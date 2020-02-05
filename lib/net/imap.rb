@@ -304,6 +304,16 @@ module Net
       @@authenticators[auth_type] = authenticator
     end
 
+    # Builds an authenticator for Net::IMAP#authenticate.
+    def self.authenticator(auth_type, *args)
+      auth_type = auth_type.upcase
+      unless @@authenticators.has_key?(auth_type)
+        raise ArgumentError,
+          format('unknown auth type - "%s"', auth_type)
+      end
+      @@authenticators[auth_type].new(*args)
+    end
+
     # The default port for IMAP connections, port 143
     def self.default_port
       return PORT
@@ -408,7 +418,7 @@ module Net
     # the form "AUTH=LOGIN" or "AUTH=CRAM-MD5".
     #
     # Authentication is done using the appropriate authenticator object:
-    # see @@authenticators for more information on plugging in your own
+    # see +add_authenticator+ for more information on plugging in your own
     # authenticator.
     #
     # For example:
@@ -417,12 +427,7 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     def authenticate(auth_type, *args)
-      auth_type = auth_type.upcase
-      unless @@authenticators.has_key?(auth_type)
-        raise ArgumentError,
-          format('unknown auth type - "%s"', auth_type)
-      end
-      authenticator = @@authenticators[auth_type].new(*args)
+      authenticator = self.class.authenticator(auth_type, *args)
       send_command("AUTHENTICATE", auth_type) do |resp|
         if resp.instance_of?(ContinuationRequest)
           data = authenticator.process(resp.data.text.unpack("m")[0])
