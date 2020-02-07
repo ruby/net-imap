@@ -3175,6 +3175,7 @@ module Net
           end
         end
         match(T_RBRA)
+        @pos += 1 if @str[@pos] == " "
         @lex_state = EXPR_RTEXT
         return result
       end
