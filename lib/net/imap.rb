@@ -3114,11 +3114,15 @@ module Net
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
+        UntaggedResponse.new(name, capability_data, @str)
+      end
+
+      def capability_data
         data = []
         while true
           token = lookahead
           case token.symbol
-          when T_CRLF
+          when T_CRLF, T_RBRA
             break
           when T_SPACE
             shift_token
@@ -3126,7 +3130,7 @@ module Net
           end
           data.push(atom.upcase)
         end
-        return UntaggedResponse.new(name, data, @str)
+        data
       end
 
       def resp_text
@@ -3150,6 +3154,8 @@ module Net
         case name
         when /\A(?:ALERT|PARSE|READ-ONLY|READ-WRITE|TRYCREATE|NOMODSEQ)\z/n
           result = ResponseCode.new(name, nil)
+        when /\A(?:CAPABILITY)\z/ni
+          result = ResponseCode.new(name, capability_data)
         when /\A(?:PERMANENTFLAGS)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, flag_list)
