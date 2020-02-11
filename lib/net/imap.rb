@@ -3425,6 +3425,69 @@ module Net
         end
       end
 
+      def namespace_response
+        @lex_state = EXPR_DATA
+        token = lookahead
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        personal = namespaces
+        match(T_SPACE)
+        other = namespaces
+        match(T_SPACE)
+        shared = namespaces
+        @lex_state = EXPR_BEG
+        data = Namespaces.new(personal, other, shared)
+        return UntaggedResponse.new(name, data, @str)
+      end
+
+      def namespaces
+        token = lookahead
+        # empty () is not allowed, so nil is functionally identical to empty.
+        data = []
+        if token.symbol == T_NIL
+          shift_token
+        else
+          match(T_LPAR)
+          loop do
+            data << namespace
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
+      end
+
+      def namespace
+        match(T_LPAR)
+        prefix = match(T_QUOTED, T_LITERAL).value
+        match(T_SPACE)
+        delimiter = string
+        extensions = namespace_response_extensions
+        match(T_RPAR)
+        Namespace.new(prefix, delimiter, extensions)
+      end
+
+      def namespace_response_extensions
+        data = {}
+        token = lookahead
+        if token.symbol == T_SPACE
+          shift_token
+          name = match(T_QUOTED, T_LITERAL).value
+          data[name] ||= []
+          match(T_SPACE)
+          match(T_LPAR)
+          loop do
+            data[name].push match(T_QUOTED, T_LITERAL).value
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
+      end
+
       def resp_text
         @lex_state = EXPR_RTEXT
         token = lookahead
