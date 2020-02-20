@@ -3,8 +3,8 @@ require_relative 'lib/net/imap/version'
 Gem::Specification.new do |spec|
   spec.name          = "net-imap"
   spec.version       = Net::Imap::VERSION
-  spec.authors       = ["Hiroshi SHIBATA"]
-  spec.email         = ["hsbt@ruby-lang.org"]
+  spec.authors       = ["Shugo Maeda"]
+  spec.email         = ["shugo@ruby-lang.org"]
 
   spec.summary       = %q{Ruby client api for Internet Message Access Protocol}
   spec.description   = %q{Ruby client api for Internet Message Access Protocol}
