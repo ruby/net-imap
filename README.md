@@ -1,8 +1,7 @@
-# Net::Imap
+# Net::IMAP
 
-Welcome to your new gem! In this directory, you'll find the files you need to be able to package up your Ruby library into a gem. Put your Ruby code in the file `lib/net/imap`. To experiment with that code, run `bin/console` for an interactive prompt.
-
-TODO: Delete this and the text above, and describe your gem
+Net::IMAP implements Internet Message Access Protocol (IMAP) client
+functionality.  The protocol is described in [IMAP].
 
 ## Installation
 
@@ -22,7 +21,33 @@ Or install it yourself as:
 
 ## Usage
 
-TODO: Write usage instructions here
+### List sender and subject of all recent messages in the default mailbox
+
+```ruby
+imap = Net::IMAP.new('mail.example.com')
+imap.authenticate('LOGIN', 'joe_user', 'joes_password')
+imap.examine('INBOX')
+imap.search(["RECENT"]).each do |message_id|
+  envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
+  puts "#{envelope.from[0].name}: \t#{envelope.subject}"
+end
+```
+
+### Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
+
+```ruby
+imap = Net::IMAP.new('mail.example.com')
+imap.authenticate('LOGIN', 'joe_user', 'joes_password')
+imap.select('Mail/sent-mail')
+if not imap.list('Mail/', 'sent-apr03')
+  imap.create('Mail/sent-apr03')
+end
+imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
+  imap.copy(message_id, "Mail/sent-apr03")
+  imap.store(message_id, "+FLAGS", [:Deleted])
+end
+imap.expunge
+```
 
 ## Development
 
@@ -32,5 +57,5 @@ To install this gem onto your local machine, run `bundle exec rake install`. To 
 
 ## Contributing
 
-Bug reports and pull requests are welcome on GitHub at https://github.com/hsbt/net-imap.
+Bug reports and pull requests are welcome on GitHub at https://github.com/ruby/net-imap.
 
