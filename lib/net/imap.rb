@@ -1786,12 +1786,15 @@ module Net
 
     # Net::IMAP::ResponseCode represents response codes.
     #
-    #   resp_text_code  ::= "ALERT" / "PARSE" /
-    #                       "PERMANENTFLAGS" SPACE "(" #(flag / "\*") ")" /
+    #   resp_text_code  ::= "ALERT" /
+    #                       "BADCHARSET" [SP "(" astring *(SP astring) ")" ] /
+    #                       capability_data / "PARSE" /
+    #                       "PERMANENTFLAGS" SP "("
+    #                       [flag_perm *(SP flag_perm)] ")" /
     #                       "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
-    #                       "UIDVALIDITY" SPACE nz_number /
-    #                       "UNSEEN" SPACE nz_number /
-    #                       atom [SPACE 1*<any TEXT_CHAR except "]">]
+    #                       "UIDNEXT" SP nz_number / "UIDVALIDITY" SP nz_number /
+    #                       "UNSEEN" SP nz_number /
+    #                       atom [SP 1*<any TEXT-CHAR except "]">]
     #
     # ==== Fields:
     #
@@ -3145,12 +3148,25 @@ module Net
         end
       end
 
+      # See https://www.rfc-editor.org/errata/rfc3501
+      #
+      # resp-text-code  = "ALERT" /
+      #                   "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
+      #                   capability-data / "PARSE" /
+      #                   "PERMANENTFLAGS" SP "("
+      #                   [flag-perm *(SP flag-perm)] ")" /
+      #                   "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
+      #                   "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
+      #                   "UNSEEN" SP nz-number /
+      #                   atom [SP 1*<any TEXT-CHAR except "]">]
       def resp_text_code
         token = match(T_ATOM)
         name = token.value.upcase
         case name
         when /\A(?:ALERT|PARSE|READ-ONLY|READ-WRITE|TRYCREATE|NOMODSEQ)\z/n
           result = ResponseCode.new(name, nil)
+        when /\A(?:BADCHARSET)\z/n
+          result = ResponseCode.new(name, charset_list)
         when /\A(?:PERMANENTFLAGS)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, flag_list)
@@ -3168,6 +3184,19 @@ module Net
           end
         end
         return result
+      end
+
+      def charset_list
+        result = []
+        if accept(T_SPACE)
+          match(T_LPAR)
+          result << charset
+          while accept(T_SPACE)
+            result << charset
+          end
+          match(T_RPAR)
+        end
+        result
       end
 
       def address_list
@@ -3328,6 +3357,17 @@ module Net
                       lookahead.symbol, args.join(" or "))
         end
         result
+      end
+
+      # See https://www.rfc-editor.org/errata/rfc3501
+      #
+      # charset = atom / quoted
+      def charset
+        if token = accept(T_QUOTED)
+          token.value
+        else
+          atom
+        end
       end
 
       def number
