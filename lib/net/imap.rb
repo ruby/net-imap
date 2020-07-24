@@ -1745,6 +1745,18 @@ module Net
     # raw_data:: Returns the raw data string.
     UntaggedResponse = Struct.new(:name, :data, :raw_data)
 
+    # Net::IMAP::IgnoredResponse represents intentionaly ignored responses.
+    #
+    # This includes untagged response "NOOP" sent by eg. Zimbra to avoid some
+    # clients to close the connection.
+    #
+    # It matches no IMAP standard.
+    #
+    # ==== Fields:
+    #
+    # raw_data:: Returns the raw data string.
+    IgnoredResponse = Struct.new(:raw_data)
+
     # Net::IMAP::TaggedResponse represents tagged responses.
     #
     # The server completion result response indicates the success or
@@ -2305,6 +2317,8 @@ module Net
             return status_response
           when /\A(?:CAPABILITY)\z/ni
             return capability_response
+          when /\A(?:NOOP)\z/ni
+            return ignored_response
           else
             return text_response
           end
@@ -2872,6 +2886,13 @@ module Net
         modseq = number
         match(T_RPAR)
         return name, modseq
+      end
+
+      def ignored_response
+        while lookahead.symbol != T_CRLF
+          shift_token
+        end
+        return IgnoredResponse.new(@str)
       end
 
       def text_response
