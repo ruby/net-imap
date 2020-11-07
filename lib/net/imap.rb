@@ -3344,22 +3344,28 @@ module Net
         return nil
       end
 
-      def match(*args)
-        token = lookahead
-        unless args.include?(token.symbol)
-          parse_error('unexpected token %s (expected %s)',
-                      token.symbol.id2name,
-                      args.collect {|i| i.id2name}.join(" or "))
+      def match(*args, lex_state: @lex_state)
+        if @token && lex_state != @lex_state
+          parse_error("invalid lex_state change to %s with unconsumed token",
+                      lex_state)
         end
-        shift_token
-        return token
+        begin
+          @lex_state, original_lex_state = lex_state, @lex_state
+          token = lookahead
+          unless args.include?(token.symbol)
+            parse_error('unexpected token %s (expected %s)',
+                        token.symbol.id2name,
+                        args.collect {|i| i.id2name}.join(" or "))
+          end
+          shift_token
+          return token
+        ensure
+          @lex_state = original_lex_state
+        end
       end
 
       def lookahead
-        unless @token
-          @token = next_token
-        end
-        return @token
+        @token ||= next_token
       end
 
       def shift_token
