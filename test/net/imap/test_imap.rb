@@ -764,7 +764,9 @@ EOF
       begin
         sock.print("* OK test server\r\n")
         requests.push(sock.gets)
-        sock.print("* ID #{server_id_str}\r\n")
+        # RFC 2971 very clearly states (in section 3.2):
+        # "a server MUST send a tagged ID response to an ID command."
+        # And yet... some servers report ID capability but won't the response.
         sock.print("RUBY0001 OK ID completed\r\n")
         requests.push(sock.gets)
         sock.print("* ID #{server_id_str}\r\n")
@@ -784,7 +786,7 @@ EOF
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
       resp = imap.id
-      assert_equal(server_id, resp)
+      assert_equal(nil, resp)
       assert_equal("RUBY0001 ID NIL\r\n", requests.pop)
       resp = imap.id({})
       assert_equal(server_id, resp)
