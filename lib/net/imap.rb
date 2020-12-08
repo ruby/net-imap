@@ -385,7 +385,7 @@ module Net
     def id(client_id=nil)
       synchronize do
         send_command("ID", ClientID.new(client_id))
-        return @responses.delete("ID")[-1]
+        @responses.delete("ID")&.last
       end
     end
 
