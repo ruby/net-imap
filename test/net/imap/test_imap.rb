@@ -578,23 +578,23 @@ class IMAPTest < Test::Unit::TestCase
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.send(:send_command, "TEST", -1)
+        imap.__send__(:send_command, "TEST", -1)
       end
-      imap.send(:send_command, "TEST", 0)
-      imap.send(:send_command, "TEST", 4294967295)
+      imap.__send__(:send_command, "TEST", 0)
+      imap.__send__(:send_command, "TEST", 4294967295)
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.send(:send_command, "TEST", 4294967296)
-      end
-      assert_raise(Net::IMAP::DataFormatError) do
-        imap.send(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
+        imap.__send__(:send_command, "TEST", 4294967296)
       end
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.send(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
       end
-      imap.send(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
-      imap.send(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967295))
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.send(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967296))
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
+      end
+      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
+      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967295))
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967296))
       end
       imap.logout
     ensure
@@ -628,7 +628,7 @@ class IMAPTest < Test::Unit::TestCase
     end
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
-      imap.send(:send_command, "TEST", ["\xDE\xAD\xBE\xEF".b])
+      imap.__send__(:send_command, "TEST", ["\xDE\xAD\xBE\xEF".b])
       assert_equal(2, requests.length)
       assert_equal("RUBY0001 TEST ({4}\r\n", requests[0])
       assert_equal("\xDE\xAD\xBE\xEF".b, literal)
