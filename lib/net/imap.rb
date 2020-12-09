@@ -3355,6 +3355,18 @@ module Net
         return token
       end
 
+      # like match, but does not raise error on failure.
+      #
+      # returns and shifts token on successful match
+      # returns nil and leaves @token unshifted on no match
+      def accept(*args)
+        token = lookahead
+        if args.include?(token.symbol)
+          shift_token
+          token
+        end
+      end
+
       def lookahead
         unless @token
           @token = next_token
