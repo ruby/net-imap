@@ -1937,8 +1937,7 @@ module Net
     # Net::IMAP::ResponseText represents texts of responses.
     # The text may be prefixed by the response code.
     #
-    #   resp_text       ::= ["[" resp_text_code "]" SPACE] (text_mime2 / text)
-    #                       ;; text SHOULD NOT begin with "[" or "="
+    #   resp_text       ::= ["[" resp-text-code "]" SP] text
     #
     # ==== Fields:
     #
@@ -3437,22 +3436,21 @@ module Net
         match(T_TEXT, lex_state: EXPR_TEXT).value
       end
 
+      # resp-text       = ["[" resp-text-code "]" SP] text
       def resp_text
-        @lex_state = EXPR_RTEXT
-        token = lookahead
-        if token.symbol == T_LBRA
+        token = match(T_LBRA, T_TEXT, lex_state: EXPR_RTEXT)
+        case token.symbol
+        when T_LBRA
           code = resp_text_code
-        else
-          code = nil
+          match(T_RBRA)
+          accept_space # violating RFC
+          ResponseText.new(code, text)
+        when T_TEXT
+          ResponseText.new(nil, token.value)
         end
-        token = match(T_TEXT)
-        @lex_state = EXPR_BEG
-        return ResponseText.new(code, token.value)
       end
 
       def resp_text_code
-        @lex_state = EXPR_BEG
-        match(T_LBRA)
         token = match(T_ATOM)
         name = token.value.upcase
         case name
@@ -3470,17 +3468,12 @@ module Net
           token = lookahead
           if token.symbol == T_SPACE
             shift_token
-            @lex_state = EXPR_CTEXT
-            token = match(T_TEXT)
-            @lex_state = EXPR_BEG
+            token = match(T_TEXT, lex_state: EXPR_CTEXT)
             result = ResponseCode.new(name, token.value)
           else
             result = ResponseCode.new(name, nil)
           end
         end
-        match(T_RBRA)
-        @pos += 1 if @str[@pos] == " "
-        @lex_state = EXPR_RTEXT
         return result
       end
 
