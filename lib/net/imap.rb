@@ -3089,10 +3089,7 @@ module Net
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
-        @lex_state = EXPR_TEXT
-        token = match(T_TEXT)
-        @lex_state = EXPR_BEG
-        return UntaggedResponse.new(name, token.value)
+        return UntaggedResponse.new(name, text)
       end
 
       def flags_response
@@ -3432,6 +3429,12 @@ module Net
           match(T_RPAR)
         end
         data
+      end
+
+      # text            = 1*TEXT-CHAR
+      # TEXT-CHAR       = <any CHAR except CR and LF>
+      def text
+        match(T_TEXT, lex_state: EXPR_TEXT).value
       end
 
       def resp_text
