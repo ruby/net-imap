@@ -3344,6 +3344,28 @@ module Net
         return nil
       end
 
+      SPACES_REGEXP = /\G */n
+
+      # This advances @pos directly so it's safe before changing @lex_state.
+      def accept_space
+        if @token
+          shift_token if @token.symbol == T_SPACE
+        elsif @str[@pos] == " "
+          @pos += 1
+        end
+      end
+
+      # The RFC is very strict about this and usually we should be too.
+      # But skipping spaces is usually a safe workaround for buggy servers.
+      #
+      # This advances @pos directly so it's safe before changing @lex_state.
+      def accept_spaces
+        shift_token if @token&.symbol == T_SPACE
+        if @str.index(SPACES_REGEXP, @pos)
+          @pos = $~.end(0)
+        end
+      end
+
       def match(*args, lex_state: @lex_state)
         if @token && lex_state != @lex_state
           parse_error("invalid lex_state change to %s with unconsumed token",
