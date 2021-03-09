@@ -365,6 +365,30 @@ module Net
       end
     end
 
+    # Sends an ID command, and returns a hash of the server's
+    # response, or nil if the server does not identify itself.
+    #
+    # Note that the user should first check if the server supports the ID
+    # capability. For example:
+    #
+    #    capabilities = imap.capability
+    #    if capabilities.include?("ID")
+    #      id = imap.id(
+    #        name: "my IMAP client (ruby)",
+    #        version: MyIMAP::VERSION,
+    #        "support-url": "mailto:bugs@example.com",
+    #        os: RbConfig::CONFIG["host_os"],
+    #      )
+    #    end
+    #
+    # See RFC 2971, Section 3.3, for defined fields.
+    def id(client_id=nil)
+      synchronize do
+        send_command("ID", ClientID.new(client_id))
+        @responses.delete("ID")&.last
+      end
+    end
+
     # Sends a NOOP command to the server. It does nothing.
     def noop
       send_command("NOOP")
@@ -1710,6 +1734,74 @@ module Net
       end
     end
 
+    class ClientID # :nodoc:
+
+      def send_data(imap, tag)
+        imap.__send__(:send_data, format_internal(@data), tag)
+      end
+
+      def validate
+        validate_internal(@data)
+      end
+
+      private
+
+      def initialize(data)
+        @data = data
+      end
+
+      def validate_internal(client_id)
+        client_id.to_h.each do |k,v|
+          unless StringFormatter.valid_string?(k)
+            raise DataFormatError, client_id.inspect
+          end
+        end
+      rescue NoMethodError, TypeError # to_h failed
+        raise DataFormatError, client_id.inspect
+      end
+
+      def format_internal(client_id)
+        return nil if client_id.nil?
+        client_id.to_h.flat_map {|k,v|
+          [StringFormatter.string(k), StringFormatter.nstring(v)]
+        }
+      end
+
+    end
+
+    module StringFormatter
+
+      LITERAL_REGEX = /[\x80-\xff\r\n]/n
+
+      module_function
+
+      # Allows symbols in addition to strings
+      def valid_string?(str)
+        str.is_a?(Symbol) || str.respond_to?(:to_str)
+      end
+
+      # Allows nil, symbols, and strings
+      def valid_nstring?(str)
+        str.nil? || valid_string?(str)
+      end
+
+      # coerces using +to_s+
+      def string(str)
+        str = str.to_s
+        if str =~ LITERAL_REGEX
+          Literal.new(str)
+        else
+          QuotedString.new(str)
+        end
+      end
+
+      # coerces non-nil using +to_s+
+      def nstring(str)
+        str.nil? ? nil : string(str)
+      end
+
+    end
+
     # Common validators of number and nz_number types
     module NumValidator # :nodoc
       class << self
@@ -2390,6 +2482,8 @@ module Net
             return response_cond
           when /\A(?:FLAGS)\z/ni
             return flags_response
+          when /\A(?:ID)\z/ni
+            return id_response
           when /\A(?:LIST|LSUB|XLIST)\z/ni
             return list_response
           when /\A(?:NAMESPACE)\z/ni
@@ -3237,6 +3331,98 @@ module Net
           data.push(atom.upcase)
         end
         return UntaggedResponse.new(name, data, @str)
+      end
+
+      def namespace_response
+        @lex_state = EXPR_DATA
+        token = lookahead
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        personal = namespaces
+        match(T_SPACE)
+        other = namespaces
+        match(T_SPACE)
+        shared = namespaces
+        @lex_state = EXPR_BEG
+        data = Namespaces.new(personal, other, shared)
+        return UntaggedResponse.new(name, data, @str)
+      end
+
+      def namespaces
+        token = lookahead
+        # empty () is not allowed, so nil is functionally identical to empty.
+        data = []
+        if token.symbol == T_NIL
+          shift_token
+        else
+          match(T_LPAR)
+          loop do
+            data << namespace
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
+      end
+
+      def namespace
+        match(T_LPAR)
+        prefix = match(T_QUOTED, T_LITERAL).value
+        match(T_SPACE)
+        delimiter = string
+        extensions = namespace_response_extensions
+        match(T_RPAR)
+        Namespace.new(prefix, delimiter, extensions)
+      end
+
+      def namespace_response_extensions
+        data = {}
+        token = lookahead
+        if token.symbol == T_SPACE
+          shift_token
+          name = match(T_QUOTED, T_LITERAL).value
+          data[name] ||= []
+          match(T_SPACE)
+          match(T_LPAR)
+          loop do
+            data[name].push match(T_QUOTED, T_LITERAL).value
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
+      end
+
+      def id_response
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        token = match(T_LPAR, T_NIL)
+        if token.symbol == T_NIL
+          return UntaggedResponse.new(name, nil, @str)
+        else
+          data = {}
+          while true
+            token = lookahead
+            case token.symbol
+            when T_RPAR
+              shift_token
+              break
+            when T_SPACE
+              shift_token
+              next
+            else
+              key = string
+              match(T_SPACE)
+              val = nstring
+              data[key] = val
+            end
+          end
+          return UntaggedResponse.new(name, data, @str)
+        end
       end
 
       def namespace_response
