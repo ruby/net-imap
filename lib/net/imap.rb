@@ -201,7 +201,7 @@ module Net
   #    Unicode", RFC 2152, May 1997.
   #
   class IMAP < Protocol
-    VERSION = "0.1.0"
+    VERSION = "0.1.1"
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
@@ -304,6 +304,16 @@ module Net
       @@authenticators[auth_type] = authenticator
     end
 
+    # Builds an authenticator for Net::IMAP#authenticate.
+    def self.authenticator(auth_type, *args)
+      auth_type = auth_type.upcase
+      unless @@authenticators.has_key?(auth_type)
+        raise ArgumentError,
+          format('unknown auth type - "%s"', auth_type)
+      end
+      @@authenticators[auth_type].new(*args)
+    end
+
     # The default port for IMAP connections, port 143
     def self.default_port
       return PORT
@@ -365,6 +375,30 @@ module Net
       end
     end
 
+    # Sends an ID command, and returns a hash of the server's
+    # response, or nil if the server does not identify itself.
+    #
+    # Note that the user should first check if the server supports the ID
+    # capability. For example:
+    #
+    #    capabilities = imap.capability
+    #    if capabilities.include?("ID")
+    #      id = imap.id(
+    #        name: "my IMAP client (ruby)",
+    #        version: MyIMAP::VERSION,
+    #        "support-url": "mailto:bugs@example.com",
+    #        os: RbConfig::CONFIG["host_os"],
+    #      )
+    #    end
+    #
+    # See RFC 2971, Section 3.3, for defined fields.
+    def id(client_id=nil)
+      synchronize do
+        send_command("ID", ClientID.new(client_id))
+        @responses.delete("ID")&.last
+      end
+    end
+
     # Sends a NOOP command to the server. It does nothing.
     def noop
       send_command("NOOP")
@@ -408,7 +442,7 @@ module Net
     # the form "AUTH=LOGIN" or "AUTH=CRAM-MD5".
     #
     # Authentication is done using the appropriate authenticator object:
-    # see @@authenticators for more information on plugging in your own
+    # see +add_authenticator+ for more information on plugging in your own
     # authenticator.
     #
     # For example:
@@ -417,12 +451,7 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     def authenticate(auth_type, *args)
-      auth_type = auth_type.upcase
-      unless @@authenticators.has_key?(auth_type)
-        raise ArgumentError,
-          format('unknown auth type - "%s"', auth_type)
-      end
-      authenticator = @@authenticators[auth_type].new(*args)
+      authenticator = self.class.authenticator(auth_type, *args)
       send_command("AUTHENTICATE", auth_type) do |resp|
         if resp.instance_of?(ContinuationRequest)
           data = authenticator.process(resp.data.text.unpack("m")[0])
@@ -549,6 +578,60 @@ module Net
       synchronize do
         send_command("LIST", refname, mailbox)
         return @responses.delete("LIST")
+      end
+    end
+
+    # Sends a NAMESPACE command [RFC2342] and returns the namespaces that are
+    # available. The NAMESPACE command allows a client to discover the prefixes
+    # of namespaces used by a server for personal mailboxes, other users'
+    # mailboxes, and shared mailboxes.
+    #
+    # This extension predates IMAP4rev1 (RFC3501), so most IMAP servers support
+    # it. Many popular IMAP servers are configured with the default personal
+    # namespaces as `("" "/")`: no prefix and "/" hierarchy delimiter. In that
+    # common case, the naive client may not have any trouble naming mailboxes.
+    #
+    # But many servers are configured with the default personal namespace as
+    # e.g. `("INBOX." ".")`, placing all personal folders under INBOX, with "."
+    # as the hierarchy delimiter. If the client does not check for this, but
+    # naively assumes it can use the same folder names for all servers, then
+    # folder creation (and listing, moving, etc) can lead to errors.
+    #
+    # From RFC2342:
+    #
+    #    Although typically a server will support only a single Personal
+    #    Namespace, and a single Other User's Namespace, circumstances exist
+    #    where there MAY be multiples of these, and a client MUST be prepared
+    #    for them. If a client is configured such that it is required to create
+    #    a certain mailbox, there can be circumstances where it is unclear which
+    #    Personal Namespaces it should create the mailbox in. In these
+    #    situations a client SHOULD let the user select which namespaces to
+    #    create the mailbox in.
+    #
+    # The user of this method should first check if the server supports the
+    # NAMESPACE capability.  The return value is a +Net::IMAP::Namespaces+
+    # object which has +personal+, +other+, and +shared+ fields, each an array
+    # of +Net::IMAP::Namespace+ objects. These arrays will be empty when the
+    # server responds with nil.
+    #
+    # For example:
+    #
+    #    capabilities = imap.capability
+    #    if capabilities.include?("NAMESPACE")
+    #      namespaces = imap.namespace
+    #      if namespace = namespaces.personal.first
+    #        prefix = namespace.prefix  # e.g. "" or "INBOX."
+    #        delim  = namespace.delim   # e.g. "/" or "."
+    #        # personal folders should use the prefix and delimiter
+    #        imap.create(prefix + "foo")
+    #        imap.create(prefix + "bar")
+    #        imap.create(prefix + %w[path to my folder].join(delim))
+    #      end
+    #    end
+    def namespace
+      synchronize do
+        send_command("NAMESPACE")
+        return @responses.delete("NAMESPACE")[-1]
       end
     end
 
@@ -1656,6 +1739,74 @@ module Net
       end
     end
 
+    class ClientID # :nodoc:
+
+      def send_data(imap, tag)
+        imap.__send__(:send_data, format_internal(@data), tag)
+      end
+
+      def validate
+        validate_internal(@data)
+      end
+
+      private
+
+      def initialize(data)
+        @data = data
+      end
+
+      def validate_internal(client_id)
+        client_id.to_h.each do |k,v|
+          unless StringFormatter.valid_string?(k)
+            raise DataFormatError, client_id.inspect
+          end
+        end
+      rescue NoMethodError, TypeError # to_h failed
+        raise DataFormatError, client_id.inspect
+      end
+
+      def format_internal(client_id)
+        return nil if client_id.nil?
+        client_id.to_h.flat_map {|k,v|
+          [StringFormatter.string(k), StringFormatter.nstring(v)]
+        }
+      end
+
+    end
+
+    module StringFormatter
+
+      LITERAL_REGEX = /[\x80-\xff\r\n]/n
+
+      module_function
+
+      # Allows symbols in addition to strings
+      def valid_string?(str)
+        str.is_a?(Symbol) || str.respond_to?(:to_str)
+      end
+
+      # Allows nil, symbols, and strings
+      def valid_nstring?(str)
+        str.nil? || valid_string?(str)
+      end
+
+      # coerces using +to_s+
+      def string(str)
+        str = str.to_s
+        if str =~ LITERAL_REGEX
+          Literal.new(str)
+        else
+          QuotedString.new(str)
+        end
+      end
+
+      # coerces non-nil using +to_s+
+      def nstring(str)
+        str.nil? ? nil : string(str)
+      end
+
+    end
+
     # Common validators of number and nz_number types
     module NumValidator # :nodoc
       class << self
@@ -1746,6 +1897,18 @@ module Net
     #
     # raw_data:: Returns the raw data string.
     UntaggedResponse = Struct.new(:name, :data, :raw_data)
+
+    # Net::IMAP::IgnoredResponse represents intentionaly ignored responses.
+    #
+    # This includes untagged response "NOOP" sent by eg. Zimbra to avoid some
+    # clients to close the connection.
+    #
+    # It matches no IMAP standard.
+    #
+    # ==== Fields:
+    #
+    # raw_data:: Returns the raw data string.
+    IgnoredResponse = Struct.new(:raw_data)
 
     # Net::IMAP::TaggedResponse represents tagged responses.
     #
@@ -1873,6 +2036,39 @@ module Net
     #          mailbox.
     #
     MailboxACLItem = Struct.new(:user, :rights, :mailbox)
+
+    # Net::IMAP::Namespace represents a single [RFC-2342] namespace.
+    #
+    #    Namespace = nil / "(" 1*( "(" string SP  (<"> QUOTED_CHAR <"> /
+    #       nil) *(Namespace_Response_Extension) ")" ) ")"
+    #
+    #    Namespace_Response_Extension = SP string SP "(" string *(SP string)
+    #       ")"
+    #
+    # ==== Fields:
+    #
+    # prefix:: Returns the namespace prefix string.
+    # delim:: Returns nil or the hierarchy delimiter character.
+    # extensions:: Returns a hash of extension names to extension flag arrays.
+    #
+    Namespace = Struct.new(:prefix, :delim, :extensions)
+
+    # Net::IMAP::Namespaces represents the response from [RFC-2342] NAMESPACE.
+    #
+    #    Namespace_Response = "*" SP "NAMESPACE" SP Namespace SP Namespace SP
+    #       Namespace
+    #
+    #       ; The first Namespace is the Personal Namespace(s)
+    #       ; The second Namespace is the Other Users' Namespace(s)
+    #       ; The third Namespace is the Shared Namespace(s)
+    #
+    # ==== Fields:
+    #
+    # personal:: Returns an array of Personal Net::IMAP::Namespace objects.
+    # other:: Returns an array of Other Users' Net::IMAP::Namespace objects.
+    # shared:: Returns an array of Shared Net::IMAP::Namespace objects.
+    #
+    Namespaces = Struct.new(:personal, :other, :shared)
 
     # Net::IMAP::StatusData represents the contents of the STATUS response.
     #
@@ -2293,8 +2489,12 @@ module Net
             return response_cond
           when /\A(?:FLAGS)\z/ni
             return flags_response
+          when /\A(?:ID)\z/ni
+            return id_response
           when /\A(?:LIST|LSUB|XLIST)\z/ni
             return list_response
+          when /\A(?:NAMESPACE)\z/ni
+            return namespace_response
           when /\A(?:QUOTA)\z/ni
             return getquota_response
           when /\A(?:QUOTAROOT)\z/ni
@@ -2309,6 +2509,8 @@ module Net
             return status_response
           when /\A(?:CAPABILITY)\z/ni
             return capability_response
+          when /\A(?:NOOP)\z/ni
+            return ignored_response
           else
             return text_response
           end
@@ -2878,6 +3080,13 @@ module Net
         return name, modseq
       end
 
+      def ignored_response
+        while lookahead.symbol != T_CRLF
+          shift_token
+        end
+        return IgnoredResponse.new(@str)
+      end
+
       def text_response
         token = match(T_ATOM)
         name = token.value.upcase
@@ -3113,11 +3322,15 @@ module Net
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
+        UntaggedResponse.new(name, capability_data, @str)
+      end
+
+      def capability_data
         data = []
         while true
           token = lookahead
           case token.symbol
-          when T_CRLF
+          when T_CRLF, T_RBRA
             break
           when T_SPACE
             shift_token
@@ -3125,7 +3338,99 @@ module Net
           end
           data.push(atom.upcase)
         end
+        data
+      end
+
+      def id_response
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        token = match(T_LPAR, T_NIL)
+        if token.symbol == T_NIL
+          return UntaggedResponse.new(name, nil, @str)
+        else
+          data = {}
+          while true
+            token = lookahead
+            case token.symbol
+            when T_RPAR
+              shift_token
+              break
+            when T_SPACE
+              shift_token
+              next
+            else
+              key = string
+              match(T_SPACE)
+              val = nstring
+              data[key] = val
+            end
+          end
+          return UntaggedResponse.new(name, data, @str)
+        end
+      end
+
+      def namespace_response
+        @lex_state = EXPR_DATA
+        token = lookahead
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        personal = namespaces
+        match(T_SPACE)
+        other = namespaces
+        match(T_SPACE)
+        shared = namespaces
+        @lex_state = EXPR_BEG
+        data = Namespaces.new(personal, other, shared)
         return UntaggedResponse.new(name, data, @str)
+      end
+
+      def namespaces
+        token = lookahead
+        # empty () is not allowed, so nil is functionally identical to empty.
+        data = []
+        if token.symbol == T_NIL
+          shift_token
+        else
+          match(T_LPAR)
+          loop do
+            data << namespace
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
+      end
+
+      def namespace
+        match(T_LPAR)
+        prefix = match(T_QUOTED, T_LITERAL).value
+        match(T_SPACE)
+        delimiter = string
+        extensions = namespace_response_extensions
+        match(T_RPAR)
+        Namespace.new(prefix, delimiter, extensions)
+      end
+
+      def namespace_response_extensions
+        data = {}
+        token = lookahead
+        if token.symbol == T_SPACE
+          shift_token
+          name = match(T_QUOTED, T_LITERAL).value
+          data[name] ||= []
+          match(T_SPACE)
+          match(T_LPAR)
+          loop do
+            data[name].push match(T_QUOTED, T_LITERAL).value
+            break unless lookahead.symbol == T_SPACE
+            shift_token
+          end
+          match(T_RPAR)
+        end
+        data
       end
 
       # text            = 1*TEXT-CHAR
@@ -3167,6 +3472,8 @@ module Net
           result = ResponseCode.new(name, nil)
         when /\A(?:BADCHARSET)\z/n
           result = ResponseCode.new(name, charset_list)
+        when /\A(?:CAPABILITY)\z/ni
+          result = ResponseCode.new(name, capability_data)
         when /\A(?:PERMANENTFLAGS)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, flag_list)
