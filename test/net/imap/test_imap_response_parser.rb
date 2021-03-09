@@ -322,6 +322,14 @@ EOF
     assert_equal(12345, response.data.attr["MODSEQ"])
   end
 
+  def test_msg_rfc3501_response_text_with_T_LBRA
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse("RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n")
+    assert_equal("RUBY0004", response.tag)
+    assert_equal("READ-WRITE", response.data.code.name)
+    assert_equal("[Gmail]/Sent Mail selected. (Success)", response.data.text)
+  end
+
   def test_continuation_request_without_response_text
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse("+\r\n")

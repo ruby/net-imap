@@ -1937,8 +1937,7 @@ module Net
     # Net::IMAP::ResponseText represents texts of responses.
     # The text may be prefixed by the response code.
     #
-    #   resp_text       ::= ["[" resp_text_code "]" SPACE] (text_mime2 / text)
-    #                       ;; text SHOULD NOT begin with "[" or "="
+    #   resp_text       ::= ["[" resp-text-code "]" SP] text
     #
     # ==== Fields:
     #
@@ -3089,10 +3088,7 @@ module Net
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
-        @lex_state = EXPR_TEXT
-        token = match(T_TEXT)
-        @lex_state = EXPR_BEG
-        return UntaggedResponse.new(name, token.value)
+        return UntaggedResponse.new(name, text)
       end
 
       def flags_response
@@ -3434,22 +3430,27 @@ module Net
         data
       end
 
+      # text            = 1*TEXT-CHAR
+      # TEXT-CHAR       = <any CHAR except CR and LF>
+      def text
+        match(T_TEXT, lex_state: EXPR_TEXT).value
+      end
+
+      # resp-text       = ["[" resp-text-code "]" SP] text
       def resp_text
-        @lex_state = EXPR_RTEXT
-        token = lookahead
-        if token.symbol == T_LBRA
+        token = match(T_LBRA, T_TEXT, lex_state: EXPR_RTEXT)
+        case token.symbol
+        when T_LBRA
           code = resp_text_code
-        else
-          code = nil
+          match(T_RBRA)
+          accept_space # violating RFC
+          ResponseText.new(code, text)
+        when T_TEXT
+          ResponseText.new(nil, token.value)
         end
-        token = match(T_TEXT)
-        @lex_state = EXPR_BEG
-        return ResponseText.new(code, token.value)
       end
 
       def resp_text_code
-        @lex_state = EXPR_BEG
-        match(T_LBRA)
         token = match(T_ATOM)
         name = token.value.upcase
         case name
@@ -3467,17 +3468,12 @@ module Net
           token = lookahead
           if token.symbol == T_SPACE
             shift_token
-            @lex_state = EXPR_CTEXT
-            token = match(T_TEXT)
-            @lex_state = EXPR_BEG
+            token = match(T_TEXT, lex_state: EXPR_CTEXT)
             result = ResponseCode.new(name, token.value)
           else
             result = ResponseCode.new(name, nil)
           end
         end
-        match(T_RBRA)
-        @pos += 1 if @str[@pos] == " "
-        @lex_state = EXPR_RTEXT
         return result
       end
 
@@ -3656,15 +3652,46 @@ module Net
         return nil
       end
 
-      def match(*args)
-        token = lookahead
-        unless args.include?(token.symbol)
-          parse_error('unexpected token %s (expected %s)',
-                      token.symbol.id2name,
-                      args.collect {|i| i.id2name}.join(" or "))
+      SPACES_REGEXP = /\G */n
+
+      # This advances @pos directly so it's safe before changing @lex_state.
+      def accept_space
+        if @token
+          shift_token if @token.symbol == T_SPACE
+        elsif @str[@pos] == " "
+          @pos += 1
         end
-        shift_token
-        return token
+      end
+
+      # The RFC is very strict about this and usually we should be too.
+      # But skipping spaces is usually a safe workaround for buggy servers.
+      #
+      # This advances @pos directly so it's safe before changing @lex_state.
+      def accept_spaces
+        shift_token if @token&.symbol == T_SPACE
+        if @str.index(SPACES_REGEXP, @pos)
+          @pos = $~.end(0)
+        end
+      end
+
+      def match(*args, lex_state: @lex_state)
+        if @token && lex_state != @lex_state
+          parse_error("invalid lex_state change to %s with unconsumed token",
+                      lex_state)
+        end
+        begin
+          @lex_state, original_lex_state = lex_state, @lex_state
+          token = lookahead
+          unless args.include?(token.symbol)
+            parse_error('unexpected token %s (expected %s)',
+                        token.symbol.id2name,
+                        args.collect {|i| i.id2name}.join(" or "))
+          end
+          shift_token
+          return token
+        ensure
+          @lex_state = original_lex_state
+        end
       end
 
       # like match, but does not raise error on failure.
@@ -3680,10 +3707,7 @@ module Net
       end
 
       def lookahead
-        unless @token
-          @token = next_token
-        end
-        return @token
+        @token ||= next_token
       end
 
       def shift_token
