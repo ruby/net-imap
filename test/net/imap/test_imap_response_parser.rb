@@ -330,6 +330,14 @@ EOF
     assert_equal("[Gmail]/Sent Mail selected. (Success)", response.data.text)
   end
 
+  def test_msg_rfc3501_response_text_with_BADCHARSET_astrings
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse("t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported charset foo.\r\n")
+    assert_equal("t", response.tag)
+    assert_equal("unsupported charset foo.", response.data.text)
+    assert_equal("BADCHARSET", response.data.code.name)
+  end
+
   def test_continuation_request_without_response_text
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse("+\r\n")
