@@ -308,4 +308,13 @@ EOF
     assert_equal(nil, response.data.code)
     assert_equal("", response.data.text)
   end
+
+  def test_ignored_response
+    parser = Net::IMAP::ResponseParser.new
+    response = nil
+    assert_nothing_raised do
+      response = parser.parse("* NOOP\r\n")
+    end
+    assert_instance_of(Net::IMAP::IgnoredResponse, response)
+  end
 end
