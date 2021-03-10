@@ -201,7 +201,7 @@ module Net
   #    Unicode", RFC 2152, May 1997.
   #
   class IMAP < Protocol
-    VERSION = "0.1.1"
+    VERSION = "0.2.0"
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
