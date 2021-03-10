@@ -7,13 +7,16 @@ jobs:
     name: build (${{ matrix.ruby }} / ${{ matrix.os }})
     strategy:
       matrix:
-        ruby: [ 3.0, 2.7, 2.6, 2.5, head ]
+        ruby: [ 3.0, 2.7, 2.5, head ]
         os: [ ubuntu-latest, macos-latest ]
         experimental: [false]
         include:
           - ruby: 2.6
             os: ubuntu-latest
             experimental: true
+          - ruby: 2.6
+            os: macos-latest
+            experimental: false
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     steps:
