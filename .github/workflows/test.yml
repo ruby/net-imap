@@ -11,9 +11,9 @@ jobs:
         os: [ ubuntu-latest, macos-latest ]
         experimental: [false]
         include:
-          - ruby: 2.6
-            os: ubuntu-latest
-            experimental: true
+#          - ruby: 2.6
+#            os: ubuntu-latest
+#            experimental: true
           - ruby: 2.6
             os: macos-latest
             experimental: false
