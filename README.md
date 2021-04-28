@@ -1,7 +1,7 @@
 # Net::IMAP
 
 Net::IMAP implements Internet Message Access Protocol (IMAP) client
-functionality.  The protocol is described in [IMAP].
+functionality.  The protocol is described in [IMAP](https://tools.ietf.org/html/rfc3501).
 
 ## Installation
 
