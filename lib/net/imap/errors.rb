@@ -55,9 +55,5 @@ module Net
     RESPONSE_ERRORS["NO"] = NoResponseError
     RESPONSE_ERRORS["BAD"] = BadResponseError
 
-    # Error raised when too many flags are interned to symbols.
-    class FlagCountError < Error
-    end
-
   end
 end

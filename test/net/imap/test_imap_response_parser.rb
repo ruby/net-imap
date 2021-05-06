@@ -7,33 +7,10 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   def setup
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
-    if Net::IMAP.respond_to?(:max_flag_count)
-      @max_flag_count = Net::IMAP.max_flag_count
-      Net::IMAP.max_flag_count = 3
-    end
   end
 
   def teardown
     Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-    if Net::IMAP.respond_to?(:max_flag_count)
-      Net::IMAP.max_flag_count = @max_flag_count
-    end
-  end
-
-  def test_flag_list_too_many_flags
-    parser = Net::IMAP::ResponseParser.new
-    assert_nothing_raised do
-      3.times do |i|
-      parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* LIST (\\Foo#{i}) "." "INBOX"
-EOF
-      end
-    end
-    assert_raise(Net::IMAP::FlagCountError) do
-      parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* LIST (\\Foo3) "." "INBOX"
-EOF
-    end
   end
 
   def test_flag_list_many_same_flags

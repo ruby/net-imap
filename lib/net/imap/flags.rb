@@ -60,17 +60,5 @@ module Net
     # Flag indicating that the mailbox does not contains new messages.
     UNMARKED = :Unmarked
 
-    @@max_flag_count = 10000
-
-    # Returns the max number of flags interned to symbols.
-    def self.max_flag_count
-      return @@max_flag_count
-    end
-
-    # Sets the max number of flags interned to symbols.
-    def self.max_flag_count=(count)
-      @@max_flag_count = count
-    end
-
   end
 end

@@ -11,7 +11,6 @@ module Net
         @pos = nil
         @lex_state = nil
         @token = nil
-        @flag_symbols = {}
       end
 
       def parse(str)
@@ -1214,12 +1213,7 @@ module Net
             if atom
               atom
             else
-              symbol = flag.capitalize.intern
-              @flag_symbols[symbol] = true
-              if @flag_symbols.length > IMAP.max_flag_count
-                raise FlagCountError, "number of flag symbols exceeded"
-              end
-              symbol
+              flag.capitalize.intern
             end
           }
         else
