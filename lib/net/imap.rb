@@ -13,7 +13,6 @@
 # See Net::IMAP for documentation.
 #
 
-
 require "socket"
 require "monitor"
 require 'net/protocol'
@@ -21,12 +20,6 @@ begin
   require "openssl"
 rescue LoadError
 end
-
-require_relative "imap/command_data"
-require_relative "imap/data_encoding"
-require_relative "imap/flags"
-require_relative "imap/response_data"
-require_relative "imap/response_parser"
 
 module Net
 
@@ -1462,118 +1455,13 @@ module Net
       end
     end
 
-    # Common validators of number and nz_number types
-    module NumValidator # :nodoc
-      class << self
-        # Check is passed argument valid 'number' in RFC 3501 terminology
-        def valid_number?(num)
-          # [RFC 3501]
-          # number          = 1*DIGIT
-          #                    ; Unsigned 32-bit integer
-          #                    ; (0 <= n < 4,294,967,296)
-          num >= 0 && num < 4294967296
-        end
-
-        # Check is passed argument valid 'nz_number' in RFC 3501 terminology
-        def valid_nz_number?(num)
-          # [RFC 3501]
-          # nz-number       = digit-nz *DIGIT
-          #                    ; Non-zero unsigned 32-bit integer
-          #                    ; (0 < n < 4,294,967,296)
-          num != 0 && valid_number?(num)
-        end
-
-        # Check is passed argument valid 'mod_sequence_value' in RFC 4551 terminology
-        def valid_mod_sequence_value?(num)
-          # mod-sequence-value  = 1*DIGIT
-          #                        ; Positive unsigned 64-bit integer
-          #                        ; (mod-sequence)
-          #                        ; (1 <= n < 18,446,744,073,709,551,615)
-          num >= 1 && num < 18446744073709551615
-        end
-
-        # Ensure argument is 'number' or raise DataFormatError
-        def ensure_number(num)
-          return if valid_number?(num)
-
-          msg = "number must be unsigned 32-bit integer: #{num}"
-          raise DataFormatError, msg
-        end
-
-        # Ensure argument is 'nz_number' or raise DataFormatError
-        def ensure_nz_number(num)
-          return if valid_nz_number?(num)
-
-          msg = "nz_number must be non-zero unsigned 32-bit integer: #{num}"
-          raise DataFormatError, msg
-        end
-
-        # Ensure argument is 'mod_sequence_value' or raise DataFormatError
-        def ensure_mod_sequence_value(num)
-          return if valid_mod_sequence_value?(num)
-
-          msg = "mod_sequence_value must be unsigned 64-bit integer: #{num}"
-          raise DataFormatError, msg
-        end
-      end
-    end
-
-    # Superclass of IMAP errors.
-    class Error < StandardError
-    end
-
-    # Error raised when data is in the incorrect format.
-    class DataFormatError < Error
-    end
-
-    # Error raised when a response from the server is non-parseable.
-    class ResponseParseError < Error
-    end
-
-    # Superclass of all errors used to encapsulate "fail" responses
-    # from the server.
-    class ResponseError < Error
-
-      # The response that caused this error
-      attr_accessor :response
-
-      def initialize(response)
-        @response = response
-
-        super @response.data.text
-      end
-
-    end
-
-    # Error raised upon a "NO" response from the server, indicating
-    # that the client command could not be completed successfully.
-    class NoResponseError < ResponseError
-    end
-
-    # Error raised upon a "BAD" response from the server, indicating
-    # that the client command violated the IMAP protocol, or an internal
-    # server failure has occurred.
-    class BadResponseError < ResponseError
-    end
-
-    # Error raised upon a "BYE" response from the server, indicating
-    # that the client is not being allowed to login, or has been timed
-    # out due to inactivity.
-    class ByeResponseError < ResponseError
-    end
-
-    # Error raised upon an unknown response from the server.
-    class UnknownResponseError < ResponseError
-    end
-
-    RESPONSE_ERRORS = Hash.new(ResponseError)
-    RESPONSE_ERRORS["NO"] = NoResponseError
-    RESPONSE_ERRORS["BAD"] = BadResponseError
-
-    # Error raised when too many flags are interned to symbols.
-    class FlagCountError < Error
-    end
   end
 end
 
+require_relative "imap/errors"
+require_relative "imap/command_data"
+require_relative "imap/data_encoding"
+require_relative "imap/flags"
+require_relative "imap/response_data"
+require_relative "imap/response_parser"
 require_relative "imap/authenticators"
