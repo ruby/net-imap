@@ -45,5 +45,5 @@ class Net::IMAP::CramMD5Authenticator
     return Digest::MD5.hexdigest(k_opad + digest)
   end
 
-  Net::IMAP.add_authenticator "PLAIN", self
+  Net::IMAP.add_authenticator "CRAM-MD5", self
 end
