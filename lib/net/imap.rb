@@ -380,26 +380,31 @@ module Net
     # the authentication mechanism to be used. Currently Net::IMAP
     # supports the authentication mechanisms:
     #
-    #   LOGIN:: login using cleartext user and password.
-    #   CRAM-MD5:: login with cleartext user and encrypted password
-    #              (see [RFC-2195] for a full description).  This
-    #              mechanism requires that the server have the user's
-    #              password stored in clear-text password.
-    #
-    # For both of these mechanisms, there should be two +args+: username
-    # and (cleartext) password.  A server may not support one or the other
-    # of these mechanisms; check #capability for a capability of
-    # the form "AUTH=LOGIN" or "AUTH=CRAM-MD5".
-    #
-    # Authentication is done using the appropriate authenticator object:
-    # see +add_authenticator+ for more information on plugging in your own
-    # authenticator.
+    # PLAIN:: Login using cleartext user and password.
+    #         See Net::IMAP::PlainAuthenticator.
     #
     # For example:
     #
-    #    imap.authenticate('LOGIN', user, password)
+    #    imap.authenticate('PLAIN', user, password)
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
+    #
+    # Servers may not support common mechanisms, clients MUST check #capability
+    # before calling #authenticate.  Server capabilities, especially auth
+    # mechanismsn change after calling #starttls.
+    #
+    # Authentication is done using the appropriate authenticator object.  Each
+    # mechanism can use different arguments; please consult the documentation
+    # for each specific mechanism.  See +add_authenticator+ for more information
+    # on plugging in your own authenticator.
+    #
+    # <em>Several obsolete mechanisms are available, for historical reference
+    # purposes.  They are not loaded by default, but can be used by requiring
+    # the appopriate file:</em>
+    #
+    #    require "net/imap/authenticators/login"
+    #    require "net/imap/authenticators/cram_md5"
+    #    require "net/imap/authenticators/digest_md5"
     def authenticate(auth_type, *args)
       authenticator = self.class.authenticator(auth_type, *args)
       send_command("AUTHENTICATE", auth_type) do |resp|

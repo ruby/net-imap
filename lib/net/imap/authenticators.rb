@@ -38,7 +38,4 @@ end
 
 Net::IMAP.extend Net::IMAP::Authenticators
 
-require_relative "authenticators/login"
 require_relative "authenticators/plain"
-require_relative "authenticators/cram_md5"
-require_relative "authenticators/digest_md5"
