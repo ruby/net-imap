@@ -378,28 +378,37 @@ module Net
     # Sends an AUTHENTICATE command to authenticate the client.
     # The +auth_type+ parameter is a string that represents
     # the authentication mechanism to be used. Currently Net::IMAP
-    # supports the authentication mechanisms:
+    # supports the following mechanisms:
     #
-    #   LOGIN:: login using cleartext user and password.
-    #   CRAM-MD5:: login with cleartext user and encrypted password
-    #              (see [RFC-2195] for a full description).  This
-    #              mechanism requires that the server have the user's
-    #              password stored in clear-text password.
+    # PLAIN:: Login using cleartext user and password.  Secure with TLS.
+    #         See Net::IMAP::PlainAuthenticator.
+    # CRAM-MD5::   DEPRECATED: Use PLAIN (or DIGEST-MD5) with TLS.
+    # DIGEST-MD5:: DEPRECATED by RFC6331. Must be secured using TLS.
+    #              See Net::IMAP::DigestMD5Authenticator.
+    # LOGIN::      DEPRECATED: Use PLAIN.
     #
-    # For both of these mechanisms, there should be two +args+: username
-    # and (cleartext) password.  A server may not support one or the other
-    # of these mechanisms; check #capability for a capability of
-    # the form "AUTH=LOGIN" or "AUTH=CRAM-MD5".
+    # Most mechanisms require two args: authentication identity (e.g. username)
+    # and credentials (e.g. a password).  But each mechanism requires and allows
+    # different arguments; please consult the documentation for the specific
+    # mechanisms you are using.  <em>Several obsolete mechanisms are available
+    # for backwards compatibility.  Using deprecated mechanisms will issue
+    # warnings.</em>
     #
-    # Authentication is done using the appropriate authenticator object:
-    # see +add_authenticator+ for more information on plugging in your own
-    # authenticator.
+    # Servers do not support all mechanisms and clients must not attempt to use
+    # a mechanism unless "AUTH=#{mechanism}" is listed as a #capability.
+    # Clients must not attempt to authenticate or #login when +LOGINDISABLED+ is
+    # listed with the capabilities.  Server capabilities, especially auth
+    # mechanisms, do change after calling #starttls so they need to be checked
+    # again.
     #
     # For example:
     #
-    #    imap.authenticate('LOGIN', user, password)
+    #    imap.authenticate('PLAIN', user, password)
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
+    #
+    # See +Net::IMAP::Authenticators+ for more information on plugging in your
+    # own authenticator.
     def authenticate(auth_type, *args)
       authenticator = self.class.authenticator(auth_type, *args)
       send_command("AUTHENTICATE", auth_type) do |resp|

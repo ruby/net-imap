@@ -19,13 +19,15 @@ module Net::IMAP::Authenticators
 
   # Builds an authenticator for Net::IMAP#authenticate.  +args+ will be passed
   # directly to the chosen authenticator's +#initialize+.
-  def authenticator(auth_type, *args)
-    auth_type = auth_type.upcase
-    unless authenticators.has_key?(auth_type)
-      raise ArgumentError,
-        format('unknown auth type - "%s"', auth_type)
+  def authenticator(mechanism, *authargs, **properties, &callback)
+    authenticator = authenticators.fetch(mechanism.upcase) do
+      raise ArgumentError, 'unknown auth type - "%s"' % mechanism
     end
-    authenticators[auth_type].new(*args)
+    if authenticator.respond_to?(:new)
+      authenticator.new(*authargs, **properties, &callback)
+    else
+      authenticator.call(*authargs, **properties, &callback)
+    end
   end
 
   private
@@ -38,7 +40,8 @@ end
 
 Net::IMAP.extend Net::IMAP::Authenticators
 
-require_relative "authenticators/login"
 require_relative "authenticators/plain"
+
+require_relative "authenticators/login"
 require_relative "authenticators/cram_md5"
 require_relative "authenticators/digest_md5"
