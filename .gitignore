@@ -4,6 +4,7 @@
 /coverage/
 /doc/
 /pkg/
+/rfcs
 /spec/reports/
 /tmp/
 /Gemfile.lock
