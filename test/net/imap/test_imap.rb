@@ -775,6 +775,39 @@ EOF
     end
   end
 
+  def test_uid_expunge
+    server = create_tcp_server
+    port = server.addr[1]
+    requests = []
+    start_server do
+      sock = server.accept
+      begin
+        sock.print("* OK test server\r\n")
+        requests.push(sock.gets)
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("RUBY0001 OK UID EXPUNGE completed\r\n")
+        sock.gets
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      ensure
+        sock.close
+        server.close
+      end
+    end
+
+    begin
+      imap = Net::IMAP.new(server_addr, :port => port)
+      response = imap.uid_expunge(1000..1003)
+      assert_equal("RUBY0001 UID EXPUNGE 1000:1003\r\n", requests.pop)
+      assert_equal(response.length, 3)
+      imap.logout
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   private
 
   def imaps_test

@@ -786,6 +786,15 @@ module Net
       end
     end
 
+    # Similar to #expunge, but takes a set of unique identifiers as
+    # argument.
+    def uid_expunge(set)
+      synchronize do
+        send_command("UID EXPUNGE", MessageSet.new(set))
+        return @responses.delete("EXPUNGE")
+      end
+    end
+
     # Sends a SEARCH command to search the mailbox for messages that
     # match the given searching criteria, and returns message sequence
     # numbers.  +keys+ can either be a string holding the entire
