@@ -1103,6 +1103,12 @@ module Net
       #                   "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
       #                   "UNSEEN" SP nz-number /
       #                   atom [SP 1*<any TEXT-CHAR except "]">]
+      #
+      # See https://datatracker.ietf.org/doc/html/rfc4315#section-6.4 for UIDPLUS extension
+      #
+      # resp-code-apnd  = "APPENDUID" SP nz-number SP append-uid
+      # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
+      # resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
       def resp_text_code
         token = match(T_ATOM)
         name = token.value.upcase
@@ -1119,6 +1125,20 @@ module Net
         when /\A(?:UIDVALIDITY|UIDNEXT|UNSEEN)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, number)
+        when /\A(?:APPENDUID)\z/n
+          match(T_SPACE)
+          uidvalidity = number
+          match(T_SPACE)
+          append_uid = number
+          result = ResponseCode.new(name, [uidvalidity, append_uid])
+        when /\A(?:COPYUID)\z/n
+          match(T_SPACE)
+          uidvalidity = number
+          match(T_SPACE)
+          from_uid = set
+          match(T_SPACE)
+          to_uid = set
+          result = ResponseCode.new(name, [uidvalidity, from_uid, to_uid])
         else
           token = lookahead
           if token.symbol == T_SPACE
@@ -1319,6 +1339,17 @@ module Net
         end
         token = match(T_NUMBER)
         return token.value.to_i
+      end
+
+      def set
+        token = match(T_ATOM)
+        token.value.split(',').flat_map do |element|
+          if element.include?(':')
+            Range.new(*element.split(':').map(&:to_i)).to_a
+          else
+            element.to_i
+          end
+        end
       end
 
       def nil_atom

@@ -808,6 +808,62 @@ EOF
     end
   end
 
+  def test_uidplus_responses
+    server = create_tcp_server
+    port = server.addr[1]
+    requests = []
+    start_server do
+      sock = server.accept
+      begin
+        sock.print("* OK test server\r\n")
+        line = sock.gets
+        size = line.slice(/{(\d+)}\r\n/, 1).to_i
+        sock.print("+ Ready for literal data\r\n")
+        sock.read(size)
+        sock.gets
+        sock.print("RUBY0001 OK [APPENDUID 38505 3955] APPEND completed\r\n")
+        requests.push(sock.gets)
+        sock.print("RUBY0002 OK [COPYUID 38505 3955,3960:3962 3963:3966] " \
+                   "COPY completed\r\n")
+        sock.gets
+        sock.print("* NO [UIDNOTSTICKY] Non-persistent UIDs\r\n")
+        sock.print("RUBY0003 OK SELECT completed\r\n")
+        sock.gets
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("RUBY0004 OK LOGOUT completed\r\n")
+      ensure
+        sock.close
+        server.close
+      end
+    end
+
+    begin
+      imap = Net::IMAP.new(server_addr, :port => port)
+      resp = imap.append("inbox", <<~EOF.gsub(/\n/, "\r\n"), [:Seen], Time.now)
+        Subject: hello
+        From: shugo@ruby-lang.org
+        To: shugo@ruby-lang.org
+
+        hello world
+      EOF
+      assert_equal(resp, [38505, 3955])
+      resp = imap.uid_copy([3955,3960..3962], 'trash')
+      assert_equal(requests.pop, "RUBY0002 UID COPY 3955,3960:3962 trash\r\n")
+      assert_equal(
+        resp,
+        [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]]
+      )
+      imap.select('trash')
+      assert_equal(
+        imap.responses["NO"].last.code,
+        Net::IMAP::ResponseCode.new('UIDNOTSTICKY', nil)
+      )
+      imap.logout
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   private
 
   def imaps_test

@@ -443,6 +443,11 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
+    #
+    # If the server supports the UIDPLUS extension it may return an additional
+    # "NO" response with a "UIDNOTSTICKY" response code indicating that the
+    # mailstore does not support persistent UIDs:
+    # +@responses["NO"].last.code.name == "UIDNOTSTICKY"+
     def select(mailbox)
       synchronize do
         @responses.clear
@@ -752,6 +757,9 @@ module Net
     # A Net::IMAP::NoResponseError is raised if the mailbox does
     # not exist (it is not created automatically), or if the flags,
     # date_time, or message arguments contain errors.
+    #
+    # If the server supports the UIDPLUS extension it returns an array
+    # with the UIDVALIDITY and the assigned UID of the appended message.
     def append(mailbox, message, flags = nil, date_time = nil)
       args = []
       if flags
@@ -759,7 +767,12 @@ module Net
       end
       args.push(date_time) if date_time
       args.push(Literal.new(message))
-      send_command("APPEND", mailbox, *args)
+      synchronize do
+        resp = send_command("APPEND", mailbox, *args)
+        if resp.data.code && resp.data.code.name == "APPENDUID"
+          return resp.data.code.data
+        end
+      end
     end
 
     # Sends a CHECK command to request a checkpoint of the currently
@@ -915,6 +928,10 @@ module Net
     # of the specified destination +mailbox+. The +set+ parameter is
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
+    #
+    # If the server supports the UIDPLUS extension it returns an array with
+    # the UIDVALIDITY, the UID set of the source messages and the assigned
+    # UID set of the copied messages.
     def copy(set, mailbox)
       copy_internal("COPY", set, mailbox)
     end
@@ -930,6 +947,10 @@ module Net
     # a message sequence number.
     #
     # The MOVE extension is described in [EXT-MOVE[https://tools.ietf.org/html/rfc6851]].
+    #
+    # If the server supports the UIDPLUS extension it returns an array with
+    # the UIDVALIDITY, the UID set of the source messages and the assigned
+    # UID set of the moved messages.
     def move(set, mailbox)
       copy_internal("MOVE", set, mailbox)
     end
@@ -1392,7 +1413,12 @@ module Net
     end
 
     def copy_internal(cmd, set, mailbox)
-      send_command(cmd, MessageSet.new(set), mailbox)
+      synchronize do
+        resp = send_command(cmd, MessageSet.new(set), mailbox)
+        if resp.data.code && resp.data.code.name == "COPYUID"
+          return resp.data.code.data
+        end
+      end
     end
 
     def sort_internal(cmd, sort_keys, search_keys, charset)
