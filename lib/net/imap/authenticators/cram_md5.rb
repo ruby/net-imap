@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require "digest/md5"
-
 # Authenticator for the "+CRAM-MD5+" SASL mechanism, specified in
 # RFC2195[https://tools.ietf.org/html/rfc2195].  See Net::IMAP#authenticate.
 #
@@ -23,7 +21,11 @@ class Net::IMAP::CramMD5Authenticator
 
   private
 
-  def initialize(user, password)
+  def initialize(user, password, warn_deprecation: true, **_ignored)
+    if warn_deprecation
+      warn "WARNING: CRAM-MD5 mechanism is deprecated." # TODO: recommend SCRAM
+    end
+    require "digest/md5"
     @user = user
     @password = password
   end

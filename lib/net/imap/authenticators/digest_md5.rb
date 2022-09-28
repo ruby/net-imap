@@ -1,8 +1,5 @@
 # frozen_string_literal: true
 
-require "digest/md5"
-require "strscan"
-
 # Net::IMAP authenticator for the "`DIGEST-MD5`" SASL mechanism type, specified
 # in RFC2831(https://tools.ietf.org/html/rfc2831).  See Net::IMAP#authenticate.
 #
@@ -29,8 +26,8 @@ class Net::IMAP::DigestMD5Authenticator
         sparams[k] = v
       end
 
-      raise DataFormatError, "Bad Challenge: '#{challenge}'" unless c.rest.size == 0
-      raise Error, "Server does not support auth (qop = #{sparams['qop'].join(',')})" unless sparams['qop'].include?("auth")
+      raise Net::IMAP::DataFormatError, "Bad Challenge: '#{challenge}'" unless c.eos?
+      raise Net::IMAP::Error, "Server does not support auth (qop = #{sparams['qop'].join(',')})" unless sparams['qop'].include?("auth")
 
       response = {
         :nonce => sparams['nonce'],
@@ -77,10 +74,17 @@ class Net::IMAP::DigestMD5Authenticator
     end
   end
 
-  def initialize(user, password, authname = nil)
+  def initialize(user, password, authname = nil, warn_deprecation: true)
+    if warn_deprecation
+      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
+      # TODO: recommend SCRAM instead.
+    end
+    require "digest/md5"
+    require "strscan"
     @user, @password, @authname = user, password, authname
     @nc, @stage = {}, STAGE_ONE
   end
+
 
   private
 
@@ -100,7 +104,7 @@ class Net::IMAP::DigestMD5Authenticator
   def qdval(k, v)
     return if k.nil? or v.nil?
     if %w"username authzid realm nonce cnonce digest-uri qop".include? k
-      v.gsub!(/([\\"])/, "\\\1")
+      v = v.gsub(/([\\"])/, "\\\1")
       return '%s="%s"' % [k, v]
     else
       return '%s=%s' % [k, v]
