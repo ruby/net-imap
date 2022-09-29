@@ -13,7 +13,7 @@ class Net::IMAP::XOauth2Authenticator
   end
 
   def build_oauth2_string(user, oauth2_token)
-    format("user=%s\1auth=Bearer %s\1\1".encode('us-ascii'), user, oauth2_token)
+    format("user=%s\1auth=Bearer %s\1\1", user, oauth2_token)
   end
 
   Net::IMAP.add_authenticator 'XOAUTH2', self

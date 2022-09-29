@@ -35,7 +35,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_xoauth2
     assert_equal(
-      "user=username\1auth=Bearer token\1\1".encode('us-ascii'),
+      "user=username\1auth=Bearer token\1\1",
       Net::IMAP::XOauth2Authenticator.new("username", "token").process(nil)
     )
   end
