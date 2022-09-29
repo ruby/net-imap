@@ -30,6 +30,17 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   # ----------------------
+  # XOAUTH2
+  # ----------------------
+
+  def test_xoauth2
+    assert_equal(
+      "user=username\1auth=Bearer token\1\1",
+      Net::IMAP::XOauth2Authenticator.new("username", "token").process(nil)
+    )
+  end
+
+  # ----------------------
   # LOGIN (obsolete)
   # ----------------------
 
@@ -128,5 +139,4 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
       )
     )
   end
-
 end
