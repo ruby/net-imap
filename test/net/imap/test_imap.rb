@@ -825,12 +825,14 @@ EOF
         requests.push(sock.gets)
         sock.print("RUBY0002 OK [COPYUID 38505 3955,3960:3962 3963:3966] " \
                    "COPY completed\r\n")
+        requests.push(sock.gets)
+        sock.print("RUBY0003 OK [COPYUID 38505 3955 3967] COPY completed\r\n")
         sock.gets
         sock.print("* NO [UIDNOTSTICKY] Non-persistent UIDs\r\n")
-        sock.print("RUBY0003 OK SELECT completed\r\n")
+        sock.print("RUBY0004 OK SELECT completed\r\n")
         sock.gets
         sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0004 OK LOGOUT completed\r\n")
+        sock.print("RUBY0005 OK LOGOUT completed\r\n")
       ensure
         sock.close
         server.close
@@ -853,6 +855,9 @@ EOF
         resp,
         [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]]
       )
+      resp = imap.uid_copy(3955, 'trash')
+      assert_equal(requests.pop, "RUBY0003 UID COPY 3955 trash\r\n")
+      assert_equal(resp, [38505, [3955], [3967]])
       imap.select('trash')
       assert_equal(
         imap.responses["NO"].last.code,

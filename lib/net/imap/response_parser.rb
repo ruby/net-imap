@@ -1342,13 +1342,19 @@ module Net
       end
 
       def set
-        token = match(T_ATOM)
-        token.value.split(',').flat_map do |element|
-          if element.include?(':')
-            Range.new(*element.split(':').map(&:to_i)).to_a
-          else
-            element.to_i
+        case lookahead.symbol
+        when T_NUMBER then [match(T_NUMBER).value.to_i]
+        when T_ATOM
+          match(T_ATOM).value.split(',').flat_map do |element|
+            if element.include?(':')
+              Range.new(*element.split(':').map(&:to_i)).to_a
+            else
+              element.to_i
+            end
           end
+        else
+          shift_token
+          nil
         end
       end
 
