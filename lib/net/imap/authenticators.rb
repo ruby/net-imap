@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "ruby2_keywords"
+
 # Registry for SASL authenticators used by Net::IMAP.
 module Net::IMAP::Authenticators
 
@@ -13,22 +15,24 @@ module Net::IMAP::Authenticators
   #
   # If +auth_type+ refers to an existing authenticator, it will be
   # replaced by the new one.
+  #
   def add_authenticator(auth_type, authenticator)
     authenticators[auth_type] = authenticator
   end
 
   # Builds an authenticator for Net::IMAP#authenticate.  +args+ will be passed
   # directly to the chosen authenticator's +#initialize+.
-  def authenticator(mechanism, *authargs, **properties, &callback)
-    authenticator = authenticators.fetch(mechanism.upcase) do
+  def authenticator(mechanism, *authargs, &callback)
+    authenticator = authenticators.fetch(mechanism.to_s.upcase) do
       raise ArgumentError, 'unknown auth type - "%s"' % mechanism
     end
     if authenticator.respond_to?(:new)
-      authenticator.new(*authargs, **properties, &callback)
+      authenticator.new(*authargs, &callback)
     else
-      authenticator.call(*authargs, **properties, &callback)
+      authenticator.call(*authargs, &callback)
     end
   end
+  ruby2_keywords :authenticator
 
   private
 

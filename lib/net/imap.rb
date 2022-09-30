@@ -15,6 +15,7 @@
 
 require "socket"
 require "monitor"
+require "ruby2_keywords"
 require 'net/protocol'
 begin
   require "openssl"
@@ -409,9 +410,9 @@ module Net
     #
     # See +Net::IMAP::Authenticators+ for more information on plugging in your
     # own authenticator.
-    def authenticate(auth_type, *args)
-      authenticator = self.class.authenticator(auth_type, *args)
-      send_command("AUTHENTICATE", auth_type) do |resp|
+    def authenticate(mechanism, *args)
+      authenticator = self.class.authenticator(mechanism, *args)
+      send_command("AUTHENTICATE", mechanism) do |resp|
         if resp.instance_of?(ContinuationRequest)
           data = authenticator.process(resp.data.text.unpack("m")[0])
           s = [data].pack("m0")
@@ -420,6 +421,7 @@ module Net
         end
       end
     end
+    ruby2_keywords :authenticate
 
     # Sends a LOGIN command to identify the client and carries
     # the plaintext +password+ authenticating this +user+.  Note
