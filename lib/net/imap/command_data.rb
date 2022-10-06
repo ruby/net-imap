@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "date"
+
 require_relative "errors"
 
 module Net
@@ -21,7 +23,7 @@ module Net
             validate_data(i)
           end
         end
-      when Time
+      when Time, Date, DateTime
       when Symbol
       else
         data.validate
@@ -38,7 +40,9 @@ module Net
         send_number_data(data)
       when Array
         send_list_data(data, tag)
-      when Time
+      when Date
+        send_date_data(data)
+      when Time, DateTime
         send_time_data(data)
       when Symbol
         send_symbol_data(data)
@@ -101,15 +105,8 @@ module Net
       put_string(")")
     end
 
-    DATE_MONTH = %w(Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec)
-
-    def send_time_data(time)
-      t = time.dup.gmtime
-      s = format('"%2d-%3s-%4d %02d:%02d:%02d +0000"',
-                 t.day, DATE_MONTH[t.month - 1], t.year,
-                 t.hour, t.min, t.sec)
-      put_string(s)
-    end
+    def send_date_data(date) put_string Net::IMAP.encode_date(date) end
+    def send_time_data(time) put_string Net::IMAP.encode_time(time) end
 
     def send_symbol_data(symbol)
       put_string("\\" + symbol.to_s)
