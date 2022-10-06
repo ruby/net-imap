@@ -31,16 +31,40 @@ class IMAPDataEncodingTest < Test::Unit::TestCase
     assert_equal(utf8, s)
   end
 
-  def test_format_date
-    time = Time.mktime(2009, 7, 24)
-    s = Net::IMAP.format_date(time)
-    assert_equal("24-Jul-2009", s)
+  def test_encode_date
+    assert_equal("24-Jul-2009", Net::IMAP.encode_date(Time.mktime(2009, 7, 24)))
+    assert_equal("24-Jul-2009", Net::IMAP.format_date(Time.mktime(2009, 7, 24)))
+    assert_equal("06-Oct-2022", Net::IMAP.encode_date(Date.new(2022, 10, 6)))
   end
 
-  def test_format_datetime
-    time = Time.mktime(2009, 7, 24, 1, 23, 45)
-    s = Net::IMAP.format_datetime(time)
-    assert_match(/\A24-Jul-2009 01:23 [+\-]\d{4}\z/, s)
+  def test_decode_date
+    assert_equal Date.new(2022, 10, 6), Net::IMAP.decode_date("06-Oct-2022")
+    assert_equal Date.new(2022, 10, 6), Net::IMAP.decode_date('"06-Oct-2022"')
+    assert_equal Date.new(2022, 10, 6), Net::IMAP.parse_date("06-Oct-2022")
+  end
+
+  def test_encode_datetime
+    time = Time.new(2009, 7, 24, 1, 3, 5, "+05:00")
+    assert_equal('"24-Jul-2009 01:03:05 +0500"', Net::IMAP.encode_datetime(time))
+    # assert_equal('"24-Jul-2009 01:03:05 +0500"', Net::IMAP.format_datetime(time))
+    assert_equal('"24-Jul-2009 01:03:05 +0500"', Net::IMAP.format_time(time))
+    assert_equal('"24-Jul-2009 01:03:05 +0500"', Net::IMAP.encode_time(time))
+  end
+
+  def test_decode_datetime
+    expected = DateTime.new(2022, 10, 6, 1, 2, 3, "-04:00")
+    actual   = Net::IMAP.decode_datetime('"06-Oct-2022 01:02:03 -0400"')
+    assert_equal expected, actual
+    actual   = Net::IMAP.parse_datetime '" 6-Oct-2022 01:02:03 -0400"'
+    assert_equal expected, actual
+  end
+
+  def test_decode_time
+    expected = DateTime.new(2020, 11, 7, 1, 2, 3, "-04:00").to_time
+    actual   = Net::IMAP.parse_time '"07-Nov-2020 01:02:03 -0400"'
+    assert_equal expected, actual
+    actual   = Net::IMAP.decode_time '" 7-Nov-2020 01:02:03 -0400"'
+    assert_equal expected, actual
   end
 
 end
