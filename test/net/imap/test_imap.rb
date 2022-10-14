@@ -801,7 +801,7 @@ EOF
       imap = Net::IMAP.new(server_addr, :port => port)
       response = imap.uid_expunge(1000..1003)
       assert_equal("RUBY0001 UID EXPUNGE 1000:1003\r\n", requests.pop)
-      assert_equal(response.length, 3)
+      assert_equal(response, [1, 1, 1])
       imap.logout
     ensure
       imap.disconnect if imap
