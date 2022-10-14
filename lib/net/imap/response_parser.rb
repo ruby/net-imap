@@ -1135,9 +1135,9 @@ module Net
           match(T_SPACE)
           uidvalidity = number
           match(T_SPACE)
-          from_uid = set
+          from_uid = uid_set
           match(T_SPACE)
-          to_uid = set
+          to_uid = uid_set
           result = ResponseCode.new(name, [uidvalidity, from_uid, to_uid])
         else
           token = lookahead
@@ -1341,7 +1341,15 @@ module Net
         return token.value.to_i
       end
 
-      def set
+      # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
+      #      uid-set         = (uniqueid / uid-range) *("," uid-set)
+      #      uid-range       = (uniqueid ":" uniqueid)
+      #                          ; two uniqueid values and all values
+      #                          ; between these two regardless of order.
+      #                          ; Example: 2:4 and 4:2 are equivalent.
+      #      uniqueid        = nz-number
+      #                          ; Strictly ascending
+      def uid_set
         case lookahead.symbol
         when T_NUMBER then [match(T_NUMBER).value.to_i]
         when T_ATOM
