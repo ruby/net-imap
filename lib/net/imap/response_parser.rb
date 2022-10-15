@@ -1103,6 +1103,12 @@ module Net
       #                   "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
       #                   "UNSEEN" SP nz-number /
       #                   atom [SP 1*<any TEXT-CHAR except "]">]
+      #
+      # See https://datatracker.ietf.org/doc/html/rfc4315#section-6.4 for UIDPLUS extension
+      #
+      # resp-code-apnd  = "APPENDUID" SP nz-number SP append-uid
+      # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
+      # resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
       def resp_text_code
         token = match(T_ATOM)
         name = token.value.upcase
@@ -1119,6 +1125,20 @@ module Net
         when /\A(?:UIDVALIDITY|UIDNEXT|UNSEEN)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, number)
+        when /\A(?:APPENDUID)\z/n
+          match(T_SPACE)
+          uidvalidity = number
+          match(T_SPACE)
+          append_uid = number
+          result = ResponseCode.new(name, [uidvalidity, append_uid])
+        when /\A(?:COPYUID)\z/n
+          match(T_SPACE)
+          uidvalidity = number
+          match(T_SPACE)
+          from_uid = uid_set
+          match(T_SPACE)
+          to_uid = uid_set
+          result = ResponseCode.new(name, [uidvalidity, from_uid, to_uid])
         else
           token = lookahead
           if token.symbol == T_SPACE
@@ -1319,6 +1339,31 @@ module Net
         end
         token = match(T_NUMBER)
         return token.value.to_i
+      end
+
+      # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
+      #      uid-set         = (uniqueid / uid-range) *("," uid-set)
+      #      uid-range       = (uniqueid ":" uniqueid)
+      #                          ; two uniqueid values and all values
+      #                          ; between these two regardless of order.
+      #                          ; Example: 2:4 and 4:2 are equivalent.
+      #      uniqueid        = nz-number
+      #                          ; Strictly ascending
+      def uid_set
+        case lookahead.symbol
+        when T_NUMBER then [match(T_NUMBER).value.to_i]
+        when T_ATOM
+          match(T_ATOM).value.split(',').flat_map do |element|
+            if element.include?(':')
+              Range.new(*element.split(':').map(&:to_i)).to_a
+            else
+              element.to_i
+            end
+          end
+        else
+          shift_token
+          nil
+        end
       end
 
       def nil_atom
