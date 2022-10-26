@@ -1104,11 +1104,8 @@ module Net
       #                   "UNSEEN" SP nz-number /
       #                   atom [SP 1*<any TEXT-CHAR except "]">]
       #
-      # See https://datatracker.ietf.org/doc/html/rfc4315#section-6.4 for UIDPLUS extension
-      #
-      # resp-code-apnd  = "APPENDUID" SP nz-number SP append-uid
-      # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
-      # resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
+      # +UIDPLUS+ ABNF:: https://www.rfc-editor.org/rfc/rfc4315.html#section-4
+      #   resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
       def resp_text_code
         token = match(T_ATOM)
         name = token.value.upcase
@@ -1126,19 +1123,9 @@ module Net
           match(T_SPACE)
           result = ResponseCode.new(name, number)
         when /\A(?:APPENDUID)\z/n
-          match(T_SPACE)
-          uidvalidity = number
-          match(T_SPACE)
-          append_uid = number
-          result = ResponseCode.new(name, [uidvalidity, append_uid])
+          result = ResponseCode.new(name, resp_code_apnd__data)
         when /\A(?:COPYUID)\z/n
-          match(T_SPACE)
-          uidvalidity = number
-          match(T_SPACE)
-          from_uid = uid_set
-          match(T_SPACE)
-          to_uid = uid_set
-          result = ResponseCode.new(name, [uidvalidity, from_uid, to_uid])
+          result = ResponseCode.new(name, resp_code_copy__data)
         else
           token = lookahead
           if token.symbol == T_SPACE
@@ -1163,6 +1150,34 @@ module Net
           match(T_RPAR)
         end
         result
+      end
+
+      # already matched:  "APPENDUID"
+      #
+      # +UIDPLUS+ ABNF:: https://www.rfc-editor.org/rfc/rfc4315.html#section-4
+      #   resp-code-apnd  = "APPENDUID" SP nz-number SP append-uid
+      #   append-uid      = uniqueid
+      #   append-uid      =/ uid-set
+      #                     ; only permitted if client uses [MULTIAPPEND]
+      #                     ; to append multiple messages.
+      #
+      # n.b, uniqueid ⊂ uid-set.  To avoid inconsistent return types, we always
+      # match uid_set even if that returns a single-member array.
+      #
+      def resp_code_apnd__data
+        match(T_SPACE); validity = number
+        match(T_SPACE); dst_uids = uid_set # uniqueid ⊂ uid-set
+        UIDPlusData.new(validity, nil, dst_uids)
+      end
+
+      # already matched:  "COPYUID"
+      #
+      # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
+      def resp_code_copy__data
+        match(T_SPACE); validity = number
+        match(T_SPACE); src_uids = uid_set
+        match(T_SPACE); dst_uids = uid_set
+        UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
       def address_list
@@ -1350,19 +1365,14 @@ module Net
       #      uniqueid        = nz-number
       #                          ; Strictly ascending
       def uid_set
-        case lookahead.symbol
-        when T_NUMBER then [match(T_NUMBER).value.to_i]
+        token = match(T_NUMBER, T_ATOM)
+        case token.symbol
+        when T_NUMBER then [Integer(token.value)]
         when T_ATOM
-          match(T_ATOM).value.split(',').flat_map do |element|
-            if element.include?(':')
-              Range.new(*element.split(':').map(&:to_i)).to_a
-            else
-              element.to_i
-            end
-          end
-        else
-          shift_token
-          nil
+          token.value.split(",").flat_map {|range|
+            range = range.split(":").map {|uniqueid| Integer(uniqueid) }
+            range.size == 1 ? range : Range.new(range.min, range.max).to_a
+          }
         end
       end
 

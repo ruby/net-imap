@@ -848,16 +848,16 @@ EOF
 
         hello world
       EOF
-      assert_equal(resp, [38505, 3955])
+      assert_equal([38505, nil, [3955]], resp.data.code.data.to_a)
       resp = imap.uid_copy([3955,3960..3962], 'trash')
       assert_equal(requests.pop, "RUBY0002 UID COPY 3955,3960:3962 trash\r\n")
       assert_equal(
-        resp,
-        [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]]
+        [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]],
+        resp.data.code.data.to_a
       )
       resp = imap.uid_copy(3955, 'trash')
       assert_equal(requests.pop, "RUBY0003 UID COPY 3955 trash\r\n")
-      assert_equal(resp, [38505, [3955], [3967]])
+      assert_equal([38505, [3955], [3967]], resp.data.code.data.to_a)
       imap.select('trash')
       assert_equal(
         imap.responses["NO"].last.code,

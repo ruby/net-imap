@@ -778,12 +778,7 @@ module Net
       end
       args.push(date_time) if date_time
       args.push(Literal.new(message))
-      synchronize do
-        resp = send_command("APPEND", mailbox, *args)
-        if resp.data.code && resp.data.code.name == "APPENDUID"
-          return resp.data.code.data
-        end
-      end
+      send_command("APPEND", mailbox, *args)
     end
 
     # Sends a CHECK command to request a checkpoint of the currently
@@ -1459,12 +1454,7 @@ module Net
     end
 
     def copy_internal(cmd, set, mailbox)
-      synchronize do
-        resp = send_command(cmd, MessageSet.new(set), mailbox)
-        if resp.data.code && resp.data.code.name == "COPYUID"
-          return resp.data.code.data
-        end
-      end
+      send_command(cmd, MessageSet.new(set), mailbox)
     end
 
     def sort_internal(cmd, sort_keys, search_keys, charset)
