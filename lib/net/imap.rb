@@ -434,20 +434,22 @@ module Net
     # Sends a SELECT command to select a +mailbox+ so that messages
     # in the +mailbox+ can be accessed.
     #
-    # After you have selected a mailbox, you may retrieve the
-    # number of items in that mailbox from <code>@responses["EXISTS"][-1]</code>,
-    # and the number of recent messages from <code>@responses["RECENT"][-1]</code>.
-    # Note that these values can change if new messages arrive
-    # during a session; see #add_response_handler for a way of
-    # detecting this event.
+    # After you have selected a mailbox, you may retrieve the number of items in
+    # that mailbox from <tt>imap.responses["EXISTS"][-1]</tt>, and the number of
+    # recent messages from <tt>imap.responses["RECENT"][-1]</tt>.  Note that
+    # these values can change if new messages arrive during a session or when
+    # existing messages are expunged; see #add_response_handler for a way to
+    # detect these events.
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
-    # If the server supports the [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]
-    # extension it may return an additional "NO" response with a "UIDNOTSTICKY" response code
-    # indicating that the mailstore does not support persistent UIDs
-    # [1[https://www.rfc-editor.org/rfc/rfc4315.html#page-4]]:
+    # ==== Capabilities
+    #
+    # If [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]] is supported,
+    # the server may return an untagged "NO" response with a "UIDNOTSTICKY"
+    # response code indicating that the mailstore does not support persistent
+    # UIDs:
     #   @responses["NO"].last.code.name == "UIDNOTSTICKY"
     def select(mailbox)
       synchronize do
@@ -759,9 +761,16 @@ module Net
     # not exist (it is not created automatically), or if the flags,
     # date_time, or message arguments contain errors.
     #
-    # If the server supports the [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]
-    # extension it returns an array with the UIDVALIDITY and the assigned UID of the
-    # appended message.
+    # ==== Capabilities
+    #
+    # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
+    # supported, the server's response should include a +APPENDUID+ response
+    # code with the UIDVALIDITY of the destination mailbox and the assigned UID
+    # of the appended message.
+    #
+    #--
+    # TODO: add MULTIAPPEND support
+    #++
     def append(mailbox, message, flags = nil, date_time = nil)
       args = []
       if flags
@@ -818,8 +827,10 @@ module Net
     #        #responses and this method returns them as an array of
     #        <em>sequence number</em> integers.
     #
-    # ==== Required capability
-    # +UIDPLUS+ - described in [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]].
+    # ==== Capability requirement
+    #
+    # +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] must be
+    # supported by the server.
     def uid_expunge(uid_set)
       synchronize do
         send_command("UID EXPUNGE", MessageSet.new(uid_set))
@@ -948,14 +959,21 @@ module Net
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
     #
-    # If the server supports the  [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]
-    # extension it returns an array with the UIDVALIDITY, the UID set of the source messages
-    # and the assigned UID set of the copied messages.
+    # ==== Capabilities
+    #
+    # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
+    # supported, the server's response should include a +COPYUID+ response code
+    # with the UIDVALIDITY of the destination mailbox, the UID set of the source
+    # messages, and the assigned UID set of the moved messages.
     def copy(set, mailbox)
       copy_internal("COPY", set, mailbox)
     end
 
     # Similar to #copy, but +set+ contains unique identifiers.
+    #
+    # ==== Capabilities
+    #
+    # +UIDPLUS+ affects #uid_copy the same way it affects #copy.
     def uid_copy(set, mailbox)
       copy_internal("UID COPY", set, mailbox)
     end
@@ -965,18 +983,27 @@ module Net
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
     #
-    # The MOVE extension is described in [EXT-MOVE[https://tools.ietf.org/html/rfc6851]].
+    # ==== Capabilities requirements
     #
-    # If the server supports the [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]
-    # extension it returns an array with the UIDVALIDITY, the UID set of the source messages
-    # and the assigned UID set of the moved messages.
+    # +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must be supported by
+    # the server.
+    #
+    # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
+    # also supported, the server's response should include a +COPYUID+ response
+    # code with the UIDVALIDITY of the destination mailbox, the UID set of the
+    # source messages, and the assigned UID set of the moved messages.
+    #
     def move(set, mailbox)
       copy_internal("MOVE", set, mailbox)
     end
 
     # Similar to #move, but +set+ contains unique identifiers.
     #
-    # The MOVE extension is described in [EXT-MOVE[https://tools.ietf.org/html/rfc6851]].
+    # ==== Capabilities requirements
+    #
+    # Same as #move: +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must
+    # be supported by the server.  +UIDPLUS+ also affects #uid_move the same way
+    # it affects #move.
     def uid_move(set, mailbox)
       copy_internal("UID MOVE", set, mailbox)
     end
