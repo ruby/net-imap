@@ -363,4 +363,79 @@ EOF
     assert_equal("/", namespace.delim)
     assert_equal({"X-PARAM" => ["FLAG1", "FLAG2"]}, namespace.extensions)
   end
+
+  def test_uidplus_appenduid
+    parser = Net::IMAP::ResponseParser.new
+    # RFC4315 example
+    response = parser.parse(
+      "A003 OK [APPENDUID 38505 3955] APPEND completed\r\n"
+    )
+    code = response.data.code
+    assert_equal   "APPENDUID", code.name
+    assert_kind_of Net::IMAP::UIDPlusData, code.data
+    assert_equal   Net::IMAP::UIDPlusData.new(38505, nil, [3955]), code.data
+    assert_equal   "APPENDUID", code.name
+    assert_kind_of Net::IMAP::UIDPlusData, code.data
+    assert_equal   Net::IMAP::UIDPlusData.new(38505, nil, [3955]), code.data
+    # MULTIAPPEND compatibility:
+    response = parser.parse(
+      "A003 OK [APPENDUID 2 4,6:7,9] APPEND completed\r\n"
+    )
+    code = response.data.code
+    assert_equal   "APPENDUID", code.name
+    assert_kind_of Net::IMAP::UIDPlusData, code.data
+    assert_equal   Net::IMAP::UIDPlusData.new(2, nil, [4, 6, 7, 9]), code.data
+  end
+
+  def test_uidplus_copyuid
+    parser = Net::IMAP::ResponseParser.new
+    # RFC4315 example, but using mixed case "copyUID".
+    response = parser.parse(
+      "A004 OK [copyUID 38505 304,319:320 3956:3958] Done\r\n"
+    )
+    code = response.data.code
+    assert_equal   "COPYUID", code.name
+    assert_kind_of Net::IMAP::UIDPlusData, code.data
+    assert_equal   Net::IMAP::UIDPlusData.new(
+      38505, [304, 319, 320], [3956, 3957, 3958]
+    ), code.data
+  end
+
+  # From RFC4315 ABNF:
+  # > and all values between these two *regardless of order*.
+  # > Example: 2:4 and 4:2 are equivalent.
+  def test_uidplus_copyuid__reversed_ranges
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse(
+      "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
+    )
+    code = response.data.code
+    assert_equal Net::IMAP::UIDPlusData.new(
+      9999,
+      [19, 20, 495, 496, 497, 498, 499, 500],
+      [92, 93, 94, 95, 96, 97, 100, 101]
+    ), code.data
+  end
+
+  def test_uidplus_copyuid__uid_mapping
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse(
+      "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
+    )
+    code = response.data.code
+    assert_equal(
+      {
+         19 =>  92,
+         20 =>  93,
+        495 =>  94,
+        496 =>  95,
+        497 =>  96,
+        498 =>  97,
+        499 => 100,
+        500 => 101,
+      },
+      code.data.uid_mapping
+    )
+  end
+
 end
