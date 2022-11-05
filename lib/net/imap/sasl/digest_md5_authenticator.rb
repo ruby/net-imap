@@ -41,7 +41,8 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   attr_reader :authzid
 
   # :call-seq:
-  #   new(username,  password,  authzid = nil) -> authenticator
+  #   new(username,  password,  authzid = nil, **options) -> authenticator
+  #   new(username:, password:, authzid:  nil, **options) -> authenticator
   #
   # Creates an Authenticator for the "+DIGEST-MD5+" SASL mechanism.
   #
@@ -55,7 +56,12 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   # * +warn_deprecation+ — Set to +false+ to silence the warning.
   #
   # See the documentation for each attribute for more details.
-  def initialize(username, password, authzid = nil, warn_deprecation: true)
+  def initialize(user = nil, pass = nil, authz = nil,
+                 username: nil, password: nil, authzid: nil,
+                 warn_deprecation: true, **)
+    username ||= user or raise ArgumentError, "missing username"
+    password ||= pass or raise ArgumentError, "missing password"
+    authzid  ||= authz
     if warn_deprecation
       warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
       # TODO: recommend SCRAM instead.
