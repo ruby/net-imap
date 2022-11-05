@@ -386,7 +386,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_digest_md5_authenticator_deprecated
     assert_warn(/DIGEST-MD5.+deprecated.+RFC6331/) do
-      Net::IMAP::SASL.authenticator("DIGEST-MD5", "user", "pass")
+      Net::IMAP.authenticator("DIGEST-MD5", "user", "pass")
     end
   end
 
@@ -422,17 +422,86 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     )
   end
 
-  def test_digest_md5_authenticator_garbage
+  def test_digest_md5_authenticator_realm_and_digest_uri
+    auth = digest_md5(authcid: "authc",
+                      authzid: "authz",
+                      password: "pass",
+                      realm: "myrealm",
+                      service: "smtp",
+                      host: "mail.example.com",
+                      service_name: "example.com")
+    assert_match(
+      %r{\A
+        nonce="OA6MG9tEQGm2hh",
+        username="authc",
+        realm="myrealm",
+        cnonce="[a-zA-Z0-9+/]{12,}={0,3}",
+        digest-uri="smtp/mail\.example\.com/example\.com",
+        qop="auth",
+        maxbuf=65535,
+        nc=00000001,
+        charset=utf-8,
+        authzid="authz",
+        response=[a-f0-9]+
+      \Z}x,
+      auth.process(
+        %w[
+          realm="somerealm"
+          nonce="OA6MG9tEQGm2hh"
+          qop="auth"
+          charset=utf-8
+          algorithm=md5-sess
+        ].join(",")
+      )
+    )
+  end
+
+  def test_digest_md5_authenticator_empty_challenge
     auth = digest_md5("user", "pass")
     assert_raise(Net::IMAP::DataFormatError) do
+      auth.process("   ")
+    end
+  end
+
+  def test_digest_md5_authenticator_empty_challenge_commas
+    auth = digest_md5("user", "pass")
+    assert_raise_with_message(Net::IMAP::DataFormatError, /empty challenge/i) do
+      auth.process(" ,  ,  ")
+    end
+  end
+
+  def test_digest_md5_authenticator_garbage_no_equal_sign
+    auth = digest_md5("user", "pass")
+    assert_raise_with_message(Net::IMAP::DataFormatError, /unparsable/i) do
+      auth.process('nonce=required,algorithm=md5-sess,foo')
+    end
+  end
+
+  def test_digest_md5_authenticator_qdstr_with_comma
+    auth = digest_md5("user", "pass")
+    assert_raise_with_message(Net::IMAP::DataFormatError, /unparsable/i) do
+      auth.process('nonce=required,algorithm=md5-sess,.')
+    end
+  end
+
+  def test_digest_md5_authenticator_garbage
+    auth = digest_md5("user", "pass")
+    assert_raise_with_message(Net::IMAP::DataFormatError, /unparsable/i) do
       auth.process('.')
     end
   end
 
-  def test_digest_md5_authenticator_no_qop
+  def test_digest_md5_authenticator_empty_qop
     auth = digest_md5("user", "pass")
-    assert_raise(Net::IMAP::DataFormatError) do
+    assert_raise_with_message(Net::IMAP::DataFormatError, /bad challenge/i) do
       auth.process('Qop=""')
+    end
+  end
+
+  def test_digest_md5_authenticator_missing_nonce
+    auth = digest_md5("user", "pass")
+    assert_raise_with_message(Net::IMAP::DataFormatError, /didn't send nonce/i) do
+      auth.process('Qop="auth"')
     end
   end
 
