@@ -602,46 +602,57 @@ module Net
       end
     end
 
+    # :call-seq:
+    #   authenticate(mechanism, ...)                               -> ok_resp
+    #   authenticate(mech, *creds, **props) {|prop, auth| val }    -> ok_resp
+    #   authenticate(mechanism, authnid, credentials, authzid=nil) -> ok_resp
+    #   authenticate(mechanism, **properties)                      -> ok_resp
+    #   authenticate(mechanism) {|propname, authctx| prop_value }  -> ok_resp
+    #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.
     #
-    # The +auth_type+ parameter is a string that
-    # represents the authentication mechanism to be used. Currently Net::IMAP
-    # supports the following mechanisms:
+    # +mechanism+ is the name of the \SASL authentication mechanism to be used.
+    # All other arguments are forwarded to the authenticator for the requested
+    # mechanism.  The listed call signatures are suggestions.  <em>The
+    # documentation for each individual mechanism must be consulted for its
+    # specific parameters.</em>
     #
-    # PLAIN:: Login using cleartext user and password.  Secure with TLS.
-    #         See PlainAuthenticator.
-    # CRAM-MD5::   DEPRECATED: Use PLAIN (or DIGEST-MD5) with TLS.
-    # DIGEST-MD5:: DEPRECATED by RFC6331. Must be secured using TLS.
-    #              See DigestMD5Authenticator.
-    # LOGIN::      DEPRECATED: Use PLAIN.
+    # <em>In general</em>, all of a mechanism's properties can be set by keyword
+    # argument or callback, but mechanisms may allow common properties to be set
+    # with positional arguments.  See SASL::Authenticator@Properties and
+    # SASL::Authenticator@Callbacks for more details.
     #
-    # Most mechanisms require two args: authentication identity (e.g. username)
-    # and credentials (e.g. a password).  But each mechanism requires and allows
-    # different arguments; please consult the documentation for the specific
-    # mechanisms you are using.  <em>Several obsolete mechanisms are available
-    # for backwards compatibility.  Using deprecated mechanisms will issue
-    # warnings.</em>
-    #
-    # Servers do not support all mechanisms and clients must not attempt to use
-    # a mechanism unless "AUTH=#{mechanism}" is listed as a #capability.
-    # Clients must not attempt to authenticate or #login when +LOGINDISABLED+ is
-    # listed with the capabilities.  Server capabilities, especially auth
-    # mechanisms, do change after calling #starttls so they need to be checked
-    # again.
-    #
-    # For example:
-    #
-    #    imap.authenticate('PLAIN', user, password)
-    #
-    # A Net::IMAP::NoResponseError is raised if authentication fails.
-    #
-    # See Net::IMAP::Authenticators for more information on plugging in your
-    # own authenticator.
+    # An exception Net::IMAP::NoResponseError is raised if authentication fails.
     #
     # Related: #login, #starttls
     #
-    # ==== Capabilities
+    # ==== Supported SASL Mechanisms
+    #
+    # Net::IMAP currently supports the following mechanisms:
+    #
+    # PLAIN::      Login using clear-text user and password.  Secure with TLS.
+    #              See PlainAuthenticator.
+    # XOAUTH2::    Login using a username and OAuth2 access token.  Non-standard
+    #              and obsoleted by +OAUTHBEARER+, but still widely supported.
+    #              See XOauth2Authenticator.
+    #
+    # See Net::IMAP::Authenticators for information on plugging in
+    # authenticators for other mechanisms.  See the {SASL mechanism
+    # registry}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
+    # for information on these and other SASL mechanisms.
+    #
+    # ===== Deprecated mechanisms
+    #
+    # <em>Obsolete mechanisms are available for backwards compatibility.
+    # Using a deprecated mechanism will print a warning.</em>
+    #
+    # DIGEST-MD5:: DEPRECATED by RFC6331. Must be secured using TLS.
+    #              See DigestMD5Authenticator.
+    # CRAM-MD5::   DEPRECATED: Use +PLAIN+ (or SCRAM-*)
+    # LOGIN::      DEPRECATED: Use +PLAIN+ with TLS.
+    #
+    # ===== Capabilities
     #
     # Clients MUST NOT attempt to #authenticate or #login when +LOGINDISABLED+
     # is listed with the capabilities.
@@ -654,9 +665,36 @@ module Net
     # The TaggedResponse to #authenticate may include updated capabilities in
     # its ResponseCode.
     #
-    def authenticate(auth_type, *args)
-      authenticator = self.class.authenticator(auth_type, *args)
-      send_command("AUTHENTICATE", auth_type) do |resp|
+    # ===== Example
+    # Most mechanisms ignore unhandled keyword arguments, so the same config can
+    # be used for multiple authenticator types:
+    #    password  = nil # saved locally, so we don't ask more than once
+    #    accesstok = nil
+    #    creds = {
+    #      authcid:      username,
+    #      password:     proc { password  ||= ui.prompt_for_password },
+    #      oauth2_token: proc { accesstok ||= kms.lookup(username, :access_token).refreshed },
+    #    }
+    #    capa = imap.capability
+    #    if capa.include? "LOGINDISABLED"
+    #      raise "the server has disabled login"
+    #    elsif capa.include? "AUTH=OAUTHBEARER"
+    #      imap.authenticate "OAUTHBEARER",   **creds # authcid, oauth2_token
+    #    elsif capa.include? "AUTH=XOAUTH2"
+    #      imap.authenticate "XOAUTH2",       **creds # authcid, oauth2_token
+    #    elsif capa.include? "AUTH=SCRAM-SHA-256"
+    #      imap.authenticate "SCRAM-SHA-256", **creds # authcid, password
+    #    elsif capa.include? "AUTH=PLAIN"
+    #      imap.authenticate "PLAIN",         **creds # authcid, password
+    #    elsif capa.include? "AUTH=DIGEST-MD5"
+    #      imap.authenticate "DIGEST-MD5",    **creds # authcid, password
+    #    else
+    #      raise "no acceptable authentication mechanism is available"
+    #    end
+    #
+    def authenticate(mechanism, *args, **props, &cb)
+      authenticator = self.class.authenticator(mechanism, *args, **props, &cb)
+      send_command("AUTHENTICATE", mechanism) do |resp|
         if resp.instance_of?(ContinuationRequest)
           data = authenticator.process(resp.data.text.unpack("m")[0])
           s = [data].pack("m0")
