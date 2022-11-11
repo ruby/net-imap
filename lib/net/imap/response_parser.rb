@@ -5,7 +5,9 @@ require_relative "errors"
 module Net
   class IMAP < Protocol
 
-    class ResponseParser # :nodoc:
+    # Parses an \IMAP server response.
+    class ResponseParser
+      # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
       def initialize
         @str = nil
         @pos = nil
@@ -13,6 +15,12 @@ module Net
         @token = nil
       end
 
+      # :call-seq:
+      #   parse(str) -> ContinuationRequest
+      #   parse(str) -> UntaggedResponse
+      #   parse(str) -> TaggedResponse
+      #
+      # Raises ResponseParseError for unparsable strings.
       def parse(str)
         @str = str
         @pos = 0
@@ -22,6 +30,8 @@ module Net
       end
 
       private
+
+      # :stopdoc:
 
       EXPR_BEG          = :EXPR_BEG
       EXPR_DATA         = :EXPR_DATA
