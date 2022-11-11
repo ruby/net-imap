@@ -116,6 +116,8 @@ module Net
     # Net::IMAP::UIDPlusData represents the ResponseCode#data that accompanies
     # the +APPENDUID+ and +COPYUID+ response codes.
     #
+    # See [[UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]].
+    #
     # ==== Capability requirement
     #
     # The +UIDPLUS+ capability[rdoc-ref:Net::IMAP#capability] must be supported.
@@ -129,13 +131,6 @@ module Net
     #--
     # TODO: support MULTIAPPEND
     #++
-    #
-    # ==== References
-    #
-    # [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]::
-    #   Crispin, M., "Internet Message Access Protocol (IMAP) - UIDPLUS
-    #   extension", RFC 4315, DOI 10.17487/RFC4315, December 2005,
-    #   <https://www.rfc-editor.org/info/rfc4315>.
     #
     class UIDPlusData < Struct.new(:uidvalidity, :source_uids, :assigned_uids)
       ##
@@ -332,6 +327,11 @@ module Net
     #        [UID]
     #           A number expressing the unique identifier of the message.
     #
+    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
+    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]
+    # for full description of the standard fetch response data items, and
+    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
+    #
     class FetchData < Struct.new(:seqno, :attr)
     end
 
@@ -358,6 +358,11 @@ module Net
     # in_reply_to:: Returns a string that represents the in-reply-to.
     #
     # message_id:: Returns a string that represents the message-id.
+    #
+    # See [{IMAP4rev1 §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]]
+    # and [{IMAP4rev2 §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]]
+    # for full description of the envelope fields, and
+    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
     class Envelope < Struct.new(:date, :subject, :from, :sender, :reply_to,
                                 :to, :cc, :bcc, :in_reply_to, :message_id)
@@ -439,6 +444,11 @@ module Net
     # extension:: Returns extension data.
     #
     # multipart?:: Returns false.
+    #
+    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
+    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2-4.9]
+    # for full description of all +BODYSTRUCTURE+ fields, and also
+    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
     class BodyTypeBasic < Struct.new(:media_type, :subtype,
                                      :param, :content_id,

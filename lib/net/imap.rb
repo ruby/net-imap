@@ -152,72 +152,184 @@ module Net
   #
   #
   # == References
+  #--
+  # TODO: Consider moving references list to REFERENCES.md or REFERENCES.rdoc.
+  #++
   #
-  # [[IMAP[https://tools.ietf.org/html/rfc3501]]]
-  #    Crispin, M. "INTERNET MESSAGE ACCESS PROTOCOL - \VERSION 4rev1",
-  #    RFC-3501[https://tools.ietf.org/html/rfc3501], March 2003.  (Note:
-  #    obsoletes RFC-2060[https://tools.ietf.org/html/rfc2060], December 1996.)
+  # [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501.html]]::
+  #   Crispin, M., "INTERNET MESSAGE ACCESS PROTOCOL - \VERSION 4rev1",
+  #   RFC 3501, DOI 10.17487/RFC3501, March 2003,
+  #   <https://www.rfc-editor.org/info/rfc3501>.
   #
-  # [[LANGUAGE-TAGS[https://tools.ietf.org/html/rfc1766]]]
-  #    Phillips, A. and Davis, M. "Tags for Identifying Languages",
-  #    RFC-5646[https://tools.ietf.org/html/rfc5646], September 2009.
-  #    (Note: obsoletes
-  #    RFC-3066[https://tools.ietf.org/html/rfc3066], January 2001,
-  #    RFC-4646[https://tools.ietf.org/html/rfc4646], September 2006, and
-  #    RFC-1766[https://tools.ietf.org/html/rfc1766], March 1995.)
+  # [IMAP-ABNF-EXT[https://www.rfc-editor.org/rfc/rfc4466.html]]::
+  #   Melnikov, A. and C. Daboo, "Collected Extensions to IMAP4 ABNF",
+  #   RFC 4466, DOI 10.17487/RFC4466, April 2006,
+  #   <https://www.rfc-editor.org/info/rfc4466>.
   #
-  # [[MD5[https://tools.ietf.org/html/rfc1864]]]
+  #   <em>Note: Net::IMAP cannot parse the entire RFC4466 grammar yet.</em>
+  #
+  # [{IMAP4rev2}[https://www.rfc-editor.org/rfc/rfc9051.html]]::
+  #   Melnikov, A., Ed., and B. Leiba, Ed., "Internet Message Access Protocol
+  #   (\IMAP) - Version 4rev2", RFC 9051, DOI 10.17487/RFC9051, August 2021,
+  #   <https://www.rfc-editor.org/info/rfc9051>.
+  #
+  #   <em>Note: Net::IMAP is not fully compatible with IMAP4rev2 yet.</em>
+  #
+  # [IMAP-IMPLEMENTATION[https://www.rfc-editor.org/info/rfc2683]]::
+  #   Leiba, B., "IMAP4 Implementation Recommendations",
+  #   RFC 2683, DOI 10.17487/RFC2683, September 1999,
+  #   <https://www.rfc-editor.org/info/rfc2683>.
+  #
+  # [IMAP-MULTIACCESS[https://www.rfc-editor.org/info/rfc2180]]::
+  #   Gahrns, M., "IMAP4 Multi-Accessed Mailbox Practice", RFC 2180, DOI
+  #   10.17487/RFC2180, July 1997, <https://www.rfc-editor.org/info/rfc2180>.
+  #
+  # [UTF7[https://tools.ietf.org/html/rfc2152]]::
+  #   Goldsmith, D. and M. Davis, "UTF-7 A Mail-Safe Transformation Format of
+  #   Unicode", RFC 2152, DOI 10.17487/RFC2152, May 1997,
+  #   <https://www.rfc-editor.org/info/rfc2152>.
+  #
+  # === Message envelope and body structure
+  #
+  # [RFC5322[https://tools.ietf.org/html/rfc5322]]::
+  #   Resnick, P., Ed., "Internet Message Format",
+  #   RFC 5322, DOI 10.17487/RFC5322, October 2008,
+  #   <https://www.rfc-editor.org/info/rfc5322>.
+  #
+  #   <em>Note: obsoletes</em>
+  #   RFC-2822[https://tools.ietf.org/html/rfc2822]<em> (April 2001) and</em>
+  #   RFC-822[https://tools.ietf.org/html/rfc822]<em> (August 1982).</em>
+  #
+  # [CHARSET[https://tools.ietf.org/html/rfc2978]]::
+  #   Freed, N. and J. Postel, "IANA Charset Registration Procedures", BCP 19,
+  #   RFC 2978, DOI 10.17487/RFC2978, October 2000,
+  #   <https://www.rfc-editor.org/info/rfc2978>.
+  #
+  # [DISPOSITION[https://tools.ietf.org/html/rfc2183]]::
+  #    Troost, R., Dorner, S., and K. Moore, Ed., "Communicating Presentation
+  #    Information in Internet Messages: The Content-Disposition Header
+  #    Field", RFC 2183, DOI 10.17487/RFC2183, August 1997,
+  #    <https://www.rfc-editor.org/info/rfc2183>.
+  #
+  # [MIME-IMB[https://tools.ietf.org/html/rfc2045]]::
+  #    Freed, N. and N. Borenstein, "Multipurpose Internet Mail Extensions
+  #    (MIME) Part One: Format of Internet Message Bodies",
+  #    RFC 2045, DOI 10.17487/RFC2045, November 1996,
+  #    <https://www.rfc-editor.org/info/rfc2045>.
+  #
+  # [MIME-IMT[https://tools.ietf.org/html/rfc2046]]::
+  #    Freed, N. and N. Borenstein, "Multipurpose Internet Mail Extensions
+  #    (MIME) Part Two: Media Types", RFC 2046, DOI 10.17487/RFC2046,
+  #    November 1996, <https://www.rfc-editor.org/info/rfc2046>.
+  #
+  # [MIME-HDRS[https://tools.ietf.org/html/rfc2047]]::
+  #    Moore, K., "MIME (Multipurpose Internet Mail Extensions) Part Three:
+  #    Message Header Extensions for Non-ASCII Text",
+  #    RFC 2047, DOI 10.17487/RFC2047, November 1996,
+  #    <https://www.rfc-editor.org/info/rfc2047>.
+  #
+  # [RFC2231[https://tools.ietf.org/html/rfc2231]]::
+  #    Freed, N. and K. Moore, "MIME Parameter Value and Encoded Word
+  #    Extensions: Character Sets, Languages, and Continuations",
+  #    RFC 2231, DOI 10.17487/RFC2231, November 1997,
+  #    <https://www.rfc-editor.org/info/rfc2231>.
+  #
+  # [I18n-HDRS[https://tools.ietf.org/html/rfc6532]]::
+  #    Yang, A., Steele, S., and N. Freed, "Internationalized Email Headers",
+  #    RFC 6532, DOI 10.17487/RFC6532, February 2012,
+  #    <https://www.rfc-editor.org/info/rfc6532>.
+  #
+  # [LANGUAGE-TAGS[https://www.rfc-editor.org/info/rfc3282]]::
+  #    Alvestrand, H., "Content Language Headers",
+  #    RFC 3282, DOI 10.17487/RFC3282, May 2002,
+  #    <https://www.rfc-editor.org/info/rfc3282>.
+  #
+  # [LOCATION[https://www.rfc-editor.org/info/rfc2557]]::
+  #    Palme, J., Hopmann, A., and N. Shelness, "MIME Encapsulation of
+  #    Aggregate Documents, such as HTML (MHTML)",
+  #    RFC 2557, DOI 10.17487/RFC2557, March 1999,
+  #    <https://www.rfc-editor.org/info/rfc2557>.
+  #
+  # [MD5[https://tools.ietf.org/html/rfc1864]]::
   #    Myers, J. and M. Rose, "The Content-MD5 Header Field",
-  #    RFC-1864[https://tools.ietf.org/html/rfc1864], October 1995.
+  #    RFC 1864, DOI 10.17487/RFC1864, October 1995,
+  #    <https://www.rfc-editor.org/info/rfc1864>.
   #
-  # [[MIME-IMB[https://tools.ietf.org/html/rfc2045]]]
-  #    Freed, N. and N. Borenstein, "MIME (Multipurpose Internet
-  #    Mail Extensions) Part One: Format of Internet Message Bodies",
-  #    RFC-2045[https://tools.ietf.org/html/rfc2045], November 1996.
+  #--
+  # TODO: Document IMAP keywords.
   #
-  # [[RFC-5322[https://tools.ietf.org/html/rfc5322]]]
-  #    Resnick, P., "Internet Message Format",
-  #    RFC-5322[https://tools.ietf.org/html/rfc5322], October 2008.
-  #    (Note: obsoletes
-  #    RFC-2822[https://tools.ietf.org/html/rfc2822], April 2001, and
-  #    RFC-822[https://tools.ietf.org/html/rfc822], August 1982.)
+  # [RFC3503[https://tools.ietf.org/html/rfc3503]]
+  #   Melnikov, A., "Message Disposition Notification (MDN)
+  #   profile for Internet Message Access Protocol (IMAP)",
+  #   RFC 3503, DOI 10.17487/RFC3503, March 2003,
+  #   <https://www.rfc-editor.org/info/rfc3503>.
+  #++
   #
-  # [[EXT-QUOTA[https://tools.ietf.org/html/rfc2087]]]
-  #    Myers, J., "IMAP4 QUOTA extension",
-  #    RFC-2087[https://tools.ietf.org/html/rfc2087], January 1997.
+  # === Supported \IMAP Extensions
   #
-  # [[EXT-NAMESPACE[https://tools.ietf.org/html/rfc2342]]]
-  #    Gahrns, M. and Newman, C., "IMAP4 Namespace",
-  #    RFC-2342[https://tools.ietf.org/html/rfc2342], May 1998.
+  # [QUOTA[https://tools.ietf.org/html/rfc2087]]::
+  #   Myers, J., "IMAP4 QUOTA extension", RFC 2087, DOI 10.17487/RFC2087,
+  #   January 1997, <https://www.rfc-editor.org/info/rfc2087>.
+  #--
+  # TODO: test compatibility with updated QUOTA extension:
+  # [QUOTA[https://tools.ietf.org/html/rfc9208]]::
+  #   Melnikov, A., "IMAP QUOTA Extension", RFC 9208, DOI 10.17487/RFC9208,
+  #   March 2022, <https://www.rfc-editor.org/info/rfc9208>.
+  #++
+  # [IDLE[https://tools.ietf.org/html/rfc2177]]::
+  #   Leiba, B., "IMAP4 IDLE command", RFC 2177, DOI 10.17487/RFC2177,
+  #   June 1997, <https://www.rfc-editor.org/info/rfc2177>.
+  # [NAMESPACE[https://tools.ietf.org/html/rfc2342]]::
+  #   Gahrns, M. and C. Newman, "IMAP4 Namespace", RFC 2342,
+  #   DOI 10.17487/RFC2342, May 1998, <https://www.rfc-editor.org/info/rfc2342>.
+  # [ID[https://tools.ietf.org/html/rfc2971]]::
+  #   Showalter, T., "IMAP4 ID extension", RFC 2971, DOI 10.17487/RFC2971,
+  #   October 2000, <https://www.rfc-editor.org/info/rfc2971>.
+  # [ACL[https://tools.ietf.org/html/rfc4314]]::
+  #   Melnikov, A., "IMAP4 Access Control List (ACL) Extension", RFC 4314,
+  #   DOI 10.17487/RFC4314, December 2005,
+  #   <https://www.rfc-editor.org/info/rfc4314>.
+  # [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]::
+  #   Crispin, M., "Internet Message Access Protocol (\IMAP) - UIDPLUS
+  #   extension", RFC 4315, DOI 10.17487/RFC4315, December 2005,
+  #   <https://www.rfc-editor.org/info/rfc4315>.
+  # [SORT[https://tools.ietf.org/html/rfc5256]]::
+  #   Crispin, M. and K. Murchison, "Internet Message Access Protocol - SORT and
+  #   THREAD Extensions", RFC 5256, DOI 10.17487/RFC5256, June 2008,
+  #   <https://www.rfc-editor.org/info/rfc5256>.
+  # [THREAD[https://tools.ietf.org/html/rfc5256]]::
+  #   Crispin, M. and K. Murchison, "Internet Message Access Protocol - SORT and
+  #   THREAD Extensions", RFC 5256, DOI 10.17487/RFC5256, June 2008,
+  #   <https://www.rfc-editor.org/info/rfc5256>.
+  # [RFC5530[https://www.rfc-editor.org/rfc/rfc5530.html]]::
+  #   Gulbrandsen, A., "IMAP Response Codes", RFC 5530, DOI 10.17487/RFC5530,
+  #   May 2009, <https://www.rfc-editor.org/info/rfc5530>.
+  # [MOVE[https://tools.ietf.org/html/rfc6851]]::
+  #   Gulbrandsen, A. and N. Freed, Ed., "Internet Message Access Protocol
+  #   (\IMAP) - MOVE Extension", RFC 6851, DOI 10.17487/RFC6851, January 2013,
+  #   <https://www.rfc-editor.org/info/rfc6851>.
   #
-  # [[EXT-ID[https://tools.ietf.org/html/rfc2971]]]
-  #    Showalter, T., "IMAP4 ID extension",
-  #    RFC-2971[https://tools.ietf.org/html/rfc2971], October 2000.
+  # === IANA registries
   #
-  # [[EXT-ACL[https://tools.ietf.org/html/rfc4314]]]
-  #    Melnikov, A., "IMAP4 ACL extension",
-  #    RFC-4314[https://tools.ietf.org/html/rfc4314], December 2005.  (Note:
-  #    obsoletes RFC-2086[https://tools.ietf.org/html/rfc2086], January 1997.)
-  #
-  # [[EXT-SORT-THREAD[https://tools.ietf.org/html/rfc5256]]]
-  #    Crispin, M. and Muchison, K., "INTERNET MESSAGE ACCESS PROTOCOL - SORT
-  #    and THREAD Extensions", RFC-5256[https://tools.ietf.org/html/rfc5256],
-  #    June 2008.
-  #
-  # [[EXT-MOVE[https://tools.ietf.org/html/rfc6851]]]
-  #    Gulbrandsen, A. and Freed, N., "Internet Message Access Protocol (\IMAP) -
-  #    MOVE Extension", RFC-6851[https://tools.ietf.org/html/rfc6851], January
-  #    2013.
-  #
-  # [[OSSL]]
-  #    http://www.openssl.org
-  #
-  # [[RSSL]]
-  #    http://savannah.gnu.org/projects/rubypki
-  #
-  # [[UTF7[https://tools.ietf.org/html/rfc2152]]]
-  #    Goldsmith, D. and Davis, M., "UTF-7: A Mail-Safe Transformation Format of
-  #    Unicode", RFC-2152[https://tools.ietf.org/html/rfc2152], May 1997.
+  # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
+  # * {IMAP Response Codes}[https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml]
+  # * {IMAP Mailbox Name Attributes}[https://www.iana.org/assignments/imap-mailbox-name-attributes/imap-mailbox-name-attributes.xhtml]
+  # * {IMAP and JMAP Keywords}[https://www.iana.org/assignments/imap-jmap-keywords/imap-jmap-keywords.xhtml]
+  # * {IMAP Threading Algorithms}[https://www.iana.org/assignments/imap-threading-algorithms/imap-threading-algorithms.xhtml]
+  #--
+  # * {IMAP Quota Resource Types}[http://www.iana.org/assignments/imap4-capabilities#imap-capabilities-2]
+  # * [{LIST-EXTENDED options and responses}[https://www.iana.org/assignments/imap-list-extended/imap-list-extended.xhtml]
+  # * {IMAP METADATA Server Entry and Mailbox Entry Registries}[https://www.iana.org/assignments/imap-metadata/imap-metadata.xhtml]
+  # * {IMAP ANNOTATE Extension Entries and Attributes}[https://www.iana.org/assignments/imap-annotate-extension/imap-annotate-extension.xhtml]
+  # * {IMAP URLAUTH Access Identifiers and Prefixes}[https://www.iana.org/assignments/urlauth-access-ids/urlauth-access-ids.xhtml]
+  # * {IMAP URLAUTH Authorization Mechanism Registry}[https://www.iana.org/assignments/urlauth-authorization-mechanism-registry/urlauth-authorization-mechanism-registry.xhtml]
+  #++
+  # * {SASL Mechanisms and SASL SCRAM Family Mechanisms}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
+  # * {Service Name and Transport Protocol Port Number Registry}[https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xml]:
+  #   +imap+: tcp/143, +imaps+: tcp/993
+  # * {GSSAPI/Kerberos/SASL Service Names}[https://www.iana.org/assignments/gssapi-service-names/gssapi-service-names.xhtml]:
+  #   +imap+
+  # * {Character sets}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
   #
   class IMAP < Protocol
     VERSION = "0.3.1"
@@ -341,7 +453,7 @@ module Net
     #      )
     #    end
     #
-    # See [EXT-ID[https://tools.ietf.org/html/rfc2971]] for field definitions.
+    # See [ID[https://tools.ietf.org/html/rfc2971]] for field definitions.
     def id(client_id=nil)
       synchronize do
         send_command("ID", ClientID.new(client_id))
@@ -597,7 +709,7 @@ module Net
     #      end
     #    end
     #
-    # The NAMESPACE extension is described in [EXT-NAMESPACE[https://tools.ietf.org/html/rfc2342]]
+    # The NAMESPACE extension is described in [NAMESPACE[https://tools.ietf.org/html/rfc2342]]
     def namespace
       synchronize do
         send_command("NAMESPACE")
@@ -642,7 +754,7 @@ module Net
     # If this mailbox exists, it returns an array containing objects of type
     # Net::IMAP::MailboxQuotaRoot and Net::IMAP::MailboxQuota.
     #
-    # The QUOTA extension is described in [EXT-QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
     def getquotaroot(mailbox)
       synchronize do
         send_command("GETQUOTAROOT", mailbox)
@@ -658,7 +770,7 @@ module Net
     # Net::IMAP::MailboxQuota object is returned.  This
     # command is generally only available to server admin.
     #
-    # The QUOTA extension is described in [EXT-QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
     def getquota(mailbox)
       synchronize do
         send_command("GETQUOTA", mailbox)
@@ -671,7 +783,7 @@ module Net
     # mailbox.  Typically one needs to be logged in as a server admin
     # for this to work.
     #
-    # The QUOTA extension is described in [EXT-QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
     def setquota(mailbox, quota)
       if quota.nil?
         data = '()'
@@ -685,7 +797,7 @@ module Net
     # +rights+ that user is to have on that mailbox.  If +rights+ is nil,
     # then that user will be stripped of any rights to that mailbox.
     #
-    # The ACL extension is described in [EXT-ACL[https://tools.ietf.org/html/rfc4314]]
+    # The ACL extension is described in [ACL[https://tools.ietf.org/html/rfc4314]]
     def setacl(mailbox, user, rights)
       if rights.nil?
         send_command("SETACL", mailbox, user, "")
@@ -698,7 +810,7 @@ module Net
     # If this mailbox exists, an array containing objects of
     # Net::IMAP::MailboxACLItem will be returned.
     #
-    # The ACL extension is described in [EXT-ACL[https://tools.ietf.org/html/rfc4314]]
+    # The ACL extension is described in [ACL[https://tools.ietf.org/html/rfc4314]]
     def getacl(mailbox)
       synchronize do
         send_command("GETACL", mailbox)
@@ -1025,14 +1137,14 @@ module Net
     #   p imap.sort(["DATE"], ["SUBJECT", "hello"], "US-ASCII")
     #   #=> [6, 7, 8, 1]
     #
-    # The SORT extension is described in [EXT-SORT-THREAD[https://tools.ietf.org/html/rfc5256]].
+    # The SORT extension is described in [SORT[https://tools.ietf.org/html/rfc5256]].
     def sort(sort_keys, search_keys, charset)
       return sort_internal("SORT", sort_keys, search_keys, charset)
     end
 
     # Similar to #sort, but returns an array of unique identifiers.
     #
-    # The SORT extension is described in [EXT-SORT-THREAD[https://tools.ietf.org/html/rfc5256]].
+    # The SORT extension is described in [SORT[https://tools.ietf.org/html/rfc5256]].
     def uid_sort(sort_keys, search_keys, charset)
       return sort_internal("UID SORT", sort_keys, search_keys, charset)
     end
@@ -1071,7 +1183,7 @@ module Net
     # Unlike #search, +charset+ is a required argument.  US-ASCII
     # and UTF-8 are sample values.
     #
-    # The THREAD extension is described in [EXT-SORT-THREAD[https://tools.ietf.org/html/rfc5256]].
+    # The THREAD extension is described in [THREAD[https://tools.ietf.org/html/rfc5256]].
     def thread(algorithm, search_keys, charset)
       return thread_internal("THREAD", algorithm, search_keys, charset)
     end
@@ -1079,7 +1191,7 @@ module Net
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
     #
-    # The THREAD extension is described in [EXT-SORT-THREAD[https://tools.ietf.org/html/rfc5256]].
+    # The THREAD extension is described in [THREAD[https://tools.ietf.org/html/rfc5256]].
     def uid_thread(algorithm, search_keys, charset)
       return thread_internal("UID THREAD", algorithm, search_keys, charset)
     end
