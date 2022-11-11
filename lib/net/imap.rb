@@ -1067,9 +1067,10 @@ module Net
     # ===== Capabilities
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
-    # supported, the server's response should include a +APPENDUID+ response
-    # code with the UIDVALIDITY of the destination mailbox and the assigned UID
-    # of the appended message.
+    # supported and the destination supports persistent UIDs, the server's
+    # response should include an +APPENDUID+ response code with UIDPlusData.
+    # This will report the UIDVALIDITY of the destination mailbox and the
+    # assigned UID of the appended message.
     #
     #--
     # TODO: add MULTIAPPEND support
@@ -1145,7 +1146,7 @@ module Net
     #
     # *Note:*
     # >>>
-    #        Although the command takes a +uid_set+ for its argument, the
+    #        Although the command takes a set of UIDs for its argument, the
     #        server still returns regular EXPUNGE responses, which contain
     #        a <em>sequence number</em>. These will be deleted from
     #        #responses and this method returns them as an array of
@@ -1322,8 +1323,9 @@ module Net
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +COPYUID+ response code
-    # with the UIDVALIDITY of the destination mailbox, the UID set of the source
-    # messages, and the assigned UID set of the moved messages.
+    # with UIDPlusData.  This will report the UIDVALIDITY of the destination
+    # mailbox, the UID set of the source messages, and the assigned UID set of
+    # the moved messages.
     def copy(set, mailbox)
       copy_internal("COPY", set, mailbox)
     end
@@ -1355,9 +1357,10 @@ module Net
     # [RFC6851[https://tools.ietf.org/html/rfc6851]].
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
-    # also supported, the server's response should include a +COPYUID+ response
-    # code with the UIDVALIDITY of the destination mailbox, the UID set of the
-    # source messages, and the assigned UID set of the moved messages.
+    # supported, the server's response should include a +COPYUID+ response code
+    # with UIDPlusData.  This will report the UIDVALIDITY of the destination
+    # mailbox, the UID set of the source messages, and the assigned UID set of
+    # the moved messages.
     #
     def move(set, mailbox)
       copy_internal("MOVE", set, mailbox)
