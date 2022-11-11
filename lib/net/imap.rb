@@ -23,12 +23,14 @@ end
 
 module Net
 
-  #
-  # Net::IMAP implements Internet Message Access Protocol (IMAP) client
+  # Net::IMAP implements Internet Message Access Protocol (\IMAP) client
   # functionality.  The protocol is described in
-  # [IMAP[https://tools.ietf.org/html/rfc3501]].
+  # [IMAP4rev1[https://tools.ietf.org/html/rfc3501]].
+  #--
+  # TODO: and [IMAP4rev2[https://tools.ietf.org/html/rfc9051]].
+  #++
   #
-  # == IMAP Overview
+  # == \IMAP Overview
   #
   # An \IMAP client connects to a server, and then authenticates
   # itself using either #authenticate or #login.  Having
@@ -41,11 +43,13 @@ module Net
   # within a hierarchy of directories.
   #
   # To work on the messages within a mailbox, the client must
-  # first select that mailbox, using either #select or (for
-  # read-only access) #examine.  Once the client has successfully
-  # selected a mailbox, they enter _selected_ state, and that
+  # first select that mailbox, using either #select or #examine
+  # (for read-only access).  Once the client has successfully
+  # selected a mailbox, they enter the "_selected_" state, and that
   # mailbox becomes the _current_ mailbox, on which mail-item
   # related commands implicitly operate.
+  #
+  # === Sequence numbers and UIDs
   #
   # Messages have two sorts of identifiers: message sequence
   # numbers and UIDs.
@@ -62,7 +66,7 @@ module Net
   # the existing message is deleted.  UIDs are required to
   # be assigned in ascending (but not necessarily sequential)
   # order within a mailbox; this means that if a non-IMAP client
-  # rearranges the order of mailitems within a mailbox, the
+  # rearranges the order of mail items within a mailbox, the
   # UIDs have to be reassigned.  An \IMAP client thus cannot
   # rearrange message orders.
   #
@@ -108,7 +112,7 @@ module Net
   #
   # == Errors
   #
-  # An IMAP server can send three different types of responses to indicate
+  # An \IMAP server can send three different types of responses to indicate
   # failure:
   #
   # NO:: the attempted command could not be successfully completed.  For
@@ -116,7 +120,7 @@ module Net
   #      the selected mailbox does not exist; etc.
   #
   # BAD:: the request from the client does not follow the server's
-  #       understanding of the IMAP protocol.  This includes attempting
+  #       understanding of the \IMAP protocol.  This includes attempting
   #       commands from the wrong client state; for instance, attempting
   #       to perform a SEARCH command without having SELECTed a current
   #       mailbox.  It can also signal an internal server
@@ -340,10 +344,12 @@ module Net
       include SSL
     end
 
-    #  Returns an initial greeting response from the server.
+    # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
 
-    # Returns recorded untagged responses.  For example:
+    # Returns recorded untagged responses.
+    #
+    # For example:
     #
     #   imap.select("inbox")
     #   p imap.responses["EXISTS"][-1]
@@ -421,14 +427,17 @@ module Net
 
     # Sends a CAPABILITY command, and returns an array of
     # capabilities that the server supports.  Each capability
-    # is a string.  See [IMAP] for a list of possible
-    # capabilities.
+    # is a string.
+    # See the {IANA IMAP capabilities registry}[https://www.iana.org/assignments/imap-capabilities/imap-capabilities.xhtml]
+    # for a list of possible capabilities and their RFCs.
     #
-    # Note that the Net::IMAP class does not modify its
-    # behaviour according to the capabilities of the server;
-    # it is up to the user of the class to ensure that
-    # a certain capability is supported by a server before
-    # using it.
+    # >>>
+    #   <em>*Note* that the Net::IMAP class does not modify its
+    #   behaviour according to the capabilities of the server;
+    #   it is up to the user of the class to ensure that
+    #   a certain capability is supported by a server before
+    #   using it.</em>
+    #
     def capability
       synchronize do
         send_command("CAPABILITY")
@@ -492,10 +501,10 @@ module Net
     # supports the following mechanisms:
     #
     # PLAIN:: Login using cleartext user and password.  Secure with TLS.
-    #         See Net::IMAP::PlainAuthenticator.
+    #         See PlainAuthenticator.
     # CRAM-MD5::   DEPRECATED: Use PLAIN (or DIGEST-MD5) with TLS.
     # DIGEST-MD5:: DEPRECATED by RFC6331. Must be secured using TLS.
-    #              See Net::IMAP::DigestMD5Authenticator.
+    #              See DigestMD5Authenticator.
     # LOGIN::      DEPRECATED: Use PLAIN.
     #
     # Most mechanisms require two args: authentication identity (e.g. username)
@@ -518,7 +527,7 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     #
-    # See +Net::IMAP::Authenticators+ for more information on plugging in your
+    # See Net::IMAP::Authenticators for more information on plugging in your
     # own authenticator.
     def authenticate(auth_type, *args)
       authenticator = self.class.authenticator(auth_type, *args)
@@ -555,7 +564,7 @@ module Net
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
-    # ==== Capabilities
+    # ===== Capabilities
     #
     # If [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]] is supported,
     # the server may return an untagged "NO" response with a "UIDNOTSTICKY"
@@ -644,7 +653,7 @@ module Net
     # which mailboxes to match.  If +mailbox+ is empty, the root
     # name of +refname+ and the hierarchy delimiter are returned.
     #
-    # The return value is an array of +Net::IMAP::MailboxList+. For example:
+    # The return value is an array of MailboxList. For example:
     #
     #   imap.create("foo/bar")
     #   imap.create("foo/baz")
@@ -688,9 +697,9 @@ module Net
     #    create the mailbox in.
     #
     # The user of this method should first check if the server supports the
-    # NAMESPACE capability.  The return value is a +Net::IMAP::Namespaces+
+    # NAMESPACE #capability.  The return value is a Namespaces
     # object which has +personal+, +other+, and +shared+ fields, each an array
-    # of +Net::IMAP::Namespace+ objects. These arrays will be empty when the
+    # of Namespace objects. These arrays will be empty when the
     # server responds with nil.
     #
     # For example:
@@ -733,7 +742,7 @@ module Net
     # The XLIST command is like the LIST command except that the flags
     # returned refer to the function of the folder/mailbox, e.g. :Sent
     #
-    # The return value is an array of +Net::IMAP::MailboxList+. For example:
+    # The return value is an array of MailboxList objects. For example:
     #
     #   imap.create("foo/bar")
     #   imap.create("foo/baz")
@@ -751,7 +760,7 @@ module Net
     # Sends the GETQUOTAROOT command along with the specified +mailbox+.
     # This command is generally available to both admin and user.
     # If this mailbox exists, it returns an array containing objects of type
-    # Net::IMAP::MailboxQuotaRoot and Net::IMAP::MailboxQuota.
+    # MailboxQuotaRoot and MailboxQuota.
     #
     # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
     def getquotaroot(mailbox)
@@ -766,7 +775,7 @@ module Net
 
     # Sends the GETQUOTA command along with specified +mailbox+.
     # If this mailbox exists, then an array containing a
-    # Net::IMAP::MailboxQuota object is returned.  This
+    # MailboxQuota object is returned.  This
     # command is generally only available to server admin.
     #
     # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
@@ -807,7 +816,7 @@ module Net
 
     # Send the GETACL command along with a specified +mailbox+.
     # If this mailbox exists, an array containing objects of
-    # Net::IMAP::MailboxACLItem will be returned.
+    # MailboxACLItem will be returned.
     #
     # The ACL extension is described in [ACL[https://tools.ietf.org/html/rfc4314]]
     def getacl(mailbox)
@@ -822,7 +831,7 @@ module Net
     # "subscribed."  +refname+ and +mailbox+ are interpreted as
     # for #list.
     #
-    # The return value is an array of +Net::IMAP::MailboxList+.
+    # The return value is an array of MailboxList objects.
     def lsub(refname, mailbox)
       synchronize do
         send_command("LSUB", refname, mailbox)
@@ -858,6 +867,7 @@ module Net
     # flags initially passed to the new message.  The optional
     # +date_time+ argument specifies the creation time to assign to the
     # new message; it defaults to the current time.
+    #
     # For example:
     #
     #   imap.append("inbox", <<EOF.gsub(/\n/, "\r\n"), [:Seen], Time.now)
@@ -872,7 +882,7 @@ module Net
     # not exist (it is not created automatically), or if the flags,
     # date_time, or message arguments contain errors.
     #
-    # ==== Capabilities
+    # ===== Capabilities
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +APPENDUID+ response
@@ -932,22 +942,24 @@ module Net
 
     # Similar to #expunge, but takes a set of unique identifiers as
     # argument. Sends a UID EXPUNGE command to permanently remove all
-    # messages that have both the \\Deleted flag set and a UID that is
+    # messages that have both the <tt>\\Deleted</tt> flag set and a UID that is
     # included in +uid_set+.
     #
     # By using UID EXPUNGE instead of EXPUNGE when resynchronizing with
     # the server, the client can ensure that it does not inadvertantly
-    # remove any messages that have been marked as \\Deleted by other
+    # remove any messages that have been marked as <tt>\\Deleted</tt> by other
     # clients between the time that the client was last connected and
     # the time the client resynchronizes.
     #
-    # Note:: Although the command takes a +uid_set+ for its argument, the
+    # *Note:*
+    # >>>
+    #        Although the command takes a +uid_set+ for its argument, the
     #        server still returns regular EXPUNGE responses, which contain
     #        a <em>sequence number</em>. These will be deleted from
     #        #responses and this method returns them as an array of
     #        <em>sequence number</em> integers.
     #
-    # ==== Capability requirement
+    # ===== Capability requirement
     #
     # +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] must be
     # supported by the server.
@@ -962,12 +974,17 @@ module Net
     # match the given searching criteria, and returns message sequence
     # numbers.  +keys+ can either be a string holding the entire
     # search string, or a single-dimension array of search keywords and
-    # arguments.  The following are some common search criteria;
-    # see [IMAP] section 6.4.4 for a full list.
+    # arguments.
     #
-    # <message set>:: a set of message sequence numbers.  ',' indicates
-    #                 an interval, ':' indicates a range.  For instance,
-    #                 '2,10:12,15' means "2,10,11,12,15".
+    # ===== Search criteria
+    #
+    # The following are some common search criteria;
+    # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]]
+    # for a full list:
+    #
+    # <message set>:: a set of message sequence numbers.  "<tt>,</tt>" indicates
+    #                 an interval, "+:+" indicates a range.  For instance,
+    #                 "<tt>2,10:12,15</tt>" means "<tt>2,10,11,12,15</tt>".
     #
     # BEFORE <date>:: messages with an internal date strictly before
     #                 <date>.  The date argument has a format similar
@@ -994,10 +1011,11 @@ module Net
     #
     # TO <string>:: messages with <string> in their TO field.
     #
-    # For example:
+    # ===== For example:
     #
     #   p imap.search(["SUBJECT", "hello", "NOT", "NEW"])
     #   #=> [1, 6, 7, 8]
+    #
     def search(keys, charset = nil)
       return search_internal("SEARCH", keys, charset)
     end
@@ -1020,9 +1038,9 @@ module Net
     # equivalent to 1..5.
     #
     # +attr+ is a list of attributes to fetch; see the documentation
-    # for Net::IMAP::FetchData for a list of valid attributes.
+    # for FetchData for a list of valid attributes.
     #
-    # The return value is an array of Net::IMAP::FetchData or nil
+    # The return value is an array of FetchData or nil
     # (instead of an empty array) if there is no matching message.
     #
     # For example:
@@ -1059,7 +1077,7 @@ module Net
     # with the provided one, '+FLAGS' will add the provided flags,
     # and '-FLAGS' will remove them.  +flags+ is a list of flags.
     #
-    # The return value is an array of Net::IMAP::FetchData. For example:
+    # The return value is an array of FetchData. For example:
     #
     #   p imap.store(6..8, "+FLAGS", [:Deleted])
     #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
@@ -1079,7 +1097,7 @@ module Net
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
     #
-    # ==== Capabilities
+    # ===== Capabilities
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +COPYUID+ response code
@@ -1091,7 +1109,7 @@ module Net
 
     # Similar to #copy, but +set+ contains unique identifiers.
     #
-    # ==== Capabilities
+    # ===== Capabilities
     #
     # +UIDPLUS+ affects #uid_copy the same way it affects #copy.
     def uid_copy(set, mailbox)
@@ -1103,7 +1121,7 @@ module Net
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
     #
-    # ==== Capabilities requirements
+    # ===== Capabilities requirements
     #
     # +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must be supported by
     # the server.
@@ -1119,7 +1137,7 @@ module Net
 
     # Similar to #move, but +set+ contains unique identifiers.
     #
-    # ==== Capabilities requirements
+    # ===== Capabilities requirements
     #
     # Same as #move: +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must
     # be supported by the server.  +UIDPLUS+ also affects #uid_move the same way
@@ -1171,8 +1189,7 @@ module Net
     end
 
     # Similar to #search, but returns message sequence numbers in threaded
-    # format, as a Net::IMAP::ThreadMember tree.  The supported algorithms
-    # are:
+    # format, as a ThreadMember tree.  The supported algorithms are:
     #
     # ORDEREDSUBJECT:: split into single-level threads according to subject,
     #                  ordered by date.
