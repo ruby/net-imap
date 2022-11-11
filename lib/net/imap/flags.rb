@@ -68,6 +68,11 @@ module Net
     # extensions, begin with <tt>"\"</tt>.  Net::IMAP returns all mailbox
     # attributes as symbols, without the <tt>"\"</tt> prefix.
     #
+    # Mailbox name attributes are not case-sensitive.  <em>The current
+    # implementation</em> normalizes mailbox attribute case using
+    # String#capitalize, such as +:Noselect+ (not +:NoSelect+).  The constants
+    # (such as NO_SELECT) can also be used for comparison.  The contants have
+    # been defined both with and without underscores between words.
     #
     # <em>The descriptions here were copied from</em> {[RFC-9051 §
     # 7.3.1]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.1].
@@ -97,7 +102,7 @@ module Net
     #
     # The client must treat the presence of the +\NonExistent+ attribute as if the
     # +\NoSelect+ attribute was also sent by the server
-    NONEXISTENT = :NonExistent
+    NONEXISTENT = :Nonexistent
 
     # Mailbox attribute indicating it is not possible for any child levels of
     # hierarchy to exist under this name; no child levels exist now and none can
@@ -105,11 +110,11 @@ module Net
     #
     # The client must treat the presence of the +\NoInferiors+ attribute as if the
     # +\HasNoChildren+ attribute was also sent by the server
-    NOINFERIORS = :Noinferiors
+    NO_INFERIORS = :Noinferiors
 
     # Mailbox attribute indicating it is not possible to use this name as a
     # selectable mailbox.
-    NOSELECT = :Noselect
+    NO_SELECT = :Noselect
 
     # The presence of this attribute indicates that the mailbox has child
     # mailboxes. A server SHOULD NOT set this attribute if there are child
@@ -128,7 +133,7 @@ module Net
     # +\HasNoChildren+ attribute in the same #list response. A client that
     # encounters a #list response with both +\HasChildren+ and +\HasNoChildren+
     # attributes present should act as if both are absent in the #list response.
-    HAS_CHILDREN = :HasChildren
+    HAS_CHILDREN = :Haschildren
 
     # The presence of this attribute indicates that the mailbox has NO child
     # mailboxes that are accessible to the currently authenticated user.
@@ -141,7 +146,7 @@ module Net
     # Note: the +\HasNoChildren+ attribute should not be confused with the
     # +\NoInferiors+ attribute, which indicates that no child mailboxes exist
     # now and none can be created in the future.
-    HAS_NO_CHILDREN = :HasNoChildren
+    HAS_NO_CHILDREN = :Hasnochildren
 
     # The mailbox has been marked "interesting" by the server; the mailbox
     # probably contains messages that have been added since the last time the
@@ -170,6 +175,15 @@ module Net
     # The mailbox is a remote mailbox.
     REMOTE = :Remove
 
+    # Alias for NO_INFERIORS, to match the \IMAP spelling.
+    NOINFERIORS   = NO_INFERIORS
+    # Alias for NO_SELECT, to match the \IMAP spelling.
+    NOSELECT      = NO_SELECT
+    # Alias for HAS_CHILDREN, to match the \IMAP spelling.
+    HASCHILDREN   = HAS_CHILDREN
+    # Alias for HAS_NO_CHILDREN, to match the \IMAP spelling.
+    HASNOCHILDREN = HAS_NO_CHILDREN
+
     # -------------------------------------------------------------------------
     # :section: Mailbox role attributes
     #
@@ -185,6 +199,10 @@ module Net
     # IMAP4 specifies that all mailbox name attributes, including future
     # extensions, begin with <tt>"\"</tt>.  Net::IMAP returns all mailbox
     # attributes as symbols, without the <tt>"\"</tt> prefix.
+    #
+    # The special use attributes were first defined as part of the
+    # SPECIAL-USE[https://www.rfc-editor.org/rfc/rfc6154.html] extension, but
+    # servers may return them without including the +SPECIAL-USE+ #capability.
     #
     # <em>The descriptions here were copied from</em> {[RFC-9051 §
     # 7.3.1]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.1].
