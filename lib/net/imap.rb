@@ -170,6 +170,355 @@ module Net
   # between UTF-8 and UTF-16), and Net::IMAP::ResponseParseError is
   # thrown if a server response is non-parseable.
   #
+  # == What's here?
+  #
+  # * {Connection control}[rdoc-ref:Net::IMAP@Connection+control+methods]
+  # * {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands]
+  #   * {...for any state}[rdoc-ref:Net::IMAP@IMAP+commands+for+any+state]
+  #   * {...for the "not authenticated" state}[rdoc-ref:Net::IMAP@IMAP+commands+for+the+-22Not+Authenticated-22+state]
+  #   * {...for the "authenticated" state}[rdoc-ref:Net::IMAP@IMAP+commands+for+the+-22Authenticated-22+state]
+  #   * {...for the "selected" state}[rdoc-ref:Net::IMAP@IMAP+commands+for+the+-22Selected-22+state]
+  #   * {...for the "logout" state}[rdoc-ref:Net::IMAP@IMAP+commands+for+the+-22Logout-22+state]
+  # * {Supported IMAP extensions}[rdoc-ref:Net::IMAP@Supported+IMAP+extensions]
+  # * {Handling server responses}[rdoc-ref:Net::IMAP@Handling+server+responses]
+  #
+  # === Connection control methods
+  #
+  # - Net::IMAP.new: A new client connects immediately and waits for a
+  #   successful server greeting before returning the new client object.
+  # - #starttls: Asks the server to upgrade a clear-text connection to use TLS.
+  # - #logout: Tells the server to end the session. Enters the "_logout_" state.
+  # - #disconnect: Disconnects the connection (without sending #logout first).
+  # - #disconnected?: True if the connection has been closed.
+  #
+  # === Core \IMAP commands
+  #
+  # The following commands are defined either by
+  # the [IMAP4rev1[https://tools.ietf.org/html/rfc3501]] base specification, or
+  # by one of the following extensions:
+  # [IDLE[https://tools.ietf.org/html/rfc2177]],
+  # [NAMESPACE[https://tools.ietf.org/html/rfc2342]],
+  # [UNSELECT[https://tools.ietf.org/html/rfc3691]],
+  #--
+  # TODO: [ENABLE[https://tools.ietf.org/html/rfc5161]],
+  # TODO: [LIST-EXTENDED[https://tools.ietf.org/html/rfc5258]],
+  # TODO: [LIST-STATUS[https://tools.ietf.org/html/rfc5819]],
+  #++
+  # [MOVE[https://tools.ietf.org/html/rfc6851]].
+  # These extensions are widely supported by modern IMAP4rev1 servers and have
+  # all been integrated into [IMAP4rev2[https://tools.ietf.org/html/rfc9051]].
+  # <em>Note: Net::IMAP doesn't fully support IMAP4rev2 yet.</em>
+  #
+  #--
+  # TODO: When IMAP4rev2 is supported, add the following to the each of the
+  # appropriate commands below.
+  #   Note:: CHECK has been removed from IMAP4rev2.
+  #   Note:: LSUB is obsoleted by +LIST-EXTENDED and has been removed from IMAP4rev2.
+  #   <em>Some arguments require the +LIST-EXTENDED+ or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +ENABLE+    or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +NAMESPACE+ or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +IDLE+      or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +UNSELECT+  or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +UIDPLUS+   or +IMAP4rev2+ capability.</em>
+  #   <em>Requires either the +MOVE+      or +IMAP4rev2+ capability.</em>
+  #++
+  #
+  # ==== \IMAP commands for any state
+  #
+  # - #capability: Returns the server's capabilities as an array of strings.
+  #
+  #   <em>Capabilities may change after</em> #starttls, #authenticate, or #login
+  #   <em>and cached capabilities must be reloaded.</em>
+  # - #noop: Allows the server to send unsolicited untagged #responses.
+  # - #logout: Tells the server to end the session. Enters the "_logout_" state.
+  #
+  # ==== \IMAP commands for the "Not Authenticated" state
+  #
+  # In addition to the universal commands, the following commands are valid in
+  # the "<em>not authenticated</em>" state:
+  #
+  # - #starttls: Upgrades a clear-text connection to use TLS.
+  #
+  #   <em>Requires the +STARTTLS+ capability.</em>
+  # - #authenticate: Identifies the client to the server using a {SASL
+  #   mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml].
+  #   Enters the "_authenticated_" state.
+  #
+  #   <em>Requires the <tt>AUTH=#{mechanism}</tt> capability for the chosen
+  #   mechanism.</em>
+  # - #login: Identifies the client to the server using a plain text password.
+  #   Using #authenticate is generally preferred.  Enters the "_authenticated_"
+  #   state.
+  #
+  #   <em>The +LOGINDISABLED+ capability</em> <b>must NOT</b> <em>be listed.</em>
+  #
+  # ==== \IMAP commands for the "Authenticated" state
+  #
+  # In addition to the universal commands, the following commands are valid in
+  # the "_authenticated_" state:
+  #
+  #--
+  # - #enable: <em>Not implemented by Net::IMAP, yet.</em>
+  #
+  #   <em>Requires the +ENABLE+ capability.</em>
+  #++
+  # - #select:  Open a mailbox and enter the "_selected_" state.
+  # - #examine: Open a mailbox read-only, and enter the "_selected_" state.
+  # - #create: Creates a new mailbox.
+  # - #delete: Permanently remove a mailbox.
+  # - #rename: Change the name of a mailbox.
+  # - #subscribe: Adds a mailbox to the "subscribed" set.
+  # - #unsubscribe: Removes a mailbox from the "subscribed" set.
+  # - #list: Returns names and attributes of mailboxes matching a given pattern.
+  # - #namespace: Returns mailbox namespaces, with path prefixes and delimiters.
+  #
+  #   <em>Requires the +NAMESPACE+ capability.</em>
+  # - #status: Returns mailbox information, e.g. message count, unseen message
+  #   count, +UIDVALIDITY+ and +UIDNEXT+.
+  # - #append: Appends a message to the end of a mailbox.
+  # - #idle: Allows the server to send updates to the client, without the client
+  #   needing to poll using #noop.
+  #
+  #   <em>Requires the +IDLE+ capability.</em>
+  # - #lsub: Lists mailboxes the user has declared "active" or "subscribed".
+  #--
+  #   <em>Replaced by</em> <tt>LIST-EXTENDED</tt> <em>and removed from</em>
+  #   +IMAP4rev2+.  <em>However, Net::IMAP hasn't implemented</em>
+  #   <tt>LIST-EXTENDED</tt> _yet_.
+  #++
+  #
+  # ==== \IMAP commands for the "Selected" state
+  #
+  # In addition to the universal commands and the "authenticated" commands, the
+  # following commands are valid in the "_selected_" state:
+  #
+  # - #close: Closes the mailbox and returns to the "_authenticated_" state,
+  #   expunging deleted messages, unless the mailbox was opened as read-only.
+  # - #unselect: Closes the mailbox and returns to the "_authenticated_" state,
+  #   without expunging any messages.
+  #
+  #   <em>Requires the +UNSELECT+ capability.</em>
+  # - #expunge: Permanently removes messages which have the Deleted flag set.
+  # - #uid_expunge: Restricts #expunge to only remove the specified UIDs.
+  #
+  #   <em>Requires the +UIDPLUS+ capability.</em>
+  # - #search, #uid_search: Returns sequence numbers or UIDs of messages that
+  #   match the given searching criteria.
+  # - #fetch, #uid_fetch: Returns data associated with a set of messages,
+  #   specified by sequence number or UID.
+  # - #store, #uid_store: Alters a message's flags.
+  # - #copy, #uid_copy: Copies the specified messages to the end of the
+  #   specified destination mailbox.
+  # - #move, #uid_move: Moves the specified messages to the end of the
+  #   specified destination mailbox, expunging them from the current mailbox.
+  #
+  #   <em>Requires the +MOVE+ capability.</em>
+  # - #check: Mostly obsolete.  Can be replaced with #noop or #idle.
+  #--
+  #   <em>Removed from IMAP4rev2.</em>
+  #++
+  #
+  # ==== \IMAP commands for the "Logout" state
+  #
+  # No \IMAP commands are valid in the +logout+ state.  If the socket is still
+  # open, Net::IMAP will close it after receiving server confirmation.
+  # Exceptions will be raised by \IMAP commands that have already started and
+  # are waiting for a response, as well as any that are called after logout.
+  #
+  # === Supported \IMAP extensions
+  #
+  # ==== RFC9051: +IMAP4rev2+
+  #
+  # Although IMAP4rev2[https://tools.ietf.org/html/rfc9051] is <em>not supported
+  # yet</em>, Net::IMAP supports several extensions that have been folded into
+  # it: +IDLE+, +MOVE+, +NAMESPACE+, +UIDPLUS+, and +UNSELECT+.
+  #--
+  # TODO: RFC4466, ABNF extensions (automatic support for other extensions)
+  # TODO: +ESEARCH+, ExtendedSearchData
+  # TODO: +SEARCHRES+,
+  # TODO: +ENABLE+,
+  # TODO: +SASL-IR+,
+  # TODO: +LIST-EXTENDED+,
+  # TODO: +LIST-STATUS+,
+  # TODO: +LITERAL-+,
+  # TODO: +BINARY+ (only the FETCH side)
+  # TODO: +SPECIAL-USE+
+  # implicitly supported, but we can do better: Response codes: RFC5530, etc
+  # implicitly supported, but we can do better: <tt>STATUS=SIZE</tt>
+  # implicitly supported, but we can do better: <tt>STATUS DELETED</tt>
+  #++
+  # Commands for these extensions are included with the {Core IMAP
+  # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.  Other supported
+  # extensons are listed below.
+  #
+  # ==== RFC2087: +QUOTA+
+  # - #getquota: returns the resource usage and limits for a quota root
+  # - #getquotaroot: returns the list of quota roots for a mailbox, as well as
+  #   their resource usage and limits.
+  # - #setquota: sets the resource limits for a given quota root.
+  #
+  # ==== RFC2177: +IDLE+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
+  # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
+  # - #idle: Allows the server to send updates to the client, without the client
+  #   needing to poll using #noop.
+  #
+  # ==== RFC2342: +NAMESPACE+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
+  # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
+  # - #namespace: Returns mailbox namespaces, with path prefixes and delimiters.
+  #
+  # ==== RFC2971: +ID+
+  # - #id: exchanges client and server implementation information.
+  #
+  #--
+  # ==== RFC3502: +MULTIAPPEND+
+  # TODO...
+  #++
+  #
+  #--
+  # ==== RFC3516: +BINARY+
+  # TODO...
+  #++
+  #
+  # ==== RFC3691: +UNSELECT+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
+  # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
+  # - #unselect: Closes the mailbox and returns to the "_authenticated_" state,
+  #   without expunging any messages.
+  #
+  # ==== RFC4314: +ACL+
+  # - #getacl: lists the authenticated user's access rights to a mailbox.
+  # - #setacl: sets the access rights for a user on a mailbox
+  #--
+  # TODO: #deleteacl, #listrights, #myrights
+  #++
+  # - *_Note:_* +DELETEACL+, +LISTRIGHTS+, and +MYRIGHTS+ are not supported yet.
+  #
+  # ==== RFC4315: +UIDPLUS+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
+  # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
+  # - #uid_expunge: Restricts #expunge to only remove the specified UIDs.
+  # - Updates #select, #examine with the +UIDNOTSTICKY+ ResponseCode
+  # - Updates #append with the +APPENDUID+ ResponseCode
+  # - Updates #copy, #move with the +COPYUID+ ResponseCode
+  #
+  #--
+  # ==== RFC4466: Collected Extensions to IMAP4 ABNF
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], this RFC updates
+  # the protocol to enable new optional parameters to many commands: #select,
+  # #examine, #create, #rename, #fetch, #uid_fetch, #store, #uid_store, #search,
+  # #uid_search, and #append.  However, specific parameters are not defined.
+  # Extensions to these commands use this syntax whenever possible.  Net::IMAP
+  # may be partially compatible with extensions to these commands, even without
+  # any explicit support.
+  #++
+  #
+  #--
+  # ==== RFC4731 +ESEARCH+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #search, #uid_search to accept result options: +MIN+, +MAX+,
+  #   +ALL+, +COUNT+, and to return ExtendedSearchData.
+  #++
+  #
+  #--
+  # ==== RFC4959: +SASL-IR+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #authenticate to reduce round-trips for supporting mechanisms.
+  #++
+  #
+  #--
+  # ==== RFC4978: COMPRESS=DEFLATE
+  # TODO...
+  #++
+  #
+  #--
+  # ==== RFC5182 +SEARCHRES+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #search, #uid_search with the +SAVE+ result option.
+  # - Updates #copy, #uid_copy, #fetch, #uid_fetch, #move, #uid_move, #search,
+  #   #uid_search, #store, #uid_store, and #uid_expunge with ability to
+  #   reference the saved result of a previous #search or #uid_search command.
+  #++
+  #
+  # ==== RFC5256: +SORT+
+  # - #sort, #uid_sort: An alternate version of #search or #uid_search which
+  #   sorts the results by specified keys.
+  # ==== RFC5256: +THREAD+
+  # - #thread, #uid_thread: An alternate version of #search or #uid_search,
+  #   which arranges the results into ordered groups or threads according to a
+  #   chosen algorithm.
+  #
+  #--
+  # ==== RFC5258 +LIST-EXTENDED+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], this updates the
+  # protocol with new optional parameters to the #list command, adding a few of
+  # its own.  Net::IMAP may be forward-compatible with future #list extensions,
+  # even without any explicit support.
+  # - Updates #list to accept selection options: +SUBSCRIBED+, +REMOTE+, and
+  #   +RECURSIVEMATCH+, and return options: +SUBSCRIBED+ and +CHILDREN+.
+  #++
+  #
+  #--
+  # ==== RFC5819 +LIST-STATUS+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #list with +STATUS+ return option.
+  #++
+  #
+  # ==== +XLIST+ (non-standard, deprecated)
+  # - #xlist: replaced by +SPECIAL-USE+ attributes in #list responses.
+  #
+  #--
+  # ==== RFC6154 +SPECIAL-USE+
+  # TODO...
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #list with the +SPECIAL-USE+ selection and return options.
+  #++
+  #
+  # ==== RFC6851: +MOVE+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
+  # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
+  # - #move, #uid_move: Moves the specified messages to the end of the
+  #   specified destination mailbox, expunging them from the current mailbox.
+  #
+  #--
+  # ==== RFC6855: UTF8=ACCEPT
+  # TODO...
+  # ==== RFC6855: UTF8=ONLY
+  # TODO...
+  #++
+  #
+  #--
+  # ==== RFC7888: <tt>LITERAL+</tt>, +LITERAL-+
+  # TODO...
+  # ==== RFC7162: +QRESYNC+
+  # TODO...
+  # ==== RFC7162: +CONDSTORE+
+  # TODO...
+  # ==== RFC8474: +OBJECTID+
+  # TODO...
+  # ==== RFC9208: +QUOTA+
+  # TODO...
+  #++
+  #
+  # === Handling server responses
+  #
+  # - #greeting: The server's initial untagged response, which can indicate a
+  #   pre-authenticated connection.
+  # - #responses: The untagged responses, as a hash.  Keys are the untagged
+  #   response type (e.g. "OK", "FETCH", "FLAGS") and response code (e.g.
+  #   "ALERT", "UIDVALIDITY", "UIDNEXT", "TRYCREATE", etc).  Values are arrays
+  #   of UntaggedResponse or ResponseCode.
+  # - #add_response_handler: Add a block to be called inside the receiver thread
+  #   with every server response.
+  # - #remove_response_handler: Remove a previously added response handler.
+  #
   #
   # == References
   #--
