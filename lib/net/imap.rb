@@ -70,6 +70,15 @@ module Net
   # UIDs have to be reassigned.  An \IMAP client thus cannot
   # rearrange message orders.
   #
+  # === Server capabilities and protocol extensions
+  #
+  # Net::IMAP <em>does not modify its behavior</em> according to server
+  # #capability.  Users of the class must check for required capabilities before
+  # issuing commands.  Special care should be taken to follow all #capability
+  # requirements for #starttls, #login, and #authenticate.
+  #
+  # See the #capability method for more information.
+  #
   # == Examples of Usage
   #
   # === List sender and subject of all recent messages in the default mailbox
@@ -428,15 +437,54 @@ module Net
     # Sends a CAPABILITY command, and returns an array of
     # capabilities that the server supports.  Each capability
     # is a string.
-    # See the {IANA IMAP capabilities registry}[https://www.iana.org/assignments/imap-capabilities/imap-capabilities.xhtml]
-    # for a list of possible capabilities and their RFCs.
+    #
+    # See the {IANA IMAP4 capabilities
+    # registry}[http://www.iana.org/assignments/imap4-capabilities] for a list
+    # of all standard capabilities, and their reference RFCs.
     #
     # >>>
-    #   <em>*Note* that the Net::IMAP class does not modify its
+    #   <em>*Note* that Net::IMAP does not currently modify its
     #   behaviour according to the capabilities of the server;
     #   it is up to the user of the class to ensure that
     #   a certain capability is supported by a server before
     #   using it.</em>
+    #
+    # Capability requirements—other than +IMAP4rev1+—are listed in the
+    # documentation for each command method.
+    #
+    # ===== Basic IMAP4rev1 capabilities
+    #
+    # All IMAP4rev1 servers must include +IMAP4rev1+ in their capabilities list.
+    # All IMAP4rev1 servers must _implement_ the +STARTTLS+,
+    # <tt>AUTH=PLAIN</tt>, and +LOGINDISABLED+ capabilities, and clients must
+    # respect their presence or absence.  See the capabilites requirements on
+    # #starttls, #login, and #authenticate.
+    #
+    # ===== Using IMAP4rev1 extensions
+    #
+    # IMAP4rev1 servers must not activate incompatible behavior until an
+    # explicit client action invokes a capability, e.g. sending a command or
+    # command argument specific to that capability.  Extensions with backward
+    # compatible behavior, such as response codes or mailbox attributes, may
+    # be sent at any time.
+    #
+    # Invoking capabilities which are unknown to Net::IMAP may cause unexpected
+    # behavior and errors, for example ResponseParseError is raised when unknown
+    # response syntax is received.  Invoking commands or command parameters that
+    # are unsupported by the server may raise NoResponseError, BadResponseError,
+    # or cause other unexpected behavior.
+    #
+    # ===== Caching +CAPABILITY+ responses
+    #
+    # Servers may send their capability list, unsolicited, using the
+    # +CAPABILITY+ response code or an untagged +CAPABILITY+ response.  These
+    # responses can be retrieved and cached using #responses or
+    # #add_response_handler.
+    #
+    # But cached capabilities _must_ be discarded after #starttls, #login, or
+    # #authenticate.  The OK TaggedResponse to #login and #authenticate may
+    # include +CAPABILITY+ response code data, but the TaggedResponse for
+    # #starttls is sent clear-text and cannot be trusted.
     #
     def capability
       synchronize do
@@ -462,6 +510,11 @@ module Net
     #    end
     #
     # See [ID[https://tools.ietf.org/html/rfc2971]] for field definitions.
+    #
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +ID+
+    # [RFC2971[https://tools.ietf.org/html/rfc2971]]
     def id(client_id=nil)
       synchronize do
         send_command("ID", ClientID.new(client_id))
@@ -481,6 +534,20 @@ module Net
     end
 
     # Sends a STARTTLS command to start TLS session.
+    # Sends a STARTTLS command to start a TLS session.
+    #
+    # ===== Capability
+    #
+    # The server's capabilities must include +STARTTLS+.
+    #
+    # Server capabilities may change after #starttls, #login, and #authenticate.
+    # Cached capabilities _must_ be invalidated after this method completes.
+    #
+    # The TaggedResponse to #starttls is sent clear-text, so the server <em>must
+    # *not*</em> send capabilities in the #starttls response and clients <em>must
+    # not</em> use them if they are sent.  Servers will generally send an
+    # unsolicited untagged response immeditely _after_ #starttls completes.
+    #
     def starttls(options = {}, verify = true)
       send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
@@ -529,6 +596,20 @@ module Net
     #
     # See Net::IMAP::Authenticators for more information on plugging in your
     # own authenticator.
+    #
+    # ==== Capabilities
+    #
+    # Clients MUST NOT attempt to #authenticate or #login when +LOGINDISABLED+
+    # is listed with the capabilities.
+    #
+    # Clients MUST NOT attempt to authenticate with a mechanism unless
+    # <tt>"AUTH=#{mechanism}"</tt> for that mechanism is a server capability.
+    #
+    # Server capabilities may change after #starttls, #login, and #authenticate.
+    # Cached capabilities _must_ be invalidated after this method completes.
+    # The TaggedResponse to #authenticate may include updated capabilities in
+    # its ResponseCode.
+    #
     def authenticate(auth_type, *args)
       authenticator = self.class.authenticator(auth_type, *args)
       send_command("AUTHENTICATE", auth_type) do |resp|
@@ -547,6 +628,16 @@ module Net
     # of "LOGIN", #login does *not* use the login authenticator.
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
+    #
+    # ==== Capabilities
+    # Clients MUST NOT attempt to #authenticate or #login when +LOGINDISABLED+
+    # is listed with the capabilities.
+    #
+    # Server capabilities may change after #starttls, #login, and #authenticate.
+    # Cached capabilities _must_ be invalidated after this method completes.
+    # The TaggedResponse to #login may include updated capabilities in its
+    # ResponseCode.
+    #
     def login(user, password)
       send_command("LOGIN", user, password)
     end
@@ -661,6 +752,10 @@ module Net
     #   #=> [#<Net::IMAP::MailboxList attr=[:Noselect], delim="/", name="foo/">, \\
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors, :Marked], delim="/", name="foo/bar">, \\
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors], delim="/", name="foo/baz">]
+    #
+    #--
+    # TODO: support LIST-EXTENDED extension [RFC5258].  Needed for IMAP4rev2.
+    #++
     def list(refname, mailbox)
       synchronize do
         send_command("LIST", refname, mailbox)
@@ -717,7 +812,10 @@ module Net
     #      end
     #    end
     #
-    # The NAMESPACE extension is described in [NAMESPACE[https://tools.ietf.org/html/rfc2342]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +NAMESPACE+
+    # [RFC2342[https://tools.ietf.org/html/rfc2342]]
     def namespace
       synchronize do
         send_command("NAMESPACE")
@@ -750,6 +848,16 @@ module Net
     #   #=> [#<Net::IMAP::MailboxList attr=[:Noselect], delim="/", name="foo/">, \\
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors, :Marked], delim="/", name="foo/bar">, \\
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors], delim="/", name="foo/baz">]
+    #
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +XLIST+,
+    # a deprecated Gmail extension (replaced by +SPECIAL-USE+).
+    #--
+    # TODO: Net::IMAP doesn't yet have full SPECIAL-USE support.  Supporting
+    # servers MAY return SPECIAL-USE attributes, but are not *required* to
+    # unless the SPECIAL-USE return option is supplied.
+    #++
     def xlist(refname, mailbox)
       synchronize do
         send_command("XLIST", refname, mailbox)
@@ -762,7 +870,10 @@ module Net
     # If this mailbox exists, it returns an array containing objects of type
     # MailboxQuotaRoot and MailboxQuota.
     #
-    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +QUOTA+
+    # [RFC2087[https://tools.ietf.org/html/rfc2087]].
     def getquotaroot(mailbox)
       synchronize do
         send_command("GETQUOTAROOT", mailbox)
@@ -778,7 +889,10 @@ module Net
     # MailboxQuota object is returned.  This
     # command is generally only available to server admin.
     #
-    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +QUOTA+
+    # [RFC2087[https://tools.ietf.org/html/rfc2087]].
     def getquota(mailbox)
       synchronize do
         send_command("GETQUOTA", mailbox)
@@ -791,7 +905,10 @@ module Net
     # mailbox.  Typically one needs to be logged in as a server admin
     # for this to work.
     #
-    # The QUOTA extension is described in [QUOTA[https://tools.ietf.org/html/rfc2087]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +QUOTA+
+    # [RFC2087[https://tools.ietf.org/html/rfc2087]].
     def setquota(mailbox, quota)
       if quota.nil?
         data = '()'
@@ -805,7 +922,10 @@ module Net
     # +rights+ that user is to have on that mailbox.  If +rights+ is nil,
     # then that user will be stripped of any rights to that mailbox.
     #
-    # The ACL extension is described in [ACL[https://tools.ietf.org/html/rfc4314]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +ACL+
+    # [RFC4314[https://tools.ietf.org/html/rfc4314]].
     def setacl(mailbox, user, rights)
       if rights.nil?
         send_command("SETACL", mailbox, user, "")
@@ -818,7 +938,10 @@ module Net
     # If this mailbox exists, an array containing objects of
     # MailboxACLItem will be returned.
     #
-    # The ACL extension is described in [ACL[https://tools.ietf.org/html/rfc4314]]
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +ACL+
+    # [RFC4314[https://tools.ietf.org/html/rfc4314]].
     def getacl(mailbox)
       synchronize do
         send_command("GETACL", mailbox)
@@ -959,10 +1082,10 @@ module Net
     #        #responses and this method returns them as an array of
     #        <em>sequence number</em> integers.
     #
-    # ===== Capability requirement
+    # ===== Capabilities
     #
-    # +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] must be
-    # supported by the server.
+    # The server's capabilities must include +UIDPLUS+
+    # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
     def uid_expunge(uid_set)
       synchronize do
         send_command("UID EXPUNGE", MessageSet.new(uid_set))
@@ -1121,10 +1244,10 @@ module Net
     # a number, an array of numbers, or a Range object. The number is
     # a message sequence number.
     #
-    # ===== Capabilities requirements
+    # ===== Capabilities
     #
-    # +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must be supported by
-    # the server.
+    # The server's capabilities must include +MOVE+
+    # [RFC6851[https://tools.ietf.org/html/rfc6851]].
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # also supported, the server's response should include a +COPYUID+ response
@@ -1137,11 +1260,11 @@ module Net
 
     # Similar to #move, but +set+ contains unique identifiers.
     #
-    # ===== Capabilities requirements
+    # ===== Capabilities
     #
-    # Same as #move: +MOVE+ [RFC6851[https://tools.ietf.org/html/rfc6851]] must
-    # be supported by the server.  +UIDPLUS+ also affects #uid_move the same way
-    # it affects #move.
+    # Same as #move: The server's capabilities must include +MOVE+
+    # [RFC6851[https://tools.ietf.org/html/rfc6851]].  +UIDPLUS+ also affects
+    # #uid_move the same way it affects #move.
     def uid_move(set, mailbox)
       copy_internal("UID MOVE", set, mailbox)
     end
@@ -1154,14 +1277,20 @@ module Net
     #   p imap.sort(["DATE"], ["SUBJECT", "hello"], "US-ASCII")
     #   #=> [6, 7, 8, 1]
     #
-    # The SORT extension is described in [SORT[https://tools.ietf.org/html/rfc5256]].
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +SORT+
+    # [RFC5256[https://tools.ietf.org/html/rfc5256]].
     def sort(sort_keys, search_keys, charset)
       return sort_internal("SORT", sort_keys, search_keys, charset)
     end
 
     # Similar to #sort, but returns an array of unique identifiers.
     #
-    # The SORT extension is described in [SORT[https://tools.ietf.org/html/rfc5256]].
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +SORT+
+    # [RFC5256[https://tools.ietf.org/html/rfc5256]].
     def uid_sort(sort_keys, search_keys, charset)
       return sort_internal("UID SORT", sort_keys, search_keys, charset)
     end
@@ -1199,7 +1328,10 @@ module Net
     # Unlike #search, +charset+ is a required argument.  US-ASCII
     # and UTF-8 are sample values.
     #
-    # The THREAD extension is described in [THREAD[https://tools.ietf.org/html/rfc5256]].
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +THREAD+
+    # [RFC5256[https://tools.ietf.org/html/rfc5256]].
     def thread(algorithm, search_keys, charset)
       return thread_internal("THREAD", algorithm, search_keys, charset)
     end
@@ -1207,7 +1339,10 @@ module Net
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
     #
-    # The THREAD extension is described in [THREAD[https://tools.ietf.org/html/rfc5256]].
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +THREAD+
+    # [RFC5256[https://tools.ietf.org/html/rfc5256]].
     def uid_thread(algorithm, search_keys, charset)
       return thread_internal("UID THREAD", algorithm, search_keys, charset)
     end
@@ -1226,6 +1361,11 @@ module Net
     #       ...
     #     end
     #   end
+    #
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +IDLE+
+    # [RFC2177[https://tools.ietf.org/html/rfc2177]].
     def idle(timeout = nil, &response_handler)
       raise LocalJumpError, "no block given" unless response_handler
 
