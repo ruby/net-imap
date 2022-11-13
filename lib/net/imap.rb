@@ -1239,17 +1239,23 @@ module Net
     #
     # ===== Search criteria
     #
-    # The following are some common search criteria;
-    # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]]
-    # for a full list:
+    # For a full list of search criteria,
+    # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]],
+    # or  [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]],
+    # in addition to documentation for
+    # any [CAPABILITIES[https://www.iana.org/assignments/imap-capabilities/imap-capabilities.xhtml]]
+    # reported by #capability which may define additional search filters, e.g:
+    # +CONDSTORE+, +WITHIN+, +FILTERS+, <tt>SEARCH=FUZZY</tt>, +OBJECTID+, or
+    # +SAVEDATE+.  The following are some common search criteria:
     #
     # <message set>:: a set of message sequence numbers.  "<tt>,</tt>" indicates
     #                 an interval, "+:+" indicates a range.  For instance,
     #                 "<tt>2,10:12,15</tt>" means "<tt>2,10,11,12,15</tt>".
     #
     # BEFORE <date>:: messages with an internal date strictly before
-    #                 <date>.  The date argument has a format similar
-    #                 to 8-Aug-2002.
+    #                 <b><date></b>.  The date argument has a format similar
+    #                 to <tt>8-Aug-2002</tt>, and can be formatted using
+    #                 Net::IMAP.format_date.
     #
     # BODY <string>:: messages that contain <string> within their body.
     #
