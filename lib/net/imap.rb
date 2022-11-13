@@ -434,9 +434,9 @@ module Net
       return @sock.closed?
     end
 
-    # Sends a CAPABILITY command, and returns an array of
-    # capabilities that the server supports.  Each capability
-    # is a string.
+    # Sends a {CAPABILITY command [IMAP4rev1 §6.1.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.1]
+    # and returns an array of capabilities that the server supports.  Each
+    # capability is a string.
     #
     # See the {IANA IMAP4 capabilities
     # registry}[http://www.iana.org/assignments/imap4-capabilities] for a list
@@ -493,8 +493,9 @@ module Net
       end
     end
 
-    # Sends an ID command, and returns a hash of the server's
-    # response, or nil if the server does not identify itself.
+    # Sends an {ID command [RFC2971 §3.1]}[https://www.rfc-editor.org/rfc/rfc2971#section-3.1]
+    # and returns a hash of the server's response, or nil if the server does not
+    # identify itself.
     #
     # Note that the user should first check if the server supports the ID
     # capability. For example:
@@ -522,19 +523,21 @@ module Net
       end
     end
 
-    # Sends a NOOP command to the server. It does nothing.
+    # Sends a {NOOP command [IMAP4rev1 §6.1.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.2]
+    # to the server.
     def noop
       send_command("NOOP")
     end
 
-    # Sends a LOGOUT command to inform the server that the client is
-    # done with the connection.
+    # Sends a {LOGOUT command [IMAP4rev1 §6.1.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.3]
+    # to inform the command to inform the server that the client is done with
+    # the connection.
     def logout
       send_command("LOGOUT")
     end
 
-    # Sends a STARTTLS command to start TLS session.
-    # Sends a STARTTLS command to start a TLS session.
+    # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
+    # to start a TLS session.
     #
     # ===== Capability
     #
@@ -562,9 +565,11 @@ module Net
       end
     end
 
-    # Sends an AUTHENTICATE command to authenticate the client.
-    # The +auth_type+ parameter is a string that represents
-    # the authentication mechanism to be used. Currently Net::IMAP
+    # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
+    # to authenticate the client.
+    #
+    # The +auth_type+ parameter is a string that
+    # represents the authentication mechanism to be used. Currently Net::IMAP
     # supports the following mechanisms:
     #
     # PLAIN:: Login using cleartext user and password.  Secure with TLS.
@@ -622,10 +627,10 @@ module Net
       end
     end
 
-    # Sends a LOGIN command to identify the client and carries
-    # the plaintext +password+ authenticating this +user+.  Note
-    # that, unlike calling #authenticate with an +auth_type+
-    # of "LOGIN", #login does *not* use the login authenticator.
+    # Sends a {LOGIN command [IMAP4rev1 §6.2.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.3]
+    # to identify the client and carries the plaintext +password+ authenticating
+    # this +user+.  Note that, unlike calling #authenticate with an +auth_type+
+    # of "LOGIN", #login does *not* use the LoginAuthenticator.
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     #
@@ -642,8 +647,8 @@ module Net
       send_command("LOGIN", user, password)
     end
 
-    # Sends a SELECT command to select a +mailbox+ so that messages
-    # in the +mailbox+ can be accessed.
+    # Sends a {SELECT command [IMAP4rev1 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.1]
+    # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     #
     # After you have selected a mailbox, you may retrieve the number of items in
     # that mailbox from <tt>imap.responses["EXISTS"][-1]</tt>, and the number of
@@ -669,9 +674,10 @@ module Net
       end
     end
 
-    # Sends a EXAMINE command to select a +mailbox+ so that messages
-    # in the +mailbox+ can be accessed.  Behaves the same as #select,
-    # except that the selected +mailbox+ is identified as read-only.
+    # Sends a {EXAMINE command [IMAP4rev1 §6.3.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.2]
+    # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
+    # Behaves the same as #select, except that the selected +mailbox+ is
+    # identified as read-only.
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-examinable.
@@ -682,7 +688,8 @@ module Net
       end
     end
 
-    # Sends a CREATE command to create a new +mailbox+.
+    # Sends a {CREATE command [IMAP4rev1 §6.3.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.3]
+    # to create a new +mailbox+.
     #
     # A Net::IMAP::NoResponseError is raised if a mailbox with that name
     # cannot be created.
@@ -690,7 +697,8 @@ module Net
       send_command("CREATE", mailbox)
     end
 
-    # Sends a DELETE command to remove the +mailbox+.
+    # Sends a {DELETE command [IMAP4rev1 §6.3.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.4]
+    # to remove the +mailbox+.
     #
     # A Net::IMAP::NoResponseError is raised if a mailbox with that name
     # cannot be deleted, either because it does not exist or because the
@@ -699,8 +707,8 @@ module Net
       send_command("DELETE", mailbox)
     end
 
-    # Sends a RENAME command to change the name of the +mailbox+ to
-    # +newname+.
+    # Sends a {RENAME command [IMAP4rev1 §6.3.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.5]
+    # to change the name of the +mailbox+ to +newname+.
     #
     # A Net::IMAP::NoResponseError is raised if a mailbox with the
     # name +mailbox+ cannot be renamed to +newname+ for whatever
@@ -710,9 +718,9 @@ module Net
       send_command("RENAME", mailbox, newname)
     end
 
-    # Sends a SUBSCRIBE command to add the specified +mailbox+ name to
-    # the server's set of "active" or "subscribed" mailboxes as returned
-    # by #lsub.
+    # Sends a {SUBSCRIBE command [IMAP4rev1 §6.3.6]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.6]
+    # to add the specified +mailbox+ name to the server's set of "active" or
+    # "subscribed" mailboxes as returned by #lsub.
     #
     # A Net::IMAP::NoResponseError is raised if +mailbox+ cannot be
     # subscribed to; for instance, because it does not exist.
@@ -720,8 +728,9 @@ module Net
       send_command("SUBSCRIBE", mailbox)
     end
 
-    # Sends a UNSUBSCRIBE command to remove the specified +mailbox+ name
-    # from the server's set of "active" or "subscribed" mailboxes.
+    # Sends an {UNSUBSCRIBE command [IMAP4rev1 §6.3.7]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.7]
+    # to remove the specified +mailbox+ name from the server's set of "active"
+    # or "subscribed" mailboxes.
     #
     # A Net::IMAP::NoResponseError is raised if +mailbox+ cannot be
     # unsubscribed from; for instance, because the client is not currently
@@ -730,15 +739,15 @@ module Net
       send_command("UNSUBSCRIBE", mailbox)
     end
 
-    # Sends a LIST command, and returns a subset of names from
-    # the complete set of all names available to the client.
-    # +refname+ provides a context (for instance, a base directory
-    # in a directory-based mailbox hierarchy).  +mailbox+ specifies
-    # a mailbox or (via wildcards) mailboxes under that context.
-    # Two wildcards may be used in +mailbox+: '*', which matches
-    # all characters *including* the hierarchy delimiter (for instance,
-    # '/' on a UNIX-hosted directory-based mailbox hierarchy); and '%',
-    # which matches all characters *except* the hierarchy delimiter.
+    # Sends a {LIST command [IMAP4rev1 §6.3.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.8]
+    # and returns a subset of names from the complete set of all names available
+    # to the client.  +refname+ provides a context (for instance, a base
+    # directory in a directory-based mailbox hierarchy).  +mailbox+ specifies a
+    # mailbox or (via wildcards) mailboxes under that context.  Two wildcards
+    # may be used in +mailbox+: '*', which matches all characters *including*
+    # the hierarchy delimiter (for instance, '/' on a UNIX-hosted
+    # directory-based mailbox hierarchy); and '%', which matches all characters
+    # *except* the hierarchy delimiter.
     #
     # If +refname+ is empty, +mailbox+ is used directly to determine
     # which mailboxes to match.  If +mailbox+ is empty, the root
@@ -763,10 +772,10 @@ module Net
       end
     end
 
-    # Sends a NAMESPACE command and returns the namespaces that are available.
-    # The NAMESPACE command allows a client to discover the prefixes of
-    # namespaces used by a server for personal mailboxes, other users'
-    # mailboxes, and shared mailboxes.
+    # Sends a {NAMESPACE command [RFC2342 §5]}[https://www.rfc-editor.org/rfc/rfc2342#section-5]
+    # and returns the namespaces that are available.  The NAMESPACE command
+    # allows a client to discover the prefixes of namespaces used by a server
+    # for personal mailboxes, other users' mailboxes, and shared mailboxes.
     #
     # The NAMESPACE extension predates [IMAP4rev1[https://tools.ietf.org/html/rfc2501]],
     # so most IMAP servers support it. Many popular IMAP servers are configured
@@ -865,10 +874,10 @@ module Net
       end
     end
 
-    # Sends the GETQUOTAROOT command along with the specified +mailbox+.
-    # This command is generally available to both admin and user.
-    # If this mailbox exists, it returns an array containing objects of type
-    # MailboxQuotaRoot and MailboxQuota.
+    # Sends a {GETQUOTAROOT command [RFC2087 §4.3]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.3]
+    # along with the specified +mailbox+.  This command is generally available
+    # to both admin and user.  If this mailbox exists, it returns an array
+    # containing objects of type MailboxQuotaRoot and MailboxQuota.
     #
     # ===== Capabilities
     #
@@ -884,10 +893,10 @@ module Net
       end
     end
 
-    # Sends the GETQUOTA command along with specified +mailbox+.
-    # If this mailbox exists, then an array containing a
-    # MailboxQuota object is returned.  This
-    # command is generally only available to server admin.
+    # Sends a {GETQUOTA command [RFC2087 §4.2]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.2]
+    # along with specified +mailbox+.  If this mailbox exists, then an array
+    # containing a MailboxQuota object is returned.  This command is generally
+    # only available to server admin.
     #
     # ===== Capabilities
     #
@@ -900,10 +909,10 @@ module Net
       end
     end
 
-    # Sends a SETQUOTA command along with the specified +mailbox+ and
-    # +quota+.  If +quota+ is nil, then +quota+ will be unset for that
-    # mailbox.  Typically one needs to be logged in as a server admin
-    # for this to work.
+    # Sends a {SETQUOTA command [RFC2087 §4.1]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.1]
+    # along with the specified +mailbox+ and +quota+.  If +quota+ is nil, then
+    # +quota+ will be unset for that mailbox.  Typically one needs to be logged
+    # in as a server admin for this to work.
     #
     # ===== Capabilities
     #
@@ -918,9 +927,10 @@ module Net
       send_command("SETQUOTA", mailbox, RawData.new(data))
     end
 
-    # Sends the SETACL command along with +mailbox+, +user+ and the
-    # +rights+ that user is to have on that mailbox.  If +rights+ is nil,
-    # then that user will be stripped of any rights to that mailbox.
+    # Sends a {SETACL command [RFC4314 §3.1]}[https://www.rfc-editor.org/rfc/rfc4314#section-3.1]
+    # along with +mailbox+, +user+ and the +rights+ that user is to have on that
+    # mailbox.  If +rights+ is nil, then that user will be stripped of any
+    # rights to that mailbox.
     #
     # ===== Capabilities
     #
@@ -934,9 +944,9 @@ module Net
       end
     end
 
-    # Send the GETACL command along with a specified +mailbox+.
-    # If this mailbox exists, an array containing objects of
-    # MailboxACLItem will be returned.
+    # Sends a {GETACL command [RFC4314 §3.3]}[https://www.rfc-editor.org/rfc/rfc4314#section-3.3]
+    # along with a specified +mailbox+.  If this mailbox exists, an array
+    # containing objects of MailboxACLItem will be returned.
     #
     # ===== Capabilities
     #
@@ -949,10 +959,10 @@ module Net
       end
     end
 
-    # Sends a LSUB command, and returns a subset of names from the set
-    # of names that the user has declared as being "active" or
-    # "subscribed."  +refname+ and +mailbox+ are interpreted as
-    # for #list.
+    # Sends a {LSUB command [IMAP4rev1 §6.3.9]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.9]
+    # and returns a subset of names from the set of names that the user has
+    # declared as being "active" or "subscribed."  +refname+ and +mailbox+ are
+    # interpreted as for #list.
     #
     # The return value is an array of MailboxList objects.
     def lsub(refname, mailbox)
@@ -962,9 +972,10 @@ module Net
       end
     end
 
-    # Sends a STATUS command, and returns the status of the indicated
-    # +mailbox+. +attr+ is a list of one or more attributes whose
-    # statuses are to be requested.  Supported attributes include:
+    # Sends a {STATUS commands [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
+    # and returns the status of the indicated +mailbox+. +attr+ is a list of one
+    # or more attributes whose statuses are to be requested.  Supported
+    # attributes include:
     #
     #   MESSAGES:: the number of messages in the mailbox.
     #   RECENT:: the number of recent messages in the mailbox.
@@ -985,10 +996,10 @@ module Net
       end
     end
 
-    # Sends a APPEND command to append the +message+ to the end of
-    # the +mailbox+. The optional +flags+ argument is an array of
-    # flags initially passed to the new message.  The optional
-    # +date_time+ argument specifies the creation time to assign to the
+    # Sends an {APPEND command [IMAP4rev1 §6.3.11]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.11]
+    # to append the +message+ to the end of the +mailbox+. The optional +flags+
+    # argument is an array of flags initially passed to the new message.  The
+    # optional +date_time+ argument specifies the creation time to assign to the
     # new message; it defaults to the current time.
     #
     # For example:
@@ -1025,26 +1036,27 @@ module Net
       send_command("APPEND", mailbox, *args)
     end
 
-    # Sends a CHECK command to request a checkpoint of the currently
-    # selected mailbox.  This performs implementation-specific
-    # housekeeping; for instance, reconciling the mailbox's
-    # in-memory and on-disk state.
+    # Sends a {CHECK command [IMAP4rev1 §6.4.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.1]
+    # to request a checkpoint of the currently selected mailbox.  This performs
+    # implementation-specific housekeeping; for instance, reconciling the
+    # mailbox's in-memory and on-disk state.
     def check
       send_command("CHECK")
     end
 
-    # Sends a CLOSE command to close the currently selected mailbox.
-    # The CLOSE command permanently removes from the mailbox all
-    # messages that have the \Deleted flag set.
+    # Sends a {CLOSE command [IMAP4rev1 §6.4.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.2]
+    # to close the currently selected mailbox.  The CLOSE command permanently
+    # removes from the mailbox all messages that have the <tt>\\Deleted</tt>
+    # flag set.
     def close
       send_command("CLOSE")
     end
 
-    # Sends an {UNSELECT command [IMAP4rev2
-    # §6.4.2]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.2] to free the
-    # session resources for a mailbox and return to the "_authenticated_" state.
-    # This is the same as #close, except that <tt>\\Deleted</tt> messages are
-    # not removed from the mailbox.
+    # Sends an {UNSELECT command [RFC3691 §2]}[https://www.rfc-editor.org/rfc/rfc3691#section-3]
+    # {[IMAP4rev2 §6.4.2]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.2]
+    # to free the session resources for a mailbox and return to the
+    # "_authenticated_" state.  This is the same as #close, except that
+    # <tt>\\Deleted</tt> messages are not removed from the mailbox.
     #
     # ===== Capabilities
     #
@@ -1054,6 +1066,7 @@ module Net
       send_command("UNSELECT")
     end
 
+    # Sends an {EXPUNGE command [IMAP4rev1 §6.4.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.3]
     # Sends a EXPUNGE command to permanently remove from the currently
     # selected mailbox all messages that have the \Deleted flag set.
     def expunge
@@ -1063,10 +1076,10 @@ module Net
       end
     end
 
-    # Similar to #expunge, but takes a set of unique identifiers as
-    # argument. Sends a UID EXPUNGE command to permanently remove all
-    # messages that have both the <tt>\\Deleted</tt> flag set and a UID that is
-    # included in +uid_set+.
+    # Sends a {UID EXPUNGE command [RFC4315 §2.1]}[https://www.rfc-editor.org/rfc/rfc4315#section-2.1]
+    # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
+    # to permanently remove all messages that have both the <tt>\\Deleted</tt>
+    # flag set and a UID that is included in +uid_set+.
     #
     # By using UID EXPUNGE instead of EXPUNGE when resynchronizing with
     # the server, the client can ensure that it does not inadvertantly
@@ -1093,11 +1106,11 @@ module Net
       end
     end
 
-    # Sends a SEARCH command to search the mailbox for messages that
-    # match the given searching criteria, and returns message sequence
-    # numbers.  +keys+ can either be a string holding the entire
-    # search string, or a single-dimension array of search keywords and
-    # arguments.
+    # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
+    # to search the mailbox for messages that match the given searching
+    # criteria, and returns message sequence numbers.  +keys+ can either be a
+    # string holding the entire search string, or a single-dimension array of
+    # search keywords and arguments.
     #
     # ===== Search criteria
     #
@@ -1143,13 +1156,17 @@ module Net
       return search_internal("SEARCH", keys, charset)
     end
 
-    # Similar to #search, but returns unique identifiers.
+    # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
+    # to search the mailbox for messages that match the given searching
+    # criteria, and returns unique identifiers (<tt>UID</tt>s).
+    #
+    # See #search for documentation of search criteria.
     def uid_search(keys, charset = nil)
       return search_internal("UID SEARCH", keys, charset)
     end
 
-    # Sends a FETCH command to retrieve data associated with a message
-    # in the mailbox.
+    # Sends a {FETCH command [IMAP4rev1 §6.4.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.5]
+    # to retrieve data associated with a message in the mailbox.
     #
     # The +set+ parameter is a number or a range between two numbers,
     # or an array of those.  The number is a message sequence number,
@@ -1187,18 +1204,22 @@ module Net
       return fetch_internal("FETCH", set, attr, mod)
     end
 
-    # Similar to #fetch, but +set+ contains unique identifiers.
+    # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
+    # to retrieve data associated with a message in the mailbox.
+    #
+    # Similar to #fetch, but the +set+ parameter contains unique identifiers
+    # instead of message sequence numbers.
     def uid_fetch(set, attr, mod = nil)
       return fetch_internal("UID FETCH", set, attr, mod)
     end
 
-    # Sends a STORE command to alter data associated with messages
-    # in the mailbox, in particular their flags. The +set+ parameter
-    # is a number, an array of numbers, or a Range object. Each number
-    # is a message sequence number.  +attr+ is the name of a data item
-    # to store: 'FLAGS' will replace the message's flag list
-    # with the provided one, '+FLAGS' will add the provided flags,
-    # and '-FLAGS' will remove them.  +flags+ is a list of flags.
+    # Sends a {STORE command [IMAP4rev1 §6.4.6]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.6]
+    # to alter data associated with messages in the mailbox, in particular their
+    # flags. The +set+ parameter is a number, an array of numbers, or a Range
+    # object. Each number is a message sequence number.  +attr+ is the name of a
+    # data item to store: 'FLAGS' will replace the message's flag list with the
+    # provided one, '+FLAGS' will add the provided flags, and '-FLAGS' will
+    # remove them.  +flags+ is a list of flags.
     #
     # The return value is an array of FetchData. For example:
     #
@@ -1210,15 +1231,20 @@ module Net
       return store_internal("STORE", set, attr, flags)
     end
 
-    # Similar to #store, but +set+ contains unique identifiers.
+    # Sends a {UID STORE command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
+    # to alter data associated with messages in the mailbox, in particular their
+    # flags.
+    #
+    # Similar to #store, but +set+ contains unique identifiers instead of
+    # message sequence numbers.
     def uid_store(set, attr, flags)
       return store_internal("UID STORE", set, attr, flags)
     end
 
-    # Sends a COPY command to copy the specified message(s) to the end
-    # of the specified destination +mailbox+. The +set+ parameter is
-    # a number, an array of numbers, or a Range object. The number is
-    # a message sequence number.
+    # Sends a {COPY command [IMAP4rev1 §6.4.7]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.7]
+    # to copy the specified message(s) to the end of the specified destination
+    # +mailbox+. The +set+ parameter is a number, an array of numbers, or a
+    # Range object.  The number is a message sequence number.
     #
     # ===== Capabilities
     #
@@ -1230,6 +1256,10 @@ module Net
       copy_internal("COPY", set, mailbox)
     end
 
+    # Sends a {UID COPY command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
+    # to copy the specified message(s) to the end of the specified destination
+    # +mailbox+.
+    #
     # Similar to #copy, but +set+ contains unique identifiers.
     #
     # ===== Capabilities
@@ -1239,10 +1269,11 @@ module Net
       copy_internal("UID COPY", set, mailbox)
     end
 
-    # Sends a MOVE command to move the specified message(s) to the end
-    # of the specified destination +mailbox+. The +set+ parameter is
-    # a number, an array of numbers, or a Range object. The number is
-    # a message sequence number.
+    # Sends a {MOVE command [RFC6851 §3.1]}[https://www.rfc-editor.org/rfc/rfc6851#section-3.1]
+    # {[IMAP4rev2 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.8]
+    # to move the specified message(s) to the end of the specified destination
+    # +mailbox+. The +set+ parameter is a number, an array of numbers, or a
+    # Range object. The number is a message sequence number.
     #
     # ===== Capabilities
     #
@@ -1258,6 +1289,11 @@ module Net
       copy_internal("MOVE", set, mailbox)
     end
 
+    # Sends a {UID MOVE command [RFC6851 §3.2]}[https://www.rfc-editor.org/rfc/rfc6851#section-3.2]
+    # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
+    # to move the specified message(s) to the end of the specified destination
+    # +mailbox+.
+    #
     # Similar to #move, but +set+ contains unique identifiers.
     #
     # ===== Capabilities
@@ -1269,8 +1305,11 @@ module Net
       copy_internal("UID MOVE", set, mailbox)
     end
 
-    # Sends a SORT command to sort messages in the mailbox.
-    # Returns an array of message sequence numbers. For example:
+    # Sends a {SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
+    # to sort messages in the mailbox.  Returns an array of message sequence
+    # numbers.
+    #
+    # ===== For example:
     #
     #   p imap.sort(["FROM"], ["ALL"], "US-ASCII")
     #   #=> [1, 2, 3, 5, 6, 7, 8, 4, 9]
@@ -1285,7 +1324,8 @@ module Net
       return sort_internal("SORT", sort_keys, search_keys, charset)
     end
 
-    # Similar to #sort, but returns an array of unique identifiers.
+    # Sends a {UID SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
+    # to sort messages in the mailbox.  Returns an array of unique identifiers.
     #
     # ===== Capabilities
     #
@@ -1317,6 +1357,7 @@ module Net
       @response_handlers.delete(handler)
     end
 
+    # Sends a {THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # Similar to #search, but returns message sequence numbers in threaded
     # format, as a ThreadMember tree.  The supported algorithms are:
     #
@@ -1336,6 +1377,7 @@ module Net
       return thread_internal("THREAD", algorithm, search_keys, charset)
     end
 
+    # Sends a {UID THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
     #
@@ -1347,8 +1389,10 @@ module Net
       return thread_internal("UID THREAD", algorithm, search_keys, charset)
     end
 
-    # Sends an IDLE command that waits for notifications of new or expunged
-    # messages.  Yields responses from the server during the IDLE.
+    # Sends an {IDLE command [RFC2177 §3]}[https://www.rfc-editor.org/rfc/rfc6851#section-3]
+    # {[IMAP4rev2 §6.3.13]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.3.13]
+    # that waits for notifications of new or expunged messages.  Yields
+    # responses from the server during the IDLE.
     #
     # Use #idle_done to leave IDLE.
     #
