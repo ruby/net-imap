@@ -562,6 +562,18 @@ module Net
     # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
     # to start a TLS session.
     #
+    # Any +options+ are forwarded to OpenSSL::SSL::SSLContext#set_params.
+    #
+    # This method returns after TLS negotiation and hostname verification are
+    # both successful.  Any error indicates that the connection has not been
+    # secured.
+    #
+    # *Note:*
+    # >>>
+    #   Any #response_handlers added before STARTTLS should be aware that the
+    #   TaggedResponse to STARTTLS is sent clear-text, _before_ TLS negotiation.
+    #   TLS negotiation starts immediately after that response.
+    #
     # Related: Net::IMAP.new, #login, #authenticate
     #
     # ===== Capability
