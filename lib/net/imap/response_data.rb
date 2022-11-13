@@ -672,24 +672,50 @@ module Net
       # call-seq: date -> string
       #
       # Returns a string that represents the +Date+ header.
+      #
+      # [Note]
+      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   message, the #date field must not be +nil+.  However it can be +nil+
+      #   for a malformed or draft message.
 
       ##
       # method: subject
       # call-seq: subject -> string or nil
       #
       # Returns a string that represents the +Subject+ header, if it is present.
+      #
+      # [Note]
+      #   Servers should return +nil+ when the header is absent and an empty
+      #   string when it is present but empty.  Some servers may return a +nil+
+      #   envelope member in the "present but empty" case.  Clients should treat
+      #   +nil+ and empty string as identical.
 
       ##
       # method: from
       # call-seq: from -> array of Net::IMAP::Address or nil
       #
       # Returns an array of Address that represents the +From+ header.
+      #
+      # If the +From+ header is absent, or is present but empty, the server
+      # returns +nil+ for this envelope field.
+      #
+      # [Note]
+      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   message, the #from field must not be +nil+.  However it can be +nil+
+      #   for a malformed or draft message.
 
       ##
       # method: sender
       # call-seq: sender -> array of Net::IMAP::Address or nil
       #
       # Returns an array of Address that represents the +Sender+ header.
+      #
+      # [Note]
+      #   If the <tt>Sender</tt> header is absent, or is present but empty, the
+      #   server sets this field to be the same value as #from.  Therefore, in a
+      #   well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]] message,
+      #   the #sender envelope field must not be +nil+.  However it can be
+      #   +nil+ for a malformed or draft message.
 
       ##
       # method: reply_to
@@ -697,6 +723,13 @@ module Net
       #
       # Returns an array of Address that represents the <tt>Reply-To</tt>
       # header.
+      #
+      # [Note]
+      #   If the <tt>Reply-To</tt> header is absent, or is present but empty,
+      #   the server sets this field to be the same value as #from.  Therefore,
+      #   in a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   message, the #reply_to envelope field must not be +nil+.  However it
+      #   can be +nil+ for a malformed or draft message.
 
       ##
       # method: to
@@ -721,12 +754,32 @@ module Net
       # call-seq: in_reply_to -> string
       #
       # Returns a string that represents the <tt>In-Reply-To</tt> header.
+      #
+      # [Note]
+      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   message, the #in_reply_to field, if present, must not be empty.  But
+      #   it can still return an empty string for malformed messages.
+      #
+      #   Servers should return +nil+ when the header is absent and an empty
+      #   string when it is present but empty.  Some servers may return a +nil+
+      #   envelope member in the "present but empty" case.  Clients should treat
+      #   +nil+ and empty string as identical.
 
       ##
       # method: message_id
       # call-seq: message_id -> string
       #
       # Returns a string that represents the <tt>Message-ID</tt>.
+      #
+      # [Note]
+      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   message, the #message_id field, if present, must not be empty.  But it
+      #   can still return an empty string for malformed messages.
+      #
+      #   Servers should return +nil+ when the header is absent and an empty
+      #   string when it is present but empty.  Some servers may return a +nil+
+      #   envelope member in the "present but empty" case.  Clients should treat
+      #   +nil+ and empty string as identical.
     end
 
     #
