@@ -126,6 +126,76 @@ module Net
     # response: any TaggedResponse and UntaggedResponse when the response type
     # is a "condition" ("OK", "NO", "BAD", "PREAUTH", or "BYE").
     #
+    # Some response codes come with additional data which will be parsed by
+    # Net::IMAP.  Others return +nil+ for #data, but are used as a
+    # machine-readable annotation for the human-readable ResponseText#text in
+    # the same response.  When Net::IMAP does not know how to parse response
+    # code text, #data returns the unparsed string.
+    #
+    # Untagged response code #data is pushed directly onto Net::IMAP#responses,
+    # keyed by #name, unless it is removed by the command that generated it.
+    # Use Net::IMAP#add_response_handler to view tagged response codes for
+    # command methods that do not return their TaggedResponse.
+    #
+    # \IMAP extensions may define new codes and the data that comes with them.
+    # The IANA {IMAP Response
+    # Codes}[https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml]
+    # registry has links to specifications for all standard response codes.
+    # Response codes are backwards compatible:  Servers are allowed to send new
+    # response codes even if the client has not enabled the extension that
+    # defines them.  When unknown response code data is encountered, #data
+    # will return an unparsed string.
+    #
+    # See [IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501]] {§7.1, "Server
+    # Responses - Status
+    # Responses"}[https://www.rfc-editor.org/rfc/rfc3501#section-7.1] for full
+    # definitions of the basic set of IMAP4rev1 response codes:
+    # * +ALERT+, the ResponseText#text contains a special alert that MUST be
+    #   brought to the user's attention.
+    # * +BADCHARSET+, #data will be an array of charset strings, or +nil+.
+    # * +CAPABILITY+, #data will be an array of capability strings.
+    # * +PARSE+, the ResponseText#text presents an error parsing a message's
+    #   \[RFC5322] or [MIME-IMB] headers.
+    # * +PERMANENTFLAGS+, followed by an array of flags.  System flags will be
+    #   symbols, and keyword flags will be strings.  See
+    #   rdoc-ref:Net::IMAP@System+flags
+    # * +READ-ONLY+, the mailbox was selected read-only, or changed to read-only
+    # * +READ-WRITE+, the mailbox was selected read-write, or changed to
+    #   read-write
+    # * +TRYCREATE+, when #append or #copy fail because the target mailbox
+    #   doesn't exist.
+    # * +UIDNEXT+, #data is an Integer, the next UID value of the mailbox.  See
+    #   [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501]],
+    #   {§2.3.1.1, "Unique Identifier (UID) Message
+    #   Attribute}[https://www.rfc-editor.org/rfc/rfc3501#section-2.3.1.1].
+    # * +UIDVALIDITY+, #data is an Integer, the UID validity value of the
+    #   mailbox  See [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501]],
+    #   {§2.3.1.1, "Unique Identifier (UID) Message
+    #   Attribute}[https://www.rfc-editor.org/rfc/rfc3501#section-2.3.1.1].
+    # * +UNSEEN+, #data is an Integer, the number of messages which do not have
+    #   the <tt>\Seen</tt> flag set.
+    #
+    # See RFC5530[https://www.rfc-editor.org/rfc/rfc5530], "IMAP Response
+    # Codes" for the definition of the following response codes, which are all
+    # machine-readable annotations for the human-readable ResponseText#text, and
+    # have +nil+ #data of their own:
+    # * +UNAVAILABLE+
+    # * +AUTHENTICATIONFAILED+
+    # * +AUTHORIZATIONFAILED+
+    # * +EXPIRED+
+    # * +PRIVACYREQUIRED+
+    # * +CONTACTADMIN+
+    # * +NOPERM+
+    # * +INUSE+
+    # * +EXPUNGEISSUED+
+    # * +CORRUPTION+
+    # * +SERVERBUG+
+    # * +CLIENTBUG+
+    # * +CANNOT+
+    # * +LIMIT+
+    # * +OVERQUOTA+
+    # * +ALREADYEXISTS+
+    # * +NONEXISTENT+
     #
     class ResponseCode < Struct.new(:name, :data)
       ##
