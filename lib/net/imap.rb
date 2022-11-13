@@ -1269,9 +1269,7 @@ module Net
     #
     # port::  Port number (default value is 143 for imap, or 993 for imaps)
     # ssl::   If +options[:ssl]+ is true, then an attempt will be made
-    #         to use SSL (now TLS) to connect to the server.  For this to work
-    #         OpenSSL [OSSL] and the Ruby OpenSSL [RSSL] extensions need to
-    #         be installed.
+    #         to use SSL (now TLS) to connect to the server.
     #         If +options[:ssl]+ is a hash, it's passed to
     #         OpenSSL::SSL::SSLContext#set_params as parameters.
     # open_timeout:: Seconds to wait until a connection is opened
