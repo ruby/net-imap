@@ -870,6 +870,37 @@ module Net
       # children of this in the thread.
     end
 
+    # Net::IMAP::BodyStructure is included by all of the structs that can be
+    # returned from a <tt>"BODYSTRUCTURE"</tt> or <tt>"BODY"</tt>
+    # FetchData#attr value.  Although these classes don't share a base class,
+    # this module can be used to pattern match all of them.
+    #
+    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
+    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2-4.9]
+    # for full description of all +BODYSTRUCTURE+ fields, and also
+    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
+    #
+    # === Classes that include BodyStructure
+    # BodyTypeBasic:: Represents any message parts that are not handled by
+    #                 BodyTypeText, BodyTypeMessage, or BodyTypeMultipart.
+    # BodyTypeText:: Used by <tt>text/*</tt> parts.  Contains all of the
+    #                BodyTypeBasic fields.
+    # BodyTypeMessage:: Used by <tt>message/rfc822</tt> and
+    #                   <tt>message/global</tt> parts.  Contains all of the
+    #                   BodyTypeBasic fields.  Other <tt>message/*</tt> types
+    #                   should use BodyTypeBasic.
+    # BodyTypeMultipart:: for <tt>multipart/*</tt> parts
+    #
+    # ==== Deprecated BodyStructure classes
+    # The following classes represent invalid server responses or parser bugs:
+    # BodyTypeExtension:: parser bug: used for <tt>message/*</tt> where
+    #                     BodyTypeBasic should have been used.
+    # BodyTypeAttachment:: server bug: some servers sometimes return the
+    #                      "Content-Disposition: attachment" data where the
+    #                      entire body structure for a message part is expected.
+    module BodyStructure
+    end
+
     # Net::IMAP::BodyTypeBasic represents basic body structures of messages and
     # message parts, unless they have a <tt>Content-Type</tt> that is handled by
     # BodyTypeText, BodyTypeMessage, or BodyTypeMultipart.
@@ -884,6 +915,7 @@ module Net
                                      :description, :encoding, :size,
                                      :md5, :disposition, :language,
                                      :extension)
+      include BodyStructure
 
       ##
       # method: media_type
@@ -1018,6 +1050,7 @@ module Net
                                     :lines,
                                     :md5, :disposition, :language,
                                     :extension)
+      include BodyStructure
 
       ##
       # method: lines
@@ -1062,6 +1095,7 @@ module Net
                                        :envelope, :body, :lines,
                                        :md5, :disposition, :language,
                                        :extension)
+      include BodyStructure
 
       ##
       # method: envelope
@@ -1120,6 +1154,7 @@ module Net
     # structure.
     #
     class BodyTypeAttachment < Struct.new(:dsp_type, :_unused_, :param)
+      include BodyStructure
 
       # *invalid for BodyTypeAttachment*
       def media_type
@@ -1161,6 +1196,7 @@ module Net
                                          :parts,
                                          :param, :disposition, :language,
                                          :extension)
+      include BodyStructure
 
       ##
       # method: media_type
@@ -1240,6 +1276,8 @@ module Net
     class BodyTypeExtension < Struct.new(:media_type, :subtype,
                                          :params, :content_id,
                                          :description, :encoding, :size)
+      include BodyStructure
+
       def multipart?
         return false
       end
