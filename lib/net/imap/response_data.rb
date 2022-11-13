@@ -786,6 +786,14 @@ module Net
     # parsed into its component parts by the server.  Address objects are
     # returned within Envelope fields.
     #
+    # === Group syntax
+    #
+    # When the #host field is +nil+, this is a special form of address structure
+    # that indicates the [RFC5322[https://tools.ietf.org/html/rfc5322]] group
+    # syntax.  If the #mailbox name field is also +nil+, this is an end-of-group
+    # marker (semicolon in RFC-822 syntax).  If the #mailbox name field is
+    # non-+NIL+, this is the start of a group marker, and the mailbox #name
+    # field holds the group name phrase.
     class Address < Struct.new(:name, :route, :mailbox, :host)
       ##
       # method: name
