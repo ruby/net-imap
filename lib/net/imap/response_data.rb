@@ -269,22 +269,36 @@ module Net
       end
     end
 
-    # Net::IMAP::MailboxList represents contents of the LIST response.
+    # Net::IMAP::MailboxList represents contents of the LIST response,
+    # representing a single mailbox path.
     #
-    #   mailbox_list    ::= "(" #("\Marked" / "\Noinferiors" /
-    #                       "\Noselect" / "\Unmarked" / flag_extension) ")"
-    #                       SPACE (<"> QUOTED_CHAR <"> / nil) SPACE mailbox
-    #
-    # ==== Fields:
-    #
-    # attr:: Returns the name attributes. Each name attribute is a symbol
-    #        capitalized by String#capitalize, such as :Noselect (not :NoSelect).
-    #
-    # delim:: Returns the hierarchy delimiter.
-    #
-    # name:: Returns the mailbox name.
+    # Net::IMAP#list returns an array of MailboxList objects.
     #
     class MailboxList < Struct.new(:attr, :delim, :name)
+      ##
+      # method: attr
+      # :call-seq: attr -> array of Symbols
+      #
+      # Returns the name attributes. Each name attribute is a symbol capitalized
+      # by String#capitalize, such as :Noselect (not :NoSelect).  For the
+      # semantics of each attribute, see:
+      # * rdoc-ref:Net::IMAP@Basic+Mailbox+Attributes
+      # * rdoc-ref:Net::IMAP@Mailbox+role+Attributes
+      # * Net::IMAP@SPECIAL-USE
+      # * The IANA {IMAP Mailbox Name Attributes
+      #   registry}[https://www.iana.org/assignments/imap-mailbox-name-attributes/imap-mailbox-name-attributes.xhtml]
+
+      ##
+      # method: delim
+      # :call-seq: delim -> single character string
+      #
+      # Returns the hierarchy delimiter for the mailbox path.
+
+      ##
+      # method: name
+      # :call-seq: name -> string
+      #
+      # Returns the mailbox name.
     end
 
     # Net::IMAP::MailboxQuota represents contents of GETQUOTA response.
