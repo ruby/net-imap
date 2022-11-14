@@ -363,8 +363,7 @@ module Net
     # Seconds to wait until an IDLE response is received.
     attr_reader :idle_response_timeout
 
-    # The thread to receive exceptions.
-    attr_accessor :client_thread
+    attr_accessor :client_thread # :nodoc:
 
     # Returns the debug mode.
     def self.debug
