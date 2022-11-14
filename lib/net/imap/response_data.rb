@@ -306,36 +306,50 @@ module Net
     # specification below, the delimiter used with the "#" construct is a
     # single space (SPACE).
     #
-    #    quota_list      ::= "(" #quota_resource ")"
+    # Net:IMAP#getquota returns an array of MailboxQuota objects.
     #
-    #    quota_resource  ::= atom SPACE number SPACE number
-    #
-    #    quota_response  ::= "QUOTA" SPACE astring SPACE quota_list
-    #
-    # ==== Fields:
-    #
-    # mailbox:: The mailbox with the associated quota.
-    #
-    # usage:: Current storage usage of the mailbox.
-    #
-    # quota:: Quota limit imposed on the mailbox.
+    # Net::IMAP#getquotaroot returns an array containing both MailboxQuotaRoot
+    # and MailboxQuota objects.
     #
     class MailboxQuota < Struct.new(:mailbox, :usage, :quota)
+      ##
+      # method: mailbox
+      # :call-seq: mailbox -> string
+      #
+      # The mailbox with the associated quota.
+
+      ##
+      # method: usage
+      # :call-seq: usage -> Integer
+      #
+      # Current storage usage of the mailbox.
+
+      ##
+      # method: quota
+      # :call-seq: quota -> Integer
+      #
+      # Quota limit imposed on the mailbox.
+      #
     end
 
     # Net::IMAP::MailboxQuotaRoot represents part of the GETQUOTAROOT
     # response. (GETQUOTAROOT can also return Net::IMAP::MailboxQuota.)
     #
-    #    quotaroot_response ::= "QUOTAROOT" SPACE astring *(SPACE astring)
-    #
-    # ==== Fields:
-    #
-    # mailbox:: The mailbox with the associated quota.
-    #
-    # quotaroots:: Zero or more quotaroots that affect the quota on the
-    #              specified mailbox.
+    # Net::IMAP#getquotaroot returns an array containing both MailboxQuotaRoot
+    # and MailboxQuota objects.
     #
     class MailboxQuotaRoot < Struct.new(:mailbox, :quotaroots)
+      ##
+      # method: mailbox
+      # :call-seq: mailbox -> string
+      #
+      # The mailbox with the associated quota.
+
+      ##
+      # method: mailbox
+      # :call-seq: quotaroots -> array of strings
+      #
+      # Zero or more quotaroots that affect the quota on the specified mailbox.
     end
 
     # Net::IMAP::MailboxACLItem represents the response from GETACL.
