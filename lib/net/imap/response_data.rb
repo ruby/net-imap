@@ -432,14 +432,20 @@ module Net
 
     # Net::IMAP::StatusData represents the contents of the STATUS response.
     #
-    # ==== Fields:
-    #
-    # mailbox:: Returns the mailbox name.
-    #
-    # attr:: Returns a hash. Each key is one of "MESSAGES", "RECENT", "UIDNEXT",
-    #        "UIDVALIDITY", "UNSEEN". Each value is a number.
-    #
+    # Net::IMAP#status returns the contents of #attr.
     class StatusData < Struct.new(:mailbox, :attr)
+      ##
+      # method: mailbox
+      # :call-seq: mailbox -> string
+      #
+      # The mailbox name.
+
+      ##
+      # method: attr
+      # :call-seq: attr -> Hash[String, Integer]
+      #
+      # A hash.  Each key is one of "MESSAGES", "RECENT", "UIDNEXT",
+      # "UIDVALIDITY", "UNSEEN". Each value is a number.
     end
 
     # Net::IMAP::FetchData represents the contents of the FETCH response.
