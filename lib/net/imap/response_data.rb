@@ -834,17 +834,22 @@ module Net
       # syntax.
     end
 
-    #
     # Net::IMAP::ContentDisposition represents Content-Disposition fields.
     #
-    # ==== Fields:
-    #
-    # dsp_type:: Returns the disposition type.
-    #
-    # param:: Returns a hash that represents parameters of the Content-Disposition
-    #         field.
-    #
     class ContentDisposition < Struct.new(:dsp_type, :param)
+      ##
+      # method: dsp_type
+      # :call-seq: dsp_type -> string
+      #
+      # Returns the content disposition type, as defined by
+      # [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+
+      ##
+      # method: param
+      # :call-seq: param -> hash
+      #
+      # Returns a hash representing parameters of the Content-Disposition
+      # field, as defined by [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
     end
 
     # Net::IMAP::ThreadMember represents a thread-node returned
