@@ -654,27 +654,11 @@ module Net
 
     # Net::IMAP::Envelope represents envelope structures of messages.
     #
-    # ==== Fields:
-    #
-    # date:: Returns a string that represents the date.
-    #
-    # subject:: Returns a string that represents the subject.
-    #
-    # from:: Returns an array of Net::IMAP::Address that represents the from.
-    #
-    # sender:: Returns an array of Net::IMAP::Address that represents the sender.
-    #
-    # reply_to:: Returns an array of Net::IMAP::Address that represents the reply-to.
-    #
-    # to:: Returns an array of Net::IMAP::Address that represents the to.
-    #
-    # cc:: Returns an array of Net::IMAP::Address that represents the cc.
-    #
-    # bcc:: Returns an array of Net::IMAP::Address that represents the bcc.
-    #
-    # in_reply_to:: Returns a string that represents the in-reply-to.
-    #
-    # message_id:: Returns a string that represents the message-id.
+    # [Note]
+    #   When the #sender and #reply_to fields are absent or empty, they will
+    #   return the same value as #from.  Also, fields may return values that are
+    #   invalid for well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+    #   messages when the message is malformed or a draft message.
     #
     # See [{IMAP4rev1 §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]]
     # and [{IMAP4rev2 §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]]
@@ -683,6 +667,66 @@ module Net
     #
     class Envelope < Struct.new(:date, :subject, :from, :sender, :reply_to,
                                 :to, :cc, :bcc, :in_reply_to, :message_id)
+      ##
+      # method: date
+      # call-seq: date -> string
+      #
+      # Returns a string that represents the +Date+ header.
+
+      ##
+      # method: subject
+      # call-seq: subject -> string or nil
+      #
+      # Returns a string that represents the +Subject+ header, if it is present.
+
+      ##
+      # method: from
+      # call-seq: from -> array of Net::IMAP::Address or nil
+      #
+      # Returns an array of Address that represents the +From+ header.
+
+      ##
+      # method: sender
+      # call-seq: sender -> array of Net::IMAP::Address or nil
+      #
+      # Returns an array of Address that represents the +Sender+ header.
+
+      ##
+      # method: reply_to
+      # call-seq: reply_to -> array of Net::IMAP::Address or nil
+      #
+      # Returns an array of Address that represents the <tt>Reply-To</tt>
+      # header.
+
+      ##
+      # method: to
+      # call-seq: to -> array of Net::IMAP::Address
+      #
+      # Returns an array of Address that represents the +To+ header.
+
+      ##
+      # method: cc
+      # call-seq: cc -> array of Net::IMAP::Address
+      #
+      # Returns an array of Address that represents the +Cc+ header.
+
+      ##
+      # method: bcc
+      # call-seq: bcc -> array of Net::IMAP::Address
+      #
+      # Returns an array of Address that represents the +Bcc+ header.
+
+      ##
+      # method: in_reply_to
+      # call-seq: in_reply_to -> string
+      #
+      # Returns a string that represents the <tt>In-Reply-To</tt> header.
+
+      ##
+      # method: message_id
+      # call-seq: message_id -> string
+      #
+      # Returns a string that represents the <tt>Message-ID</tt>.
     end
 
     #
