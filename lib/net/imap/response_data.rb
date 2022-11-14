@@ -448,51 +448,208 @@ module Net
       # "UIDVALIDITY", "UNSEEN". Each value is a number.
     end
 
-    # Net::IMAP::FetchData represents the contents of the FETCH response.
+    # Net::IMAP::FetchData represents the contents of a FETCH response.
     #
-    # ==== Fields:
+    # Net::IMAP#fetch and Net::IMAP#uid_fetch both return an array of
+    # FetchData objects.
     #
-    # seqno:: Returns the message sequence number.
-    #         (Note: not the unique identifier, even for the UID command response.)
+    # === Fetch attributes
     #
-    # attr:: Returns a hash. Each key is a data item name, and each value is
-    #        its value.
+    #--
+    # TODO: merge branch with accessor methods for each type of attr.  Then
+    # move nearly all of the +attr+ documentation onto the appropriate
+    # accessor methods.
+    #++
     #
-    #        The current data items are:
-    #
-    #        [BODY]
-    #           A form of BODYSTRUCTURE without extension data.
-    #        [BODY[<section>]<<origin_octet>>]
-    #           A string expressing the body contents of the specified section.
-    #        [BODYSTRUCTURE]
-    #           An object that describes the [MIME-IMB] body structure of a message.
-    #           See Net::IMAP::BodyTypeBasic, Net::IMAP::BodyTypeText,
-    #           Net::IMAP::BodyTypeMessage, Net::IMAP::BodyTypeMultipart.
-    #        [ENVELOPE]
-    #           A Net::IMAP::Envelope object that describes the envelope
-    #           structure of a message.
-    #        [FLAGS]
-    #           A array of flag symbols that are set for this message. Flag symbols
-    #           are capitalized by String#capitalize.
-    #        [INTERNALDATE]
-    #           A string representing the internal date of the message.
-    #        [RFC822]
-    #           Equivalent to +BODY[]+.
-    #        [RFC822.HEADER]
-    #           Equivalent to +BODY.PEEK[HEADER]+.
-    #        [RFC822.SIZE]
-    #           A number expressing the [RFC-822] size of the message.
-    #        [RFC822.TEXT]
-    #           Equivalent to +BODY[TEXT]+.
-    #        [UID]
-    #           A number expressing the unique identifier of the message.
+    # Each key of the #attr hash is the data item name for the fetched value.
+    # Each data item represents a message attribute, part of one, or an
+    # interpretation of one.  #seqno is not a message attribute.  Most message
+    # attributes are static and must never change for a given <tt>[server,
+    # account, mailbox, UIDVALIDITY, UID]</tt> tuple.  A few message attributes
+    # can be dynamically changed, e.g. using the {STORE
+    # command}[rdoc-ref:Net::IMAP#store].
     #
     # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
     # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]
     # for full description of the standard fetch response data items, and
     # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
+    # ==== Static fetch data items
+    #
+    # The static data items
+    # defined by [IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html]] are:
+    #
+    # [<tt>"UID"</tt>]
+    #   A number expressing the unique identifier of the message.
+    #
+    # [<tt>"BODY[]"</tt>, <tt>"BODY[]<#{offset}>"</tt>]
+    #   The [RFC5322[https://tools.ietf.org/html/rfc5322]] expression of the
+    #   entire message, as a string.
+    #
+    #   If +offset+ is specified, this returned string is a substring of the
+    #   entire contents, starting at that origin octet.  This means that
+    #   <tt>BODY[]<0></tt> MAY be truncated, but <tt>BODY[]</tt> is NEVER
+    #   truncated.
+    #
+    #   <em>Messages can be parsed using the "mail" gem.</em>
+    #
+    #   [Note]
+    #     When fetching <tt>BODY.PEEK[#{specifier}]</tt>, the data will be
+    #     returned in <tt>BODY[#{specifier}]</tt>, without the +PEEK+.  This is
+    #     true for all of the <tt>BODY[...]</tt> attribute forms.
+    #
+    # [<tt>"BODY[HEADER]"</tt>, <tt>"BODY[HEADER]<#{offset}>"</tt>]
+    #   The [RFC5322[https://tools.ietf.org/html/rfc5322]] header of the
+    #   message.
+    #
+    #   <em>Message headers can be parsed using the "mail" gem.</em>
+    #
+    # [<tt>"BODY[HEADER.FIELDS (#{fields.join(" ")})]"</tt>,]
+    # [<tt>"BODY[HEADER.FIELDS (#{fields.join(" ")})]<#{offset}>"</tt>]
+    #   When field names are given, the subset contains only the header fields
+    #   that matches one of the names in the list.  The field names are based
+    #   on what was requested, not on what was returned.
+    #
+    # [<tt>"BODY[HEADER.FIELDS.NOT (#{fields.join(" ")})]"</tt>,]
+    # [<tt>"BODY[HEADER.FIELDS.NOT (#{fields.join(" ")})]<#{offset}>"</tt>]
+    #   When the <tt>HEADER.FIELDS.NOT</tt> is used, the subset is all of the
+    #   fields that <em>do not</em> match any names in the list.
+    #
+    # [<tt>"BODY[TEXT]"</tt>, <tt>"BODY[TEXT]<#{offset}>"</tt>]
+    #   The text body of the message, omitting
+    #   the [RFC5322[https://tools.ietf.org/html/rfc5322]] header.
+    #
+    # [<tt>"BODY[#{part}]"</tt>, <tt>"BODY[#{part}]<#{offset}>"</tt>]
+    #   The text of a particular body section, if it was fetched.
+    #
+    #   Multiple part specifiers will be joined with <tt>"."</tt>.  Numeric
+    #   part specifiers refer to the MIME part number, counting up from +1+.
+    #   Messages that don't use MIME, or MIME messages that are not multipart
+    #   and don't hold an encapsulated message, only have a part +1+.
+    #
+    #   8-bit textual data is permitted if
+    #   a [CHARSET[https://tools.ietf.org/html/rfc2978]] identifier is part of
+    #   the body parameter parenthesized list for this section.  See
+    #   BodyTypeBasic.
+    #
+    #   MESSAGE/RFC822 or MESSAGE/GLOBAL message, or a subset of the header, if
+    #   it was fetched.
+    #
+    # [<tt>"BODY[#{part}.HEADER]"</tt>,]
+    # [<tt>"BODY[#{part}.HEADER]<#{offset}>"</tt>,]
+    # [<tt>"BODY[#{part}.HEADER.FIELDS.NOT (#{fields.join(" ")})]"</tt>,]
+    # [<tt>"BODY[#{part}.HEADER.FIELDS.NOT (#{fields.join(" ")})]<#{offset}>"</tt>,]
+    # [<tt>"BODY[#{part}.TEXT]"</tt>,]
+    # [<tt>"BODY[#{part}.TEXT]<#{offset}>"</tt>,]
+    # [<tt>"BODY[#{part}.MIME]"</tt>,]
+    # [<tt>"BODY[#{part}.MIME]<#{offset}>"</tt>]
+    #   +HEADER+, <tt>HEADER.FIELDS</tt>, <tt>HEADER.FIELDS.NOT</tt>, and
+    #   <tt>TEXT</tt> can be prefixed by numeric part specifiers, if it refers
+    #   to a part of type <tt>message/rfc822</tt> or <tt>message/global</tt>.
+    #
+    #   +MIME+ refers to the [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
+    #   header for this part.
+    #
+    # [<tt>"BODY"</tt>]
+    #   A form of +BODYSTRUCTURE+, without any extension data.
+    #
+    # [<tt>"BODYSTRUCTURE"</tt>]
+    #   Returns a BodyStructure object that describes
+    #   the [MIME-IMB[https://tools.ietf.org/html/rfc2045]] body structure of
+    #   a message, if it was fetched.
+    #
+    # [<tt>"ENVELOPE"</tt>]
+    #   An Envelope object that describes the envelope structure of a message.
+    #   See the documentation for Envelope for a description of the envelope
+    #   structure attributes.
+    #
+    # [<tt>"INTERNALDATE"</tt>]
+    #   The internal date and time of the message on the server.  This is not
+    #   the date and time in
+    #   the [RFC5322[https://tools.ietf.org/html/rfc5322]] header, but rather
+    #   a date and time which reflects when the message was received.
+    #
+    # [<tt>"RFC822.SIZE"</tt>]
+    #   A number expressing the [RFC5322[https://tools.ietf.org/html/rfc5322]]
+    #   size of the message.
+    #
+    #   [Note]
+    #     \IMAP was originally developed for the older RFC-822 standard, and
+    #     as a consequence several fetch items in \IMAP incorporate "RFC822"
+    #     in their name.  With the exception of +RFC822.SIZE+, there are more
+    #     modern replacements; for example, the modern version of
+    #     +RFC822.HEADER+ is <tt>BODY.PEEK[HEADER]</tt>.  In all cases,
+    #     "RFC822" should be interpreted as a reference to the
+    #     updated [RFC5322[https://tools.ietf.org/html/rfc5322]] standard.
+    #
+    # [<tt>"RFC822"</tt>]
+    #   Semantically equivalent to <tt>BODY[]</tt>.
+    # [<tt>"RFC822.HEADER"</tt>]
+    #   Semantically equivalent to <tt>BODY[HEADER]</tt>.
+    # [<tt>"RFC822.TEXT"</tt>]
+    #   Semantically equivalent to <tt>BODY[TEXT]</tt>.
+    #
+    # [Note:]
+    #   >>>
+    #     Additional static fields are defined in \IMAP extensions and
+    #     [IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]], but
+    #     Net::IMAP can't parse them yet.
+    #
+    #--
+    # <tt>"BINARY[#{section_binary}]<#{offset}>"</tt>:: TODO...
+    # <tt>"BINARY.SIZE[#{sectionbinary}]"</tt>::        TODO...
+    # <tt>"EMAILID"</tt>::                              TODO...
+    # <tt>"THREADID"</tt>::                             TODO...
+    # <tt>"SAVEDATE"</tt>::                             TODO...
+    #++
+    #
+    # ==== Dynamic message attributes
+    # The only dynamic item defined
+    # by [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501.html]] is:
+    # [<tt>"FLAGS"</tt>]
+    #   An array of flags that are set for this message.  System flags are
+    #   symbols that have been capitalized by String#capitalize.  Keyword
+    #   flags are strings and their case is not changed.
+    #
+    # \IMAP extensions define new dynamic fields, e.g.:
+    #
+    # [<tt>"MODSEQ"</tt>]
+    #   The modification sequence number associated with this IMAP message.
+    #
+    #   Requires the [CONDSTORE[https://tools.ietf.org/html/rfc7162]]
+    #   server {capability}[rdoc-ref:Net::IMAP#capability].
+    #
+    # [Note:]
+    #   >>>
+    #     Additional dynamic fields are defined in \IMAP extensions, but
+    #     Net::IMAP can't parse them yet.
+    #
+    #--
+    # <tt>"ANNOTATE"</tt>:: TODO...
+    # <tt>"PREVIEW"</tt>::  TODO...
+    #++
+    #
     class FetchData < Struct.new(:seqno, :attr)
+      ##
+      # method: seqno
+      # :call-seq: seqno -> Integer
+      #
+      # The message sequence number.
+      #
+      # [Note]
+      #   This is never the unique identifier (UID), not even for the
+      #   Net::IMAP#uid_fetch result.  If it was returned, the UID is available
+      #   from <tt>attr["UID"]</tt>.
+
+      ##
+      # method: attr
+      # :call-seq: attr -> hash
+      #
+      # A hash.  Each key is specifies a message attribute, and the value is the
+      # corresponding data item.
+      #
+      # See rdoc-ref:FetchData@Fetch+attributes for descriptions of possible
+      # values.
     end
 
     # Net::IMAP::Envelope represents envelope structures of messages.
