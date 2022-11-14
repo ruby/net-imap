@@ -101,38 +101,48 @@ module Net
     end
 
     # Net::IMAP::ResponseText represents texts of responses.
-    # The text may be prefixed by the response code.
     #
-    #   resp_text       ::= ["[" resp-text-code "]" SP] text
+    # The text may be prefixed by a ResponseCode.
     #
-    # ==== Fields:
-    #
-    # code:: Returns the response code. See ((<Net::IMAP::ResponseCode>)).
-    #
-    # text:: Returns the text.
-    #
+    # ResponseText is returned from TaggedResponse#data, or from
+    # UntaggedResponse#data when the response type is a "condition" ("OK", "NO",
+    # "BAD", "PREAUTH", or "BYE").
     class ResponseText < Struct.new(:code, :text)
+      ##
+      # method: code
+      # :call-seq: code -> ResponseCode or nil
+      #
+      # Returns a ResponseCode, if the response contains one
+
+      ##
+      # method: text
+      # :call-seq: text -> string
+      #
+      # Returns the response text, not including any response code
     end
 
-    # Net::IMAP::ResponseCode represents response codes.
+    # Net::IMAP::ResponseCode represents response codes.  Response codes can be
+    # retrieved from ResponseText#code and can be included in any "condition"
+    # response: any TaggedResponse and UntaggedResponse when the response type
+    # is a "condition" ("OK", "NO", "BAD", "PREAUTH", or "BYE").
     #
-    #   resp_text_code  ::= "ALERT" /
-    #                       "BADCHARSET" [SP "(" astring *(SP astring) ")" ] /
-    #                       capability_data / "PARSE" /
-    #                       "PERMANENTFLAGS" SP "("
-    #                       [flag_perm *(SP flag_perm)] ")" /
-    #                       "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
-    #                       "UIDNEXT" SP nz_number / "UIDVALIDITY" SP nz_number /
-    #                       "UNSEEN" SP nz_number /
-    #                       atom [SP 1*<any TEXT-CHAR except "]">]
-    #
-    # ==== Fields:
-    #
-    # name:: Returns the name, such as "ALERT", "PERMANENTFLAGS", or "UIDVALIDITY".
-    #
-    # data:: Returns the data, if it exists.
     #
     class ResponseCode < Struct.new(:name, :data)
+      ##
+      # method: name
+      # :call-seq: name -> string
+      #
+      # Returns the response code name, such as "ALERT", "PERMANENTFLAGS", or
+      # "UIDVALIDITY".
+
+      ##
+      # method: data
+      # :call-seq: data -> object or nil
+      #
+      # Returns the parsed response code data, e.g: an array of capabilities
+      # strings, an array of character set strings, a list of permanent flags,
+      # an Integer, etc.  The response #code determines what form the response
+      # code data can take.
     end
 
     # Net::IMAP::UIDPlusData represents the ResponseCode#data that accompanies
