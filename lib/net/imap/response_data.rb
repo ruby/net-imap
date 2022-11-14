@@ -782,23 +782,48 @@ module Net
       #   +nil+ and empty string as identical.
     end
 
-    #
-    # Net::IMAP::Address represents electronic mail addresses.
-    #
-    # ==== Fields:
-    #
-    # name:: Returns the phrase from [RFC-822] mailbox.
-    #
-    # route:: Returns the route from [RFC-822] route-addr.
-    #
-    # mailbox:: nil indicates end of [RFC-822] group.
-    #           If non-nil and host is nil, returns [RFC-822] group name.
-    #           Otherwise, returns [RFC-822] local-part.
-    #
-    # host:: nil indicates [RFC-822] group syntax.
-    #        Otherwise, returns [RFC-822] domain name.
+    # Net::IMAP::Address represents an electronic mail address, which has been
+    # parsed into its component parts by the server.  Address objects are
+    # returned within Envelope fields.
     #
     class Address < Struct.new(:name, :route, :mailbox, :host)
+      ##
+      # method: name
+      # :call-seq: name -> string or nil
+      #
+      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] address
+      # +display-name+ (or the mailbox +phrase+ in the RFC-822 grammar).
+
+      ##
+      # method: route
+      # :call-seq: route -> string or nil
+      #
+      # Returns the route from RFC-822 route-addr.
+      #
+      # Note:: Generating this obsolete route addressing syntax is not allowed
+      #        by [RFC5322[https://tools.ietf.org/html/rfc5322]].  However,
+      #        addresses with this syntax must still be accepted and parsed.
+
+      ##
+      # method: mailbox
+      # :call-seq: mailbox -> string or nil
+      #
+      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] address
+      # +local-part+, if #host is not +nil+.
+      #
+      # When #host is +nil+, this returns
+      # an [RFC5322[https://tools.ietf.org/html/rfc5322]] group name and a +nil+
+      # mailbox indicates the end of a group.
+
+      ##
+      # method: host
+      # :call-seq: host -> string or nil
+      #
+      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] addr-spec
+      # +domain+ name.
+      #
+      # +nil+ indicates [RFC5322[https://tools.ietf.org/html/rfc5322]] group
+      # syntax.
     end
 
     #
