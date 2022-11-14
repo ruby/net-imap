@@ -10,34 +10,47 @@ module Net
     # ready to accept the continuation of a command from the client.  The
     # remainder of this response is a line of text.
     #
-    #   continue_req    ::= "+" SPACE (resp_text / base64)
-    #
-    # ==== Fields:
-    #
-    # data:: Returns the data (Net::IMAP::ResponseText).
-    #
-    # raw_data:: Returns the raw data string.
     class ContinuationRequest < Struct.new(:data, :raw_data)
+      ##
+      # method: data
+      # :call-seq: data -> ResponseText
+      #
+      # Returns a ResponseText object
+
+      ##
+      # method: raw_data
+      # :call-seq: raw_data -> string
+      #
+      # the raw response data
     end
 
     # Net::IMAP::UntaggedResponse represents untagged responses.
     #
     # Data transmitted by the server to the client and status responses
     # that do not indicate command completion are prefixed with the token
-    # "*", and are called untagged responses.
+    # <tt>"*"</tt>, and are called untagged responses.
     #
-    #   response_data   ::= "*" SPACE (resp_cond_state / resp_cond_bye /
-    #                       mailbox_data / message_data / capability_data)
-    #
-    # ==== Fields:
-    #
-    # name:: Returns the name, such as "FLAGS", "LIST", or "FETCH".
-    #
-    # data:: Returns the data such as an array of flag symbols,
-    #        a ((<Net::IMAP::MailboxList>)) object.
-    #
-    # raw_data:: Returns the raw data string.
     class UntaggedResponse < Struct.new(:name, :data, :raw_data)
+      ##
+      # method: name
+      # :call-seq: name -> string
+      #
+      # The uppercase response name, e.g. "FLAGS", "LIST", "FETCH", etc.
+
+      ##
+      # method: data
+      # :call-seq: data -> object or nil
+      #
+      # The parsed response data, e.g: an array of flag symbols, an array of
+      # capabilities strings, a ResponseText object, a MailboxList object, a
+      # FetchData object, a Namespaces object, etc.  The response #name
+      # determines what form the data can take.
+
+      ##
+      # method: raw_data
+      # :call-seq: raw_data -> string
+      #
+      # The raw response data.
     end
 
     # Net::IMAP::IgnoredResponse represents intentionally ignored responses.
@@ -47,10 +60,12 @@ module Net
     #
     # It matches no IMAP standard.
     #
-    # ==== Fields:
-    #
-    # raw_data:: Returns the raw data string.
     class IgnoredResponse < Struct.new(:raw_data)
+      ##
+      # method: raw_data
+      # :call-seq: raw_data -> string
+      #
+      # The raw response data.
     end
 
     # Net::IMAP::TaggedResponse represents tagged responses.
@@ -59,23 +74,30 @@ module Net
     # failure of the operation.  It is tagged with the same tag as the
     # client command which began the operation.
     #
-    #   response_tagged ::= tag SPACE resp_cond_state CRLF
-    #
-    #   tag             ::= 1*<any ATOM_CHAR except "+">
-    #
-    #   resp_cond_state ::= ("OK" / "NO" / "BAD") SPACE resp_text
-    #
-    # ==== Fields:
-    #
-    # tag:: Returns the tag.
-    #
-    # name:: Returns the name, one of "OK", "NO", or "BAD".
-    #
-    # data:: Returns the data. See ((<Net::IMAP::ResponseText>)).
-    #
-    # raw_data:: Returns the raw data string.
-    #
     class TaggedResponse < Struct.new(:tag, :name, :data, :raw_data)
+      ##
+      # method: tag
+      # :call-seq: tag -> string
+      #
+      # Returns the command tag
+
+      ##
+      # method: name
+      # :call-seq: name -> string
+      #
+      # Returns the name, one of "OK", "NO", or "BAD".
+
+      ##
+      # method: data
+      # :call-seq: data -> ResponseText
+      #
+      # Returns a ResponseText object
+
+      ##
+      # method: raw_data
+      # :call-seq: raw_data -> string
+      #
+      # The raw response data.
     end
 
     # Net::IMAP::ResponseText represents texts of responses.
