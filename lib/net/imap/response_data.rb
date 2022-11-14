@@ -870,37 +870,9 @@ module Net
       # children of this in the thread.
     end
 
-    # Net::IMAP::BodyTypeBasic represents basic body structures of messages.
-    #
-    # ==== Fields:
-    #
-    # media_type:: Returns the content media type name as defined in [MIME-IMB].
-    #
-    # subtype:: Returns the content subtype name as defined in [MIME-IMB].
-    #
-    # param:: Returns a hash that represents parameters as defined in [MIME-IMB].
-    #
-    # content_id:: Returns a string giving the content id as defined in [MIME-IMB].
-    #
-    # description:: Returns a string giving the content description as defined in
-    #               [MIME-IMB].
-    #
-    # encoding:: Returns a string giving the content transfer encoding as defined in
-    #            [MIME-IMB].
-    #
-    # size:: Returns a number giving the size of the body in octets.
-    #
-    # md5:: Returns a string giving the body MD5 value as defined in [MD5].
-    #
-    # disposition:: Returns a Net::IMAP::ContentDisposition object giving
-    #               the content disposition.
-    #
-    # language:: Returns a string or an array of strings giving the body
-    #            language value as defined in [LANGUAGE-TAGS].
-    #
-    # extension:: Returns extension data.
-    #
-    # multipart?:: Returns false.
+    # Net::IMAP::BodyTypeBasic represents basic body structures of messages and
+    # message parts, unless they have a <tt>Content-Type</tt> that is handled by
+    # BodyTypeText, BodyTypeMessage, or BodyTypeMultipart.
     #
     # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
     # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2-4.9]
@@ -912,26 +884,133 @@ module Net
                                      :description, :encoding, :size,
                                      :md5, :disposition, :language,
                                      :extension)
+
+      ##
+      # method: media_type
+      # :call-seq: media_type -> string
+      #
+      # The top-level media type as defined in
+      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+
+      ##
+      # method: subtype
+      # :call-seq: subtype -> string
+      #
+      # The media subtype name as defined in
+      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+
+      ##
+      # method: param
+      # :call-seq: param -> string
+      #
+      # Returns a hash that represents parameters as defined in
+      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+
+      ##
+      # method: content_id
+      # :call-seq: content_id -> string
+      #
+      # Returns a string giving the content id as defined
+      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
+      # {§7}[https://tools.ietf.org/html/rfc2045#section-7].
+
+      ##
+      # method: description
+      # :call-seq: description -> string
+      #
+      # Returns a string giving the content description as defined
+      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
+      # {§8}[https://tools.ietf.org/html/rfc2045#section-8].
+
+      ##
+      # method: encoding
+      # :call-seq: encoding -> string
+      #
+      # Returns a string giving the content transfer encoding as defined
+      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
+      # {§6}[https://tools.ietf.org/html/rfc2045#section-6].
+
+      ##
+      # method: size
+      # :call-seq: size -> integer
+      #
+      # Returns a number giving the size of the body in octets.
+
+      ##
+      # method: md5
+      # :call-seq: md5 -> string
+      #
+      # Returns a string giving the body MD5 value as defined in
+      # [MD5[https://tools.ietf.org/html/rfc1864]].
+
+      ##
+      # method: disposition
+      # :call-seq: disposition -> ContentDisposition
+      #
+      # Returns a ContentDisposition object giving the content
+      # disposition, as defined by
+      # [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+
+      ##
+      # method: language
+      # :call-seq: language -> string
+      #
+      # Returns a string or an array of strings giving the body
+      # language value as defined in
+      # [LANGUAGE-TAGS[https://www.rfc-editor.org/info/rfc3282]].
+
+      #--
+      ##
+      # method: location
+      # :call-seq: location -> string
+      #
+      # A string list giving the body content URI as defined in
+      # [LOCATION[https://www.rfc-editor.org/info/rfc2557]].
+      #++
+
+      ##
+      # method: extension
+      # :call-seq: extension -> string
+      #
+      # Returns extension data.  The +BODYSTRUCTURE+ fetch attribute
+      # contains extension data, but +BODY+ does not.
+
+      ##
+      # :call-seq: multipart? -> false
+      #
+      # BodyTypeBasic is not used for multipart MIME parts.
       def multipart?
         return false
       end
 
-      # Obsolete: use +subtype+ instead.  Calling this will
-      # generate a warning message to +stderr+, then return
-      # the value of +subtype+.
+      # :call-seq: media_subtype -> subtype
+      #
+      # >>>
+      #   [Obsolete]
+      #     Use +subtype+ instead.  Calling this will generate a warning message
+      #     to +stderr+, then return the value of +subtype+.
+      #--
+      # TODO: why not just keep this as an alias?  Would "media_subtype" be used
+      # for something else?
+      #++
       def media_subtype
         warn("media_subtype is obsolete, use subtype instead.\n", uplevel: 1)
         return subtype
       end
     end
 
-    # Net::IMAP::BodyTypeText represents TEXT body structures of messages.
+    # Net::IMAP::BodyTypeText represents the body structures of messages and
+    # message parts, when <tt>Content-Type</tt> is <tt>text/*</tt>.
     #
-    # ==== Fields:
-    #
-    # lines:: Returns the size of the body in text lines.
-    #
-    # And Net::IMAP::BodyTypeText has all fields of Net::IMAP::BodyTypeBasic.
+    # BodyTypeText contains all of the fields of BodyTypeBasic.  See
+    # BodyTypeBasic for documentation of the following:
+    # * {media_type}[rdoc-ref:BodyTypeBasic#media_type]
+    # * subtype[rdoc-ref:BodyTypeBasic#subtype]
+    # * param[rdoc-ref:BodyTypeBasic#param]
+    # * {content_id}[rdoc-ref:BodyTypeBasic#content_id]
+    # * description[rdoc-ref:BodyTypeBasic#description]
+    # * encoding[rdoc-ref:BodyTypeBasic#encoding]
+    # * size[rdoc-ref:BodyTypeBasic#size]
     #
     class BodyTypeText < Struct.new(:media_type, :subtype,
                                     :param, :content_id,
@@ -939,6 +1018,17 @@ module Net
                                     :lines,
                                     :md5, :disposition, :language,
                                     :extension)
+
+      ##
+      # method: lines
+      # :call-seq: lines -> Integer
+      #
+      # Returns the size of the body in text lines.
+
+      ##
+      # :call-seq: multipart? -> false
+      #
+      # BodyTypeText is not used for multipart MIME parts.
       def multipart?
         return false
       end
@@ -952,15 +1042,19 @@ module Net
       end
     end
 
-    # Net::IMAP::BodyTypeMessage represents MESSAGE/RFC822 body structures of messages.
+    # Net::IMAP::BodyTypeMessage represents the body structures of messages and
+    # message parts, when <tt>Content-Type</tt> is <tt>message/rfc822</tt> or
+    # <tt>message/global</tt>.
     #
-    # ==== Fields:
-    #
-    # envelope:: Returns a Net::IMAP::Envelope giving the envelope structure.
-    #
-    # body:: Returns an object giving the body structure.
-    #
-    # And Net::IMAP::BodyTypeMessage has all methods of Net::IMAP::BodyTypeText.
+    # BodyTypeMessage contains all of the fields of BodyTypeBasic.  See
+    # BodyTypeBasic for documentation of the following fields:
+    # * {media_type}[rdoc-ref:BodyTypeBasic#media_type]
+    # * subtype[rdoc-ref:BodyTypeBasic#subtype]
+    # * param[rdoc-ref:BodyTypeBasic#param]
+    # * {content_id}[rdoc-ref:BodyTypeBasic#content_id]
+    # * description[rdoc-ref:BodyTypeBasic#description]
+    # * encoding[rdoc-ref:BodyTypeBasic#encoding]
+    # * size[rdoc-ref:BodyTypeBasic#size]
     #
     class BodyTypeMessage < Struct.new(:media_type, :subtype,
                                        :param, :content_id,
@@ -968,6 +1062,23 @@ module Net
                                        :envelope, :body, :lines,
                                        :md5, :disposition, :language,
                                        :extension)
+
+      ##
+      # method: envelope
+      # :call-seq: envelope -> Envelope
+      #
+      # Returns a Net::IMAP::Envelope giving the envelope structure.
+
+      ##
+      # method: body
+      # :call-seq: body -> BodyStructure
+      #
+      # Returns a Net::IMAP::BodyStructure for the message's body structure.
+
+      ##
+      # :call-seq: multipart? -> false
+      #
+      # BodyTypeMessage is not used for multipart MIME parts.
       def multipart?
         return false
       end
@@ -981,57 +1092,134 @@ module Net
       end
     end
 
-    # Net::IMAP::BodyTypeAttachment represents attachment body structures
-    # of messages.
+    # === WARNING
+    # BodyTypeAttachment represents a <tt>body-fld-dsp</tt> that is
+    # incorrectly in a position where the IMAP4rev1 grammar expects a nested
+    # +body+ structure.
     #
-    # ==== Fields:
+    # >>>
+    #   \IMAP body structures are parenthesized lists and assign their fields
+    #   positionally, so missing fields change the intepretation of all
+    #   following fields.  Buggy \IMAP servers sometimes leave fields missing
+    #   rather than empty, which inevitably confuses parsers.
+    #   BodyTypeAttachment was an attempt to parse a common type of buggy body
+    #   structure without crashing.
     #
-    # media_type:: Returns the content media type name.
+    #   Currently, when Net::IMAP::ResponseParser sees "attachment" as the first
+    #   entry in a <tt>body-type-1part</tt>, which is where the MIME type should
+    #   be, it uses BodyTypeAttachment to capture the rest.  "attachment" is not
+    #   a valid MIME type, but _is_ a common <tt>Content-Disposition</tt>.  What
+    #   might have happened was that buggy server could not parse the message
+    #   (which might have been incorrectly formatted) and output a
+    #   <tt>body-type-dsp</tt> where a Net::IMAP::ResponseParser expected to see
+    #   a +body+.
     #
-    # subtype:: Returns +nil+.
+    # A future release will replace this, probably with a ContentDisposition
+    # nested inside another body structure object, maybe BodyTypeBasic, or
+    # perhaps a new body structure class that represents any unparsable body
+    # structure.
     #
-    # param:: Returns a hash that represents parameters.
-    #
-    # multipart?:: Returns false.
-    #
-    class BodyTypeAttachment < Struct.new(:media_type, :subtype,
-                                          :param)
+    class BodyTypeAttachment < Struct.new(:dsp_type, :_unused_, :param)
+
+      # *invalid for BodyTypeAttachment*
+      def media_type
+        warn(<<~WARN, uplevel: 1)
+          BodyTypeAttachment#media_type is obsolete.  Use dsp_type instead.
+        WARN
+        dsp_type
+      end
+
+      # *invalid for BodyTypeAttachment*
+      def subtype
+        warn("BodyTypeAttachment#subtype is obsolete.\n", uplevel: 1)
+        nil
+      end
+
+      ##
+      # method: dsp_type
+      # :call-seq: dsp_type -> string
+      #
+      # Returns the content disposition type, as defined by
+      # [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+
+      ##
+      # method: param
+      # :call-seq: param -> hash
+      #
+      # Returns a hash representing parameters of the Content-Disposition
+      # field, as defined by [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+
+      ##
       def multipart?
         return false
       end
     end
 
-    # Net::IMAP::BodyTypeMultipart represents multipart body structures
-    # of messages.
-    #
-    # ==== Fields:
-    #
-    # media_type:: Returns the content media type name as defined in [MIME-IMB].
-    #
-    # subtype:: Returns the content subtype name as defined in [MIME-IMB].
-    #
-    # parts:: Returns multiple parts.
-    #
-    # param:: Returns a hash that represents parameters as defined in [MIME-IMB].
-    #
-    # disposition:: Returns a Net::IMAP::ContentDisposition object giving
-    #               the content disposition.
-    #
-    # language:: Returns a string or an array of strings giving the body
-    #            language value as defined in [LANGUAGE-TAGS].
-    #
-    # extension:: Returns extension data.
-    #
-    # multipart?:: Returns true.
-    #
+    # Net::IMAP::BodyTypeMultipart represents body structures of messages and
+    # message parts, when <tt>Content-Type</tt> is <tt>multipart/*</tt>.
     class BodyTypeMultipart < Struct.new(:media_type, :subtype,
                                          :parts,
                                          :param, :disposition, :language,
                                          :extension)
+
+      ##
+      # method: media_type
+      # call-seq: media_type -> "multipart"
+      #
+      # BodyTypeMultipart is only used with <tt>multipart/*</tt> media types.
+
+      ##
+      # method: subtype
+      # call-seq: subtype -> string
+      #
+      # Returns the content subtype name
+      # as defined in [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+
+      ##
+      # method: parts
+      # call-seq: parts -> array of BodyStructure objects
+      #
+      # Returns an array with a BodyStructure object for each part contained in
+      # this part.
+
+      ##
+      # method: param
+      # call-seq: param -> hash
+      #
+      # Returns a hash that represents parameters
+      # as defined in [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+
+      ##
+      # method: disposition
+      # call-seq: disposition -> ContentDisposition
+      #
+      # Returns a Net::IMAP::ContentDisposition object giving the content
+      # disposition.
+
+      ##
+      # method: language
+      # :call-seq: language -> string
+      #
+      # Returns a string or an array of strings giving the body
+      # language value as defined in
+      # [LANGUAGE-TAGS[https://www.rfc-editor.org/info/rfc3282]].
+
+      ##
+      # method: extension
+      # call-seq: extension -> array
+      #
+      # Returns extension data as an array of numbers strings, and nested
+      # arrays (of numbers, strings, etc).
+
+      ##
+      # :call-seq: multipart? -> true
+      #
+      # BodyTypeMultipart is used for multipart MIME parts.
       def multipart?
         return true
       end
 
+      ##
       # Obsolete: use +subtype+ instead.  Calling this will
       # generate a warning message to +stderr+, then return
       # the value of +subtype+.
@@ -1041,6 +1229,14 @@ module Net
       end
     end
 
+    # === WARNING:
+    # >>>
+    #   BodyTypeExtension is (incorrectly) used for <tt>message/*</tt> parts
+    #   (besides <tt>message/rfc822</tt>, which correctly uses BodyTypeMessage).
+    #
+    # A future release will replace this class with:
+    # * BodyTypeMessage for <tt>message/rfc822</tt> and <tt>message/global</tt>
+    # * BodyTypeBasic for any other <tt>message/*</tt>
     class BodyTypeExtension < Struct.new(:media_type, :subtype,
                                          :params, :content_id,
                                          :description, :encoding, :size)
