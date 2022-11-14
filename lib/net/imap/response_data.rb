@@ -379,39 +379,55 @@ module Net
       # The access rights the indicated #user has to the #mailbox.
     end
 
-    # Net::IMAP::Namespace represents a single [RFC-2342] namespace.
+    # Net::IMAP::Namespace represents a single namespace contained inside a
+    # NAMESPACE response.
     #
-    #    Namespace = nil / "(" 1*( "(" string SP  (<"> QUOTED_CHAR <"> /
-    #       nil) *(Namespace_Response_Extension) ")" ) ")"
-    #
-    #    Namespace_Response_Extension = SP string SP "(" string *(SP string)
-    #       ")"
-    #
-    # ==== Fields:
-    #
-    # prefix:: Returns the namespace prefix string.
-    # delim:: Returns nil or the hierarchy delimiter character.
-    # extensions:: Returns a hash of extension names to extension flag arrays.
+    # Returned by Net::IMAP#namespace, contained inside a Namespaces object.
     #
     class Namespace < Struct.new(:prefix, :delim, :extensions)
+      ##
+      # method: prefix
+      # :call-seq: prefix -> string
+      #
+      # Returns the namespace prefix string.
+
+      ##
+      # method: delim
+      # :call-seq: delim -> single character string or nil
+      #
+      # Returns a hierarchy delimiter character, if it exists.
+
+      ##
+      # method: extensions
+      # :call-seq: extensions -> Hash[String, Array[String]]
+      #
+      # A hash of parameters mapped to arrays of strings, for extensibility.
+      # Extension parameter semantics would be defined by the extension.
     end
 
-    # Net::IMAP::Namespaces represents the response from [RFC-2342] NAMESPACE.
+    # Net::IMAP::Namespaces represents a +NAMESPACE+ server response, which
+    # contains lists of #personal, #shared, and #other namespaces.
     #
-    #    Namespace_Response = "*" SP "NAMESPACE" SP Namespace SP Namespace SP
-    #       Namespace
-    #
-    #       ; The first Namespace is the Personal Namespace(s)
-    #       ; The second Namespace is the Other Users' Namespace(s)
-    #       ; The third Namespace is the Shared Namespace(s)
-    #
-    # ==== Fields:
-    #
-    # personal:: Returns an array of Personal Net::IMAP::Namespace objects.
-    # other:: Returns an array of Other Users' Net::IMAP::Namespace objects.
-    # shared:: Returns an array of Shared Net::IMAP::Namespace objects.
+    # Net::IMAP#namespace returns a Namespaces object.
     #
     class Namespaces < Struct.new(:personal, :other, :shared)
+      ##
+      # method: personal
+      # :call-seq: personal -> array of Namespace
+      #
+      # Returns an array of Personal Namespace objects.
+
+      ##
+      # method: other
+      # :call-seq: other -> array of Namespace
+      #
+      # Returns an array of Other Users' Namespace objects.
+
+      ##
+      # method: shared
+      # :call-seq: shared -> array of Namespace
+      #
+      # Returns an array of Shared Namespace objects.
     end
 
     # Net::IMAP::StatusData represents the contents of the STATUS response.
