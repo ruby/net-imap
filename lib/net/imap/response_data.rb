@@ -855,14 +855,19 @@ module Net
     # Net::IMAP::ThreadMember represents a thread-node returned
     # by Net::IMAP#thread.
     #
-    # ==== Fields:
-    #
-    # seqno:: The sequence number of this message.
-    #
-    # children:: An array of Net::IMAP::ThreadMember objects for mail
-    #            items that are children of this in the thread.
-    #
     class ThreadMember < Struct.new(:seqno, :children)
+      ##
+      # method: seqno
+      # :call-seq: seqno -> Integer
+      #
+      # The message sequence number.
+
+      ##
+      # method: children
+      # :call-seq: children -> array of ThreadMember
+      #
+      # An array of Net::IMAP::ThreadMember objects for mail items that are
+      # children of this in the thread.
     end
 
     # Net::IMAP::BodyTypeBasic represents basic body structures of messages.
