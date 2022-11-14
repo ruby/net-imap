@@ -354,21 +354,29 @@ module Net
 
     # Net::IMAP::MailboxACLItem represents the response from GETACL.
     #
-    #    acl_data        ::= "ACL" SPACE mailbox *(SPACE identifier SPACE rights)
+    # Net::IMAP#getacl returns an array of MailboxACLItem objects.
     #
-    #    identifier      ::= astring
-    #
-    #    rights          ::= astring
-    #
-    # ==== Fields:
-    #
-    # user:: Login name that has certain rights to the mailbox
-    #        that was specified with the getacl command.
-    #
-    # rights:: The access rights the indicated user has to the
-    #          mailbox.
-    #
+    # ==== Required capability
+    # +ACL+ - described in [ACL[https://tools.ietf.org/html/rfc4314]]
     class MailboxACLItem < Struct.new(:user, :rights, :mailbox)
+      ##
+      # method: mailbox
+      # :call-seq: mailbox -> string
+      #
+      # The mailbox to which the indicated #user has the specified #rights.
+
+      ##
+      # method: user
+      # :call-seq: user -> string
+      #
+      # Login name that has certain #rights to the #mailbox that was specified
+      # with the getacl command.
+
+      ##
+      # method: rights
+      # :call-seq: rights -> string
+      #
+      # The access rights the indicated #user has to the #mailbox.
     end
 
     # Net::IMAP::Namespace represents a single [RFC-2342] namespace.
