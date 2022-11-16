@@ -77,6 +77,31 @@ module Net
     # <em>Using a deprecated mechanism will print a warning.</em>
     #
     module SASL
+      # Exception class for any client error detected during the authentication
+      # exchange.
+      #
+      # When the _server_ reports an authentication failure, it will respond
+      # with a protocol specific error instead, e.g: +BAD+ or +NO+ in IMAP.
+      #
+      # When the client encounters any error, it *must* consider the
+      # authentication exchange to be unsuccessful and it might need to drop the
+      # connection.  For example, if the server reports that the authentication
+      # exchange was successful or the protocol does not allow additional
+      # authentication attempts.
+      Error = Class.new(StandardError)
+
+      # Indicates an authentication exchange that will be or has been canceled
+      # by the client, not due to any error or failure during processing.
+      AuthenticationCanceled = Class.new(Error)
+
+      # Indicates an error when processing a server challenge, e.g: an invalid
+      # or unparsable challenge.  An underlying exception may be available as
+      # the exception's #cause.
+      AuthenticationError = Class.new(Error)
+
+      # Indicates that authentication cannot proceed because one of the server's
+      # messages has not passed integrity checks.
+      AuthenticationFailed = Class.new(Error)
 
       # autoloading to avoid loading all of the regexps when they aren't used.
       sasl_stringprep_rb = File.expand_path("sasl/stringprep", __dir__)
@@ -118,11 +143,22 @@ module Net
         Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
       end
 
-      # Returns whether the authenticator is client-first and supports sending
-      # an "initial response".
+      # Returns whether +authenticator+ is client-first and supports sending an
+      # "initial response".
       def initial_response?(authenticator)
         authenticator.respond_to?(:initial_response?) &&
           authenticator.initial_response?
+      end
+
+      # Returns whether +authenticator+ considers the authentication exchange to
+      # be complete.
+      #
+      # The authentication should not succeed if this returns false, but
+      # returning true does *not* indicate success.  Authentication succeeds
+      # when this method returns true and the server responds with a
+      # protocol-specific success.
+      def done?(authenticator)
+        !authenticator.respond_to?(:done?) || authenticator.done?
       end
 
     end

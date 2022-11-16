@@ -11,7 +11,8 @@
 class Net::IMAP::SASL::DigestMD5Authenticator
   STAGE_ONE = :stage_one
   STAGE_TWO = :stage_two
-  private_constant :STAGE_ONE, :STAGE_TWO
+  STAGE_DONE = :stage_done
+  private_constant :STAGE_ONE, :STAGE_TWO, :STAGE_DONE
 
   # Authentication identity: the identity that matches the #password.
   #
@@ -126,7 +127,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
 
       return response.keys.map {|key| qdval(key.to_s, response[key]) }.join(',')
     when STAGE_TWO
-      @stage = nil
+      @stage = STAGE_DONE
       # if at the second stage, return an empty string
       if challenge =~ /rspauth=/
         return ''
@@ -137,6 +138,8 @@ class Net::IMAP::SASL::DigestMD5Authenticator
       raise ResponseParseError, challenge
     end
   end
+
+  def done?; @stage == STAGE_DONE end
 
   private
 

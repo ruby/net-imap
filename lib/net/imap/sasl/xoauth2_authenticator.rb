@@ -56,6 +56,7 @@ class Net::IMAP::SASL::XOAuth2Authenticator
       raise ArgumentError, "conflicting values for username"
     [oauth2_token, token].compact.count == 1 or
       raise ArgumentError, "conflicting values for oauth2_token"
+    @done = false
   end
 
   # :call-seq:
@@ -68,7 +69,15 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # with the +oauth2_token+.
   def process(_data)
     build_oauth2_string(@username, @oauth2_token)
+  ensure
+    @done = true
   end
+
+  # Returns true when the initial client response was sent.
+  #
+  # The authentication should not succeed unless this returns true, but it
+  # does *not* indicate success.
+  def done?; @done end
 
   private
 

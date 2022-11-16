@@ -21,12 +21,17 @@ class Net::IMAP::SASL::CramMD5Authenticator
     require "digest/md5"
     @user = user
     @password = password
+    @done = false
   end
 
   def process(challenge)
     digest = hmac_md5(challenge, @password)
     return @user + " " + digest
+  ensure
+    @done = true
   end
+
+  def done?; @done end
 
   private
 

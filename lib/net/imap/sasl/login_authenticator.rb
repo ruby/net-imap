@@ -20,7 +20,8 @@
 class Net::IMAP::SASL::LoginAuthenticator
   STATE_USER = :USER
   STATE_PASSWORD = :PASSWORD
-  private_constant :STATE_USER, :STATE_PASSWORD
+  STATE_DONE = :DONE
+  private_constant :STATE_USER, :STATE_PASSWORD, :STATE_DONE
 
   def initialize(user, password, warn_deprecation: true, **_ignored)
     if warn_deprecation
@@ -37,7 +38,12 @@ class Net::IMAP::SASL::LoginAuthenticator
       @state = STATE_PASSWORD
       return @user
     when STATE_PASSWORD
+      @state = STATE_DONE
       return @password
+    when STATE_DONE
+      raise ResponseParseError, data
     end
   end
+
+  def done?; @state == STATE_DONE end
 end
