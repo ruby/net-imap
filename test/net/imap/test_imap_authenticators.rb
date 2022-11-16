@@ -57,6 +57,28 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   # ----------------------
+  # OAUTHBEARER
+  # ----------------------
+
+  def test_oauthbearer_authenticator_matches_mechanism
+    assert_kind_of(Net::IMAP::SASL::OAuthBearerAuthenticator,
+                   Net::IMAP::SASL.authenticator("OAUTHBEARER", "tok"))
+  end
+
+  def oauthbearer(*args, **kwargs, &block)
+    Net::IMAP::SASL.authenticator("OAUTHBEARER", *args, **kwargs, &block)
+  end
+
+  def test_oauthbearer_response
+    assert_equal(
+      "n,a=user@example.com,\1host=server.example.com\1port=587\1" \
+      "auth=Bearer mF_9.B5f-4.1JqM\1\1",
+      oauthbearer("mF_9.B5f-4.1JqM", authzid: "user@example.com",
+                  host: "server.example.com", port: 587).process(nil)
+    )
+  end
+
+  # ----------------------
   # XOAUTH2
   # ----------------------
 
