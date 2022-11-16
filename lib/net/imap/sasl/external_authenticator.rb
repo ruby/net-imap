@@ -34,6 +34,7 @@ module Net
           if @authzid&.match?(/\u0000/u) # also validates UTF8 encoding
             raise ArgumentError, "contains NULL"
           end
+          @done = false
         end
 
         # :call-seq:
@@ -45,7 +46,15 @@ module Net
         # Returns #authzid, or an empty string if there is no authzid.
         def process(_)
           authzid || ""
+        ensure
+          @done = true
         end
+
+        # Returns true when the initial client response was sent.
+        #
+        # The authentication should not succeed unless this returns true, but it
+        # does *not* indicate success.
+        def done?; @done end
 
       end
     end

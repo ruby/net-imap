@@ -61,6 +61,7 @@ class Net::IMAP::SASL::PlainAuthenticator
     @username = username
     @password = password
     @authzid  = authzid
+    @done = false
   end
 
   # :call-seq:
@@ -72,6 +73,14 @@ class Net::IMAP::SASL::PlainAuthenticator
   # Responds with the client's credentials.
   def process(data)
     return "#@authzid\0#@username\0#@password"
+  ensure
+    @done = true
   end
+
+  # Returns true when the initial client response was sent.
+  #
+  # The authentication should not succeed unless this returns true, but it
+  # does *not* indicate success.
+  def done?; @done end
 
 end

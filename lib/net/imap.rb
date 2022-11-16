@@ -1088,7 +1088,7 @@ module Net
     def logout!
       logout unless disconnected?
     rescue => ex
-      warn "%s during <Net::IMAP %s:%s>logout!: %s" % [
+      warn "%s during <Net::IMAP %s:%s> logout!: %s" % [
         ex.class, host, port, ex
       ]
     ensure
@@ -1238,7 +1238,7 @@ module Net
           SASL.initial_response?(authenticator)
         cmdargs << [authenticator.process(nil)].pack("m0")
       end
-      send_command(*cmdargs) do |resp|
+      result = send_command(*cmdargs) do |resp|
         if resp.instance_of?(ContinuationRequest)
           challenge = resp.data.text.unpack1("m")
           response  = authenticator.process(challenge)
@@ -1246,9 +1246,12 @@ module Net
           put_string(response + CRLF)
         end
       end
-        .tap { @capabilities = capabilities_from_resp_code _1 }
-      # NOTE: If any Net::IMAP::SASL mechanism ever supports security layer
-      # negotiation, capabilities sent during the "OK" response MUST be ignored.
+      unless SASL.done?(authenticator)
+        logout!
+        raise SASL::AuthenticationFailed, "authentication ended prematurely"
+      end
+      @capabilities = capabilities_from_resp_code result
+      result
     end
 
     # Sends a {LOGIN command [IMAP4rev1 §6.2.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.3]

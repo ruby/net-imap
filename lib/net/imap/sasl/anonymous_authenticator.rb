@@ -40,6 +40,7 @@ module Net
             raise ArgumentError,
                   "anonymous_message is too long.  (%d codepoints)" % [size]
           end
+          @done = false
         end
 
         # :call-seq:
@@ -51,7 +52,15 @@ module Net
         # Returns #anonymous_message.
         def process(_server_challenge_string)
           anonymous_message
+        ensure
+          @done = true
         end
+
+        # Returns true when the initial client response was sent.
+        #
+        # The authentication should not succeed unless this returns true, but it
+        # does *not* indicate success.
+        def done?; @done end
 
       end
     end
