@@ -33,10 +33,24 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # XOAUTH2
   # ----------------------
 
-  def test_xoauth2
+  def test_xoauth2_authenticator_matches_mechanism
+    assert_kind_of(Net::IMAP::XOauth2Authenticator,
+                   Net::IMAP.authenticator("XOAUTH2", "user", "tok"))
+  end
+
+  def xoauth2(*args, **kwargs, &block)
+    Net::IMAP.authenticator("XOAUTH2", *args, **kwargs, &block)
+  end
+
+  def test_xoauth2_no_kwargs # this probably fails in ruby 2.6
+    assert_kind_of(Net::IMAP::XOauth2Authenticator,
+                   xoauth2("user", "tok", **{}))
+  end
+
+  def test_xoauth2_response
     assert_equal(
       "user=username\1auth=Bearer token\1\1",
-      Net::IMAP::XOauth2Authenticator.new("username", "token").process(nil)
+      xoauth2("username", "token").process(nil)
     )
   end
 

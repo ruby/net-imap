@@ -7,7 +7,7 @@ class Net::IMAP::XOauth2Authenticator
 
   private
 
-  def initialize(user, oauth2_token)
+  def initialize(user, oauth2_token, **_)
     @user = user
     @oauth2_token = oauth2_token
   end
