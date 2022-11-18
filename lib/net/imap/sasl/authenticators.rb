@@ -37,6 +37,8 @@ module Net::IMAP::SASL
         add_authenticator "External"
         add_authenticator "OAuthBearer"
         add_authenticator "Plain"
+        add_authenticator "Scram-SHA-1"
+        add_authenticator "Scram-SHA-256"
         add_authenticator "XOAuth2"
         add_authenticator "Login"      # deprecated
         add_authenticator "Cram-MD5"   # deprecated

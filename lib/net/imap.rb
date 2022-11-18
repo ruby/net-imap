@@ -1183,6 +1183,17 @@ module Net
     #
     #     Login using clear-text username and password.
     #
+    # +SCRAM-SHA-1+::
+    # +SCRAM-SHA-256+::
+    #     See ScramAuthenticator[rdoc-ref:Net::IMAP::SASL::ScramAuthenticator].
+    #
+    #     Login by username and password.  The password is not sent to the
+    #     server but is used in a salted challenge/response exchange.
+    #     +SCRAM-SHA-1+ and +SCRAM-SHA-256+ are directly supported by
+    #     Net::IMAP::SASL.  New authenticators can easily be added for any other
+    #     <tt>SCRAM-*</tt> mechanism if the digest algorithm is supported by
+    #     OpenSSL::Digest.
+    #
     # +XOAUTH2+::
     #     See XOAuth2Authenticator[rdoc-ref:Net::IMAP::SASL::XOAuth2Authenticator].
     #
