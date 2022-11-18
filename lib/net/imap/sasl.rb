@@ -51,6 +51,17 @@ module Net
     #
     #     Login using clear-text username and password.
     #
+    # +SCRAM-SHA-1+::
+    # +SCRAM-SHA-256+::
+    #     See ScramAuthenticator.
+    #
+    #     Login by username and password.  The password is not sent to the
+    #     server but is used in a salted challenge/response exchange.
+    #     +SCRAM-SHA-1+ and +SCRAM-SHA-256+ are directly supported by
+    #     Net::IMAP::SASL.  New authenticators can easily be added for any other
+    #     <tt>SCRAM-*</tt> mechanism if the digest algorithm is supported by
+    #     OpenSSL::Digest.
+    #
     # +XOAUTH2+::
     #     See XOAuth2Authenticator.
     #
@@ -114,11 +125,15 @@ module Net
       sasl_dir = File.expand_path("sasl", __dir__)
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
+      autoload :ScramAlgorithm,           "#{sasl_dir}/scram_algorithm"
 
       autoload :AnonymousAuthenticator,   "#{sasl_dir}/anonymous_authenticator"
       autoload :ExternalAuthenticator,    "#{sasl_dir}/external_authenticator"
       autoload :OAuthBearerAuthenticator, "#{sasl_dir}/oauthbearer_authenticator"
       autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
+      autoload :ScramAuthenticator,       "#{sasl_dir}/scram_authenticator"
+      autoload :ScramSHA1Authenticator,   "#{sasl_dir}/scram_authenticator"
+      autoload :ScramSHA256Authenticator, "#{sasl_dir}/scram_authenticator"
       autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
 
       autoload :CramMD5Authenticator,     "#{sasl_dir}/cram_md5_authenticator"

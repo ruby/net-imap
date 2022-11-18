@@ -9,6 +9,7 @@ module Net
       # several different mechanisms start with a GS2 header:
       # * +GS2-*+       --- RFC5801[https://tools.ietf.org/html/rfc5801]
       # * +SCRAM-*+     --- RFC5802[https://tools.ietf.org/html/rfc5802]
+      #   (ScramAuthenticator)
       # * +SAML20+      --- RFC6595[https://tools.ietf.org/html/rfc6595]
       # * +OPENID20+    --- RFC6616[https://tools.ietf.org/html/rfc6616]
       # * +OAUTH10A+    --- RFC7628[https://tools.ietf.org/html/rfc7628]

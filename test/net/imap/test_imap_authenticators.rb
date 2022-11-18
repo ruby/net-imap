@@ -79,6 +79,92 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   # ----------------------
+  # SCRAM-SHA-1
+  # SCRAM-SHA-256
+  # SCRAM-SHA-* (etc)
+  # ----------------------
+
+  def test_scram_sha1_authenticator_matches_mechanism
+    authenticator = Net::IMAP::SASL.authenticator("SCRAM-SHA-1", "user", "pass")
+    assert_kind_of(Net::IMAP::SASL::ScramAuthenticator,     authenticator)
+    assert_kind_of(Net::IMAP::SASL::ScramSHA1Authenticator, authenticator)
+  end
+
+  def test_scram_sha256_authenticator_matches_mechanism
+    authenticator = Net::IMAP::SASL.authenticator("SCRAM-SHA-256", "user", "pass")
+    assert_kind_of(Net::IMAP::SASL::ScramAuthenticator,       authenticator)
+    assert_kind_of(Net::IMAP::SASL::ScramSHA256Authenticator, authenticator)
+  end
+
+  def scram_sha1(*args, **kwargs, &block)
+    Net::IMAP::SASL.authenticator("SCRAM-SHA-1", *args, **kwargs, &block)
+  end
+
+  def scram_sha256(*args, **kwargs, &block)
+    Net::IMAP::SASL.authenticator("SCRAM-SHA-256", *args, **kwargs, &block)
+  end
+
+  def test_scram_sha1_authenticator
+    authenticator = scram_sha1("user", "pencil",
+                               cnonce: "fyko+d2lbbFgONRv9qkxdawL")
+    # n = no channel binding
+    # a = authzid
+    # n = authcid
+    # r = random nonce (client)
+    assert_equal("n,,n=user,r=fyko+d2lbbFgONRv9qkxdawL",
+                 authenticator.process(nil))
+    refute authenticator.done?
+    assert_equal(
+      # c = b64 of gs2 header and channel binding data
+      # r = random nonce (client + server)
+      # p = b64 client proof
+      # s = salt
+      # i = iteration count
+      "c=biws," \
+      "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j," \
+      "p=v0X8v3Bz2T0CJGbJQyF0X+HI4Ts=",
+      authenticator.process(
+        "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j," \
+        "s=QSXCR+Q6sek8bf92," \
+        "i=4096")
+    )
+    refute authenticator.done?
+    assert_empty authenticator.process("v=rmF9pqV8S7suAoZWja4dJRkFsKQ=")
+    assert authenticator.done?
+  end
+
+  def test_scram_sha256_authenticator
+    authenticator = scram_sha256("user", "pencil",
+                                 cnonce: "rOprNGfwEbeRWgbNEkqO")
+    # n = no channel binding
+    # a = authzid
+    # n = authcid
+    # r = random nonce (client)
+    assert_equal("n,,n=user,r=rOprNGfwEbeRWgbNEkqO",
+                 authenticator.process(nil))
+    refute authenticator.done?
+    assert_equal(
+      # c = b64 of gs2 header and channel binding data
+      # r = random nonce (client + server)
+      # p = b64 client proof
+      # s = salt
+      # i = iteration count
+      "c=biws," \
+      "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+      "p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=",
+      authenticator.process(
+        "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+        "s=W22ZaJ0SNY7soEsUEjb6gQ==," \
+        "i=4096")
+    )
+    refute authenticator.done?
+    assert_empty authenticator.process(
+      "v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4="
+    )
+    assert authenticator.done?
+  end
+
+  # ----------------------
   # XOAUTH2
   # ----------------------
 
