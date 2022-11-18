@@ -869,6 +869,52 @@ EOF
     end
   end
 
+  def yields_in_test_server_thread(
+    greeting = "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN STARTTLS] test server\r\n"
+  )
+    server = create_tcp_server
+    port   = server.addr[1]
+    @threads << Thread.start do
+      sock = server.accept
+      gets = ->{
+        buf = "".b
+        buf << sock.gets until /\A([^ ]+) ([^ ]+) ?(.*)\r\n\z/mn =~ buf
+        [$1, $2, $3]
+      }
+      begin
+        sock.print(greeting)
+        last_tag = yield sock, gets
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("#{last_tag} OK LOGOUT completed\r\n") if last_tag
+      ensure
+        sock.close
+        server.close
+      end
+    end
+    port
+  end
+
+  def test_close
+    requests = Queue.new
+    port = yields_in_test_server_thread do |sock, gets|
+      requests.push(gets[])
+      sock.print("RUBY0001 OK CLOSE completed\r\n")
+      requests.push(gets[])
+      "RUBY0002"
+    end
+    begin
+      imap = Net::IMAP.new(server_addr, :port => port)
+      resp = imap.close
+      assert_equal(["RUBY0001", "CLOSE", ""], requests.pop)
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+                   [resp.class, resp.tag, resp.name])
+      imap.logout
+      assert_equal(["RUBY0002", "LOGOUT", ""], requests.pop)
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   private
 
   def imaps_test
