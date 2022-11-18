@@ -796,6 +796,20 @@ module Net
       send_command("CLOSE")
     end
 
+    # Sends an {UNSELECT command [IMAP4rev2
+    # §6.4.2]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.2] to free the
+    # session resources for a mailbox and return to the "_authenticated_" state.
+    # This is the same as #close, except that <tt>\\Deleted</tt> messages are
+    # not removed from the mailbox.
+    #
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +UNSELECT+
+    # [RFC3691[https://tools.ietf.org/html/rfc3691]].
+    def unselect
+      send_command("UNSELECT")
+    end
+
     # Sends a EXPUNGE command to permanently remove from the currently
     # selected mailbox all messages that have the \Deleted flag set.
     def expunge

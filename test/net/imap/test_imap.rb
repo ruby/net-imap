@@ -915,6 +915,27 @@ EOF
     end
   end
 
+  def test_unselect
+    requests = Queue.new
+    port = yields_in_test_server_thread do |sock, gets|
+      requests.push(gets[])
+      sock.print("RUBY0001 OK UNSELECT completed\r\n")
+      requests.push(gets[])
+      "RUBY0002"
+    end
+    begin
+      imap = Net::IMAP.new(server_addr, :port => port)
+      resp = imap.unselect
+      assert_equal(["RUBY0001", "UNSELECT", ""], requests.pop)
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+                   [resp.class, resp.tag, resp.name])
+      imap.logout
+      assert_equal(["RUBY0002", "LOGOUT", ""], requests.pop)
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   private
 
   def imaps_test
