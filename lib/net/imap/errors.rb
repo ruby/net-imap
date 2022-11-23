@@ -51,7 +51,7 @@ module Net
     class UnknownResponseError < ResponseError
     end
 
-    RESPONSE_ERRORS = Hash.new(ResponseError)
+    RESPONSE_ERRORS = Hash.new(ResponseError) # :nodoc:
     RESPONSE_ERRORS["NO"] = NoResponseError
     RESPONSE_ERRORS["BAD"] = BadResponseError
 
