@@ -22,8 +22,6 @@ RFCS = {
   5162 => "IMAP QRESYNC (OBSOLETE)",
   6237 => "IMAP MULTISEARCH (OBSOLETE)",
 
-  2595 => "Using TLS with IMAP, POP3 and ACAP",
-
   # Core IMAP RFCs
   3501 => "IMAP4rev1", # supported by nearly all email servers
   4466 => "Collected Extensions to IMAP4 ABNF",
@@ -36,7 +34,6 @@ RFCS = {
   3503 => "Message Disposition Notification (MDN) profile IMAP",
   5234 => "ABNF",
   5788 => "IMAP4 keyword registry",
-  8314 => "Cleartext Considered Obsolete: Use of TLS for Email",
 
   # Internet Message format and envelope and body structure
   5322 => "Internet Message Format (current)",
@@ -77,10 +74,14 @@ RFCS = {
   # "Informational" RFCs
   1733 => "Distributed E-Mail Models in IMAP4",
   4549 => "Synchronization Operations for Disconnected IMAP4 Clients",
-  6151 => "Updated Security Considerations for MD5 Message-Digest and HMAC-MD5",
 
-  # "Best Current Practice" RFCs
+  # TLS and other security concerns
+  2595 => "Using TLS with IMAP, POP3 and ACAP",
+  6151 => "Updated Security Considerations for MD5 Message-Digest and HMAC-MD5",
   7525 => "Recommendations for Secure Use of TLS and DTLS",
+  7818 => "Updated TLS Server Identity Check Procedure for Email Protocols",
+  8314 => "Cleartext Considered Obsolete: Use of TLS for Email",
+  8996 => "Deprecating TLS 1.0 and TLS 1.1,",
 
   # related email specifications
   6376 => "DomainKeys Identified Mail (DKIM) Signatures",
