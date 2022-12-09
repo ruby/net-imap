@@ -332,7 +332,7 @@ module Net
   # * {Character sets}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
   #
   class IMAP < Protocol
-    VERSION = "0.3.1"
+    VERSION = "0.3.2"
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
