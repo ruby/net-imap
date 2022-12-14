@@ -736,6 +736,12 @@ module Net
 
     attr_accessor :client_thread # :nodoc:
 
+    # The hostname this client connected to
+    attr_reader :host
+
+    # The port this client connected to
+    attr_reader :port
+
     # Returns the debug mode.
     def self.debug
       return @@debug
