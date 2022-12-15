@@ -407,6 +407,8 @@ module Net
     end
 
     # Disconnects from the server.
+    #
+    # Related: #logout
     def disconnect
       return if disconnected?
       begin
@@ -430,6 +432,8 @@ module Net
     end
 
     # Returns true if disconnected from the server.
+    #
+    # Related: #logout, #disconnect
     def disconnected?
       return @sock.closed?
     end
@@ -525,6 +529,8 @@ module Net
 
     # Sends a {NOOP command [IMAP4rev1 §6.1.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.2]
     # to the server.
+    #
+    # Related: #idle, #check
     def noop
       send_command("NOOP")
     end
@@ -532,12 +538,16 @@ module Net
     # Sends a {LOGOUT command [IMAP4rev1 §6.1.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.3]
     # to inform the command to inform the server that the client is done with
     # the connection.
+    #
+    # Related: #disconnect
     def logout
       send_command("LOGOUT")
     end
 
     # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
     # to start a TLS session.
+    #
+    # Related: Net::IMAP.new, #login, #authenticate
     #
     # ===== Capability
     #
@@ -602,6 +612,8 @@ module Net
     # See Net::IMAP::Authenticators for more information on plugging in your
     # own authenticator.
     #
+    # Related: #login, #starttls
+    #
     # ==== Capabilities
     #
     # Clients MUST NOT attempt to #authenticate or #login when +LOGINDISABLED+
@@ -634,6 +646,8 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     #
+    # Related: #authenticate, #starttls
+    #
     # ==== Capabilities
     # Clients MUST NOT attempt to #authenticate or #login when +LOGINDISABLED+
     # is listed with the capabilities.
@@ -660,6 +674,8 @@ module Net
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
+    # Related: #examine
+    #
     # ===== Capabilities
     #
     # If [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]] is supported,
@@ -681,6 +697,8 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-examinable.
+    #
+    # Related: #select
     def examine(mailbox)
       synchronize do
         @responses.clear
@@ -693,6 +711,8 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if a mailbox with that name
     # cannot be created.
+    #
+    # Related: #rename, #delete
     def create(mailbox)
       send_command("CREATE", mailbox)
     end
@@ -703,6 +723,8 @@ module Net
     # A Net::IMAP::NoResponseError is raised if a mailbox with that name
     # cannot be deleted, either because it does not exist or because the
     # client does not have permission to delete it.
+    #
+    # Related: #create, #rename
     def delete(mailbox)
       send_command("DELETE", mailbox)
     end
@@ -714,6 +736,8 @@ module Net
     # name +mailbox+ cannot be renamed to +newname+ for whatever
     # reason; for instance, because +mailbox+ does not exist, or
     # because there is already a mailbox with the name +newname+.
+    #
+    # Related: #create, #delete
     def rename(mailbox, newname)
       send_command("RENAME", mailbox, newname)
     end
@@ -724,6 +748,8 @@ module Net
     #
     # A Net::IMAP::NoResponseError is raised if +mailbox+ cannot be
     # subscribed to; for instance, because it does not exist.
+    #
+    # Related: #unsubscribe, #lsub, #list
     def subscribe(mailbox)
       send_command("SUBSCRIBE", mailbox)
     end
@@ -735,6 +761,8 @@ module Net
     # A Net::IMAP::NoResponseError is raised if +mailbox+ cannot be
     # unsubscribed from; for instance, because the client is not currently
     # subscribed to it.
+    #
+    # Related: #subscribe, #lsub, #list
     def unsubscribe(mailbox)
       send_command("UNSUBSCRIBE", mailbox)
     end
@@ -753,7 +781,11 @@ module Net
     # which mailboxes to match.  If +mailbox+ is empty, the root
     # name of +refname+ and the hierarchy delimiter are returned.
     #
-    # The return value is an array of MailboxList. For example:
+    # The return value is an array of MailboxList.
+    #
+    # Related: #lsub, MailboxList
+    #
+    # ===== For example:
     #
     #   imap.create("foo/bar")
     #   imap.create("foo/baz")
@@ -806,7 +838,9 @@ module Net
     # of Namespace objects. These arrays will be empty when the
     # server responds with nil.
     #
-    # For example:
+    # Related: #list, Namespaces, Namespace
+    #
+    # ===== For example:
     #
     #    capabilities = imap.capability
     #    if capabilities.include?("NAMESPACE")
@@ -858,6 +892,8 @@ module Net
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors, :Marked], delim="/", name="foo/bar">, \\
     #        #<Net::IMAP::MailboxList attr=[:Noinferiors], delim="/", name="foo/baz">]
     #
+    # Related: #list, MailboxList
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +XLIST+,
@@ -879,6 +915,8 @@ module Net
     # to both admin and user.  If this mailbox exists, it returns an array
     # containing objects of type MailboxQuotaRoot and MailboxQuota.
     #
+    # Related: #getquota, #setquota, MailboxQuotaRoot, MailboxQuota
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +QUOTA+
@@ -898,6 +936,8 @@ module Net
     # containing a MailboxQuota object is returned.  This command is generally
     # only available to server admin.
     #
+    # Related: #getquotaroot, #setquota, MailboxQuota
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +QUOTA+
@@ -913,6 +953,8 @@ module Net
     # along with the specified +mailbox+ and +quota+.  If +quota+ is nil, then
     # +quota+ will be unset for that mailbox.  Typically one needs to be logged
     # in as a server admin for this to work.
+    #
+    # Related: #getquota, #getquotaroot
     #
     # ===== Capabilities
     #
@@ -932,6 +974,8 @@ module Net
     # mailbox.  If +rights+ is nil, then that user will be stripped of any
     # rights to that mailbox.
     #
+    # Related: #getacl
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +ACL+
@@ -947,6 +991,8 @@ module Net
     # Sends a {GETACL command [RFC4314 §3.3]}[https://www.rfc-editor.org/rfc/rfc4314#section-3.3]
     # along with a specified +mailbox+.  If this mailbox exists, an array
     # containing objects of MailboxACLItem will be returned.
+    #
+    # Related: #setacl, MailboxACLItem
     #
     # ===== Capabilities
     #
@@ -965,6 +1011,8 @@ module Net
     # interpreted as for #list.
     #
     # The return value is an array of MailboxList objects.
+    #
+    # Related: #subscribe, #unsubscribe, #list, MailboxList
     def lsub(refname, mailbox)
       synchronize do
         send_command("LSUB", refname, mailbox)
@@ -1040,6 +1088,8 @@ module Net
     # to request a checkpoint of the currently selected mailbox.  This performs
     # implementation-specific housekeeping; for instance, reconciling the
     # mailbox's in-memory and on-disk state.
+    #
+    # Related: #idle, #noop
     def check
       send_command("CHECK")
     end
@@ -1048,6 +1098,8 @@ module Net
     # to close the currently selected mailbox.  The CLOSE command permanently
     # removes from the mailbox all messages that have the <tt>\\Deleted</tt>
     # flag set.
+    #
+    # Related: #unselect
     def close
       send_command("CLOSE")
     end
@@ -1057,6 +1109,8 @@ module Net
     # to free the session resources for a mailbox and return to the
     # "_authenticated_" state.  This is the same as #close, except that
     # <tt>\\Deleted</tt> messages are not removed from the mailbox.
+    #
+    # Related: #close
     #
     # ===== Capabilities
     #
@@ -1069,6 +1123,8 @@ module Net
     # Sends an {EXPUNGE command [IMAP4rev1 §6.4.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.3]
     # Sends a EXPUNGE command to permanently remove from the currently
     # selected mailbox all messages that have the \Deleted flag set.
+    #
+    # Related: #uid_expunge
     def expunge
       synchronize do
         send_command("EXPUNGE")
@@ -1095,6 +1151,8 @@ module Net
     #        #responses and this method returns them as an array of
     #        <em>sequence number</em> integers.
     #
+    # Related: #expunge
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +UIDPLUS+
@@ -1111,6 +1169,8 @@ module Net
     # criteria, and returns message sequence numbers.  +keys+ can either be a
     # string holding the entire search string, or a single-dimension array of
     # search keywords and arguments.
+    #
+    # Related: #uid_search
     #
     # ===== Search criteria
     #
@@ -1183,7 +1243,9 @@ module Net
     # The return value is an array of FetchData or nil
     # (instead of an empty array) if there is no matching message.
     #
-    # For example:
+    # Related: #uid_search, FetchData
+    #
+    # ===== For example:
     #
     #   p imap.fetch(6..8, "UID")
     #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"UID"=>98}>, \\
@@ -1209,6 +1271,8 @@ module Net
     #
     # Similar to #fetch, but the +set+ parameter contains unique identifiers
     # instead of message sequence numbers.
+    #
+    # Related: #fetch, FetchData
     def uid_fetch(set, attr, mod = nil)
       return fetch_internal("UID FETCH", set, attr, mod)
     end
@@ -1221,7 +1285,11 @@ module Net
     # provided one, '+FLAGS' will add the provided flags, and '-FLAGS' will
     # remove them.  +flags+ is a list of flags.
     #
-    # The return value is an array of FetchData. For example:
+    # The return value is an array of FetchData
+    #
+    # Related: #uid_store
+    #
+    # ===== For example:
     #
     #   p imap.store(6..8, "+FLAGS", [:Deleted])
     #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
@@ -1237,6 +1305,8 @@ module Net
     #
     # Similar to #store, but +set+ contains unique identifiers instead of
     # message sequence numbers.
+    #
+    # Related: #store
     def uid_store(set, attr, flags)
       return store_internal("UID STORE", set, attr, flags)
     end
@@ -1245,6 +1315,8 @@ module Net
     # to copy the specified message(s) to the end of the specified destination
     # +mailbox+. The +set+ parameter is a number, an array of numbers, or a
     # Range object.  The number is a message sequence number.
+    #
+    # Related: #uid_copy
     #
     # ===== Capabilities
     #
@@ -1275,6 +1347,8 @@ module Net
     # +mailbox+. The +set+ parameter is a number, an array of numbers, or a
     # Range object. The number is a message sequence number.
     #
+    # Related: #uid_move
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +MOVE+
@@ -1296,6 +1370,8 @@ module Net
     #
     # Similar to #move, but +set+ contains unique identifiers.
     #
+    # Related: #move
+    #
     # ===== Capabilities
     #
     # Same as #move: The server's capabilities must include +MOVE+
@@ -1308,6 +1384,8 @@ module Net
     # Sends a {SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to sort messages in the mailbox.  Returns an array of message sequence
     # numbers.
+    #
+    # Related: #uid_sort, #search, #uid_search, #thread, #uid_thread
     #
     # ===== For example:
     #
@@ -1326,6 +1404,8 @@ module Net
 
     # Sends a {UID SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to sort messages in the mailbox.  Returns an array of unique identifiers.
+    #
+    # Related: #sort, #search, #uid_search, #thread, #uid_thread
     #
     # ===== Capabilities
     #
@@ -1369,6 +1449,8 @@ module Net
     # Unlike #search, +charset+ is a required argument.  US-ASCII
     # and UTF-8 are sample values.
     #
+    # Related: #uid_thread, #search, #uid_search, #sort, #uid_sort
+    #
     # ===== Capabilities
     #
     # The server's capabilities must include +THREAD+
@@ -1380,6 +1462,8 @@ module Net
     # Sends a {UID THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
+    #
+    # Related: #thread, #search, #uid_search, #sort, #uid_sort
     #
     # ===== Capabilities
     #
@@ -1405,6 +1489,8 @@ module Net
     #       ...
     #     end
     #   end
+    #
+    # Related: #idle_done, #noop, #check
     #
     # ===== Capabilities
     #
@@ -1440,6 +1526,8 @@ module Net
     end
 
     # Leaves IDLE.
+    #
+    # Related: #idle
     def idle_done
       synchronize do
         if @idle_done_cond.nil?
