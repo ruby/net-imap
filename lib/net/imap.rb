@@ -696,6 +696,11 @@ module Net
     # The port this client connected to
     attr_reader :port
 
+    # Returns true after the TLS negotiation has completed and the remote
+    # hostname has been verified.  Returns false when TLS has been established
+    # but peer verification was disabled.
+    def tls_verified?; @tls_verified end
+
     # Returns the debug mode.
     def self.debug
       return @@debug
@@ -2261,6 +2266,7 @@ module Net
       @utf8_strings = false
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
+      @tls_verified = false
       @parser = ResponseParser.new
       @sock = tcp_socket(@host, @port)
       begin
@@ -2632,6 +2638,7 @@ module Net
       ssl_socket_connect(@sock, @open_timeout)
       if context.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
+        @tls_verified = true
       end
     end
 

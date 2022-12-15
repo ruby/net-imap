@@ -41,27 +41,41 @@ class IMAPTest < Test::Unit::TestCase
     end
 
     def test_imaps_with_ca_file
+      # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
+      # Otherwise, failures can't logout and need to wait for the timeout.
+      verified, imap = :unknown, nil
       assert_nothing_raised do
         imaps_test do |port|
-          begin
-            Net::IMAP.new("localhost",
-                          :port => port,
-                          :ssl => { :ca_file => CA_FILE })
-          rescue SystemCallError
-            skip $!
-          end
+          imap = Net::IMAP.new("localhost",
+                               port: port,
+                               ssl: { :ca_file => CA_FILE })
+          verified = imap.tls_verified?
+          imap
+        rescue SystemCallError
+          skip $!
         end
       end
+      assert_equal true, verified
+      assert_equal true, imap.tls_verified?
     end
 
     def test_imaps_verify_none
+      # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
+      # Otherwise, failures can't logout and need to wait for the timeout.
+      verified, imap = :unknown, nil
       assert_nothing_raised do
         imaps_test do |port|
-          Net::IMAP.new(server_addr,
-                        :port => port,
-                        :ssl => { :verify_mode => OpenSSL::SSL::VERIFY_NONE })
+          imap = Net::IMAP.new(
+            server_addr,
+            port: port,
+            ssl: { :verify_mode => OpenSSL::SSL::VERIFY_NONE }
+          )
+          verified = imap.tls_verified?
+          imap
         end
       end
+      assert_equal false, verified
+      assert_equal false, imap.tls_verified?
     end
 
     def test_imaps_post_connection_check
@@ -79,12 +93,15 @@ class IMAPTest < Test::Unit::TestCase
 
   if defined?(OpenSSL::SSL)
     def test_starttls
-      imap = nil
+      verified, imap = :unknown, nil
       starttls_test do |port|
         imap = Net::IMAP.new("localhost", :port => port)
         imap.starttls(:ca_file => CA_FILE)
+        verified = imap.tls_verified?
         imap
       end
+      assert_equal true, verified
+      assert_equal true, imap.tls_verified?
     rescue SystemCallError
       skip $!
     ensure
@@ -94,13 +111,17 @@ class IMAPTest < Test::Unit::TestCase
     end
 
     def test_starttls_stripping
+      verified, imap = :unknown, nil
       starttls_stripping_test do |port|
         imap = Net::IMAP.new("localhost", :port => port)
         assert_raise(Net::IMAP::UnknownResponseError) do
           imap.starttls(:ca_file => CA_FILE)
         end
+        verified = imap.tls_verified?
         imap
       end
+      assert_equal false, verified
+      assert_equal false, imap.tls_verified?
     end
   end
 
@@ -1068,6 +1089,7 @@ EOF
         begin
           imap = yield(port)
           imap.logout
+          imap
         ensure
           imap.disconnect if imap
         end
