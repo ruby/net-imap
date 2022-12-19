@@ -1,6 +1,9 @@
 # frozen_string_literal: true
 
 class Net::IMAP::XOauth2Authenticator
+
+  def initial_response?; true end
+
   def process(_data)
     build_oauth2_string(@user, @oauth2_token)
   end

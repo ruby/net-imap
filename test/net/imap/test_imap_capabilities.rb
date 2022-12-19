@@ -190,6 +190,7 @@ class IMAPCapabilitiesTest < Test::Unit::TestCase
 
       imap.authenticate("PLAIN", "test_user", "test-password")
       assert_equal "AUTHENTICATE", server.commands.pop.name
+      assert server.commands.pop[:continuation]
       refute imap.capabilities_cached?
 
       assert imap.capable? :IMAP4rev1
@@ -277,6 +278,7 @@ class IMAPCapabilitiesTest < Test::Unit::TestCase
       rescue Net::IMAP::NoResponseError
       end
       assert_equal "AUTHENTICATE", server.commands.pop.name
+      assert server.commands.pop[:continuation]
       assert_equal original_capabilities, imap.capabilities
       assert_empty server.commands
     end

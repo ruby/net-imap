@@ -11,6 +11,8 @@
 # can be secured by TLS encryption.
 class Net::IMAP::PlainAuthenticator
 
+  def initial_response?; true end
+
   def process(data)
     return "#@authzid\0#@username\0#@password"
   end

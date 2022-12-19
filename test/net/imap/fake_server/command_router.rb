@@ -79,8 +79,14 @@ class Net::IMAP::FakeServer
     on "AUTHENTICATE" do |resp|
       state.not_authenticated?           or return resp.fail_bad_state(state)
       args = resp.command.args
-      args == "PLAIN"                    or return resp.fail_no "unsupported"
-      response_b64 = resp.request_continuation("") || ""
+      (1..2) === args.length             or return resp.fail_bad_args
+      args.first == "PLAIN"              or return resp.fail_no "unsupported"
+      if args.length == 2
+        response_b64 = args.last
+      else
+        response_b64 = resp.request_continuation("") || ""
+        state.commands << {continuation: response_b64}
+      end
       response = Base64.decode64(response_b64)
       response.empty?                   and return resp.fail_bad "canceled"
       # TODO: support mechanisms other than PLAIN.
