@@ -874,11 +874,10 @@ module Net
     # allows a client to discover the prefixes of namespaces used by a server
     # for personal mailboxes, other users' mailboxes, and shared mailboxes.
     #
-    # The NAMESPACE extension predates [IMAP4rev1[https://tools.ietf.org/html/rfc2501]],
-    # so most IMAP servers support it. Many popular IMAP servers are configured
-    # with the default personal namespaces as `("" "/")`: no prefix and "/"
-    # hierarchy delimiter. In that common case, the naive client may not have
-    # any trouble naming mailboxes.
+    # The NAMESPACE extension is supported by most IMAP4 servers.  Many popular
+    # IMAP servers are configured with the default personal namespaces as `(""
+    # "/")`: no prefix and "/" hierarchy delimiter. In that common case, the
+    # naive client may not have any trouble naming mailboxes.
     #
     # But many servers are configured with the default personal namespace as
     # e.g. `("INBOX." ".")`, placing all personal folders under INBOX, with "."
