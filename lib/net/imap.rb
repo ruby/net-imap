@@ -1845,28 +1845,6 @@ module Net
       return sort_internal("UID SORT", sort_keys, search_keys, charset)
     end
 
-    # Adds a response handler. For example, to detect when
-    # the server sends a new EXISTS response (which normally
-    # indicates new messages being added to the mailbox),
-    # add the following handler after selecting the
-    # mailbox:
-    #
-    #   imap.add_response_handler { |resp|
-    #     if resp.kind_of?(Net::IMAP::UntaggedResponse) and resp.name == "EXISTS"
-    #       puts "Mailbox now has #{resp.data} messages"
-    #     end
-    #   }
-    #
-    def add_response_handler(handler = nil, &block)
-      raise ArgumentError, "two Procs are passed" if handler && block
-      @response_handlers.push(block || handler)
-    end
-
-    # Removes the response handler.
-    def remove_response_handler(handler)
-      @response_handlers.delete(handler)
-    end
-
     # Sends a {THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox and return message sequence numbers in threaded
     # format, as a ThreadMember tree.  +search_keys+ are interpreted the same as
@@ -1968,6 +1946,28 @@ module Net
         end
         @idle_done_cond.signal
       end
+    end
+
+    # Adds a response handler. For example, to detect when
+    # the server sends a new EXISTS response (which normally
+    # indicates new messages being added to the mailbox),
+    # add the following handler after selecting the
+    # mailbox:
+    #
+    #   imap.add_response_handler { |resp|
+    #     if resp.kind_of?(Net::IMAP::UntaggedResponse) and resp.name == "EXISTS"
+    #       puts "Mailbox now has #{resp.data} messages"
+    #     end
+    #   }
+    #
+    def add_response_handler(handler = nil, &block)
+      raise ArgumentError, "two Procs are passed" if handler && block
+      @response_handlers.push(block || handler)
+    end
+
+    # Removes the response handler.
+    def remove_response_handler(handler)
+      @response_handlers.delete(handler)
     end
 
     private
