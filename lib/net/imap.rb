@@ -1337,6 +1337,11 @@ module Net
     # Similar to #fetch, but the +set+ parameter contains unique identifiers
     # instead of message sequence numbers.
     #
+    # >>>
+    #   *Note:* Servers _MUST_ implicitly include the +UID+ message data item as
+    #   part of any +FETCH+ response caused by a +UID+ command, regardless of
+    #   whether a +UID+ was specified as a message data item to the +FETCH+.
+    #
     # Related: #fetch, FetchData
     def uid_fetch(set, attr, mod = nil)
       return fetch_internal("UID FETCH", set, attr, mod)
