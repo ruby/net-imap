@@ -873,34 +873,30 @@ module Net
     # allows a client to discover the prefixes of namespaces used by a server
     # for personal mailboxes, other users' mailboxes, and shared mailboxes.
     #
-    # The NAMESPACE extension predates [IMAP4rev1[https://tools.ietf.org/html/rfc2501]],
-    # so most IMAP servers support it. Many popular IMAP servers are configured
-    # with the default personal namespaces as `("" "/")`: no prefix and "/"
-    # hierarchy delimiter. In that common case, the naive client may not have
-    # any trouble naming mailboxes.
+    # The return value is a Namespaces object which has +personal+, +other+, and
+    # +shared+ fields, each an array of Namespace objects.  These arrays will be
+    # empty when the server responds with +nil+.
     #
+    # Many \IMAP servers are configured with the default personal namespaces as
+    # <tt>("" "/")</tt>: no prefix and the "+/+" hierarchy delimiter. In that
+    # common case, the naive client may not have any trouble naming mailboxes.
     # But many servers are configured with the default personal namespace as
-    # e.g. `("INBOX." ".")`, placing all personal folders under INBOX, with "."
-    # as the hierarchy delimiter. If the client does not check for this, but
-    # naively assumes it can use the same folder names for all servers, then
-    # folder creation (and listing, moving, etc) can lead to errors.
+    # e.g.  <tt>("INBOX." ".")</tt>, placing all personal folders under INBOX,
+    # with "+.+" as the hierarchy delimiter. If the client does not check for
+    # this, but naively assumes it can use the same folder names for all
+    # servers, then folder creation (and listing, moving, etc) can lead to
+    # errors.
     #
     # From RFC2342:
     #
     #    Although typically a server will support only a single Personal
     #    Namespace, and a single Other User's Namespace, circumstances exist
     #    where there MAY be multiples of these, and a client MUST be prepared
-    #    for them. If a client is configured such that it is required to create
+    #    for them.  If a client is configured such that it is required to create
     #    a certain mailbox, there can be circumstances where it is unclear which
-    #    Personal Namespaces it should create the mailbox in. In these
+    #    Personal Namespaces it should create the mailbox in.  In these
     #    situations a client SHOULD let the user select which namespaces to
     #    create the mailbox in.
-    #
-    # The user of this method should first check if the server supports the
-    # NAMESPACE #capability.  The return value is a Namespaces
-    # object which has +personal+, +other+, and +shared+ fields, each an array
-    # of Namespace objects. These arrays will be empty when the
-    # server responds with nil.
     #
     # Related: #list, Namespaces, Namespace
     #
@@ -922,7 +918,7 @@ module Net
     # ===== Capabilities
     #
     # The server's capabilities must include +NAMESPACE+
-    # [RFC2342[https://tools.ietf.org/html/rfc2342]]
+    # [RFC2342[https://tools.ietf.org/html/rfc2342]].
     def namespace
       synchronize do
         send_command("NAMESPACE")
