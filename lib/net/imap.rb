@@ -1459,8 +1459,13 @@ module Net
     end
 
     # Sends a {SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
-    # to sort messages in the mailbox.  Returns an array of message sequence
-    # numbers.
+    # to search a mailbox for messages that match +search_keys+ and return an
+    # array of message sequence numbers, sorted by +sort_keys+.  +search_keys+
+    # are interpreted the same as for #search.
+    #
+    #--
+    # TODO: describe +sort_keys+
+    #++
     #
     # Related: #uid_sort, #search, #uid_search, #thread, #uid_thread
     #
@@ -1480,7 +1485,9 @@ module Net
     end
 
     # Sends a {UID SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
-    # to sort messages in the mailbox.  Returns an array of unique identifiers.
+    # to search a mailbox for messages that match +search_keys+ and return an
+    # array of unique identifiers, sorted by +sort_keys+.  +search_keys+ are
+    # interpreted the same as for #search.
     #
     # Related: #sort, #search, #uid_search, #thread, #uid_thread
     #
@@ -1515,8 +1522,11 @@ module Net
     end
 
     # Sends a {THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
-    # Similar to #search, but returns message sequence numbers in threaded
-    # format, as a ThreadMember tree.  The supported algorithms are:
+    # to search a mailbox and return message sequence numbers in threaded
+    # format, as a ThreadMember tree.  +search_keys+ are interpreted the same as
+    # for #search.
+    #
+    # The supported algorithms are:
     #
     # ORDEREDSUBJECT:: split into single-level threads according to subject,
     #                  ordered by date.
