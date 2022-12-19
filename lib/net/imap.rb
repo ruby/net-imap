@@ -61,6 +61,13 @@ module Net
   # are expunged from the mailbox, remaining messages have their
   # sequence numbers "shuffled down" to fill the gaps.
   #
+  # To avoid sequence number race conditions, servers must not expunge messages
+  # when no command is in progress, nor when responding to #fetch, #store, or
+  # #search.  Expunges _may_ be sent during any other command, including
+  # #uid_fetch, #uid_store, and #uid_search.  The #noop and #idle commands are
+  # both useful for this side-effect: they allow the server to send all mailbox
+  # updates, including expunges.
+  #
   # UIDs, on the other hand, are permanently guaranteed not to
   # identify another message within the same mailbox, even if
   # the existing message is deleted.  UIDs are required to
@@ -529,6 +536,14 @@ module Net
 
     # Sends a {NOOP command [IMAP4rev1 §6.1.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.2]
     # to the server.
+    #
+    # This allows the server to send unsolicited untagged EXPUNGE #responses,
+    # but does not execute any client request.  \IMAP servers are permitted to
+    # send unsolicited untagged responses at any time, except for `EXPUNGE`.
+    #
+    # * +EXPUNGE+ can only be sent while a command is in progress.
+    # * +EXPUNGE+ must _not_ be sent during #fetch, #store, or #search.
+    # * +EXPUNGE+ may be sent during #uid_fetch, #uid_store, or #uid_search.
     #
     # Related: #idle, #check
     def noop
@@ -1138,7 +1153,7 @@ module Net
     # to permanently remove all messages that have both the <tt>\\Deleted</tt>
     # flag set and a UID that is included in +uid_set+.
     #
-    # By using UID EXPUNGE instead of EXPUNGE when resynchronizing with
+    # By using #uid_expunge instead of #expunge when resynchronizing with
     # the server, the client can ensure that it does not inadvertantly
     # remove any messages that have been marked as <tt>\\Deleted</tt> by other
     # clients between the time that the client was last connected and
