@@ -1037,8 +1037,8 @@ module Net
     #      imap.login username, password
     #    end
     #
-    def authenticate(mechanism, *args, **props, &cb)
-      authenticator = self.class.authenticator(mechanism, *args, **props, &cb)
+    def authenticate(mechanism, ...)
+      authenticator = self.class.authenticator(mechanism, ...)
       send_command("AUTHENTICATE", mechanism) do |resp|
         if resp.instance_of?(ContinuationRequest)
           data = authenticator.process(resp.data.text.unpack("m")[0])
