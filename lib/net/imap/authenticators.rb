@@ -39,15 +39,11 @@ module Net::IMAP::Authenticators
   #
   # The returned object represents a single authentication exchange and <em>must
   # not</em> be reused for multiple authentication attempts.
-  def authenticator(mechanism, *authargs, **properties, &callback)
-    authenticator = authenticators.fetch(mechanism.upcase) do
+  def authenticator(mechanism, ...)
+    auth = authenticators.fetch(mechanism.upcase) do
       raise ArgumentError, 'unknown auth type - "%s"' % mechanism
     end
-    if authenticator.respond_to?(:new)
-      authenticator.new(*authargs, **properties, &callback)
-    else
-      authenticator.call(*authargs, **properties, &callback)
-    end
+    auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
   end
 
   private
