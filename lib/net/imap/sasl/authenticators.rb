@@ -34,6 +34,7 @@ module Net::IMAP::SASL
       @authenticators = {}
       if use_defaults
         add_authenticator "Anonymous"
+        add_authenticator "External"
         add_authenticator "OAuthBearer"
         add_authenticator "Plain"
         add_authenticator "XOAuth2"

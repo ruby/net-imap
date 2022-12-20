@@ -136,6 +136,35 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   # ----------------------
+  # EXTERNAL
+  # ----------------------
+
+  def external(...)
+    Net::IMAP::SASL.authenticator("EXTERNAL", ...)
+  end
+
+  def test_external_matches_mechanism
+    assert_kind_of(Net::IMAP::SASL::ExternalAuthenticator, external)
+  end
+
+  def test_external_response
+    assert_equal("", external.process(nil))
+    assert_equal("kwarg", external(authzid: "kwarg").process(nil))
+  end
+
+  def test_external_utf8
+    assert_equal("", external.process(nil))
+    assert_equal("🏴󠁧󠁢󠁥󠁮󠁧󠁿 England",
+                 external(authzid: "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England").process(nil))
+  end
+
+  def test_external_invalid
+    assert_raise(ArgumentError) { external(authzid: "bad\0contains NULL") }
+    assert_raise(ArgumentError) { external(authzid: "invalid utf8\x80") }
+    assert_raise(ArgumentError) { external("invalid positional argument") }
+  end
+
+  # ----------------------
   # LOGIN (obsolete)
   # ----------------------
 
