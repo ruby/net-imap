@@ -1002,6 +1002,12 @@ module Net
     # Each mechanism has different properties and requirements.  Please consult
     # the documentation for the specific mechanisms you are using:
     #
+    # +ANONYMOUS+::
+    #     See AnonymousAuthenticator[Net::IMAP::SASL::AnonymousAuthenticator].
+    #
+    #     Allows the user to gain access to public services or resources without
+    #     authenticating or disclosing an identity.
+    #
     # +OAUTHBEARER+::
     #     See OAuthBearerAuthenticator[rdoc-ref:Net::IMAP::SASL::OAuthBearerAuthenticator].
     #

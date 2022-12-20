@@ -27,6 +27,12 @@ module Net
     # Each mechanism has different properties and requirements.  Please consult
     # the documentation for the specific mechanisms you are using:
     #
+    # +ANONYMOUS+::
+    #     See AnonymousAuthenticator[Net::IMAP::SASL::AnonymousAuthenticator].
+    #
+    #     Allows the user to gain access to public services or resources without
+    #     authenticating or disclosing an identity.
+    #
     # +OAUTHBEARER+::
     #     See OAuthBearerAuthenticator.
     #
@@ -77,6 +83,8 @@ module Net
       sasl_dir = File.expand_path("sasl", __dir__)
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
+
+      autoload :AnonymousAuthenticator,   "#{sasl_dir}/anonymous_authenticator"
       autoload :OAuthBearerAuthenticator, "#{sasl_dir}/oauthbearer_authenticator"
       autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
       autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
