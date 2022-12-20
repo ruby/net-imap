@@ -101,6 +101,41 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   # ----------------------
+  # ANONYMOUS
+  # ----------------------
+
+  def anonymous(*args, **kwargs, &block)
+    Net::IMAP::SASL.authenticator("ANONYMOUS", *args, **kwargs, &block)
+  end
+
+  def test_anonymous_matches_mechanism
+    assert_kind_of(Net::IMAP::SASL::AnonymousAuthenticator, anonymous)
+  end
+
+  def test_anonymous_response
+    assert_equal("", anonymous.process(nil))
+    assert_equal("hello world", anonymous("hello world").process(nil))
+    assert_equal("kwargs",
+                 anonymous(anonymous_message: "kwargs").process(nil))
+  end
+
+  def test_anonymous_stringprep
+    assert_raise(Net::IMAP::SASL::ProhibitedCodepoint) {
+      anonymous("no\ncontrol\rchars").process(nil)
+    }
+    assert_raise(Net::IMAP::SASL::ProhibitedCodepoint) {
+      anonymous("regional flags use tagging chars: e.g." \
+                "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England, " \
+                "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland, " \
+                "🏴󠁧󠁢󠁷󠁬󠁳󠁿 Wales.").process(nil)
+    }
+  end
+
+  def test_anonymous_length_over_255
+    assert_raise(ArgumentError) { anonymous("a" * 256).process(nil) }
+  end
+
+  # ----------------------
   # LOGIN (obsolete)
   # ----------------------
 

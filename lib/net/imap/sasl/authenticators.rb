@@ -33,6 +33,7 @@ module Net::IMAP::SASL
     def initialize(use_defaults: false)
       @authenticators = {}
       if use_defaults
+        add_authenticator "Anonymous"
         add_authenticator "OAuthBearer"
         add_authenticator "Plain"
         add_authenticator "XOAuth2"
