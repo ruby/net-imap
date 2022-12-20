@@ -33,6 +33,12 @@ module Net
     #     Allows the user to gain access to public services or resources without
     #     authenticating or disclosing an identity.
     #
+    # +EXTERNAL+::
+    #     See ExternalAuthenticator[Net::IMAP::SASL::ExternalAuthenticator].
+    #
+    #     Authenticates using already established credentials, such as a TLS
+    #     certificate or IPsec.
+    #
     # +OAUTHBEARER+::
     #     See OAuthBearerAuthenticator.
     #
@@ -85,6 +91,7 @@ module Net
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
 
       autoload :AnonymousAuthenticator,   "#{sasl_dir}/anonymous_authenticator"
+      autoload :ExternalAuthenticator,    "#{sasl_dir}/external_authenticator"
       autoload :OAuthBearerAuthenticator, "#{sasl_dir}/oauthbearer_authenticator"
       autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
       autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
