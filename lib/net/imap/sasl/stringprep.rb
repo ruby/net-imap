@@ -26,6 +26,9 @@ module Net::IMAP::SASL
     #
     # Also checks bidirectional characters, when <tt>bidi: true</tt>, which may
     # raise a BidiStringError.
+    #
+    # +profile+ is an optional string which will be added to any exception that
+    # is raised (it does not affect behavior).
     def check_prohibited!(string, *tables, bidi: false, profile: nil)
       tables = TABLE_TITLES.keys.grep(/^C/) if tables.empty?
       tables |= %w[C.8] if bidi
@@ -47,10 +50,11 @@ module Net::IMAP::SASL
     #   RandALCat character MUST be the last character of the string.
     #
     # This is usually combined with #check_prohibited!, so table "C.8" is only
-    # checked when +c_8: true+.
+    # checked when <tt>c_8: true</tt>.
     #
     # Raises either ProhibitedCodepoint or BidiStringError unless all
-    # requirements are met.
+    # requirements are met.  +profile+ is an optional string which will be
+    # added to any exception that is raised (it does not affect behavior).
     def check_bidi!(string, c_8: false, profile: nil)
       check_prohibited!(string, "C.8", profile: profile) if c_8
       if BIDI_FAILS_REQ2.match?(string)

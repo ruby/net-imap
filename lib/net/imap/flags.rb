@@ -257,5 +257,6 @@ module Net
     # special use is likely not to be supported.
     TRASH = :Trash
 
+    # :section:
   end
 end
