@@ -1592,20 +1592,6 @@ module Net
         end
       end
 
-      def parse_error(fmt, *args)
-        if IMAP.debug
-          $stderr.printf("@str: %s\n", @str.dump)
-          $stderr.printf("@pos: %d\n", @pos)
-          $stderr.printf("@lex_state: %s\n", @lex_state)
-          if @token
-            $stderr.printf("@token.symbol: %s\n", @token.symbol)
-            $stderr.printf("@token.value: %s\n", @token.value.inspect)
-          end
-        end
-        raise ResponseParseError, format(fmt, *args)
-      end
     end
-
   end
-
 end
