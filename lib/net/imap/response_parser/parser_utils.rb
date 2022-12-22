@@ -54,6 +54,31 @@ module Net
         def shift_token
           @token = nil
         end
+
+        def parse_error(fmt, *args)
+          msg = format(fmt, *args)
+          if IMAP.debug
+            local_path = File.dirname(__dir__)
+            tok = @token ? "%s: %p" % [@token.symbol, @token.value] : "nil"
+            warn "%s %s: %s"        % [self.class, __method__, msg]
+            warn "  tokenized : %s" % [@str[...@pos].dump]
+            warn "  remaining : %s" % [@str[@pos..].dump]
+            warn "  @lex_state: %s" % [@lex_state]
+            warn "  @pos      : %d" % [@pos]
+            warn "  @token    : %s" % [tok]
+            caller_locations(1..20).each_with_index do |cloc, idx|
+              next unless cloc.path&.start_with?(local_path)
+              warn "  caller[%2d]: %-30s (%s:%d)" % [
+                idx,
+                cloc.base_label,
+                File.basename(cloc.path, ".rb"),
+                cloc.lineno
+              ]
+            end
+          end
+          raise ResponseParseError, msg
+        end
+
       end
     end
   end
