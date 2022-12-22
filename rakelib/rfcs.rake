@@ -43,7 +43,8 @@ RFCS = {
   2046 => "[MIME-IMT]:  MIME Part Two: Media Types",
   2047 => "[MIME-HDRS]: MIME Part Three: Header Extensions for Non-ASCII Text",
   2183 => "[DISPOSITION]: The Content-Disposition Header",
-  2231 => "MIME Parameter Value and Encoded Word Extensions: Character Sets, Languages, and Continuations",
+  2231 => "MIME Parameter Value and Encoded Word Extensions: " \
+          "Character Sets, Languages, and Continuations",
   2557 => "[LOCATION]: MIME Encapsulation of Aggregate Documents",
   2978 => "[CHARSET]: IANA Charset Registration Procedures, BCP 19",
   3282 => "[LANGUAGE-TAGS]: Content Language Headers",
@@ -146,6 +147,7 @@ RFCS = {
   9208 => "IMAP QUOTA, QUOTA=, QUOTASET",
 
   # etc...
+  3629 => "UTF8",
   6857 => "Post-Delivery Message Downgrading for I18n Email Messages",
 
 }.freeze
