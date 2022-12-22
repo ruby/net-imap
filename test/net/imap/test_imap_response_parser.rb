@@ -2,8 +2,14 @@
 
 require "net/imap"
 require "test/unit"
+require_relative "net_imap_test_helpers"
 
 class IMAPResponseParserTest < Test::Unit::TestCase
+  TEST_FIXTURE_PATH = File.join(__dir__, "fixtures/response_parser")
+
+  include NetIMAPTestHelpers
+  extend  NetIMAPTestHelpers::TestFixtureGenerators
+
   def setup
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
@@ -12,6 +18,22 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   def teardown
     Socket.do_not_reverse_lookup = @do_not_reverse_lookup
   end
+
+  ############################################################################
+  # Tests that do no more than parse an example response and assert the result
+  # data has the correct values have been moved to yml test fixtures.
+  #
+  # TODO: add instructions for how to quickly add or update yaml tests
+  ############################################################################
+  # Core IMAP specs, by RFC9051 section (w/ obsolete listed last):
+
+  ############################################################################
+  # IMAP extensions, by RFC:
+
+  ############################################################################
+  # More interesting tests about the behavior, either of the test or of the
+  # response data, should still use normal tests, below
+  ############################################################################
 
   def test_flag_list_many_same_flags
     parser = Net::IMAP::ResponseParser.new
