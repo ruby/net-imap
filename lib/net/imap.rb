@@ -511,10 +511,8 @@ module Net
   #
   # - #greeting: The server's initial untagged response, which can indicate a
   #   pre-authenticated connection.
-  # - #responses: The untagged responses, as a hash.  Keys are the untagged
-  #   response type (e.g. "OK", "FETCH", "FLAGS") and response code (e.g.
-  #   "ALERT", "UIDVALIDITY", "UIDNEXT", "TRYCREATE", etc).  Values are arrays
-  #   of UntaggedResponse or ResponseCode.
+  # - #responses: A hash with arrays of unhandled <em>non-+nil+</em>
+  #   UntaggedResponse and ResponseCode +#data+, keyed by +#name+.
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
   # - #remove_response_handler: Remove a previously added response handler.
@@ -712,7 +710,9 @@ module Net
     # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
 
-    # Returns recorded untagged responses.
+    # Returns a hash with arrays of unhandled <em>non-+nil+</em>
+    # UntaggedResponse#data keyed by UntaggedResponse#name, and
+    # ResponseCode#data keyed by ResponseCode#name.
     #
     # For example:
     #
