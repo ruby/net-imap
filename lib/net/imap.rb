@@ -734,8 +734,6 @@ module Net
     # Seconds to wait until an IDLE response is received.
     attr_reader :idle_response_timeout
 
-    attr_accessor :client_thread # :nodoc:
-
     # The hostname this client connected to
     attr_reader :host
 
@@ -766,6 +764,11 @@ module Net
       alias default_imap_port default_port
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
+    end
+
+    def client_thread # :nodoc:
+      warn "Net::IMAP#client_thread is deprecated and will be removed soon."
+      @client_thread
     end
 
     # Disconnects from the server.
