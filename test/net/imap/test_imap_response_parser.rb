@@ -42,6 +42,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   ############################################################################
   # IMAP extensions, by RFC:
 
+  # RFC 2971: ID response
+  generate_tests_from fixture_file: "id_responses.yml"
+
   # RFC 4315: UIDPLUS extension, APPENDUID and COPYUID response codes
   generate_tests_from fixture_file: "uidplus_extension.yml"
 
@@ -144,18 +147,6 @@ EOF
     assert_equal("ENABLED", response.name)
     assert_equal(1, response.data.length)
     assert_equal("SMTPUTF8", response.data.first)
-  end
-
-  def test_id
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* ID NIL\r\n")
-    assert_equal("ID", response.name)
-    assert_equal(nil, response.data)
-    response = parser.parse("* ID (\"name\" \"GImap\" \"vendor\" \"Google, Inc.\" \"support-url\" NIL)\r\n")
-    assert_equal("ID", response.name)
-    assert_equal("GImap", response.data["name"])
-    assert_equal("Google, Inc.", response.data["vendor"])
-    assert_equal(nil, response.data.fetch("support-url"))
   end
 
   # [Bug #13649]

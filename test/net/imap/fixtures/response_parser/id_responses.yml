@@ -1,0 +1,30 @@
+---
+:tests:
+  test_id_rfc2971_example_3.1_nil:
+    :response: "* ID NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ID
+      data:
+      raw_data: "* ID NIL\r\n"
+  test_id_rfc2971_example_3.2_cyrus:
+    :response: "* ID (\"name\" \"Cyrus\" \"version\" \"1.5\" \"os\" \"sunos\" \"os-version\" \"5.5\" \"support-url\" \"mailto:cyrus-bugs+@andrew.cmu.edu\")\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ID
+      data:
+        name: Cyrus
+        version: "1.5"
+        os: sunos
+        os-version: "5.5"
+        support-url: "mailto:cyrus-bugs+@andrew.cmu.edu"
+      raw_data: "* ID (\"name\" \"Cyrus\" \"version\" \"1.5\" \"os\" \"sunos\" \"os-version\" \"5.5\" \"support-url\" \"mailto:cyrus-bugs+@andrew.cmu.edu\")\r\n"
+  test_id_gmail:
+    :response: "* ID (\"name\" \"GImap\" \"vendor\" \"Google, Inc.\" \"support-url\"
+      NIL)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ID
+      data:
+        name: GImap
+        vendor: Google, Inc.
+        support-url:
+      raw_data: "* ID (\"name\" \"GImap\" \"vendor\" \"Google, Inc.\" \"support-url\"
+        NIL)\r\n"
