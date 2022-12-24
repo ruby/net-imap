@@ -27,6 +27,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   ############################################################################
   # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
 
+  # §7.2.2: CAPABILITY response
+  generate_tests_from fixture_file: "capability_responses.yml"
+
   # §7.3.2: NAMESPACE response (also RFC2342)
   generate_tests_from fixture_file: "namespace_responses.yml"
 
@@ -127,26 +130,6 @@ EOF
     assert_equal("imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com",
                  response.data[0].user)
     assert_equal("lrswickxteda", response.data[0].rights)
-  end
-
-  # [Bug #8415]
-  def test_capability
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* CAPABILITY st11p00mm-iscream009 1Q49 XAPPLEPUSHSERVICE IMAP4 IMAP4rev1 SASL-IR AUTH=ATOKEN AUTH=PLAIN\r\n")
-    assert_equal("CAPABILITY", response.name)
-    assert_equal("AUTH=PLAIN", response.data.last)
-    response = parser.parse("* CAPABILITY st11p00mm-iscream009 1Q49 XAPPLEPUSHSERVICE IMAP4 IMAP4rev1 SASL-IR AUTH=ATOKEN AUTH=PLAIN \r\n")
-    assert_equal("CAPABILITY", response.name)
-    assert_equal("AUTH=PLAIN", response.data.last)
-    response = parser.parse("* OK [CAPABILITY IMAP4rev1 SASL-IR 1234 NIL THIS+THAT + AUTH=PLAIN ID] IMAP4rev1 Hello\r\n")
-    assert_equal("OK", response.name)
-    assert_equal("IMAP4rev1 Hello", response.data.text)
-    code = response.data.code
-    assert_equal("CAPABILITY", code.name)
-    assert_equal(
-      ["IMAP4REV1", "SASL-IR", "1234", "NIL", "THIS+THAT", "+", "AUTH=PLAIN", "ID"],
-      code.data
-    )
   end
 
   def test_enable
