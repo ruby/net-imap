@@ -1,0 +1,177 @@
+---
+:tests:
+
+  # The same examples are used by RFC9051 §6.3.10
+  NAMESPACE_rfc2342_example_5.1:
+    :response: &rfc2342_ex5_1 "* NAMESPACE ((\"\" \"/\")) NIL NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other: []
+        shared: []
+      raw_data: *rfc2342_ex5_1
+
+  NAMESPACE_rfc2342_example_5.2:
+    :response: &rfc2342_ex5_2 "* NAMESPACE NIL NIL ((\"\" \".\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal: []
+        other: []
+        shared:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "."
+          extensions: {}
+      raw_data: *rfc2342_ex5_2
+
+  NAMESPACE_rfc2342_example_5.3:
+    :response: &rfc2342_ex5_3 "* NAMESPACE ((\"\" \"/\")) NIL ((\"Public Folders/\" \"/\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other: []
+        shared:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: Public Folders/
+          delim: "/"
+          extensions: {}
+      raw_data: *rfc2342_ex5_3
+
+  NAMESPACE_rfc2342_example_5.4:
+    # WARNING: this example is wrong and will be fixed soon...
+    :response: &rfc2342_ex5_4 "* NAMESPACE ((\"\" \"/\")) ((\"~\" \"/\")) ((\"#shared/\" \"/\") (\"#public/\"
+      \"/\") (\"#ftp/\" \"/\") (\"#news.\" \".\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "~"
+          delim: "/"
+          extensions: {}
+        shared:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#shared/"
+          delim: "/"
+          extensions: {}
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#public/"
+          delim: "/"
+          extensions: {}
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#ftp/"
+          delim: "/"
+          extensions: {}
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#news."
+          delim: "."
+          extensions: {}
+      raw_data: *rfc2342_ex5_4
+
+  NAMESPACE_rfc2342_example_5.5:
+    # FYI: it looks like both RFCs contain an extra SP char in this example
+    :response: &rfc2342_ex5_5 "* NAMESPACE ((\"INBOX.\" \".\")) NIL NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: INBOX.
+          delim: "."
+          extensions: {}
+        other: []
+        shared: []
+      raw_data: *rfc2342_ex5_5
+
+  NAMESPACE_rfc2342_example_5.6:
+    :response: &rfc2342_ex5_6 "* NAMESPACE ((\"\" \"/\") (\"#mh/\" \"/\" \"X-PARAM\" (\"FLAG1\" \"FLAG2\")))
+      NIL NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#mh/"
+          delim: "/"
+          extensions:
+            X-PARAM:
+            - FLAG1
+            - FLAG2
+        other: []
+        shared: []
+      raw_data: *rfc2342_ex5_6
+
+  NAMESPACE_rfc2342_example_5.7:
+    :response: &rfc2342_ex5_7 "* NAMESPACE ((\"\" \"/\")) ((\"Other Users/\" \"/\")) NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: Other Users/
+          delim: "/"
+          extensions: {}
+        shared: []
+      raw_data: *rfc2342_ex5_7
+
+  NAMESPACE_rfc9051_6.3.10_example_8:
+    :response: &rfc9051_6_3_10_ex8 "* NAMESPACE ((\"\" \"/\")) ((\"#Users/\" \"/\")) NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "#Users/"
+          delim: "/"
+          extensions: {}
+        shared: []
+      raw_data: *rfc9051_6_3_10_ex8
+      raw_data: "* NAMESPACE ((\"\" \"/\")) ((\"#Users/\" \"/\")) NIL\r\n"
+
+  NAMESPACE_rfc2342_example_5.9:
+    :response: &rfc2342_ex5_9 "* NAMESPACE ((\"\" \"/\")) ((\"~\" \"/\")) NIL\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: NAMESPACE
+      data: !ruby/struct:Net::IMAP::Namespaces
+        personal:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: ''
+          delim: "/"
+          extensions: {}
+        other:
+        - !ruby/struct:Net::IMAP::Namespace
+          prefix: "~"
+          delim: "/"
+          extensions: {}
+        shared: []
+      raw_data: "* NAMESPACE ((\"\" \"/\")) ((\"~\" \"/\")) NIL\r\n"
