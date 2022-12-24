@@ -45,6 +45,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC 2971: ID response
   generate_tests_from fixture_file: "id_responses.yml"
 
+  # RFC 4314: ACL response (TODO: LISTRIGHTS and MYRIGHTS responses)
+  generate_tests_from fixture_file: "acl_responses.yml"
+
   # RFC 4315: UIDPLUS extension, APPENDUID and COPYUID response codes
   generate_tests_from fixture_file: "uidplus_extension.yml"
 
@@ -125,20 +128,6 @@ EOF
   def assert_parseable(s)
     parser = Net::IMAP::ResponseParser.new
     parser.parse(s.gsub(/\n/, "\r\n"))
-  end
-
-  # [Bug #8281]
-  def test_acl
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* ACL "INBOX/share" "imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com" lrswickxteda
-EOF
-    assert_equal("ACL", response.name)
-    assert_equal(1, response.data.length)
-    assert_equal("INBOX/share", response.data[0].mailbox)
-    assert_equal("imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com",
-                 response.data[0].user)
-    assert_equal("lrswickxteda", response.data[0].rights)
   end
 
   def test_enable

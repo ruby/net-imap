@@ -1,0 +1,16 @@
+---
+:tests:
+  test_acl_response:
+    :comment: |
+      [Bug #8281]
+    :response: "* ACL \"INBOX/share\" \"imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com\"
+      lrswickxteda\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ACL
+      data:
+      - !ruby/struct:Net::IMAP::MailboxACLItem
+        user: imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com
+        rights: lrswickxteda
+        mailbox: INBOX/share
+      raw_data: "* ACL \"INBOX/share\" \"imshare2copy1366146467@xxxxxxxxxxxxxxxxxx.com\"
+        lrswickxteda\r\n"
