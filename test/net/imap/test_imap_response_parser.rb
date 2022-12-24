@@ -42,6 +42,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   ############################################################################
   # IMAP extensions, by RFC:
 
+  # RFC 5256: THREAD response
+  generate_tests_from fixture_file: "thread_responses.yml"
+
   ############################################################################
   # More interesting tests about the behavior, either of the test or of the
   # response data, should still use normal tests, below
