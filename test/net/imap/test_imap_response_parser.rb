@@ -27,6 +27,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   ############################################################################
   # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
 
+  # §7.1: Generic Status Responses (OK, NO, BAD, PREAUTH, BYE, codes, text)
+  generate_tests_from fixture_file: "resp_text_responses.yml"
+
   # §7.2.2: CAPABILITY response
   generate_tests_from fixture_file: "capability_responses.yml"
 
@@ -76,14 +79,6 @@ EOF
 * XLIST (\\Inbox) "." "INBOX"
 EOF
     assert_equal [:Inbox], response.data.attr
-  end
-
-  def test_resp_text_code
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* OK [CLOSED] Previous mailbox closed.
-EOF
-    assert_equal "CLOSED", response.data.code.name
   end
 
   def test_msg_att_extra_space
@@ -156,22 +151,6 @@ EOF
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse("* 1 FETCH (FLAGS (\Seen) MODSEQ (12345) UID 5)\r\n")
     assert_equal(12345, response.data.attr["MODSEQ"])
-  end
-
-  def test_msg_rfc3501_response_text_with_T_LBRA
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n")
-    assert_equal("RUBY0004", response.tag)
-    assert_equal("READ-WRITE", response.data.code.name)
-    assert_equal("[Gmail]/Sent Mail selected. (Success)", response.data.text)
-  end
-
-  def test_msg_rfc3501_response_text_with_BADCHARSET_astrings
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported charset foo.\r\n")
-    assert_equal("t", response.tag)
-    assert_equal("unsupported charset foo.", response.data.text)
-    assert_equal("BADCHARSET", response.data.code.name)
   end
 
   def test_continuation_request_without_response_text

@@ -1,0 +1,40 @@
+---
+:tests:
+  test_resp_text_with_code:
+    :response: "* OK [CLOSED] Previous mailbox closed.\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CLOSED
+          data:
+        text: Previous mailbox closed.
+      raw_data: "* OK [CLOSED] Previous mailbox closed.\r\n"
+
+  test_resp_text_with_T_LBRA:
+    :response: "RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: RUBY0004
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: READ-WRITE
+          data:
+        text: "[Gmail]/Sent Mail selected. (Success)"
+      raw_data: "RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n"
+
+  test_resp_text_with_BADCHARSET_astrings:
+    :response: "t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported
+      charset foo.\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: t
+      name: BAD
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: BADCHARSET
+          data:
+          - US-ASCII
+          - "[astring with brackets]"
+        text: unsupported charset foo.
+      raw_data: "t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported
+        charset foo.\r\n"
