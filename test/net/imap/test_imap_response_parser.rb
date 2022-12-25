@@ -39,6 +39,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC3501 §7.2.5: SEARCH response (obsolete in IMAP4rev2):
   generate_tests_from fixture_file: "search_responses.yml"
 
+  # §7.5.2: FETCH response, misc msg-att
+  generate_tests_from fixture_file: "fetch_responses.yml"
+
   # §7.5.2: FETCH response, BODYSTRUCTURE msg-att
   generate_tests_from fixture_file: "body_structure_responses.yml"
 
@@ -81,50 +84,6 @@ EOF
     assert_equal [:Inbox], response.data.attr
   end
 
-  def test_msg_att_extra_space
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* 1 FETCH (UID 92285)
-EOF
-    assert_equal 92285, response.data.attr["UID"]
-
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* 1 FETCH (UID 92285 )
-EOF
-    assert_equal 92285, response.data.attr["UID"]
-  end
-
-  def test_msg_att_parse_error
-    parser = Net::IMAP::ResponseParser.new
-    e = assert_raise(Net::IMAP::ResponseParseError) {
-      parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* 123 FETCH (UNKNOWN 92285)
-EOF
-    }
-    assert_match(/ for \{123\}/, e.message)
-  end
-
-  def test_msg_att_rfc822_text
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* 123 FETCH (RFC822 {5}
-foo
-)
-EOF
-    assert_equal("foo\r\n", response.data.attr["RFC822"])
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* 123 FETCH (RFC822[] {5}
-foo
-)
-EOF
-    assert_equal("foo\r\n", response.data.attr["RFC822"])
-  end
-
-  def assert_parseable(s)
-    parser = Net::IMAP::ResponseParser.new
-    parser.parse(s.gsub(/\n/, "\r\n"))
-  end
-
   def test_enable
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse("* ENABLED SMTPUTF8\r\n")
@@ -144,13 +103,6 @@ EOF
     assert_equal("STATUS", response.name)
     assert_equal("INBOX", response.data.mailbox)
     assert_equal(1234, response.data.attr["UIDVALIDITY"])
-  end
-
-  # [Bug #10119]
-  def test_msg_att_modseq_data
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* 1 FETCH (FLAGS (\Seen) MODSEQ (12345) UID 5)\r\n")
-    assert_equal(12345, response.data.attr["MODSEQ"])
   end
 
   def test_continuation_request_without_response_text
