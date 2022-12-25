@@ -51,6 +51,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # §7.5.2: FETCH response, BODYSTRUCTURE msg-att
   generate_tests_from fixture_file: "body_structure_responses.yml"
 
+  # §7.6: Command Continuation Request
+  generate_tests_from fixture_file: "continuation_requests.yml"
+
   ############################################################################
   # IMAP extensions, by RFC:
 
@@ -77,14 +80,6 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     assert_equal("ENABLED", response.name)
     assert_equal(1, response.data.length)
     assert_equal("SMTPUTF8", response.data.first)
-  end
-
-  def test_continuation_request_without_response_text
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("+\r\n")
-    assert_instance_of(Net::IMAP::ContinuationRequest, response)
-    assert_equal(nil, response.data.code)
-    assert_equal("", response.data.text)
   end
 
   def test_ignored_response

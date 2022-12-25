@@ -1,0 +1,34 @@
+---
+:tests:
+
+  test_continuation_request_rfc3501_6.2.2_example:
+    :response: "+ YDMGCSqGSIb3EgECAgIBAAD/////6jcyG4GE3KkTzBeBiVHeceP2CWY0SR0fAQAgAAQEBAQ=\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "YDMGCSqGSIb3EgECAgIBAAD/////6jcyG4GE3KkTzBeBiVHeceP2CWY0SR0fAQAgAAQEBAQ="
+      raw_data: "+ YDMGCSqGSIb3EgECAgIBAAD/////6jcyG4GE3KkTzBeBiVHeceP2CWY0SR0fAQAgAAQEBAQ=\r\n"
+
+  test_continuation_request_rfc3501_6.3.11_example:
+    :response: "+ Ready for literal data\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Ready for literal data"
+      raw_data: "+ Ready for literal data\r\n"
+
+  test_continuation_request_rfc3501_7.5_example:
+    :response: "+ Ready for additional command text\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Ready for additional command text"
+      raw_data: "+ Ready for additional command text\r\n"
+
+  test_continuation_request_without_response_text:
+    :response: "+\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: ''
+      raw_data: "+\r\n"
