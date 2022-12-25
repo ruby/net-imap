@@ -1,0 +1,25 @@
+---
+:tests:
+  test_status_response_uidnext_uidvalidity:
+    :response: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: INBOX
+        attr:
+          UIDNEXT: 1
+          UIDVALIDITY: 1234
+      raw_data: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234)\r\n"
+
+  test_invalid_status_response_trailing_space:
+    :comments: |
+      [Bug #13649]
+    :response: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234) \r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: INBOX
+        attr:
+          UIDNEXT: 1
+          UIDVALIDITY: 1234
+      raw_data: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234) \r\n"

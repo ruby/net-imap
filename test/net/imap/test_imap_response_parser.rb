@@ -39,6 +39,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # §7.3.2: NAMESPACE response (also RFC2342)
   generate_tests_from fixture_file: "namespace_responses.yml"
 
+  # §7.3.3: STATUS response
+  generate_tests_from fixture_file: "status_responses.yml"
+
   # RFC3501 §7.2.5: SEARCH response (obsolete in IMAP4rev2):
   generate_tests_from fixture_file: "search_responses.yml"
 
@@ -74,19 +77,6 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     assert_equal("ENABLED", response.name)
     assert_equal(1, response.data.length)
     assert_equal("SMTPUTF8", response.data.first)
-  end
-
-  # [Bug #13649]
-  def test_status
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234)\r\n")
-    assert_equal("STATUS", response.name)
-    assert_equal("INBOX", response.data.mailbox)
-    assert_equal(1234, response.data.attr["UIDVALIDITY"])
-    response = parser.parse("* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234) \r\n")
-    assert_equal("STATUS", response.name)
-    assert_equal("INBOX", response.data.mailbox)
-    assert_equal(1234, response.data.attr["UIDVALIDITY"])
   end
 
   def test_continuation_request_without_response_text
