@@ -70,6 +70,10 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   generate_tests_from fixture_file: "thread_responses.yml"
 
   ############################################################################
+  # Workarounds or unspecified extensions:
+  generate_tests_from fixture_file: "quirky_behaviors.yml"
+
+  ############################################################################
   # More interesting tests about the behavior, either of the test or of the
   # response data, should still use normal tests, below
   ############################################################################
@@ -82,15 +86,8 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     assert_equal("SMTPUTF8", response.data.first)
   end
 
-  def test_ignored_response
-    parser = Net::IMAP::ResponseParser.new
-    response = nil
-    assert_nothing_raised do
-      response = parser.parse("* NOOP\r\n")
-    end
-    assert_instance_of(Net::IMAP::IgnoredResponse, response)
-  end
-
+  # todo: move this to response data tests file
+  # it's testing the mapping fn, not the parsing.
   def test_uidplus_copyuid__uid_mapping
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse(
