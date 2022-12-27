@@ -1,5 +1,18 @@
 ---
 :tests:
+  # 7.2.5.  SEARCH Response
+  #
+  #    Example:    S: * SEARCH 2 3 6
+  rfc3501_7.2.5_SEARCH_response_example:
+    :response: "* SEARCH 2 3 6\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data:
+      - 2
+      - 3
+      - 6
+      raw_data: "* SEARCH 2 3 6\r\n"
+
   test_search_response_empty:
     :response: "* SEARCH\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse

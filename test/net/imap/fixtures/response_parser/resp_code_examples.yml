@@ -1,0 +1,404 @@
+---
+:tests:
+
+  test_resp_code_CAPABILITY_rfc9051_6.2.2_example:
+    :response: "* OK [CAPABILITY IMAP4rev2 STARTTLS AUTH=GSSAPI] Capabilities\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CAPABILITY
+          data:
+          - IMAP4REV2
+          - STARTTLS
+          - AUTH=GSSAPI
+        text: Capabilities
+      raw_data: "* OK [CAPABILITY IMAP4rev2 STARTTLS AUTH=GSSAPI] Capabilities\r\n"
+
+  test_resp_code_UNSEEN_rfc3501_6.3.1_example:
+    :response: "* OK [UNSEEN 12] Message 12 is first unseen\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UNSEEN
+          data: 12
+        text: Message 12 is first unseen
+      raw_data: "* OK [UNSEEN 12] Message 12 is first unseen\r\n"
+
+  test_resp_code_UIDVALIDITY_rfc3501_6.3.1_example:
+    :response: "* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UIDVALIDITY
+          data: 3857529045
+        text: UIDs valid
+      raw_data: "* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"
+
+  test_resp_code_UIDNEXT_rfc3501_6.3.1_example:
+    :response: "* OK [UIDNEXT 4392] Predicted next UID\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UIDNEXT
+          data: 4392
+        text: Predicted next UID
+      raw_data: "* OK [UIDNEXT 4392] Predicted next UID\r\n"
+
+  test_resp_code_PERMANENTFLAGS_rfc3501_6.3.1_example:
+    :response: "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: PERMANENTFLAGS
+          data:
+          - :Deleted
+          - :Seen
+          - :*
+        text: Limited
+      raw_data: "* OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited\r\n"
+
+  # demonstrates when PERMANENTFLAGS is empty
+  test_resp_code_READ-WRITE_rfc3501_6.3.1_example:
+    :response: "A142 OK [READ-WRITE] SELECT completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A142
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: READ-WRITE
+          data:
+        text: SELECT completed
+      raw_data: "A142 OK [READ-WRITE] SELECT completed\r\n"
+
+  test_resp_code_PERMANENTFLAGS_rfc3501_6.3.2_example:
+    :response: "* OK [PERMANENTFLAGS ()] No permanent flags permitted\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: PERMANENTFLAGS
+          data: []
+        text: No permanent flags permitted
+      raw_data: "* OK [PERMANENTFLAGS ()] No permanent flags permitted\r\n"
+
+  test_resp_code_READ-ONLY_rfc3501_6.3.2_example:
+    :response: "A932 OK [READ-ONLY] EXAMINE completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A932
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: READ-ONLY
+          data:
+        text: EXAMINE completed
+      raw_data: "A932 OK [READ-ONLY] EXAMINE completed\r\n"
+
+  # The example in the RFC doesn't follow the formal syntax!
+  # Errata submitted: https://www.rfc-editor.org/errata/eid7323 :)
+  #
+  # test_resp_code_BADCHARSET_rfc9051_6.4.4.4_example:
+  #   :response: "B283 NO [BADCHARSET UTF-8] KOI8-R is not supported\r\n"
+  test_resp_code_BADCHARSET_rfc9051_6.4.4.4_example_modified:
+    :response: "B283 NO [BADCHARSET (UTF-8)] KOI8-R is not supported\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: B283
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: BADCHARSET
+          data:
+          - UTF-8
+        text: KOI8-R is not supported
+      raw_data: "B283 NO [BADCHARSET (UTF-8)] KOI8-R is not supported\r\n"
+
+  test_resp_code_BADCHARSET_with_astrings:
+    :response: "t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported
+      charset foo.\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: t
+      name: BAD
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: BADCHARSET
+          data:
+          - US-ASCII
+          - "[astring with brackets]"
+        text: unsupported charset foo.
+      raw_data: "t BAD [BADCHARSET (US-ASCII \"[astring with brackets]\")] unsupported
+        charset foo.\r\n"
+
+  test_resp_code_ALREADYEXISTS_rfc9051_7.1_example:
+    :response: "o356 NO [ALREADYEXISTS] Mailbox \"that\" already exists\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: o356
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: ALREADYEXISTS
+          data:
+        text: Mailbox "that" already exists
+      raw_data: "o356 NO [ALREADYEXISTS] Mailbox \"that\" already exists\r\n"
+
+  test_resp_code_AUTHENTICATIONFAILED_rfc9051_7.1_example:
+    :response: "b NO [AUTHENTICATIONFAILED] Authentication failed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: b
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: AUTHENTICATIONFAILED
+          data:
+        text: Authentication failed
+      raw_data: "b NO [AUTHENTICATIONFAILED] Authentication failed\r\n"
+
+  test_resp_code_AUTHORIZATIONFAILED_rfc9051_7.1_example_1:
+    :response: "c1 NO [AUTHORIZATIONFAILED] No such authorization-ID\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: c1
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: AUTHORIZATIONFAILED
+          data:
+        text: No such authorization-ID
+      raw_data: "c1 NO [AUTHORIZATIONFAILED] No such authorization-ID\r\n"
+
+  test_resp_code_AUTHORIZATIONFAILED_rfc9051_7.1_example_2:
+    :response: "c2 NO [AUTHORIZATIONFAILED] Authenticator is not an admin\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: c2
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: AUTHORIZATIONFAILED
+          data:
+        text: Authenticator is not an admin
+      raw_data: "c2 NO [AUTHORIZATIONFAILED] Authenticator is not an admin\r\n"
+
+  test_resp_code_CANNOT_rfc9051_7.1_example:
+    :response: "l NO [CANNOT] Adjacent slashes are not supported\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: l
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CANNOT
+          data:
+        text: Adjacent slashes are not supported
+      raw_data: "l NO [CANNOT] Adjacent slashes are not supported\r\n"
+
+  test_resp_code_CLIENTBUG_rfc9051_7.1_example:
+    :response: "k2 OK [CLIENTBUG] Done\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: k2
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CLIENTBUG
+          data:
+        text: Done
+      raw_data: "k2 OK [CLIENTBUG] Done\r\n"
+
+  test_resp_code_CONTACTADMIN_rfc9051_7.1_example:
+    :response: "e NO [CONTACTADMIN]\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: e
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CONTACTADMIN
+          data:
+        text: ''
+      raw_data: "e NO [CONTACTADMIN]\r\n"
+
+  test_resp_code_CORRUPTION_rfc9051_7.1_example:
+    :response: "i NO [CORRUPTION] Cannot open mailbox\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: i
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CORRUPTION
+          data:
+        text: Cannot open mailbox
+      raw_data: "i NO [CORRUPTION] Cannot open mailbox\r\n"
+
+  test_resp_code_EXPIRED_rfc9051_7.1_example:
+    :response: "d NO [EXPIRED] That password isn't valid any more\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: d
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: EXPIRED
+          data:
+        text: That password isn't valid any more
+      raw_data: "d NO [EXPIRED] That password isn't valid any more\r\n"
+
+  test_resp_code_EXPUNGEISSUED_rfc9051_7.1_example:
+    :response: "h OK [EXPUNGEISSUED] Search completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: h
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: EXPUNGEISSUED
+          data:
+        text: Search completed
+      raw_data: "h OK [EXPUNGEISSUED] Search completed\r\n"
+
+  test_resp_code_HASCHILDREN_rfc9051_7.1_example:
+    :response: "o356 NO [HASCHILDREN] Mailbox \"Notes\" has children\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: o356
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: HASCHILDREN
+          data:
+        text: Mailbox "Notes" has children
+      raw_data: "o356 NO [HASCHILDREN] Mailbox \"Notes\" has children\r\n"
+
+  test_resp_code_INUSE_rfc9051_7.1_example:
+    :response: "g NO [INUSE] Mailbox in use\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: g
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: INUSE
+          data:
+        text: Mailbox in use
+      raw_data: "g NO [INUSE] Mailbox in use\r\n"
+
+  test_resp_code_LIMIT_rfc9051_7.1_example:
+    :response: "m NO [LIMIT] At most 32 flags in one mailbox supported\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: m
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: LIMIT
+          data:
+        text: At most 32 flags in one mailbox supported
+      raw_data: "m NO [LIMIT] At most 32 flags in one mailbox supported\r\n"
+
+  test_resp_code_NONEXISTENT_rfc9051_7.1_example:
+    :response: "p NO [NONEXISTENT] No such mailbox\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: p
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: NONEXISTENT
+          data:
+        text: No such mailbox
+      raw_data: "p NO [NONEXISTENT] No such mailbox\r\n"
+
+  test_resp_code_NOPERM_rfc9051_7.1_example:
+    :response: "f NO [NOPERM] Access denied\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: f
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: NOPERM
+          data:
+        text: Access denied
+      raw_data: "f NO [NOPERM] Access denied\r\n"
+
+  test_resp_code_OVERQUOTA_rfc9051_7.1_example_1:
+    :response: "n1 NO [OVERQUOTA] Sorry\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: n1
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: OVERQUOTA
+          data:
+        text: Sorry
+      raw_data: "n1 NO [OVERQUOTA] Sorry\r\n"
+
+  test_resp_code_OVERQUOTA_rfc9051_7.1_example_2:
+    :response: "n2 OK [OVERQUOTA] You are now over your soft quota\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: n2
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: OVERQUOTA
+          data:
+        text: You are now over your soft quota
+      raw_data: "n2 OK [OVERQUOTA] You are now over your soft quota\r\n"
+
+  test_resp_code_PRIVACYREQUIRED_rfc9051_7.1_example:
+    :response: "d NO [PRIVACYREQUIRED] Connection offers no privacy\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: d
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: PRIVACYREQUIRED
+          data:
+        text: Connection offers no privacy
+      raw_data: "d NO [PRIVACYREQUIRED] Connection offers no privacy\r\n"
+
+  test_resp_code_SERVERBUG_rfc9051_7.1_example:
+    :response: "j NO [SERVERBUG] This should not happen\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: j
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: SERVERBUG
+          data:
+        text: This should not happen
+      raw_data: "j NO [SERVERBUG] This should not happen\r\n"
+
+  test_resp_code_UNAVAILABLE_rfc9051_7.1_example:
+    :response: "a NO [UNAVAILABLE] User's backend down for maintenance\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: a
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UNAVAILABLE
+          data:
+        text: User's backend down for maintenance
+      raw_data: "a NO [UNAVAILABLE] User's backend down for maintenance\r\n"
+
+  test_resp_code_CAPABILITY_with_valid_atoms:
+    :response: "* OK [CAPABILITY IMAP4rev1 SASL-IR 1234 NIL THIS+THAT + AUTH=PLAIN ID] IMAP4rev1 Hello\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CAPABILITY
+          data:
+          - IMAP4REV1
+          - SASL-IR
+          - '1234'
+          - NIL
+          - THIS+THAT
+          - "+"
+          - AUTH=PLAIN
+          - ID
+        text: IMAP4rev1 Hello
+      raw_data: "* OK [CAPABILITY IMAP4rev1 SASL-IR 1234 NIL THIS+THAT + AUTH=PLAIN
+        ID] IMAP4rev1 Hello\r\n"
+
+  test_resp_code_CLOSED:
+    :response: "* OK [CLOSED] Previous mailbox closed.\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CLOSED
+          data:
+        text: Previous mailbox closed.
+      raw_data: "* OK [CLOSED] Previous mailbox closed.\r\n"

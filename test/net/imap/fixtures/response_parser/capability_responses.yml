@@ -1,7 +1,20 @@
 ---
 :tests:
 
-  test_capability_rfc3501_6.1.1_example_1:
+  # 6.1.1.  CAPABILITY Command
+  #
+  #    Example:    C: abcd CAPABILITY
+  #                S: * CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI
+  #                LOGINDISABLED
+  #                S: abcd OK CAPABILITY completed
+  #                C: efgh STARTTLS
+  #                S: efgh OK STARTLS completed
+  #                <TLS negotiation, further commands are under [TLS] layer>
+  #                C: ijkl CAPABILITY
+  #                S: * CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN
+  #                S: ijkl OK CAPABILITY completed
+
+  rfc3501_6.1.1_example_1_capability_response:
     :response: "* CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI LOGINDISABLED\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: CAPABILITY
@@ -12,7 +25,7 @@
       - LOGINDISABLED
       raw_data: "* CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI LOGINDISABLED\r\n"
 
-  test_capability_rfc3501_6.1.1_example_2:
+  rfc3501_6.1.1_example_2_capability_response:
     :response: "* CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: CAPABILITY
@@ -21,6 +34,34 @@
       - AUTH=GSSAPI
       - AUTH=PLAIN
       raw_data: "* CAPABILITY IMAP4rev1 AUTH=GSSAPI AUTH=PLAIN\r\n"
+
+  # 7.2.1.  CAPABILITY Response
+  #
+  #    Example:    S: * CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI XPIG-LATIN
+  rfc3501_7.2.1_CAPABILITY_response_example:
+    :response: "* CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI XPIG-LATIN\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: CAPABILITY
+      data:
+      - IMAP4REV1
+      - STARTTLS
+      - AUTH=GSSAPI
+      - XPIG-LATIN
+      raw_data: "* CAPABILITY IMAP4rev1 STARTTLS AUTH=GSSAPI XPIG-LATIN\r\n"
+
+  # The RFC9051 examples aren't significantly different from RFC3501.
+  # Including only this one, for completeness:
+  rfc9051_7.2.2_capability_example:
+    :response: "* CAPABILITY STARTTLS AUTH=GSSAPI IMAP4rev2 LOGINDISABLED XPIG-LATIN\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: CAPABILITY
+      data:
+      - STARTTLS
+      - AUTH=GSSAPI
+      - IMAP4REV2
+      - LOGINDISABLED
+      - XPIG-LATIN
+      raw_data: "* CAPABILITY STARTTLS AUTH=GSSAPI IMAP4rev2 LOGINDISABLED XPIG-LATIN\r\n"
 
   test_invalid_capability_extra_space_at_end:
     :comment: |
@@ -41,24 +82,3 @@
       - AUTH=PLAIN
       raw_data: "* CAPABILITY st11p00mm-iscream009 1Q49 XAPPLEPUSHSERVICE IMAP4 IMAP4rev1
         SASL-IR AUTH=ATOKEN AUTH=PLAIN \r\n"
-
-  test_capability_response_code_with_valid_atoms:
-    :response: "* OK [CAPABILITY IMAP4rev1 SASL-IR 1234 NIL THIS+THAT + AUTH=PLAIN
-      ID] IMAP4rev1 Hello\r\n"
-    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
-      name: OK
-      data: !ruby/struct:Net::IMAP::ResponseText
-        code: !ruby/struct:Net::IMAP::ResponseCode
-          name: CAPABILITY
-          data:
-          - IMAP4REV1
-          - SASL-IR
-          - '1234'
-          - NIL
-          - THIS+THAT
-          - "+"
-          - AUTH=PLAIN
-          - ID
-        text: IMAP4rev1 Hello
-      raw_data: "* OK [CAPABILITY IMAP4rev1 SASL-IR 1234 NIL THIS+THAT + AUTH=PLAIN
-        ID] IMAP4rev1 Hello\r\n"

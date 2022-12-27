@@ -26,8 +26,11 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # TODO: add instructions for how to quickly add or update yaml tests
   ############################################################################
   # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
+  generate_tests_from fixture_file: "rfc3501_examples.yml"
 
   # §7.1: Generic Status Responses (OK, NO, BAD, PREAUTH, BYE, codes, text)
+  generate_tests_from fixture_file: "resp_code_examples.yml"
+  generate_tests_from fixture_file: "resp_cond_examples.yml"
   generate_tests_from fixture_file: "resp_text_responses.yml"
 
   # §7.2.1: ENABLED response
@@ -47,6 +50,15 @@ class IMAPResponseParserTest < Test::Unit::TestCase
 
   # RFC3501 §7.2.5: SEARCH response (obsolete in IMAP4rev2):
   generate_tests_from fixture_file: "search_responses.yml"
+
+  # §7.3.5: FLAGS response
+  generate_tests_from fixture_file: "flags_responses.yml"
+
+  # §7.4: Mailbox size, EXISTS and RECENT
+  generate_tests_from fixture_file: "mailbox_size_responses.yml"
+
+  # §7.5.1: EXPUNGE response
+  generate_tests_from fixture_file: "expunge_responses.yml"
 
   # §7.5.2: FETCH response, misc msg-att
   generate_tests_from fixture_file: "fetch_responses.yml"

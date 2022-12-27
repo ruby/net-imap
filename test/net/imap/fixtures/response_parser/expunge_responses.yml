@@ -1,0 +1,12 @@
+---
+:tests:
+
+  # 7.4.1.  EXPUNGE Response
+  #
+  #    Example:    S: * 44 EXPUNGE
+  rfc3501_7.4.1_EXPUNGE_response_example:
+    :response: "* 44 EXPUNGE\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: EXPUNGE
+      data: 44
+      raw_data: "* 44 EXPUNGE\r\n"

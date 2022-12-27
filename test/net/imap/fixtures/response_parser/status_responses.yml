@@ -1,5 +1,19 @@
 ---
 :tests:
+  # 7.2.4   STATUS Response
+  #
+  #    Example:    S: * STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)
+  rfc3501_7.2.4_STATUS_response_example:
+    :response: "* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: blurdybloop
+        attr:
+          MESSAGES: 231
+          UIDNEXT: 44292
+      raw_data: "* STATUS blurdybloop (MESSAGES 231 UIDNEXT 44292)\r\n"
+
   test_status_response_uidnext_uidvalidity:
     :response: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse

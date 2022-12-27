@@ -1,6 +1,39 @@
 ---
 :tests:
 
+  # 7.2.    Server Responses - Server and Mailbox Status
+  #
+  #    These responses are always untagged.  This is how server and mailbox
+  #    status data are transmitted from the server to the client.  Many of
+  #    these responses typically result from a command with the same name.
+
+  # 7.2.2.  LIST Response
+  #
+  #    Example:    S: * LIST (\Noselect) "/" ~/Mail/foo
+  rfc3501_7.2.2_LIST_response_example:
+    :response: "* LIST (\\Noselect) \"/\" ~/Mail/foo\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: LIST
+      data: !ruby/struct:Net::IMAP::MailboxList
+        attr:
+        - :Noselect
+        delim: "/"
+        name: "~/Mail/foo"
+      raw_data: "* LIST (\\Noselect) \"/\" ~/Mail/foo\r\n"
+
+  # 7.2.3.  LSUB Response
+  #
+  #    Example:    S: * LSUB () "." #news.comp.mail.misc
+  rfc3501_7.2.3_LSUB_response_example:
+    :response: "* LSUB () \".\" #news.comp.mail.misc\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: LSUB
+      data: !ruby/struct:Net::IMAP::MailboxList
+        attr: []
+        delim: "."
+        name: "#news.comp.mail.misc"
+      raw_data: "* LSUB () \".\" #news.comp.mail.misc\r\n"
+
   test_list_with_various_flag_types_and_capitalizations:
     :response: "* LIST (\\foo bAR $Etc \\baz) \".\" \"INBOX\"\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse

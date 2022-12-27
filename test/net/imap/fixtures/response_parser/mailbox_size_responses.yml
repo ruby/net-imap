@@ -1,0 +1,28 @@
+---
+:tests:
+  # 7.3.    Server Responses - Mailbox Size
+  #
+  #    These responses are always untagged.  This is how changes in the size
+  #    of the mailbox are transmitted from the server to the client.
+  #    Immediately following the "*" token is a number that represents a
+  #    message count.
+
+  # 7.3.1.  EXISTS Response
+  #
+  #    Example:    S: * 23 EXISTS
+  rfc3501_7.3.1_EXISTS_response_example:
+    :response: "* 23 EXISTS\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: EXISTS
+      data: 23
+      raw_data: "* 23 EXISTS\r\n"
+
+  # 7.3.2.  RECENT Response
+  #
+  #    Example:    S: * 5 RECENT
+  rfc3501_7.3.2_RECENT_response_example:
+    :response: "* 5 RECENT\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: RECENT
+      data: 5
+      raw_data: "* 5 RECENT\r\n"
