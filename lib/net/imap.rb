@@ -511,10 +511,12 @@ module Net
   #
   # - #greeting: The server's initial untagged response, which can indicate a
   #   pre-authenticated connection.
-  # - #responses: A hash with arrays of unhandled <em>non-+nil+</em>
-  #   UntaggedResponse and ResponseCode +#data+, keyed by +#name+.
+  # - #responses: Yields unhandled UntaggedResponse#data and <em>non-+nil+</em>
+  #   ResponseCode#data.
+  # - #clear_responses: Deletes unhandled data from #responses and returns it.
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
+  # - #response_handlers: Returns the list of response handlers.
   # - #remove_response_handler: Remove a previously added response handler.
   #
   #
@@ -709,22 +711,6 @@ module Net
 
     # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
-
-    # Returns a hash with arrays of unhandled <em>non-+nil+</em>
-    # UntaggedResponse#data keyed by UntaggedResponse#name, and
-    # ResponseCode#data keyed by ResponseCode#name.
-    #
-    # For example:
-    #
-    #   imap.select("inbox")
-    #   p imap.responses["EXISTS"][-1]
-    #   #=> 2
-    #   p imap.responses["UIDVALIDITY"][-1]
-    #   #=> 968263756
-    attr_reader :responses
-
-    # Returns all response handlers.
-    attr_reader :response_handlers
 
     # Seconds to wait until a connection is opened.
     # If the IMAP object cannot open a connection within this time,
@@ -1087,11 +1073,11 @@ module Net
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     #
     # After you have selected a mailbox, you may retrieve the number of items in
-    # that mailbox from <tt>imap.responses["EXISTS"][-1]</tt>, and the number of
-    # recent messages from <tt>imap.responses["RECENT"][-1]</tt>.  Note that
-    # these values can change if new messages arrive during a session or when
-    # existing messages are expunged; see #add_response_handler for a way to
-    # detect these events.
+    # that mailbox from <tt>imap.responses("EXISTS", &:last)</tt>, and the
+    # number of recent messages from <tt>imap.responses("RECENT", &:last)</tt>.
+    # Note that these values can change if new messages arrive during a session
+    # or when existing messages are expunged; see #add_response_handler for a
+    # way to detect these events.
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
@@ -1957,6 +1943,104 @@ module Net
       end
     end
 
+    # :call-seq:
+    #   responses       {|hash|  ...} -> block result
+    #   responses(type) {|array| ...} -> block result
+    #
+    # Yields unhandled responses and returns the result of the block.
+    #
+    # Unhandled responses are stored in a hash, with arrays of
+    # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
+    # and ResponseCode#data keyed by ResponseCode#name.  Call without +type+ to
+    # yield the entire responses hash.  Call with +type+ to yield only the array
+    # of responses for that type.
+    #
+    # For example:
+    #
+    #   imap.select("inbox")
+    #   p imap.responses("EXISTS", &:last)
+    #   #=> 2
+    #   p imap.responses("UIDVALIDITY", &:last)
+    #   #=> 968263756
+    #
+    # >>>
+    #   *Note:* Access to the responses hash is synchronized for thread-safety.
+    #   The receiver thread and response_handlers cannot process new responses
+    #   until the block completes.  Accessing either the response hash or its
+    #   response type arrays outside of the block is unsafe.
+    #
+    #   Calling without a block is unsafe and deprecated.  Future releases will
+    #   raise ArgumentError unless a block is given.
+    #
+    # Previously unhandled responses are automatically cleared before entering a
+    # mailbox with #select or #examine.  Long-lived connections can receive many
+    # unhandled server responses, which must be pruned or they will continually
+    # consume more memory.  Update or clear the responses hash or arrays inside
+    # the block, or use #clear_responses.
+    #
+    # Only non-+nil+ data is stored.  Many important response codes have no data
+    # of their own, but are used as "tags" on the ResponseText object they are
+    # attached to.  ResponseText will be accessible by its response types:
+    # "+OK+", "+NO+", "+BAD+", "+BYE+", or "+PREAUTH+".
+    #
+    # TaggedResponse#data is not saved to #responses, nor is any
+    # ResponseCode#data on tagged responses.  Although some command methods do
+    # return the TaggedResponse directly, #add_response_handler must be used to
+    # handle all response codes.
+    #
+    # Related: #clear_responses, #response_handlers, #greeting
+    def responses(type = nil)
+      if block_given?
+        synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
+      elsif type
+        raise ArgumentError, "Pass a block or use #clear_responses"
+      else
+        # warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+        @responses
+      end
+    end
+
+    # :call-seq:
+    #   clear_responses       -> hash
+    #   clear_responses(type) -> array
+    #
+    # Clears and returns the unhandled #responses hash or the unhandled
+    # responses array for a single response +type+.
+    #
+    # Clearing responses is synchronized with other threads.  The lock is
+    # released before returning.
+    #
+    # Related: #responses, #response_handlers
+    def clear_responses(type = nil)
+      synchronize {
+        if type
+          @responses.delete(type) || []
+        else
+          @responses.dup.transform_values(&:freeze)
+            .tap { _1.default = [].freeze }
+            .tap { @responses.clear }
+        end
+      }
+        .freeze
+    end
+
+    # Returns all response handlers, including those that are added internally
+    # by commands.  Each response handler will be called with every new
+    # UntaggedResponse, TaggedResponse, and ContinuationRequest.
+    #
+    # Response handlers are called with a mutex inside the receiver thread.  New
+    # responses cannot be processed and commands from other threads must wait
+    # until all response_handlers return.  An exception will shut-down the
+    # receiver thread and close the connection.
+    #
+    # For thread-safety, the returned array is a frozen copy of the internal
+    # array.
+    #
+    # Related: #add_response_handler, #remove_response_handler
+    def response_handlers
+      synchronize { @response_handlers.clone.freeze }
+    end
+
     # Adds a response handler. For example, to detect when
     # the server sends a new EXISTS response (which normally
     # indicates new messages being added to the mailbox),
@@ -1969,14 +2053,21 @@ module Net
     #     end
     #   }
     #
+    # Related: #remove_response_handler, #response_handlers
     def add_response_handler(handler = nil, &block)
       raise ArgumentError, "two Procs are passed" if handler && block
-      @response_handlers.push(block || handler)
+      synchronize do
+        @response_handlers.push(block || handler)
+      end
     end
 
     # Removes the response handler.
+    #
+    # Related: #add_response_handler, #response_handlers
     def remove_response_handler(handler)
-      @response_handlers.delete(handler)
+      synchronize do
+        @response_handlers.delete(handler)
+      end
     end
 
     private
