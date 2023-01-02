@@ -928,7 +928,12 @@ EOF
     end
     begin
       imap = Net::IMAP.new(server_addr, port: port)
+      # responses available before SELECT/EXAMINE
+      assert_equal(%w[IMAP4REV1 AUTH=PLAIN STARTTLS],
+                   imap.responses("CAPABILITY", &:last))
       resp = imap.select "INBOX"
+      # responses are cleared after SELECT/EXAMINE
+      assert_equal(nil, imap.responses("CAPABILITY", &:last))
       assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
                    [resp.class, resp.tag, resp.name])
       assert_equal([172], imap.responses { _1["EXISTS"] })

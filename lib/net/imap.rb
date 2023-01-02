@@ -2134,7 +2134,7 @@ module Net
         else
           @usessl = false
         end
-        @responses = Hash.new([].freeze)
+        @responses = Hash.new {|h, k| h[k] = [] }
         @tagged_responses = {}
         @response_handlers = []
         @tagged_response_arrival = new_cond
@@ -2150,6 +2150,7 @@ module Net
         if @greeting.nil?
           raise Error, "connection closed"
         end
+        record_untagged_response_code(@greeting)
         if @greeting.name == "BYE"
           raise ByeResponseError, @greeting
         end
@@ -2214,10 +2215,7 @@ module Net
               end
             when UntaggedResponse
               record_response(resp.name, resp.data)
-              if resp.data.instance_of?(ResponseText) &&
-                  (code = resp.data.code)
-                record_response(code.name, code.data)
-              end
+              record_untagged_response_code(resp)
               if resp.name == "BYE" && @logout_command_tag.nil?
                 @sock.close
                 @exception = ByeResponseError.new(resp)
@@ -2293,6 +2291,13 @@ module Net
         $stderr.print(buff.gsub(/^/n, "S: "))
       end
       return @parser.parse(buff)
+    end
+
+    def record_untagged_response_code(resp)
+      if resp.data.instance_of?(ResponseText) &&
+          (code = resp.data.code)
+        record_response(code.name, code.data)
+      end
     end
 
     def record_response(name, data)
