@@ -2501,6 +2501,7 @@ module Net
     #
     #   Calling without a block is unsafe and deprecated.  Future releases will
     #   raise ArgumentError unless a block is given.
+    #   See Config#responses_without_block.
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
@@ -2525,7 +2526,12 @@ module Net
       elsif type
         raise ArgumentError, "Pass a block or use #clear_responses"
       else
-        # warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+        case config.responses_without_block
+        when :raise
+          raise ArgumentError, "Pass a block or use #clear_responses"
+        when :warn
+          warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+        end
         @responses
       end
     end
