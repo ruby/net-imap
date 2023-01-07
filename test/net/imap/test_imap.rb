@@ -860,7 +860,7 @@ EOF
       assert_equal([38505, [3955], [3967]], resp.data.code.data.to_a)
       imap.select('trash')
       assert_equal(
-        imap.responses["NO"].last.code,
+        imap.responses("NO", &:last).code,
         Net::IMAP::ResponseCode.new('UIDNOTSTICKY', nil)
       )
       imap.logout
@@ -870,37 +870,123 @@ EOF
   end
 
   def yields_in_test_server_thread(
-    greeting = "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN STARTTLS] test server\r\n"
+    read_timeout: 2, # requires ruby 3.2+
+    timeout: 10,
+    greeting: "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN STARTTLS] test server\r\n"
   )
     server = create_tcp_server
     port   = server.addr[1]
+    last_tag, last_cmd, last_args = nil
     @threads << Thread.start do
-      sock = server.accept
-      gets = ->{
-        buf = "".b
-        buf << sock.gets until /\A([^ ]+) ([^ ]+) ?(.*)\r\n\z/mn =~ buf
-        [$1, $2, $3]
-      }
-      begin
-        sock.print(greeting)
-        last_tag = yield sock, gets
-        sock.print("* BYE terminating connection\r\n")
-        sock.print("#{last_tag} OK LOGOUT completed\r\n") if last_tag
-      ensure
-        sock.close
-        server.close
+      Timeout.timeout(timeout) do
+        sock = server.accept
+        sock.timeout = read_timeout if sock.respond_to? :timeout # ruby 3.2+
+        sock.singleton_class.define_method(:getcmd) do
+          buf = "".b
+          buf << (sock.gets || "") until /\A([^ ]+) ([^ ]+) ?(.*)\r\n\z/mn =~ buf
+          [last_tag = $1, last_cmd = $2, last_args = $3]
+        end
+        begin
+          sock.print(greeting)
+          yield sock
+        ensure
+          begin
+            sock.print("* BYE terminating connection\r\n")
+            last_cmd =~ /LOGOUT/i and
+              sock.print("#{last_tag} OK LOGOUT completed\r\n")
+          ensure
+            sock.close
+            server.close
+          end
+        end
       end
     end
     port
   end
 
+  # SELECT returns many different untagged results, so this is useful for
+  # several different tests.
+  RFC3501_6_3_1_SELECT_EXAMPLE_DATA = <<~RESPONSES
+    * 172 EXISTS
+    * 1 RECENT
+    * OK [UNSEEN 12] Message 12 is first unseen
+    * OK [UIDVALIDITY 3857529045] UIDs valid
+    * OK [UIDNEXT 4392] Predicted next UID
+    * FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)
+    * OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited
+    %{tag} OK [READ-WRITE] SELECT completed
+  RESPONSES
+    .split("\n").join("\r\n").concat("\r\n").freeze
+
+  def test_responses
+    port = yields_in_test_server_thread do |sock|
+      tag, name, = sock.getcmd
+      if name == "SELECT"
+        sock.print RFC3501_6_3_1_SELECT_EXAMPLE_DATA % {tag: tag}
+      end
+      sock.getcmd # waits for logout command
+    end
+    begin
+      imap = Net::IMAP.new(server_addr, port: port)
+      resp = imap.select "INBOX"
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+                   [resp.class, resp.tag, resp.name])
+      assert_equal([172], imap.responses { _1["EXISTS"] })
+      assert_equal([3857529045], imap.responses("UIDVALIDITY") { _1 })
+      assert_equal(1, imap.responses("RECENT", &:last))
+      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
+      # Deprecated style, without a block:
+      # assert_warn(/Pass a block.*or.*clear_responses/i) do
+      #   assert_equal(%i[Answered Flagged Deleted Seen Draft],
+      #                imap.responses["FLAGS"]&.last)
+      # end
+      imap.logout
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
+  def test_clear_responses
+    port = yields_in_test_server_thread do |sock|
+      tag, name, = sock.getcmd
+      if name == "SELECT"
+        sock.print RFC3501_6_3_1_SELECT_EXAMPLE_DATA % {tag: tag}
+      end
+      sock.getcmd # waits for logout command
+    end
+    begin
+      imap = Net::IMAP.new(server_addr, port: port)
+      resp = imap.select "INBOX"
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+                   [resp.class, resp.tag, resp.name])
+      # called with "type", clears and returns only that type
+      assert_equal([172],        imap.clear_responses("EXISTS"))
+      assert_equal([],           imap.clear_responses("EXISTS"))
+      assert_equal([1],          imap.clear_responses("RECENT"))
+      assert_equal([3857529045], imap.clear_responses("UIDVALIDITY"))
+      # called without "type", clears and returns all responses
+      responses = imap.clear_responses
+      assert_equal([],   responses["EXISTS"])
+      assert_equal([],   responses["RECENT"])
+      assert_equal([],   responses["UIDVALIDITY"])
+      assert_equal([12], responses["UNSEEN"])
+      assert_equal([4392], responses["UIDNEXT"])
+      assert_equal(5, responses["FLAGS"].last&.size)
+      assert_equal(3, responses["PERMANENTFLAGS"].last&.size)
+      assert_equal({}, imap.responses(&:itself))
+      assert_equal({}, imap.clear_responses)
+      imap.logout
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   def test_close
     requests = Queue.new
-    port = yields_in_test_server_thread do |sock, gets|
-      requests.push(gets[])
+    port = yields_in_test_server_thread do |sock|
+      requests << sock.getcmd
       sock.print("RUBY0001 OK CLOSE completed\r\n")
-      requests.push(gets[])
-      "RUBY0002"
+      requests << sock.getcmd
     end
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
@@ -917,14 +1003,13 @@ EOF
 
   def test_unselect
     requests = Queue.new
-    port = yields_in_test_server_thread do |sock, gets|
-      requests.push(gets[])
+    port = yields_in_test_server_thread do |sock|
+      requests << sock.getcmd
       sock.print("RUBY0001 OK UNSELECT completed\r\n")
-      requests.push(gets[])
-      "RUBY0002"
+      requests << sock.getcmd
     end
     begin
-      imap = Net::IMAP.new(server_addr, :port => port)
+      imap = Net::IMAP.new(server_addr, port: port)
       resp = imap.unselect
       assert_equal(["RUBY0001", "UNSELECT", ""], requests.pop)
       assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
