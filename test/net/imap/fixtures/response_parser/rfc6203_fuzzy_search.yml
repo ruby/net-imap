@@ -1,0 +1,54 @@
+---
+:tests:
+
+  "RFC6203 SEARCH=FUZZY 4. Relevancy scores for search results":
+    :response: "* ESEARCH (TAG \"B1\") ALL 1,5,10 RELEVANCY (4 99 42)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: B1
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: '1,5,10'
+            tuples:
+            - - 1
+              - 1
+            - - 5
+              - 5
+            - - 10
+              - 10
+        - - RELEVANCY
+          - - 4
+            - 99
+            - 42
+      raw_data: "* ESEARCH (TAG \"B1\") ALL 1,5,10 RELEVANCY (4 99 42)\r\n"
+
+  "RFC6203 SEARCH=FUZZY 6. Relevency score with ESORT results":
+    comment: |
+      This doesn't require anything new for the parser beyond the prior example.
+      But it important to note that the SequenceSet has *not* been normalized
+      (sorted and coalesced).
+    :response: "* ESEARCH (TAG \"C2\") ALL 5,10,1 RELEVANCY (99 42 4)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C2
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: '5,10,1'
+            tuples:
+            - - 1
+              - 1
+            - - 5
+              - 5
+            - - 10
+              - 10
+        - - RELEVANCY
+          - - 99
+            - 42
+            - 4
+      raw_data: "* ESEARCH (TAG \"C2\") ALL 5,10,1 RELEVANCY (99 42 4)\r\n"
