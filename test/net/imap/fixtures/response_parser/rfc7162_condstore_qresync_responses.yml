@@ -142,18 +142,38 @@
     :response: "* VANISHED (EARLIER) 41,43:116,118,120:211,214:540\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: VANISHED
-      data: !ruby/struct:Net::IMAP::UnparsedData
-        unparsed_data: "(EARLIER) 41,43:116,118,120:211,214:540"
+      data: !ruby/object:Net::IMAP::VanishedData
+        uids: !ruby/object:Net::IMAP::SequenceSet
+          string: 41,43:116,118,120:211,214:540
+          tuples:
+          - - 41
+            - 41
+          - - 43
+            - 116
+          - - 118
+            - 118
+          - - 120
+            - 211
+          - - 214
+            - 540
+        earlier: true
       raw_data: "* VANISHED (EARLIER) 41,43:116,118,120:211,214:540\r\n"
-    comment: |
-      Note that QRESYNC isn't supported yet, so the data is unparsed.
 
   "RFC7162 QRESYNC 3.2.7. EXPUNGE Command":
     :response: "* VANISHED 405,407,410,425\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: VANISHED
-      data: !ruby/struct:Net::IMAP::UnparsedData
-        unparsed_data: '405,407,410,425'
+      data: !ruby/object:Net::IMAP::VanishedData
+        uids: !ruby/object:Net::IMAP::SequenceSet
+          string: '405,407,410,425'
+          tuples:
+          - - 405
+            - 405
+          - - 407
+            - 407
+          - - 410
+            - 410
+          - - 425
+            - 425
+        earlier: false
       raw_data: "* VANISHED 405,407,410,425\r\n"
-    comment: |
-      Note that QRESYNC isn't supported yet, so the data is unparsed.
