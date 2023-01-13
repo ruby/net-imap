@@ -869,6 +869,37 @@ EOF
     end
   end
 
+  def test_enable
+    server = create_tcp_server
+    port = server.addr[1]
+    requests = []
+    start_server do
+      sock = server.accept
+      begin
+        sock.print("* OK test server\r\n")
+        requests.push(sock.gets)
+        sock.print("* ENABLED SMTPUTF8\r\n")
+        sock.print("RUBY0001 OK \r\n")
+        sock.gets
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      ensure
+        sock.close
+        server.close
+      end
+    end
+
+    begin
+      imap = Net::IMAP.new(server_addr, port: port)
+      response = imap.enable(["SMTPUTF8", "X-NO-SUCH-THING"])
+      assert_equal("RUBY0001 ENABLE SMTPUTF8 X-NO-SUCH-THING\r\n", requests.pop)
+      assert_equal(response, ["SMTPUTF8"])
+      imap.logout
+    ensure
+      imap.disconnect if imap
+    end
+  end
+
   def yields_in_test_server_thread(
     read_timeout: 2, # requires ruby 3.2+
     timeout: 10,

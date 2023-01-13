@@ -160,6 +160,8 @@ module Net
             return capability_response
           when /\A(?:NOOP)\z/ni
             return ignored_response
+          when /\A(?:ENABLED)\z/ni
+            return enabled_response
           else
             return text_response
           end
@@ -968,6 +970,13 @@ module Net
       end
 
       def capability_response
+        token = match(T_ATOM)
+        name = token.value.upcase
+        match(T_SPACE)
+        UntaggedResponse.new(name, capability_data, @str)
+      end
+
+      def enabled_response
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)

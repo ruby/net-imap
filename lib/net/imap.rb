@@ -199,8 +199,8 @@ module Net
   # [IDLE[https://tools.ietf.org/html/rfc2177]],
   # [NAMESPACE[https://tools.ietf.org/html/rfc2342]],
   # [UNSELECT[https://tools.ietf.org/html/rfc3691]],
+  # [ENABLE[https://tools.ietf.org/html/rfc5161]],
   #--
-  # TODO: [ENABLE[https://tools.ietf.org/html/rfc5161]],
   # TODO: [LIST-EXTENDED[https://tools.ietf.org/html/rfc5258]],
   # TODO: [LIST-STATUS[https://tools.ietf.org/html/rfc5819]],
   #++
@@ -1877,6 +1877,27 @@ module Net
     # [RFC5256[https://tools.ietf.org/html/rfc5256]].
     def uid_thread(algorithm, search_keys, charset)
       return thread_internal("UID THREAD", algorithm, search_keys, charset)
+    end
+
+    # Sends an {ENABLE command [RFC5161 §3.2]}[https://www.rfc-editor.org/rfc/rfc5161#section-3.1]
+    # {[IMAP4rev2 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.3.1]
+    # to enable the specified extenstions, which may be either an
+    # array or a string.
+    #
+    # Some of the extensions that use ENABLE permit the server to send
+    # syntax that this class cannot parse. Caution is advised.
+    #
+    # ===== Capabilities
+    #
+    # The server's capabilities must include +ENABLE+
+    # [RFC5161[https://tools.ietf.org/html/rfc5161]] or IMAP4REV2
+    # [RFC9051[https://tools.ietf.org/html/rfc9051]].
+
+    def enable(extensions)
+      synchronize do
+        send_command("ENABLE #{[extensions].flatten.join(' ')}")
+        return @responses.delete("ENABLED")[-1]
+      end
     end
 
     # Sends an {IDLE command [RFC2177 §3]}[https://www.rfc-editor.org/rfc/rfc6851#section-3]
