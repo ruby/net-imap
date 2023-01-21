@@ -199,11 +199,11 @@ module Net
           when /\A(?:STATUS)\z/ni
             return status_response
           when /\A(?:CAPABILITY)\z/ni
-            return capability_response
+            return capability_data__untagged
           when /\A(?:NOOP)\z/ni
             return ignored_response
           when /\A(?:ENABLED)\z/ni
-            return enabled_response
+            return enable_data
           else
             return text_response
           end
@@ -1011,35 +1011,37 @@ module Net
         return UntaggedResponse.new(name, data, @str)
       end
 
-      def capability_response
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        UntaggedResponse.new(name, capability_data, @str)
+      # The presence of "IMAP4rev1" or "IMAP4rev2" is unenforced here.
+      # The grammar rule is used by both response-data and resp-text-code.
+      # But this method only returns UntaggedResponse (response-data).
+      #
+      # RFC3501:
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev1"
+      #                      *(SP capability)
+      # RFC9051:
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev2"
+      #                      *(SP capability)
+      def capability_data__untagged
+        UntaggedResponse.new label("CAPABILITY"), capability__list, @str
       end
 
-      def enabled_response
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        UntaggedResponse.new(name, capability_data, @str)
+      # enable-data   = "ENABLED" *(SP capability)
+      def enable_data
+        UntaggedResponse.new label("ENABLED"), capability__list, @str
       end
 
-      def capability_data
-        data = []
-        while true
-          token = lookahead
-          case token.symbol
-          when T_CRLF, T_RBRA
-            break
-          when T_SPACE
-            shift_token
-            next
-          end
-          data.push(atom.upcase)
-        end
-        data
+      # As a workaround for buggy servers, allow a trailing SP:
+      #     *(SP capapility) [SP]
+      def capability__list
+        data = []; while _ = SP? && capability? do data << _ end; data
       end
+
+      # capability      = ("AUTH=" auth-type) / atom
+      #                     ; New capabilities MUST begin with "X" or be
+      #                     ; registered with IANA as standard or
+      #                     ; standards-track
+      alias capability  case_insensitive__atom
+      alias capability? case_insensitive__atom?
 
       def id_response
         token = match(T_ATOM)
@@ -1176,7 +1178,7 @@ module Net
         when /\A(?:BADCHARSET)\z/n
           result = ResponseCode.new(name, charset_list)
         when /\A(?:CAPABILITY)\z/ni
-          result = ResponseCode.new(name, capability_data)
+          result = ResponseCode.new(name, capability__list)
         when /\A(?:PERMANENTFLAGS)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, flag_list)
