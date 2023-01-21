@@ -202,6 +202,29 @@ module Net
 
       # :markup: markdown
       #
+      # The default value for the +ssl+ option of Net::IMAP.new, when +port+ is
+      # unspecified or non-standard.
+      #
+      # *Note*: A future release of Net::IMAP will set the default to +true+, as
+      # per RFC7525[https://tools.ietf.org/html/rfc7525],
+      # RFC7817[https://tools.ietf.org/html/rfc7817], and
+      # RFC8314[https://tools.ietf.org/html/rfc8314].
+      #
+      # * Set to +true+ for the secure default without warnings.
+      # * Set to +:warn+ for the secure default _with_ warnings.
+      # * Set to +nil+ to use insecure defaults with warnings.
+      # * Set to +false+ to silence warnings and use insecure defaults.
+      #
+      # | Starting with version   | The default value is   |
+      # |-------------------------|------------------------|
+      # | _original_              | +false+                |
+      # | v0.6 <em>(planned)</em> | +nil+                  |
+      # | v0.7 <em>(planned)</em> | +:warn+                |
+      # | _eventually_            | +true+                 |
+      attr_accessor :default_ssl
+
+      # :markup: markdown
+      #
       # Whether to use the +SASL-IR+ extension when the server and \SASL
       # mechanism both support it.
       #
@@ -331,6 +354,7 @@ module Net
         debug: false,
         open_timeout: 30,
         idle_response_timeout: 5,
+        default_ssl: nil,
         sasl_ir: true,
         enforce_logindisabled: true,
         responses_without_block: :warn,
