@@ -9,22 +9,25 @@ module Net::IMAP::StringPrep
   module SASLprep
 
     # RFC4013 §2.1 Mapping - mapped to space
-    # * non-ASCII space characters (\StringPrep\[\"C.1.2\"]) that can be
-    #   mapped to SPACE (U+0020), and
+    # >>>
+    #   non-ASCII space characters (\StringPrep\[\"C.1.2\"]) that can
+    #   be mapped to SPACE (U+0020)
     #
     # Equal to \StringPrep\[\"C.1.2\"].
-    # Redefined here to avoid loading the StringPrep module.
+    # Redefined here to avoid loading StringPrep::Tables unless necessary.
     MAP_TO_SPACE = /[\u200b\p{Zs}&&[^ ]]/.freeze
 
     # RFC4013 §2.1 Mapping - mapped to nothing
-    #   the "commonly mapped to nothing" characters (\StringPrep\[\"B.1\"])
-    #   that can be mapped to nothing.
+    # >>>
+    #   the "commonly mapped to nothing" characters
+    #   (\StringPrep\[\"B.1\"]) that can be mapped to nothing.
     #
     # Equal to \StringPrep\[\"B.1\"].
-    # Redefined here to avoid loading the StringPrep module.
+    # Redefined here to avoid loading StringPrep::Tables unless necessary.
     MAP_TO_NOTHING = /[\u{00ad 034f 1806 2060 feff}\u{180b}-\u{180d}\u{200b}-\u{200d}\u{fe00}-\u{fe0f}]/.freeze
 
-    # RFC4013 §2.3 Prohibited Output::
+    # RFC4013 §2.3 Prohibited Output
+    # >>>
     # * Non-ASCII space characters — \StringPrep\[\"C.1.2\"]
     # * ASCII control characters — \StringPrep\[\"C.2.1\"]
     # * Non-ASCII control characters — \StringPrep\[\"C.2.2\"]
@@ -39,32 +42,40 @@ module Net::IMAP::StringPrep
 
     # Adds unassigned (by Unicode 3.2) codepoints to TABLES_PROHIBITED.
     #
-    # RFC4013 §2.5 Unassigned Code Points::
-    #   This profile specifies the \StringPrep\[\"A.1\"] table as its list of
-    #   unassigned code points.
+    # RFC4013 §2.5 Unassigned Code Points
+    # >>>
+    #   This profile specifies the \StringPrep\[\"A.1\"] table as its
+    #   list of unassigned code points.
     TABLES_PROHIBITED_STORED = ["A.1", *TABLES_PROHIBITED].freeze
 
-    # Matches codepoints prohibited by RFC4013 §2.3.
+    # A Regexp matching codepoints prohibited by RFC4013 §2.3.
     #
-    # See TABLES_PROHIBITED.
-    #
-    # Equal to +Regexp.union+ of the TABLES_PROHIBITED tables.  Redefined
-    # here to avoid loading the StringPrep module unless necessary.
+    # This combines all of the TABLES_PROHIBITED tables.
     PROHIBITED_OUTPUT = /[\u{06dd 070f 1680 180e 3000 feff e0001}\u{0000}-\u{001f}\u{007f}-\u{00a0}\u{0340}-\u{0341}\u{2000}-\u{200f}\u{2028}-\u{202f}\u{205f}-\u{2063}\u{206a}-\u{206f}\u{2ff0}-\u{2ffb}\u{e000}-\u{f8ff}\u{fdd0}-\u{fdef}\u{fff9}-\u{ffff}\u{1d173}-\u{1d17a}\u{1fffe}-\u{1ffff}\u{2fffe}-\u{2ffff}\u{3fffe}-\u{3ffff}\u{4fffe}-\u{4ffff}\u{5fffe}-\u{5ffff}\u{6fffe}-\u{6ffff}\u{7fffe}-\u{7ffff}\u{8fffe}-\u{8ffff}\u{9fffe}-\u{9ffff}\u{afffe}-\u{affff}\u{bfffe}-\u{bffff}\u{cfffe}-\u{cffff}\u{dfffe}-\u{dffff}\u{e0020}-\u{e007f}\u{efffe}-\u{10ffff}\p{Cs}]/.freeze
 
-    # RFC4013 §2.5 Unassigned Code Points::
-    #   This profile specifies the \StringPrep\[\"A.1\"] table as its list of
-    #   unassigned code points.
+    # RFC4013 §2.5 Unassigned Code Points
+    # >>>
+    #   This profile specifies the \StringPrep\[\"A.1\"] table as its
+    #   list of unassigned code points.
+    #
+    # Equal to \StringPrep\[\"A.1\"].
+    # Redefined here to avoid loading StringPrep::Tables unless necessary.
     UNASSIGNED = /\p{^AGE=3.2}/.freeze
 
-    # Matches codepoints prohibited by RFC4013 §2.3 and §2.5.
+    # A Regexp matching codepoints prohibited by RFC4013 §2.3 and §2.5.
     #
-    # See TABLES_PROHIBITED_STORED.
+    # This combines PROHIBITED_OUTPUT and UNASSIGNED.
     PROHIBITED_OUTPUT_STORED = Regexp.union(
       UNASSIGNED, PROHIBITED_OUTPUT
     ).freeze
 
     # Bidirectional Characters [StringPrep, §6]
+    #
+    # A Regexp for strings that don't satisfy StringPrep's Bidirectional
+    # Characters rules.
+    #
+    # Equal to StringPrep::Tables::BIDI_FAILURE.
+    # Redefined here to avoid loading StringPrep::Tables unless necessary.
     BIDI_FAILURE = /(?mx-i: # RandALCat followed by LCat
       (?<r_and_al_cat>[\u{05be 05c0 05c3 061b 061f 06dd 0710 07b1 200f fb1d fb3e}\u{05d0}-\u{05ea}\u{05f0}-\u{05f4}\u{0621}-\u{063a}\u{0640}-\u{064a}\u{066d}-\u{066f}\u{0671}-\u{06d5}\u{06e5}-\u{06e6}\u{06fa}-\u{06fe}\u{0700}-\u{070d}\u{0712}-\u{072c}\u{0780}-\u{07a5}\u{fb1f}-\u{fb28}\u{fb2a}-\u{fb36}\u{fb38}-\u{fb3c}\u{fb40}-\u{fb41}\u{fb43}-\u{fb44}\u{fb46}-\u{fbb1}\u{fbd3}-\u{fd3d}\u{fd50}-\u{fd8f}\u{fd92}-\u{fdc7}\u{fdf0}-\u{fdfc}\u{fe70}-\u{fe74}\u{fe76}-\u{fefc}])
         .*?
@@ -79,17 +90,16 @@ module Net::IMAP::StringPrep
         \g<r_and_al_cat> .*? \g<not_r_nor_al>\z
     )/mx.freeze
 
-    # Matches strings prohibited by RFC4013 §2.3 and §2.4.
+    # A Regexp matching strings prohibited by RFC4013 §2.3 and §2.4.
     #
-    # This checks prohibited output and bidirectional characters.
+    # This combines PROHIBITED_OUTPUT and BIDI_FAILURE.
     PROHIBITED = Regexp.union(
       PROHIBITED_OUTPUT, BIDI_FAILURE,
     )
 
-    # Matches strings prohibited by RFC4013 §2.3, §2.4, and §2.5.
+    # A Regexp matching strings prohibited by RFC4013 §2.3, §2.4, and §2.5.
     #
-    # This checks prohibited output, bidirectional characters, and
-    # unassigned codepoints.
+    # This combines PROHIBITED_OUTPUT_STORED and BIDI_FAILURE.
     PROHIBITED_STORED = Regexp.union(
       PROHIBITED_OUTPUT_STORED, BIDI_FAILURE,
     )

@@ -50,6 +50,47 @@ module Net
 
       module_function
 
+      # >>>
+      #   1. Map -- For each character in the input, check if it has a mapping
+      #      and, if so, replace it with its mapping.  This is described in
+      #      section 3.
+      #
+      #   2. Normalize -- Possibly normalize the result of step 1 using Unicode
+      #      normalization.  This is described in section 4.
+      #
+      #   3. Prohibit -- Check for any characters that are not allowed in the
+      #      output.  If any are found, return an error.  This is described in
+      #      section 5.
+      #
+      #   4. Check bidi -- Possibly check for right-to-left characters, and if
+      #      any are found, make sure that the whole string satisfies the
+      #      requirements for bidirectional strings.  If the string does not
+      #      satisfy the requirements for bidirectional strings, return an
+      #      error.  This is described in section 6.
+      #
+      #   The above steps MUST be performed in the order given to comply with
+      #   this specification.
+      #
+      def stringprep(string,
+                     maps:,
+                     normalization:,
+                     prohibited:,
+                     **opts)
+        string = string.encode("UTF-8") # also dups (and raises invalid encoding)
+        map_tables!(string, *maps)                     if maps
+        string.unicode_normalize!(normalization)       if normalization
+        check_prohibited!(string, *prohibited, **opts) if prohibited
+        string
+      end
+
+      def map_tables!(string, *tables)
+        tables.each do |table|
+          regexp, replacements = Tables::MAPPINGS.fetch(table)
+          string.gsub!(regexp, replacements)
+        end
+        string
+      end
+
       # Checks +string+ for any codepoint in +tables+. Raises a
       # ProhibitedCodepoint describing the first matching table.
       #
@@ -58,13 +99,27 @@ module Net
       #
       # +profile+ is an optional string which will be added to any exception that
       # is raised (it does not affect behavior).
-      def check_prohibited!(string, *tables, bidi: false, profile: nil)
-        tables = TABLE_TITLES.keys.grep(/^C/) if tables.empty?
+      def check_prohibited!(string,
+                            *tables,
+                            bidi: false,
+                            unassigned: "A.1",
+                            stored: false,
+                            profile: nil)
+        tables  = Tables::TITLES.keys.grep(/^C/) if tables.empty?
+        tables |= [unassigned] if stored
         tables |= %w[C.8] if bidi
-        table = tables.find {|t| Tables::REGEXPS[t].match?(string) }
-        raise ProhibitedCodepoint.new(
-          table, string: string, profile: nil
-        ) if table
+        table   = tables.find {|t|
+          case t
+          when String then Tables::REGEXPS.fetch(t).match?(string)
+          when Regexp then t.match?(string)
+          else raise ArgumentError, "only table names and regexps can be checked"
+          end
+        }
+        if table
+          raise ProhibitedCodepoint.new(
+            table, string: string, profile: profile
+          )
+        end
         check_bidi!(string, profile: profile) if bidi
       end
 
