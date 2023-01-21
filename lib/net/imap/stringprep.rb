@@ -11,6 +11,7 @@ module Net
     module StringPrep
       autoload :SASLprep, File.expand_path("stringprep/saslprep", __dir__)
       autoload :Tables,   File.expand_path("stringprep/tables",   __dir__)
+      autoload :Trace,    File.expand_path("stringprep/trace",    __dir__)
 
       # ArgumentError raised when +string+ is invalid for the stringprep
       # +profile+.
