@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
-require_relative "saslprep_tables"
-
-module Net::IMAP::SASL
+module Net
+  class IMAP
+    module StringPrep
 
   # SASLprep#saslprep can be used to prepare a string according to [RFC4013].
   #
@@ -15,6 +15,16 @@ module Net::IMAP::SASL
 
     # Used to short-circuit strings that don't need preparation.
     ASCII_NO_CTRLS = /\A[\x20-\x7e]*\z/u.freeze
+
+    # Avoid loading these tables unless they are needed (they are only
+    # needed for non-ASCII).
+    saslprep_tables = File.expand_path("saslprep_tables", __dir__)
+    autoload :MAP_TO_NOTHING,           saslprep_tables
+    autoload :MAP_TO_SPACE,             saslprep_tables
+    autoload :PROHIBITED,               saslprep_tables
+    autoload :PROHIBITED_STORED,        saslprep_tables
+    autoload :TABLES_PROHIBITED,        saslprep_tables
+    autoload :TABLES_PROHIBITED_STORED, saslprep_tables
 
     module_function
 
@@ -40,7 +50,7 @@ module Net::IMAP::SASL
       # raise helpful errors to indicate *why* it failed:
       tables = stored ? TABLES_PROHIBITED_STORED : TABLES_PROHIBITED
       StringPrep.check_prohibited! str, *tables, bidi: true, profile: "SASLprep"
-      raise StringPrep::InvalidStringError.new(
+      raise InvalidStringError.new(
         "unknown error", string: string, profile: "SASLprep"
       )
     rescue ArgumentError, Encoding::CompatibilityError => ex
@@ -51,5 +61,8 @@ module Net::IMAP::SASL
       raise ex
     end
 
+  end
+
+    end
   end
 end

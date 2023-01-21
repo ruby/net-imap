@@ -24,7 +24,7 @@ prelude: |
   $LOAD_PATH.unshift "./lib"
   require "net/imap"
   def net_imap_saslprep(string)
-    Net::IMAP::SASL::SASLprep.saslprep string, exception: false
+    Net::IMAP::StringPrep::SASLprep.saslprep string, exception: false
   end
 
   def libidn_saslprep(string)

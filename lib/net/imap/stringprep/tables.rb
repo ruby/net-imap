@@ -4,9 +4,9 @@
 # This file is generated from RFC3454, by rake.  Don't edit directly.
 #++
 
-module Net::IMAP::SASL
+module Net::IMAP::StringPrep
 
-  module StringPrep
+  module Tables
 
     # Unassigned code points in Unicode 3.2 \StringPrep\[\"A.1\"]
     IN_A_1 = /\p{^AGE=3.2}/.freeze
@@ -106,7 +106,7 @@ module Net::IMAP::SASL
     )/mx.freeze
 
     # Names of each codepoint table in the RFC-3454 appendices
-    TABLE_TITLES = {
+    TITLES = {
       "A.1" => "Unassigned code points in Unicode 3.2",
       "B.1" => "Commonly mapped to nothing",
       "B.2" => "Mapping for case-folding used with NFKC",
@@ -129,7 +129,7 @@ module Net::IMAP::SASL
     }.freeze
 
     # Regexps matching each codepoint table in the RFC-3454 appendices
-    TABLE_REGEXPS = {
+    REGEXPS = {
       "A.1" => IN_A_1,
       "B.1" => IN_B_1,
       "B.2" => IN_B_2,

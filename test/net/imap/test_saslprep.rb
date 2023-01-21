@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 
 class SASLprepTest < Test::Unit::TestCase
-  include Net::IMAP::SASL
+  include Net::IMAP::StringPrep
 
   # Test cases from RFC-4013 §3:
   #

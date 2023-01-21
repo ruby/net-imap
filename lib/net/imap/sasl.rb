@@ -25,54 +25,21 @@ module Net
 
       # autoloading to avoid loading all of the regexps when they aren't used.
 
-      autoload :StringPrep, File.expand_path("sasl/stringprep", __dir__)
-      autoload :SASLprep, File.expand_path("#{__dir__}/sasl/saslprep", __dir__)
+      sasl_stringprep_rb = File.expand_path("sasl/stringprep", __dir__)
+      autoload :StringPrep,          sasl_stringprep_rb
+      autoload :SASLprep,            sasl_stringprep_rb
+      autoload :StringPrepError,     sasl_stringprep_rb
+      autoload :ProhibitedCodepoint, sasl_stringprep_rb
+      autoload :BidiStringError,     sasl_stringprep_rb
 
-      # ArgumentError raised when +string+ is invalid for the stringprep
-      # +profile+.
-      class StringPrepError < ArgumentError
-        attr_reader :string, :profile
+      module_function
 
-        def initialize(*args, string: nil, profile: nil)
-          @string  = -string.to_str  unless string.nil?
-          @profile = -profile.to_str unless profile.nil?
-          super(*args)
-        end
-      end
-
-      # StringPrepError raised when +string+ contains a codepoint prohibited by
-      # +table+.
-      class ProhibitedCodepoint < StringPrepError
-        attr_reader :table
-
-        def initialize(table, *args, **kwargs)
-          @table = -table.to_str
-          details = (title = StringPrep::TABLE_TITLES[table]) ?
-            "%s [%s]" % [title, table] : table
-          message = "String contains a prohibited codepoint: %s" % [details]
-          super(message, *args, **kwargs)
-        end
-      end
-
-      # StringPrepError raised when +string+ contains bidirectional characters
-      # which violate the StringPrep requirements.
-      class BidiStringError < StringPrepError
-      end
-
-      #--
-      # We could just extend SASLprep module directly.  It's done this way so
-      # SASLprep can be lazily autoloaded.  Most users won't need it.
-      #++
-      extend self
-
-      # See SASLprep#saslprep.
+      # See Net::IMAP::StringPrep::SASLprep#saslprep.
       def saslprep(string, **opts)
-        SASLprep.saslprep(string, **opts)
+        Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
       end
 
     end
   end
 
 end
-
-Net::IMAP.extend Net::IMAP::SASL

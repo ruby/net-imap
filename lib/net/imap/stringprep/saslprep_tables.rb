@@ -4,7 +4,7 @@
 # This file is generated from RFC3454, by rake.  Don't edit directly.
 #++
 
-module Net::IMAP::SASL
+module Net::IMAP::StringPrep
 
   module SASLprep
 
