@@ -8,5 +8,9 @@ module Net::IMAP::SASL
   BidiStringError     = Net::IMAP::StringPrep::BidiStringError     # :nodoc:
   ProhibitedCodepoint = Net::IMAP::StringPrep::ProhibitedCodepoint # :nodoc:
   StringPrepError     = Net::IMAP::StringPrep::StringPrepError     # :nodoc:
+  deprecate_constant :StringPrep
+  deprecate_constant :BidiStringError
+  deprecate_constant :ProhibitedCodepoint
+  deprecate_constant :StringPrepError
 
 end
