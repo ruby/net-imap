@@ -759,6 +759,19 @@ module Net
       alias default_imap_port default_port
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
+
+      # The default value for the +tls+ option of ::new, when +port+ is
+      # unspecified or non-standard.
+      #
+      # *Note*: A future release of Net::IMAP will set the default to +true+, as
+      # per RFC7525[https://tools.ietf.org/html/rfc7525],
+      # RFC7817[https://tools.ietf.org/html/rfc7817], and
+      # RFC8314[https://tools.ietf.org/html/rfc8314].
+      #
+      # Set to +true+ for the secure default without warnings.  Set to
+      # +false+ to globally silence warnings and use insecure defaults.
+      attr_accessor :default_tls
+      alias default_ssl default_tls
     end
 
     # Returns the initial greeting the server, an UntaggedResponse.
@@ -801,15 +814,27 @@ module Net
     # Accepts the following options:
     #
     # [port]
-    #   Port number.  Defaults to 993 when +ssl+ is truthy, and 143 otherwise.
+    #   Port number.  Defaults to 143 when +tls+ is false, 993 when +tls+ is
+    #   truthy.  Based on ::default_tls when both +port+ and +tls+ are nil.
     #
-    # [ssl]
+    # [tls]
     #   If +true+, the connection will use TLS with the default params set by
     #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
-    #   If +ssl+ is a hash, it's passed to
+    #   If +tls+ is a hash, it's passed to
     #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
     #   the keys are names of attribute assignment methods on
     #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    #   When <tt>port: 993</tt>, +tls+ defaults to +true+.
+    #   When <tt>port: 143</tt>, +tls+ defaults to +false+.
+    #   When port is unspecified or non-standard, +tls+ defaults to
+    #   ::default_tls.  When ::default_tls is also +nil+, a warning is printed
+    #   and the connection does _not_ use TLS.
+    #
+    #   When +nil+ or unassigned a default value is assigned: the default is
+    #   +true+ if <tt>port: 993</tt>, +false+ if <tt>port: 143</tt>, and
+    #   ::default_tls when +port+ is unspecified or non-standard.  When
+    #   ::default_tls is +nil+, a back
     #
     # [open_timeout]
     #   Seconds to wait until a connection is opened
@@ -871,15 +896,15 @@ module Net
     # [Net::IMAP::ByeResponseError]
     #   Connected to the host successfully, but it immediately said goodbye.
     #
-    def initialize(host, port: nil, ssl:  nil,
+    def initialize(host, port: nil, tls:  nil,
                    open_timeout: 30, idle_response_timeout: 5)
       super()
       # Config options
       @host = host
-      @port = port || (ssl ? SSL_PORT : PORT)
+      tls, @port = default_tls_and_port(tls, port)
       @open_timeout = Integer(open_timeout)
       @idle_response_timeout = Integer(idle_response_timeout)
-      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(tls)
 
       # Basic Client State
       @utf8_strings = false
@@ -994,7 +1019,7 @@ module Net
     # servers will drop all <tt>AUTH=</tt> mechanisms from #capabilities after
     # the connection has authenticated.
     #
-    #    imap = Net::IMAP.new(hostname, ssl: false)
+    #    imap = Net::IMAP.new(hostname, tls: false)
     #    imap.capabilities    # => ["IMAP4REV1", "LOGINDISABLED"]
     #    imap.auth_mechanisms # => []
     #
@@ -2583,6 +2608,27 @@ module Net
     SSL_PORT = 993   # :nodoc:
 
     @@debug = false
+
+    def default_tls_and_port(tls, port)
+      if tls.nil? && port
+        tls = true  if port == SSL_PORT || /\Aimaps\z/i === port
+        tls = false if port == PORT
+      elsif port.nil? && !tls.nil?
+        port = tls ? SSL_PORT : PORT
+      end
+      if tls.nil? && port.nil?
+        tls = self.class.default_tls.dup.freeze
+        port = tls ? SSL_PORT : PORT
+        if tls.nil?
+          warn "A future version of Net::IMAP.default_tls " \
+               "will default to 'true', for secure connections by default.  " \
+               "Use 'Net::IMAP.new(host, tls: false)' or set " \
+               "Net::IMAP.default_tls = false' to silence this warning."
+        end
+      end
+      tls &&= tls.respond_to?(:to_hash) ? tls.to_hash : {}
+      [tls, port]
+    end
 
     def start_imap_connection
       @greeting        = get_server_greeting

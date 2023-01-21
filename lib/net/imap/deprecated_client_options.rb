@@ -5,9 +5,12 @@ module Net
 
     # This module handles deprecated arguments to various Net::IMAP methods.
     module DeprecatedClientOptions
+      UNDEF = Module.new.freeze
+      private_constant :UNDEF
 
       # :call-seq:
       #   Net::IMAP.new(host, **options) # standard keyword options
+      #   Net::IMAP.new(host, ssl: nil, **options) # ssl => tls
       #   Net::IMAP.new(host, options)   # obsolete hash options
       #   Net::IMAP.new(host, port)      # obsolete port argument
       #   Net::IMAP.new(host, port, usessl, certs = nil, verify = true) # deprecated SSL arguments
@@ -18,6 +21,13 @@ module Net
       #
       # Using obsolete arguments does not a warning.  Obsolete arguments will be
       # deprecated by a future release.
+      #
+      # If +ssl+ is given, it is silently converted to the +tls+ keyword
+      # argument.  Combining both +ssl+ and +tls+ raises an ArgumentError.  Both
+      # of the following behave identically:
+      #
+      #     Net::IMAP.new("imap.example.com", port: 993, ssl: {ca_path: "path/to/certs"})
+      #     Net::IMAP.new("imap.example.com", port: 993, tls: {ca_path: "path/to/certs"})
       #
       # If a second positional argument is given and it is a hash (or is
       # convertable via +#to_hash+), it is converted to keyword arguments.
@@ -71,6 +81,7 @@ module Net
       #
       def initialize(host, port_or_options = nil, *deprecated, **options)
         if port_or_options.nil? && deprecated.empty?
+          translate_ssl_to_tls(options)
           super host, **options
         elsif options.any?
           # Net::IMAP.new(host, *__invalid__, **options)
@@ -79,15 +90,17 @@ module Net
           # Net::IMAP.new(host, options, *__invalid__)
           raise ArgumentError, "Do not use deprecated SSL params with options hash"
         elsif port_or_options.respond_to?(:to_hash)
-          super host, **Hash.try_convert(port_or_options)
+          options = Hash.try_convert(port_or_options)
+          translate_ssl_to_tls(options)
+          super host, **options
         elsif deprecated.empty?
           super host, port: port_or_options
         elsif deprecated.shift
           warn "DEPRECATED: Call Net::IMAP.new with keyword options", uplevel: 1
-          super host, port: port_or_options, ssl: create_ssl_params(*deprecated)
+          super host, port: port_or_options, tls: create_ssl_params(*deprecated)
         else
           warn "DEPRECATED: Call Net::IMAP.new with keyword options", uplevel: 1
-          super host, port: port_or_options, ssl: false
+          super host, port: port_or_options, tls: false
         end
       end
 
@@ -120,7 +133,17 @@ module Net
 
       private
 
+      def translate_ssl_to_tls(options)
+        return unless options.key?(:ssl)
+        if options.key?(:tls)
+          raise ArgumentError, "conflicting :ssl and :tls keyword arguments"
+        end
+        options.merge!(tls: options.delete(:ssl))
+      end
+
       def create_ssl_params(certs = nil, verify = true)
+        certs  = nil  if certs  == UNDEF
+        verify = true if verify == UNDEF
         params = {}
         if certs
           if File.file?(certs)
