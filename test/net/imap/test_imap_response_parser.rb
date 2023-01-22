@@ -30,6 +30,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # §7.1: Generic Status Responses (OK, NO, BAD, PREAUTH, BYE, codes, text)
   generate_tests_from fixture_file: "resp_text_responses.yml"
 
+  # §7.2.1: ENABLED response
+  generate_tests_from fixture_file: "enabled_responses.yml"
+
   # §7.2.2: CAPABILITY response
   generate_tests_from fixture_file: "capability_responses.yml"
 
@@ -77,14 +80,6 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # More interesting tests about the behavior, either of the test or of the
   # response data, should still use normal tests, below
   ############################################################################
-
-  def test_enable
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* ENABLED SMTPUTF8\r\n")
-    assert_equal("ENABLED", response.name)
-    assert_equal(1, response.data.length)
-    assert_equal("SMTPUTF8", response.data.first)
-  end
 
   # todo: move this to response data tests file
   # it's testing the mapping fn, not the parsing.
