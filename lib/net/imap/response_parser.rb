@@ -1473,44 +1473,48 @@ module Net
         end
       end
 
-      # See https://www.rfc-editor.org/errata/rfc3501
+      # RFC3501 (See https://www.rfc-editor.org/errata/rfc3501):
+      #   resp-text-code   = "ALERT" /
+      #                      "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
+      #                      capability-data / "PARSE" /
+      #                      "PERMANENTFLAGS" SP "(" [flag-perm *(SP flag-perm)] ")" /
+      #                      "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
+      #                      "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
+      #                      "UNSEEN" SP nz-number /
+      #                      atom [SP 1*<any TEXT-CHAR except "]">]
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev1"
+      #                      *(SP capability)
       #
-      # resp-text-code  = "ALERT" /
-      #                   "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
-      #                   capability-data / "PARSE" /
-      #                   "PERMANENTFLAGS" SP "("
-      #                   [flag-perm *(SP flag-perm)] ")" /
-      #                   "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
-      #                   "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
-      #                   "UNSEEN" SP nz-number /
-      #                   atom [SP 1*<any TEXT-CHAR except "]">]
+      # RFC4315 (UIDPLUS), RFC9051 (IMAP4rev2):
+      #   resp-code-apnd   = "APPENDUID" SP nz-number SP append-uid
+      #   resp-code-copy   = "COPYUID" SP nz-number SP uid-set SP uid-set
+      #   resp-text-code   =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
       #
-      # +UIDPLUS+ ABNF:: https://www.rfc-editor.org/rfc/rfc4315.html#section-4
-      #   resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
+      # RFC7162 (CONDSTORE):
+      #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
+      #                       "NOMODSEQ" /
+      #                       "MODIFIED" SP sequence-set
       def resp_text_code
-        token = match(T_ATOM)
-        name = token.value.upcase
+        name = resp_text_code__name
         case name
-        when /\A(?:ALERT|PARSE|READ-ONLY|READ-WRITE|TRYCREATE|NOMODSEQ)\z/n
+        when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE", "NOMODSEQ"
           result = ResponseCode.new(name, nil)
-        when /\A(?:BADCHARSET)\z/n
+        when "BADCHARSET"
           result = ResponseCode.new(name, charset_list)
-        when /\A(?:CAPABILITY)\z/ni
+        when "CAPABILITY"
           result = ResponseCode.new(name, capability__list)
-        when /\A(?:PERMANENTFLAGS)\z/n
-          match(T_SPACE)
+        when "PERMANENTFLAGS"
+          SP!
           result = ResponseCode.new(name, flag_list)
-        when /\A(?:UIDVALIDITY|UIDNEXT|UNSEEN)\z/n
-          match(T_SPACE)
+        when "UIDVALIDITY", "UIDNEXT", "UNSEEN"
+          SP!
           result = ResponseCode.new(name, number)
-        when /\A(?:APPENDUID)\z/n
+        when "APPENDUID"
           result = ResponseCode.new(name, resp_code_apnd__data)
-        when /\A(?:COPYUID)\z/n
+        when "COPYUID"
           result = ResponseCode.new(name, resp_code_copy__data)
         else
-          token = lookahead
-          if token.symbol == T_SPACE
-            shift_token
+          if SP?
             result = ResponseCode.new(name, text_chars_except_rbra)
           else
             result = ResponseCode.new(name, nil)
@@ -1518,6 +1522,8 @@ module Net
         end
         return result
       end
+
+      alias resp_text_code__name case_insensitive__atom
 
       # 1*<any TEXT-CHAR except "]">
       def text_chars_except_rbra
