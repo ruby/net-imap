@@ -42,6 +42,11 @@ module Net
           end
         end
 
+        # like accept, without consuming the token
+        def lookahead?(*symbols)
+          @token if symbols.include?((@token ||= next_token)&.symbol)
+        end
+
         def lookahead
           @token ||= next_token
         end

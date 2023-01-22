@@ -99,6 +99,45 @@ module Net
 
       Token = Struct.new(:symbol, :value)
 
+      # atom            = 1*ATOM-CHAR
+      #
+      # TODO: match atom entirely by regexp (in the "lexer")
+      def atom; -combine_adjacent(*ATOM_TOKENS) end
+
+      # the #accept version of #atom
+      def atom?; -combine_adjacent(*ATOM_TOKENS) if lookahead?(*ATOM_TOKENS) end
+
+      # Returns <tt>atom.upcase</tt>
+      def case_insensitive__atom; -combine_adjacent(*ATOM_TOKENS).upcase end
+
+      # Returns <tt>atom?&.upcase</tt>
+      def case_insensitive__atom?
+        -combine_adjacent(*ATOM_TOKENS).upcase if lookahead?(*ATOM_TOKENS)
+      end
+
+      # In addition to explicitly uses of +tagged-ext-label+, use this to match
+      # keywords when the grammar has not provided any extension syntax.
+      #
+      # Do *not* use this for labels where the grammar specifies extensions
+      # can be +atom+, even if all currently defined labels would match.  For
+      # example response codes in +resp-text-code+.
+      #
+      #   tagged-ext-label    = tagged-label-fchar *tagged-label-char
+      #                         ; Is a valid RFC 3501 "atom".
+      #   tagged-label-fchar  = ALPHA / "-" / "_" / "."
+      #   tagged-label-char   = tagged-label-fchar / DIGIT / ":"
+      #
+      # TODO: add to lexer and only match tagged-ext-label
+      alias tagged_ext_label  case_insensitive__atom
+      alias tagged_ext_label? case_insensitive__atom?
+
+      # Use #label or #label_in to assert specific known labels
+      # (+tagged-ext-label+ only, not +atom+).
+      def label(word)
+        (val = tagged_ext_label) == word and return val
+        parse_error("unexpected atom %p, expected %p instead", val, word)
+      end
+
       def response
         token = lookahead
         case token.symbol
@@ -1333,10 +1372,6 @@ module Net
         T_PLUS
       ]
 
-      def atom
-        -combine_adjacent(*ATOM_TOKENS)
-      end
-
       # ASTRING-CHAR    = ATOM-CHAR / resp-specials
       # resp-specials   = "]"
       ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA]
@@ -1408,11 +1443,17 @@ module Net
       # This advances @pos directly so it's safe before changing @lex_state.
       def accept_space
         if @token
-          shift_token if @token.symbol == T_SPACE
+          if @token.symbol == T_SPACE
+            shift_token
+            " "
+          end
         elsif @str[@pos] == " "
           @pos += 1
+          " "
         end
       end
+
+      alias SP? accept_space
 
       # The RFC is very strict about this and usually we should be too.
       # But skipping spaces is usually a safe workaround for buggy servers.
