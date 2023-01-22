@@ -1498,9 +1498,6 @@ module Net
         name = resp_text_code__name
         data =
           case name
-          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
-          when "NOMODSEQ"           # CONDSTORE
-          when "BADCHARSET"         then charset_list
           when "CAPABILITY"         then capability__list
           when "PERMANENTFLAGS"     then SP!; flag_list
           when "UIDVALIDITY"        then SP!; number
@@ -1508,6 +1505,9 @@ module Net
           when "UNSEEN"             then SP!; number
           when "APPENDUID"          then resp_code_apnd__data
           when "COPYUID"            then resp_code_copy__data
+          when "BADCHARSET"         then charset_list
+          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
+          when "NOMODSEQ"           # CONDSTORE
           else
             SP? and text_chars_except_rbra
           end
