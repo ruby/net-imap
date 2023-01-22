@@ -222,6 +222,14 @@ EOF
     )
   end
 
+  def test_enable
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse("* ENABLED SMTPUTF8\r\n")
+    assert_equal("ENABLED", response.name)
+    assert_equal(1, response.data.length)
+    assert_equal("SMTPUTF8", response.data.first)
+  end
+
   def test_id
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse("* ID NIL\r\n")

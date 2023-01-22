@@ -1,12 +1,15 @@
 # frozen_string_literal: true
 
 require_relative "errors"
+require_relative "response_parser/parser_utils"
 
 module Net
   class IMAP < Protocol
 
     # Parses an \IMAP server response.
     class ResponseParser
+      include ParserUtils
+
       # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
       def initialize
         @str = nil
@@ -96,6 +99,45 @@ module Net
 
       Token = Struct.new(:symbol, :value)
 
+      # atom            = 1*ATOM-CHAR
+      #
+      # TODO: match atom entirely by regexp (in the "lexer")
+      def atom; -combine_adjacent(*ATOM_TOKENS) end
+
+      # the #accept version of #atom
+      def atom?; -combine_adjacent(*ATOM_TOKENS) if lookahead?(*ATOM_TOKENS) end
+
+      # Returns <tt>atom.upcase</tt>
+      def case_insensitive__atom; -combine_adjacent(*ATOM_TOKENS).upcase end
+
+      # Returns <tt>atom?&.upcase</tt>
+      def case_insensitive__atom?
+        -combine_adjacent(*ATOM_TOKENS).upcase if lookahead?(*ATOM_TOKENS)
+      end
+
+      # In addition to explicitly uses of +tagged-ext-label+, use this to match
+      # keywords when the grammar has not provided any extension syntax.
+      #
+      # Do *not* use this for labels where the grammar specifies extensions
+      # can be +atom+, even if all currently defined labels would match.  For
+      # example response codes in +resp-text-code+.
+      #
+      #   tagged-ext-label    = tagged-label-fchar *tagged-label-char
+      #                         ; Is a valid RFC 3501 "atom".
+      #   tagged-label-fchar  = ALPHA / "-" / "_" / "."
+      #   tagged-label-char   = tagged-label-fchar / DIGIT / ":"
+      #
+      # TODO: add to lexer and only match tagged-ext-label
+      alias tagged_ext_label  case_insensitive__atom
+      alias tagged_ext_label? case_insensitive__atom?
+
+      # Use #label or #label_in to assert specific known labels
+      # (+tagged-ext-label+ only, not +atom+).
+      def label(word)
+        (val = tagged_ext_label) == word and return val
+        parse_error("unexpected atom %p, expected %p instead", val, word)
+      end
+
       def response
         token = lookahead
         case token.symbol
@@ -157,9 +199,11 @@ module Net
           when /\A(?:STATUS)\z/ni
             return status_response
           when /\A(?:CAPABILITY)\z/ni
-            return capability_response
+            return capability_data__untagged
           when /\A(?:NOOP)\z/ni
             return ignored_response
+          when /\A(?:ENABLED)\z/ni
+            return enable_data
           else
             return text_response
           end
@@ -967,28 +1011,37 @@ module Net
         return UntaggedResponse.new(name, data, @str)
       end
 
-      def capability_response
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        UntaggedResponse.new(name, capability_data, @str)
+      # The presence of "IMAP4rev1" or "IMAP4rev2" is unenforced here.
+      # The grammar rule is used by both response-data and resp-text-code.
+      # But this method only returns UntaggedResponse (response-data).
+      #
+      # RFC3501:
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev1"
+      #                      *(SP capability)
+      # RFC9051:
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev2"
+      #                      *(SP capability)
+      def capability_data__untagged
+        UntaggedResponse.new label("CAPABILITY"), capability__list, @str
       end
 
-      def capability_data
-        data = []
-        while true
-          token = lookahead
-          case token.symbol
-          when T_CRLF, T_RBRA
-            break
-          when T_SPACE
-            shift_token
-            next
-          end
-          data.push(atom.upcase)
-        end
-        data
+      # enable-data   = "ENABLED" *(SP capability)
+      def enable_data
+        UntaggedResponse.new label("ENABLED"), capability__list, @str
       end
+
+      # As a workaround for buggy servers, allow a trailing SP:
+      #     *(SP capapility) [SP]
+      def capability__list
+        data = []; while _ = SP? && capability? do data << _ end; data
+      end
+
+      # capability      = ("AUTH=" auth-type) / atom
+      #                     ; New capabilities MUST begin with "X" or be
+      #                     ; registered with IANA as standard or
+      #                     ; standards-track
+      alias capability  case_insensitive__atom
+      alias capability? case_insensitive__atom?
 
       def id_response
         token = match(T_ATOM)
@@ -1125,7 +1178,7 @@ module Net
         when /\A(?:BADCHARSET)\z/n
           result = ResponseCode.new(name, charset_list)
         when /\A(?:CAPABILITY)\z/ni
-          result = ResponseCode.new(name, capability_data)
+          result = ResponseCode.new(name, capability__list)
         when /\A(?:PERMANENTFLAGS)\z/n
           match(T_SPACE)
           result = ResponseCode.new(name, flag_list)
@@ -1321,10 +1374,6 @@ module Net
         T_PLUS
       ]
 
-      def atom
-        -combine_adjacent(*ATOM_TOKENS)
-      end
-
       # ASTRING-CHAR    = ATOM-CHAR / resp-specials
       # resp-specials   = "]"
       ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA]
@@ -1396,11 +1445,17 @@ module Net
       # This advances @pos directly so it's safe before changing @lex_state.
       def accept_space
         if @token
-          shift_token if @token.symbol == T_SPACE
+          if @token.symbol == T_SPACE
+            shift_token
+            " "
+          end
         elsif @str[@pos] == " "
           @pos += 1
+          " "
         end
       end
+
+      alias SP? accept_space
 
       # The RFC is very strict about this and usually we should be too.
       # But skipping spaces is usually a safe workaround for buggy servers.
@@ -1411,46 +1466,6 @@ module Net
         if @str.index(SPACES_REGEXP, @pos)
           @pos = $~.end(0)
         end
-      end
-
-      def match(*args, lex_state: @lex_state)
-        if @token && lex_state != @lex_state
-          parse_error("invalid lex_state change to %s with unconsumed token",
-                      lex_state)
-        end
-        begin
-          @lex_state, original_lex_state = lex_state, @lex_state
-          token = lookahead
-          unless args.include?(token.symbol)
-            parse_error('unexpected token %s (expected %s)',
-                        token.symbol.id2name,
-                        args.collect {|i| i.id2name}.join(" or "))
-          end
-          shift_token
-          return token
-        ensure
-          @lex_state = original_lex_state
-        end
-      end
-
-      # like match, but does not raise error on failure.
-      #
-      # returns and shifts token on successful match
-      # returns nil and leaves @token unshifted on no match
-      def accept(*args)
-        token = lookahead
-        if args.include?(token.symbol)
-          shift_token
-          token
-        end
-      end
-
-      def lookahead
-        @token ||= next_token
-      end
-
-      def shift_token
-        @token = nil
       end
 
       def next_token
