@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "net/imap"
-require "net/imap/sasl/stringprep"
 require "test/unit"
 
 class StringPrepProfilesTest < Test::Unit::TestCase
