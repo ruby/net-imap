@@ -1346,10 +1346,12 @@ module Net
       end
 
       # As a workaround for buggy servers, allow a trailing SP:
-      #     *(SP capapility) [SP]
+      #     *(SP capability) [SP]
       def capability__list
-        data = []; while _ = SP? && capability? do data << _ end; data
+        list = []; while SP? && (capa = capability?) do list << capa end; list
       end
+
+      alias resp_code__capability capability__list
 
       # capability      = ("AUTH=" auth-type) / atom
       #                     ; New capabilities MUST begin with "X" or be
@@ -1498,7 +1500,7 @@ module Net
         name = resp_text_code__name
         data =
           case name
-          when "CAPABILITY"         then capability__list
+          when "CAPABILITY"         then resp_code__capability
           when "PERMANENTFLAGS"     then SP!; flag_list
           when "UIDVALIDITY"        then SP!; number
           when "UIDNEXT"            then SP!; number
