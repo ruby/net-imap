@@ -33,6 +33,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # §7.2.2: CAPABILITY response
   generate_tests_from fixture_file: "capability_responses.yml"
 
+  # §7.3.1: LIST response (including obsolete LSUB and XLIST responses)
+  generate_tests_from fixture_file: "list_responses.yml"
+
   # §7.3.2: NAMESPACE response (also RFC2342)
   generate_tests_from fixture_file: "namespace_responses.yml"
 
@@ -64,25 +67,6 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # More interesting tests about the behavior, either of the test or of the
   # response data, should still use normal tests, below
   ############################################################################
-
-  def test_flag_list_many_same_flags
-    parser = Net::IMAP::ResponseParser.new
-    assert_nothing_raised do
-      100.times do
-      parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* LIST (\\Foo) "." "INBOX"
-EOF
-      end
-    end
-  end
-
-  def test_flag_xlist_inbox
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* XLIST (\\Inbox) "." "INBOX"
-EOF
-    assert_equal [:Inbox], response.data.attr
-  end
 
   def test_enable
     parser = Net::IMAP::ResponseParser.new

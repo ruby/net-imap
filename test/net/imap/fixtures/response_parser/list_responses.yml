@@ -1,0 +1,27 @@
+---
+:tests:
+
+  test_list_with_various_flag_types_and_capitalizations:
+    :response: "* LIST (\\foo bAR $Etc \\baz) \".\" \"INBOX\"\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: LIST
+      data: !ruby/struct:Net::IMAP::MailboxList
+        attr:
+        - :Foo
+        - bAR
+        - $Etc
+        - :Baz
+        delim: "."
+        name: INBOX
+      raw_data: "* LIST (\\foo bAR $Etc \\baz) \".\" \"INBOX\"\r\n"
+
+  test_xlist_inbox:
+    :response: "* XLIST (\\Inbox) \".\" \"INBOX\"\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: XLIST
+      data: !ruby/struct:Net::IMAP::MailboxList
+        attr:
+        - :Inbox
+        delim: "."
+        name: INBOX
+      raw_data: "* XLIST (\\Inbox) \".\" \"INBOX\"\r\n"
