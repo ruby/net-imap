@@ -1501,7 +1501,7 @@ module Net
         data =
           case name
           when "CAPABILITY"         then resp_code__capability
-          when "PERMANENTFLAGS"     then SP!; flag_list
+          when "PERMANENTFLAGS"     then SP? ? flag_perm__list : []
           when "UIDVALIDITY"        then SP!; number
           when "UIDNEXT"            then SP!; number
           when "UNSEEN"             then SP!; number
@@ -1638,6 +1638,8 @@ module Net
         end
       end
 
+      # TODO: not quite correct.  flag-perm != flag
+      alias flag_perm__list flag_list
 
       # See https://www.rfc-editor.org/errata/rfc3501
       #
