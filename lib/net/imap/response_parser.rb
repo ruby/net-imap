@@ -1502,9 +1502,9 @@ module Net
           case name
           when "CAPABILITY"         then resp_code__capability
           when "PERMANENTFLAGS"     then SP? ? flag_perm__list : []
-          when "UIDVALIDITY"        then SP!; number
-          when "UIDNEXT"            then SP!; number
-          when "UNSEEN"             then SP!; number
+          when "UIDNEXT"            then SP!; nz_number
+          when "UIDVALIDITY"        then SP!; nz_number
+          when "UNSEEN"             then SP!; nz_number            # rev1 only
           when "APPENDUID"          then resp_code_apnd__data
           when "COPYUID"            then resp_code_copy__data
           when "BADCHARSET"         then charset_list
