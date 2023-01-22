@@ -62,9 +62,9 @@ class StringPrepTablesGenerator
       # This file is generated from RFC3454, by rake.  Don't edit directly.
       #++
 
-      module Net::IMAP::SASL
+      module Net::IMAP::StringPrep
 
-        module StringPrep
+        module Tables
 
           #{asgn_table "A.1"}
 
@@ -122,12 +122,12 @@ class StringPrepTablesGenerator
           BIDI_FAILURE = #{bidi_failure_regexp.inspect}.freeze
 
           # Names of each codepoint table in the RFC-3454 appendices
-          TABLE_TITLES = {
+          TITLES = {
             #{table_titles_rb}
           }.freeze
 
           # Regexps matching each codepoint table in the RFC-3454 appendices
-          TABLE_REGEXPS = {
+          REGEXPS = {
             #{table_regexps_rb}
           }.freeze
 
@@ -157,7 +157,7 @@ class StringPrepTablesGenerator
       # This file is generated from RFC3454, by rake.  Don't edit directly.
       #++
 
-      module Net::IMAP::SASL
+      module Net::IMAP::StringPrep
 
         module SASLprep
 

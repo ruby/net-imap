@@ -705,6 +705,9 @@ module Net
   class IMAP < Protocol
     VERSION = "0.3.4"
 
+    autoload :SASL,       File.expand_path("imap/sasl",       __dir__)
+    autoload :StringPrep, File.expand_path("imap/stringprep", __dir__)
+
     include MonitorMixin
     if defined?(OpenSSL::SSL)
       include OpenSSL
@@ -2513,6 +2516,16 @@ module Net
       end
     end
 
+    #--
+    # We could get the saslprep method by extending the SASLprep module
+    # directly.  It's done indirectly, so SASLprep can be lazily autoloaded,
+    # because most users won't need it.
+    #++
+    # Delegates to Net::IMAP::StringPrep::SASLprep#saslprep.
+    def self.saslprep(string, **opts)
+      Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
+    end
+
   end
 end
 
@@ -2523,4 +2536,3 @@ require_relative "imap/flags"
 require_relative "imap/response_data"
 require_relative "imap/response_parser"
 require_relative "imap/authenticators"
-require_relative "imap/sasl"

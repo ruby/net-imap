@@ -7,8 +7,8 @@ require "set"
 
 require_relative "../../../rakelib/string_prep_tables_generator"
 
-class StringPrepTest < Test::Unit::TestCase
-  include Net::IMAP::SASL
+class StringPrepTablesTest < Test::Unit::TestCase
+  include Net::IMAP::StringPrep
 
   # Surrogates are excluded.  They are handled by enforcing valid UTF8 encoding.
   VALID_CODEPOINTS = (0..0x10_ffff).map{|cp| cp.chr("UTF-8") rescue nil}.compact
@@ -49,9 +49,9 @@ class StringPrepTest < Test::Unit::TestCase
   def test_rfc3454_table_D_2;   assert_rfc3454_table_compliance "D.2"   end
 
   def assert_rfc3454_table_compliance(name)
-    set     = RFC3454_TABLE_SETS       .fetch(name)
-    regexp  = RFC3454_TABLE_REGEXPS    .fetch(name)
-    coded   = StringPrep::TABLE_REGEXPS.fetch(name)
+    set     = RFC3454_TABLE_SETS   .fetch(name)
+    regexp  = RFC3454_TABLE_REGEXPS.fetch(name)
+    coded   = Tables::REGEXPS      .fetch(name)
     matched_set = VALID_CODEPOINTS
       .map{|cp| cp.unpack1 "U"}
       .grep(set)

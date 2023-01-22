@@ -10,17 +10,17 @@ end
 
 directory "lib/net/imap/sasl"
 
-file "lib/net/imap/sasl/stringprep_tables.rb" => generator.rb_deps do |t|
+file "lib/net/imap/stringprep/tables.rb" => generator.rb_deps do |t|
   File.write t.name, generator.stringprep_rb
 end
 
-file "lib/net/imap/sasl/saslprep_tables.rb" => generator.rb_deps do |t|
+file "lib/net/imap/stringprep/saslprep_tables.rb" => generator.rb_deps do |t|
   File.write t.name, generator.saslprep_rb
 end
 
 GENERATED_RUBY = FileList.new(
-  "lib/net/imap/sasl/stringprep_tables.rb",
-  "lib/net/imap/sasl/saslprep_tables.rb",
+  "lib/net/imap/stringprep/tables.rb",
+  "lib/net/imap/stringprep/saslprep_tables.rb",
 )
 
 CLEAN.include   generator.clean_deps
