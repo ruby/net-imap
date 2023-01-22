@@ -9,6 +9,7 @@ module Net
     # codepoint table defined in the RFC-3454 appendices is matched by a Regexp
     # defined in this module.
     module StringPrep
+      autoload :NamePrep, File.expand_path("stringprep/nameprep", __dir__)
       autoload :SASLprep, File.expand_path("stringprep/saslprep", __dir__)
       autoload :Tables,   File.expand_path("stringprep/tables",   __dir__)
       autoload :Trace,    File.expand_path("stringprep/trace",    __dir__)
