@@ -600,6 +600,16 @@ module Net
         end
       end
 
+      # mailbox         = "INBOX" / astring
+      #                     ; INBOX is case-insensitive.  All case variants of
+      #                     ; INBOX (e.g., "iNbOx") MUST be interpreted as INBOX
+      #                     ; not as an astring.  An astring which consists of
+      #                     ; the case-insensitive sequence "I" "N" "B" "O" "X"
+      #                     ; is considered to be INBOX and not an astring.
+      #                     ;  Refer to section 5.1 for further
+      #                     ; semantic details of mailbox names.
+      alias mailbox astring
+
       # valid number ranges are not enforced by parser
       #   number64        = 1*DIGIT
       #                       ; Unsigned 63-bit integer
@@ -1508,31 +1518,79 @@ module Net
         return rootmember
       end
 
+      #   mailbox-data    =/ "STATUS" SP mailbox SP "(" [status-att-list] ")"
       def mailbox_data__status
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        mailbox = astring
-        match(T_SPACE)
-        match(T_LPAR)
-        attr = {}
-        while true
-          token = lookahead
-          case token.symbol
-          when T_RPAR
-            shift_token
-            break
-          when T_SPACE
-            shift_token
+        resp_name  = label("STATUS"); SP!
+        mbox_name  = mailbox;         SP!
+        lpar; attr = status_att_list; rpar
+        UntaggedResponse.new(resp_name, StatusData.new(mbox_name, attr), @str)
+      end
+
+      # RFC3501
+      #   status-att-list = status-att SP number *(SP status-att SP number)
+      # RFC4466, RFC9051, and RFC3501 Errata
+      #   status-att-list = status-att-val *(SP status-att-val)
+      def status_att_list
+        attrs = [status_att_val]
+        while SP? do attrs << status_att_val end
+        attrs.to_h
+      end
+
+      # RFC3501 Errata:
+      # status-att-val  = ("MESSAGES" SP number) / ("RECENT" SP number) /
+      #                   ("UIDNEXT" SP nz-number) / ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number)
+      # RFC4466:
+      # status-att-val  = ("MESSAGES" SP number) /
+      #                   ("RECENT" SP number) /
+      #                   ("UIDNEXT" SP nz-number) /
+      #                   ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number)
+      #                   ;; Extensions to the STATUS responses
+      #                   ;; should extend this production.
+      #                   ;; Extensions should use the generic
+      #                   ;; syntax defined by tagged-ext.
+      # RFC9051:
+      # status-att-val  = ("MESSAGES" SP number) /
+      #                   ("UIDNEXT" SP nz-number) /
+      #                   ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number) /
+      #                   ("DELETED" SP number) /
+      #                   ("SIZE" SP number64)
+      #                     ; Extensions to the STATUS responses
+      #                     ; should extend this production.
+      #                     ; Extensions should use the generic
+      #                     ; syntax defined by tagged-ext.
+      # RFC7162:
+      # status-att-val      =/ "HIGHESTMODSEQ" SP mod-sequence-valzer
+      #                        ;; Extends non-terminal defined in [RFC4466].
+      #                        ;; Value 0 denotes that the mailbox doesn't
+      #                        ;; support persistent mod-sequences
+      #                        ;; as described in Section 3.1.2.2.
+      # RFC7889:
+      # status-att-val =/ "APPENDLIMIT" SP (number / nil)
+      #                 ;; status-att-val is defined in RFC 4466
+      # RFC8438:
+      # status-att-val =/ "SIZE" SP number64
+      # RFC8474:
+      # status-att-val =/ "MAILBOXID" SP "(" objectid ")"
+      #         ; follows tagged-ext production from [RFC4466]
+      def status_att_val
+        key = tagged_ext_label
+        SP!
+        val =
+          case key
+          when "MESSAGES"      then number              # RFC3501, RFC9051
+          when "UNSEEN"        then number              # RFC3501, RFC9051
+          when "DELETED"       then number              # RFC3501, RFC9051
+          when "UIDNEXT"       then nz_number           # RFC3501, RFC9051
+          when "UIDVALIDITY"   then nz_number           # RFC3501, RFC9051
+          when "RECENT"        then number              # RFC3501 (obsolete)
+          when "SIZE"          then number64            # RFC8483, RFC9051
+          else
+            number? || ExtensionData.new(tagged_ext_val)
           end
-          token = match(T_ATOM)
-          key = token.value.upcase
-          match(T_SPACE)
-          val = number
-          attr[key] = val
-        end
-        data = StatusData.new(mailbox, attr)
-        return UntaggedResponse.new(name, data, @str)
+        [key, val]
       end
 
       # The presence of "IMAP4rev1" or "IMAP4rev2" is unenforced here.

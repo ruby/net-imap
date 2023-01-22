@@ -37,3 +37,36 @@
           UIDNEXT: 1
           UIDVALIDITY: 1234
       raw_data: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234) \r\n"
+
+  test_imaginary_status_response_using_tagged-ext-val:
+    :response: &test_imaginary_status_response_using_tagged_ext_val
+      "* STATUS mbox (num 1 seq 1234:5,*:789654 comp-empty ()
+      comp-quoted (\"quoted string\") comp-astring (nil) comp-multi (1 \"str\"
+      2:3,7:77 nil (nested (several (layers)))))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: mbox
+        attr:
+          NUM: 1
+          SEQ: !ruby/struct:Net::IMAP::ExtensionData
+            data: !ruby/object:Net::IMAP::SequenceSet
+              atom: 1234:5,*:789654
+          COMP-EMPTY: !ruby/struct:Net::IMAP::ExtensionData
+            data: []
+          COMP-QUOTED: !ruby/struct:Net::IMAP::ExtensionData
+            data:
+            - quoted string
+          COMP-ASTRING: !ruby/struct:Net::IMAP::ExtensionData
+            data:
+            - nil
+          COMP-MULTI: !ruby/struct:Net::IMAP::ExtensionData
+            data:
+            - 1
+            - str
+            - 2:3,7:77
+            - nil
+            - - nested
+              - - several
+                - - layers
+      raw_data: *test_imaginary_status_response_using_tagged_ext_val
