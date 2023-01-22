@@ -941,40 +941,56 @@ module Net
       # this represents the partial size for BODY or BINARY
       alias gt__number__lt atom
 
+      # RFC3501 & RFC9051:
+      #   envelope        = "(" env-date SP env-subject SP env-from SP
+      #                     env-sender SP env-reply-to SP env-to SP env-cc SP
+      #                     env-bcc SP env-in-reply-to SP env-message-id ")"
       def envelope
         @lex_state = EXPR_DATA
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          result = nil
-        else
-          match(T_LPAR)
-          date = nstring
-          match(T_SPACE)
-          subject = nstring
-          match(T_SPACE)
-          from = address_list
-          match(T_SPACE)
-          sender = address_list
-          match(T_SPACE)
-          reply_to = address_list
-          match(T_SPACE)
-          to = address_list
-          match(T_SPACE)
-          cc = address_list
-          match(T_SPACE)
-          bcc = address_list
-          match(T_SPACE)
-          in_reply_to = nstring
-          match(T_SPACE)
-          message_id = nstring
-          match(T_RPAR)
-          result = Envelope.new(date, subject, from, sender, reply_to,
-                                to, cc, bcc, in_reply_to, message_id)
-        end
+        lpar; date        = env_date
+        SP!;  subject     = env_subject
+        SP!;  from        = env_from
+        SP!;  sender      = env_sender
+        SP!;  reply_to    = env_reply_to
+        SP!;  to          = env_to
+        SP!;  cc          = env_cc
+        SP!;  bcc         = env_bcc
+        SP!;  in_reply_to = env_in_reply_to
+        SP!;  message_id  = env_message_id
+        rpar
+        Envelope.new(date, subject, from, sender, reply_to,
+                     to, cc, bcc, in_reply_to, message_id)
+      ensure
         @lex_state = EXPR_BEG
-        return result
       end
+
+      #   env-date        = nstring
+      #   env-subject     = nstring
+      #   env-in-reply-to = nstring
+      #   env-message-id  = nstring
+      alias env_date        nstring
+      alias env_subject     nstring
+      alias env_in_reply_to nstring
+      alias env_message_id  nstring
+
+      #   env-from        = "(" 1*address ")" / nil
+      #   env-sender      = "(" 1*address ")" / nil
+      #   env-reply-to    = "(" 1*address ")" / nil
+      #   env-to          = "(" 1*address ")" / nil
+      #   env-cc          = "(" 1*address ")" / nil
+      #   env-bcc         = "(" 1*address ")" / nil
+      def nlist__address
+        return if NIL?
+        lpar; list = [address]; list << address until rpar?
+        list
+      end
+
+      alias env_from     nlist__address
+      alias env_sender   nlist__address
+      alias env_reply_to nlist__address
+      alias env_to       nlist__address
+      alias env_cc       nlist__address
+      alias env_bcc      nlist__address
 
       #   date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
       #                     SP time SP zone DQUOTE
@@ -1877,60 +1893,39 @@ module Net
         UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
-      def address_list
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        else
-          result = []
-          match(T_LPAR)
-          while true
-            token = lookahead
-            case token.symbol
-            when T_RPAR
-              shift_token
-              break
-            when T_SPACE
-              shift_token
-            end
-            result.push(address)
-          end
-          return result
-        end
-      end
+      ADDRESS_REGEXP = /\G
+        \( (?: NIL | #{Patterns::QUOTED_rev2} )  # 1: NAME
+        \s (?: NIL | #{Patterns::QUOTED_rev2} )  # 2: ROUTE
+        \s (?: NIL | #{Patterns::QUOTED_rev2} )  # 3: MAILBOX
+        \s (?: NIL | #{Patterns::QUOTED_rev2} )  # 4: HOST
+        \)
+      /nix
 
-      ADDRESS_REGEXP = /\G\
-(?# 1: NAME     )(?:NIL|"((?:[^\x80-\xff\x00\r\n"\\]|\\["\\])*)") \
-(?# 2: ROUTE    )(?:NIL|"((?:[^\x80-\xff\x00\r\n"\\]|\\["\\])*)") \
-(?# 3: MAILBOX  )(?:NIL|"((?:[^\x80-\xff\x00\r\n"\\]|\\["\\])*)") \
-(?# 4: HOST     )(?:NIL|"((?:[^\x80-\xff\x00\r\n"\\]|\\["\\])*)")\
-\)/ni
-
+      #   address         = "(" addr-name SP addr-adl SP addr-mailbox SP
+      #                     addr-host ")"
+      #   addr-adl        = nstring
+      #   addr-host       = nstring
+      #   addr-mailbox    = nstring
+      #   addr-name       = nstring
       def address
-        match(T_LPAR)
-        if @str.index(ADDRESS_REGEXP, @pos)
-          # address does not include literal.
-          @pos = $~.end(0)
-          name = $1
-          route = $2
-          mailbox = $3
-          host = $4
-          for s in [name, route, mailbox, host]
-            Patterns.unescape_quoted! s
-          end
-        else
-          name = nstring
-          match(T_SPACE)
-          route = nstring
-          match(T_SPACE)
-          mailbox = nstring
-          match(T_SPACE)
-          host = nstring
-          match(T_RPAR)
+        if (match = accept_re(ADDRESS_REGEXP))
+          # note that "NIL" isn't captured by the regexp
+          name, route, mailbox, host = match.captures
+            .map { Patterns.unescape_quoted _1 }
+        else # address may include literals
+          lpar; name    = addr_name
+          SP!;  route   = addr_adl
+          SP!;  mailbox = addr_mailbox
+          SP!;  host    = addr_host
+          rpar
         end
-        return Address.new(name, route, mailbox, host)
+        Address.new(name, route, mailbox, host)
       end
+
+      alias addr_adl     nstring
+      alias addr_host    nstring
+      alias addr_mailbox nstring
+      alias addr_name    nstring
 
       # flag-list       = "(" [flag *(SP flag)] ")"
       def flag_list
