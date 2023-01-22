@@ -1487,6 +1487,35 @@ module Net
       #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev1"
       #                      *(SP capability)
       #
+      # RFC5530:
+      #   resp-text-code  =/ "UNAVAILABLE" / "AUTHENTICATIONFAILED" /
+      #                     "AUTHORIZATIONFAILED" / "EXPIRED" /
+      #                     "PRIVACYREQUIRED" / "CONTACTADMIN" / "NOPERM" /
+      #                     "INUSE" / "EXPUNGEISSUED" / "CORRUPTION" /
+      #                     "SERVERBUG" / "CLIENTBUG" / "CANNOT" /
+      #                     "LIMIT" / "OVERQUOTA" / "ALREADYEXISTS" /
+      #                     "NONEXISTENT"
+      # RFC9051:
+      #   resp-text-code   = "ALERT" /
+      #                      "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
+      #                      capability-data / "PARSE" /
+      #                      "PERMANENTFLAGS" SP "(" [flag-perm *(SP flag-perm)] ")" /
+      #                      "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
+      #                      "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
+      #                      resp-code-apnd / resp-code-copy / "UIDNOTSTICKY" /
+      #                      "UNAVAILABLE" / "AUTHENTICATIONFAILED" /
+      #                      "AUTHORIZATIONFAILED" / "EXPIRED" /
+      #                      "PRIVACYREQUIRED" / "CONTACTADMIN" / "NOPERM" /
+      #                      "INUSE" / "EXPUNGEISSUED" / "CORRUPTION" /
+      #                      "SERVERBUG" / "CLIENTBUG" / "CANNOT" /
+      #                      "LIMIT" / "OVERQUOTA" / "ALREADYEXISTS" /
+      #                      "NONEXISTENT" / "NOTSAVED" / "HASCHILDREN" /
+      #                      "CLOSED" /
+      #                      "UNKNOWN-CTE" /
+      #                      atom [SP 1*<any TEXT-CHAR except "]">]
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev2"
+      #                      *(SP capability)
+      #
       # RFC4315 (UIDPLUS), RFC9051 (IMAP4rev2):
       #   resp-code-apnd   = "APPENDUID" SP nz-number SP append-uid
       #   resp-code-copy   = "COPYUID" SP nz-number SP uid-set SP uid-set
@@ -1508,7 +1537,12 @@ module Net
           when "APPENDUID"          then SP!; resp_code_apnd__data # rev2, UIDPLUS
           when "COPYUID"            then SP!; resp_code_copy__data # rev2, UIDPLUS
           when "BADCHARSET"         then SP? ? charset__list : []
-          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
+          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE",
+            "UNAVAILABLE", "AUTHENTICATIONFAILED", "AUTHORIZATIONFAILED",
+            "EXPIRED", "PRIVACYREQUIRED", "CONTACTADMIN", "NOPERM", "INUSE",
+            "EXPUNGEISSUED", "CORRUPTION", "SERVERBUG", "CLIENTBUG", "CANNOT",
+            "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
+            "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
           when "NOMODSEQ"           # CONDSTORE
           else
             SP? and text_chars_except_rbra
