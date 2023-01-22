@@ -1802,6 +1802,8 @@ module Net
       #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
       #                       "NOMODSEQ" /
       #                       "MODIFIED" SP sequence-set
+      # RFC7162 (QRESYNC):
+      #   resp-text-code   =/ "CLOSED"
       #
       # RFC8474: OBJECTID
       #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
@@ -1823,7 +1825,9 @@ module Net
             "EXPUNGEISSUED", "CORRUPTION", "SERVERBUG", "CLIENTBUG", "CANNOT",
             "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
             "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
-          when "NOMODSEQ"           # CONDSTORE
+          when "NOMODSEQ"           then nil                       # CONDSTORE
+          when "HIGHESTMODSEQ"      then SP!; mod_sequence_value   # CONDSTORE
+          when "MODIFIED"           then SP!; sequence_set         # CONDSTORE
           when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
           else
             SP? and text_chars_except_rbra
