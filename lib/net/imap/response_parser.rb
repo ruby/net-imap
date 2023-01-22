@@ -1507,7 +1507,7 @@ module Net
           when "UNSEEN"             then SP!; nz_number            # rev1 only
           when "APPENDUID"          then SP!; resp_code_apnd__data # rev2, UIDPLUS
           when "COPYUID"            then SP!; resp_code_copy__data # rev2, UIDPLUS
-          when "BADCHARSET"         then charset_list
+          when "BADCHARSET"         then SP? ? charset__list : []
           when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
           when "NOMODSEQ"           # CONDSTORE
           else
@@ -1523,17 +1523,9 @@ module Net
         match_re(CTEXT_REGEXP, '1*<any TEXT-CHAR except "]">')[0]
       end
 
-      def charset_list
-        result = []
-        if accept(T_SPACE)
-          match(T_LPAR)
-          result << charset
-          while accept(T_SPACE)
-            result << charset
-          end
-          match(T_RPAR)
-        end
-        result
+      # "(" charset *(SP charset) ")"
+      def charset__list
+        lpar; list = [charset]; while SP? do list << charset end; rpar; list
       end
 
       # already matched:  "APPENDUID"
@@ -1644,13 +1636,7 @@ module Net
       # See https://www.rfc-editor.org/errata/rfc3501
       #
       # charset = atom / quoted
-      def charset
-        if token = accept(T_QUOTED)
-          token.value
-        else
-          atom
-        end
-      end
+      def charset; quoted? || atom end
 
       # RFC7162:
       # mod-sequence-value  = 1*DIGIT
