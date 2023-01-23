@@ -49,9 +49,7 @@
       raw_data: *rfc2342_ex5_3
 
   NAMESPACE_rfc2342_example_5.4:
-    # WARNING: this example is wrong and will be fixed soon...
-    :response: &rfc2342_ex5_4 "* NAMESPACE ((\"\" \"/\")) ((\"~\" \"/\")) ((\"#shared/\" \"/\") (\"#public/\"
-      \"/\") (\"#ftp/\" \"/\") (\"#news.\" \".\"))\r\n"
+    :response: &rfc2342_ex5_4 "* NAMESPACE ((\"\" \"/\")) ((\"~\" \"/\")) ((\"#shared/\" \"/\")(\"#public/\" \"/\")(\"#ftp/\" \"/\")(\"#news.\" \".\"))\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: NAMESPACE
       data: !ruby/struct:Net::IMAP::Namespaces
@@ -100,7 +98,7 @@
       raw_data: *rfc2342_ex5_5
 
   NAMESPACE_rfc2342_example_5.6:
-    :response: &rfc2342_ex5_6 "* NAMESPACE ((\"\" \"/\") (\"#mh/\" \"/\" \"X-PARAM\" (\"FLAG1\" \"FLAG2\")))
+    :response: &rfc2342_ex5_6 "* NAMESPACE ((\"\" \"/\")(\"#mh/\" \"/\" \"X-PARAM\" (\"FLAG1\" \"FLAG2\")))
       NIL NIL\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: NAMESPACE
