@@ -47,9 +47,67 @@ module Net
             RUBY
           end
 
+          # TODO: move coersion to the token.value method?
+          def def_token_matchers(name, *token_symbols, coerce: nil, send: nil)
+            match_name = name.match(/\A[A-Z]/) ? "#{name}!" : name
+
+            if token_symbols.size == 1
+              token   = token_symbols.first
+              matcher = "token&.symbol == %p" % [token]
+              desc    = token
+            else
+              matcher = "%p.include? token&.symbol" % [token_symbols]
+              desc    = token_symbols.join(" or ")
+            end
+
+            value = "(token.value)"
+            value = coerce.to_s + value   if coerce
+            value = [value, send].join(".") if send
+
+            raise_parse_error = <<~RUBY
+              parse_error("unexpected %s (expected #{desc})", token&.symbol)
+            RUBY
+
+            class_eval <<~RUBY, __FILE__, __LINE__ + 1
+              # frozen_string_literal: true
+
+              def #{name}?
+                token = #{LOOKAHEAD}
+                if #{matcher}
+                  #{SHIFT_TOKEN}
+                  #{value}
+                end
+              end
+
+              def #{match_name}
+                token = #{LOOKAHEAD}
+                if #{matcher}
+                  #{SHIFT_TOKEN}
+                  #{value}
+                else
+                  #{raise_parse_error}
+                end
+              end
+            RUBY
+          end
+
         end
 
         private
+
+        # TODO: after checking the lookahead, use a regexp for remaining chars.
+        # That way a loop isn't needed.
+        def combine_adjacent(*tokens)
+          result = "".b
+          while token = accept(*tokens)
+            result << token.value
+          end
+          if result.empty?
+            parse_error('unexpected token %s (expected %s)',
+                        lookahead.symbol, tokens.join(" or "))
+          end
+          result
+        end
 
         def match(*args)
           token = lookahead
