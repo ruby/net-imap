@@ -222,8 +222,50 @@ module Net
 
       def_char_matchers :SP,   " ", :T_SPACE
 
+      def_char_matchers :lpar, "(", :T_LPAR
+      def_char_matchers :rpar, ")", :T_RPAR
+
       def_char_matchers :lbra, "[", :T_LBRA
       def_char_matchers :rbra, "]", :T_RBRA
+
+      def_token_matchers :quoted, T_QUOTED
+
+      #   string          = quoted / literal
+      def_token_matchers :string,  T_QUOTED, T_LITERAL
+
+      # use where string represents "LABEL" values
+      def_token_matchers :case_insensitive_string,
+                         T_QUOTED, T_LITERAL,
+                         send: :upcase
+
+      # n.b: NIL? and NIL! return the "NIL" atom string (truthy) on success.
+      # NIL? returns nil when it does *not* match
+      def_token_matchers :NIL, T_NIL
+
+      # In addition to explicitly uses of +tagged-ext-label+, use this to match
+      # keywords when the grammar has not provided any extension syntax.
+      #
+      # Do *not* use this for labels where the grammar specifies extensions
+      # can be +atom+, even if all currently defined labels would match.  For
+      # example response codes in +resp-text-code+.
+      #
+      #   tagged-ext-label    = tagged-label-fchar *tagged-label-char
+      #                         ; Is a valid RFC 3501 "atom".
+      #   tagged-label-fchar  = ALPHA / "-" / "_" / "."
+      #   tagged-label-char   = tagged-label-fchar / DIGIT / ":"
+      #
+      # TODO: add to lexer and only match tagged-ext-label
+      def_token_matchers :tagged_ext_label, T_ATOM, T_NIL, send: :upcase
+
+      # atom            = 1*ATOM-CHAR
+      # ATOM-CHAR       = <any CHAR except atom-specials>
+      ATOM_TOKENS = [T_ATOM, T_NUMBER, T_NIL, T_LBRA, T_PLUS]
+
+      # ASTRING-CHAR    = ATOM-CHAR / resp-specials
+      # resp-specials   = "]"
+      ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA].freeze
+
+      ASTRING_TOKENS = [T_QUOTED, *ASTRING_CHARS_TOKENS, T_LITERAL].freeze
 
       # atom            = 1*ATOM-CHAR
       #
@@ -241,27 +283,34 @@ module Net
         -combine_adjacent(*ATOM_TOKENS).upcase if lookahead?(*ATOM_TOKENS)
       end
 
-      # In addition to explicitly uses of +tagged-ext-label+, use this to match
-      # keywords when the grammar has not provided any extension syntax.
-      #
-      # Do *not* use this for labels where the grammar specifies extensions
-      # can be +atom+, even if all currently defined labels would match.  For
-      # example response codes in +resp-text-code+.
-      #
-      #   tagged-ext-label    = tagged-label-fchar *tagged-label-char
-      #                         ; Is a valid RFC 3501 "atom".
-      #   tagged-label-fchar  = ALPHA / "-" / "_" / "."
-      #   tagged-label-char   = tagged-label-fchar / DIGIT / ":"
-      #
-      # TODO: add to lexer and only match tagged-ext-label
-      alias tagged_ext_label  case_insensitive__atom
-      alias tagged_ext_label? case_insensitive__atom?
+      # TODO: handle astring_chars entirely inside the lexer
+      def astring_chars
+        combine_adjacent(*ASTRING_CHARS_TOKENS)
+      end
+
+      #   astring         = 1*ASTRING-CHAR / string
+      def astring
+        lookahead?(*ASTRING_CHARS_TOKENS) ? astring_chars : string
+      end
+
+      def astring?
+        lookahead?(*ASTRING_CHARS_TOKENS) ? astring_chars : string?
+      end
 
       # Use #label or #label_in to assert specific known labels
       # (+tagged-ext-label+ only, not +atom+).
       def label(word)
         (val = tagged_ext_label) == word and return val
         parse_error("unexpected atom %p, expected %p instead", val, word)
+      end
+
+      #   nstring         = string / nil
+      def nstring
+        NIL? ? nil : string
+      end
+
+      def nquoted
+        NIL? ? nil : quoted
       end
 
       def response
@@ -1198,65 +1247,56 @@ module Net
         end
       end
 
+      # namespace-response = "NAMESPACE" SP namespace
+      #                       SP namespace SP namespace
+      #                  ; The first Namespace is the Personal Namespace(s).
+      #                  ; The second Namespace is the Other Users'
+      #                  ; Namespace(s).
+      #                  ; The third Namespace is the Shared Namespace(s).
       def namespace_response
+        name = label("NAMESPACE")
         @lex_state = EXPR_DATA
-        token = lookahead
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        personal = namespaces
-        match(T_SPACE)
-        other = namespaces
-        match(T_SPACE)
-        shared = namespaces
+        data = Namespaces.new((SP!; namespace),
+                              (SP!; namespace),
+                              (SP!; namespace))
+        UntaggedResponse.new(name, data, @str)
+      ensure
         @lex_state = EXPR_BEG
-        data = Namespaces.new(personal, other, shared)
-        return UntaggedResponse.new(name, data, @str)
       end
 
-      def namespaces
-        token = lookahead
-        # empty () is not allowed, so nil is functionally identical to empty.
-        data = []
-        if token.symbol == T_NIL
-          shift_token
-        else
-          match(T_LPAR)
-          loop do
-            data << namespace
-            break unless lookahead.symbol == T_SPACE
-            shift_token
-          end
-          match(T_RPAR)
-        end
-        data
-      end
-
+      # namespace         = nil / "(" 1*namespace-descr ")"
       def namespace
-        match(T_LPAR)
-        prefix = match(T_QUOTED, T_LITERAL).value
-        match(T_SPACE)
-        delimiter = string
+        NIL? and return []
+        lpar
+        list = [namespace_descr]
+        list << namespace_descr until rpar?
+        list
+      end
+
+      # namespace-descr   = "(" string SP
+      #                        (DQUOTE QUOTED-CHAR DQUOTE / nil)
+      #                         [namespace-response-extensions] ")"
+      def namespace_descr
+        lpar
+        prefix     = string; SP!
+        delimiter  = nquoted # n.b: should only accept single char
         extensions = namespace_response_extensions
-        match(T_RPAR)
+        rpar
         Namespace.new(prefix, delimiter, extensions)
       end
 
+      # namespace-response-extensions = *namespace-response-extension
+      # namespace-response-extension = SP string SP
+      #                   "(" string *(SP string) ")"
       def namespace_response_extensions
         data = {}
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          name = match(T_QUOTED, T_LITERAL).value
+        while SP?
+          name = string; SP!
+          lpar
           data[name] ||= []
-          match(T_SPACE)
-          match(T_LPAR)
-          loop do
-            data[name].push match(T_QUOTED, T_LITERAL).value
-            break unless lookahead.symbol == T_SPACE
-            shift_token
-          end
-          match(T_RPAR)
+          data[name] << string
+          data[name] << string while SP?
+          rpar
         end
         data
       end
@@ -1459,80 +1499,6 @@ module Net
         end
       end
 
-      def nstring
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        else
-          return string
-        end
-      end
-
-      def astring
-        token = lookahead
-        if string_token?(token)
-          return string
-        else
-          return astring_chars
-        end
-      end
-
-      def string
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        end
-        token = match(T_QUOTED, T_LITERAL)
-        return token.value
-      end
-
-      STRING_TOKENS = [T_QUOTED, T_LITERAL, T_NIL]
-
-      def string_token?(token)
-        return STRING_TOKENS.include?(token.symbol)
-      end
-
-      def case_insensitive_string
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        end
-        token = match(T_QUOTED, T_LITERAL)
-        return token.value.upcase
-      end
-
-      # atom            = 1*ATOM-CHAR
-      # ATOM-CHAR       = <any CHAR except atom-specials>
-      ATOM_TOKENS = [
-        T_ATOM,
-        T_NUMBER,
-        T_NIL,
-        T_LBRA,
-        T_PLUS
-      ]
-
-      # ASTRING-CHAR    = ATOM-CHAR / resp-specials
-      # resp-specials   = "]"
-      ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA]
-
-      def astring_chars
-        combine_adjacent(*ASTRING_CHARS_TOKENS)
-      end
-
-      def combine_adjacent(*tokens)
-        result = "".b
-        while token = accept(*tokens)
-          result << token.value
-        end
-        if result.empty?
-          parse_error('unexpected token %s (expected %s)',
-                      lookahead.symbol, args.join(" or "))
-        end
-        result
-      end
 
       # See https://www.rfc-editor.org/errata/rfc3501
       #
