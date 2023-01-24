@@ -25,10 +25,13 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   #
   # TODO: add instructions for how to quickly add or update yaml tests
   ############################################################################
-  # Core IMAP specs, by RFC9051 section (w/ obsolete listed last):
+  # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
 
   # §7.3.2: NAMESPACE response (also RFC2342)
   generate_tests_from fixture_file: "namespace_responses.yml"
+
+  # RFC3501 §7.2.5: SEARCH response (obsolete in IMAP4rev2):
+  generate_tests_from fixture_file: "search_responses.yml"
 
   # §7.5.2: FETCH response, BODYSTRUCTURE msg-att
   generate_tests_from fixture_file: "body_structure_responses.yml"
@@ -66,34 +69,6 @@ EOF
 * OK [CLOSED] Previous mailbox closed.
 EOF
     assert_equal "CLOSED", response.data.code.name
-  end
-
-  def test_search_response
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* SEARCH
-EOF
-    assert_equal [], response.data
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* SEARCH 1
-EOF
-    assert_equal [1], response.data
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* SEARCH 1 2 3
-EOF
-    assert_equal [1, 2, 3], response.data
-  end
-
-  def test_search_response_of_yahoo
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* SEARCH 1\s
-EOF
-    assert_equal [1], response.data
-    response = parser.parse(<<EOF.gsub(/\n/, "\r\n"))
-* SEARCH 1 2 3\s
-EOF
-    assert_equal [1, 2, 3], response.data
   end
 
   def test_msg_att_extra_space
@@ -192,14 +167,6 @@ EOF
     assert_equal("GImap", response.data["name"])
     assert_equal("Google, Inc.", response.data["vendor"])
     assert_equal(nil, response.data.fetch("support-url"))
-  end
-
-  # [Bug #10112]
-  def test_search_modseq
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse("* SEARCH 87216 87221 (MODSEQ 7667567)\r\n")
-    assert_equal("SEARCH", response.name)
-    assert_equal([87216, 87221], response.data)
   end
 
   # [Bug #13649]
