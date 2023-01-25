@@ -607,6 +607,53 @@ module Net
       alias mailbox_data__exists  response_data__simple_numeric
       alias mailbox_data__recent  response_data__simple_numeric
 
+      # RFC3501 & RFC9051:
+      #   msg-att         = "(" (msg-att-dynamic / msg-att-static)
+      #                      *(SP (msg-att-dynamic / msg-att-static)) ")"
+      #
+      #   msg-att-dynamic = "FLAGS" SP "(" [flag-fetch *(SP flag-fetch)] ")"
+      # RFC5257 (ANNOTATE extension):
+      #   msg-att-dynamic =/ "ANNOTATION" SP
+      #                        ( "(" entry-att *(SP entry-att) ")" /
+      #                          "(" entry *(SP entry) ")" )
+      # RFC7162 (CONDSTORE extension):
+      #   msg-att-dynamic =/ fetch-mod-resp
+      #   fetch-mod-resp  = "MODSEQ" SP "(" permsg-modsequence ")"
+      # RFC8970 (PREVIEW extension):
+      #   msg-att-dynamic =/ "PREVIEW" SP nstring
+      #
+      # RFC3501:
+      #   msg-att-static  = "ENVELOPE" SP envelope /
+      #                     "INTERNALDATE" SP date-time /
+      #                     "RFC822" [".HEADER" / ".TEXT"] SP nstring /
+      #                     "RFC822.SIZE" SP number /
+      #                     "BODY" ["STRUCTURE"] SP body /
+      #                     "BODY" section ["<" number ">"] SP nstring /
+      #                     "UID" SP uniqueid
+      # RFC3516 (BINARY extension):
+      #   msg-att-static  =/ "BINARY" section-binary SP (nstring / literal8)
+      #                    / "BINARY.SIZE" section-binary SP number
+      # RFC8514 (SAVEDATE extension):
+      #   msg-att-static  =/ "SAVEDATE" SP (date-time / nil)
+      # RFC8474 (OBJECTID extension):
+      #   msg-att-static =/ fetch-emailid-resp / fetch-threadid-resp
+      #   fetch-emailid-resp  = "EMAILID" SP "(" objectid ")"
+      #   fetch-threadid-resp = "THREADID" SP ( "(" objectid ")" / nil )
+      # RFC9051:
+      #   msg-att-static  = "ENVELOPE" SP envelope /
+      #                     "INTERNALDATE" SP date-time /
+      #                     "RFC822.SIZE" SP number64 /
+      #                     "BODY" ["STRUCTURE"] SP body /
+      #                     "BODY" section ["<" number ">"] SP nstring /
+      #                     "BINARY" section-binary SP (nstring / literal8) /
+      #                     "BINARY.SIZE" section-binary SP number /
+      #                     "UID" SP uniqueid
+      #
+      # Re https://www.rfc-editor.org/errata/eid7246, I'm adding "offset" to the
+      # official "BINARY" ABNF, like so:
+      #
+      #   msg-att-static   =/ "BINARY" section-binary ["<" number ">"] SP
+      #                       (nstring / literal8)
       def msg_att(n)
         match(T_LPAR)
         attr = {}
@@ -996,6 +1043,23 @@ module Net
         end
       end
 
+      # section         = "[" [section-spec] "]"
+      #
+      # section-spec    = section-msgtext / (section-part ["." section-text])
+      # section-msgtext = "HEADER" /
+      #                   "HEADER.FIELDS" [".NOT"] SP header-list /
+      #                   "TEXT"
+      #                     ; top-level or MESSAGE/RFC822 or
+      #                     ; MESSAGE/GLOBAL part
+      # section-part    = nz-number *("." nz-number)
+      #                     ; body part reference.
+      #                     ; Allows for accessing nested body parts.
+      # section-text    = section-msgtext / "MIME"
+      #                     ; text other than actual body part (headers,
+      #                     ; etc.)
+      #
+      # header-list     = "(" header-fld-name *(SP header-fld-name) ")"
+      #
       def section
         str = String.new
         token = match(T_LBRA)
@@ -1031,6 +1095,14 @@ module Net
         return str
       end
 
+      # header-fld-name = astring
+      #
+      # RFC5233:
+      # optional-field  =   field-name ":" unstructured CRLF
+      # field-name      =   1*ftext
+      # ftext           =   %d33-57 /          ; Printable US-ASCII
+      #                     %d59-126           ;  characters not including
+      #                                        ;  ":".
       def format_string(str)
         case str
         when ""
