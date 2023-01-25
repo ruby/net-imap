@@ -74,6 +74,12 @@ class StringPrepTablesGenerator
 
           #{asgn_table "B.3"}
 
+          #{asgn_mapping "B.1", ""}
+
+          #{asgn_mapping "B.2"}
+
+          #{asgn_mapping "B.3"}
+
           #{asgn_table "C.1.1"}
 
           #{asgn_table "C.1.2"}
@@ -105,14 +111,16 @@ class StringPrepTablesGenerator
 
           BIDI_DESC_REQ2 = "A string with RandALCat characters must not contain LCat characters."
 
-          # Bidirectional Characters [StringPrep, §6], Requirement 2::
+          # Bidirectional Characters [StringPrep, §6], Requirement 2
+          # >>>
           #   If a string contains any RandALCat character, the string MUST NOT
           #   contain any LCat character.
           BIDI_FAILS_REQ2 = #{bidi_fails_req2.inspect}.freeze
 
           BIDI_DESC_REQ3 = "A string with RandALCat characters must start and end with RandALCat characters."
 
-          # Bidirectional Characters [StringPrep, §6], Requirement 3::
+          # Bidirectional Characters [StringPrep, §6], Requirement 3
+          # >>>
           #   If a string contains any RandALCat character, a RandALCat
           #   character MUST be the first character of the string, and a
           #   RandALCat character MUST be the last character of the string.
@@ -129,6 +137,12 @@ class StringPrepTablesGenerator
           # Regexps matching each codepoint table in the RFC-3454 appendices
           REGEXPS = {
             #{table_regexps_rb}
+          }.freeze
+
+          MAPPINGS = {
+            "B.1" => [IN_B_1, MAP_B_1].freeze,
+            "B.2" => [IN_B_2, MAP_B_2].freeze,
+            "B.3" => [IN_B_3, MAP_B_3].freeze,
           }.freeze
 
         end
@@ -162,22 +176,25 @@ class StringPrepTablesGenerator
         module SASLprep
 
           # RFC4013 §2.1 Mapping - mapped to space
-          # * non-ASCII space characters (\\StringPrep\\[\\"C.1.2\\"]) that can be
-          #   mapped to SPACE (U+0020), and
+          # >>>
+          #   non-ASCII space characters (\\StringPrep\\[\\"C.1.2\\"]) that can
+          #   be mapped to SPACE (U+0020)
           #
           # Equal to \\StringPrep\\[\\"C.1.2\\"].
-          # Redefined here to avoid loading the StringPrep module.
+          # Redefined here to avoid loading StringPrep::Tables unless necessary.
           MAP_TO_SPACE = #{regex_str "C.1.2"}
 
           # RFC4013 §2.1 Mapping - mapped to nothing
-          #   the "commonly mapped to nothing" characters (\\StringPrep\\[\\"B.1\\"])
-          #   that can be mapped to nothing.
+          # >>>
+          #   the "commonly mapped to nothing" characters
+          #   (\\StringPrep\\[\\"B.1\\"]) that can be mapped to nothing.
           #
           # Equal to \\StringPrep\\[\\"B.1\\"].
-          # Redefined here to avoid loading the StringPrep module.
+          # Redefined here to avoid loading StringPrep::Tables unless necessary.
           MAP_TO_NOTHING = #{regex_str "B.1"}
 
-          # RFC4013 §2.3 Prohibited Output::
+          # RFC4013 §2.3 Prohibited Output
+          # >>>
           # * Non-ASCII space characters — \\StringPrep\\[\\"C.1.2\\"]
           # * ASCII control characters — \\StringPrep\\[\\"C.2.1\\"]
           # * Non-ASCII control characters — \\StringPrep\\[\\"C.2.2\\"]
@@ -192,45 +209,52 @@ class StringPrepTablesGenerator
 
           # Adds unassigned (by Unicode 3.2) codepoints to TABLES_PROHIBITED.
           #
-          # RFC4013 §2.5 Unassigned Code Points::
-          #   This profile specifies the \\StringPrep\\[\\"A.1\\"] table as its list of
-          #   unassigned code points.
+          # RFC4013 §2.5 Unassigned Code Points
+          # >>>
+          #   This profile specifies the \\StringPrep\\[\\"A.1\\"] table as its
+          #   list of unassigned code points.
           TABLES_PROHIBITED_STORED = ["A.1", *TABLES_PROHIBITED].freeze
 
-          # Matches codepoints prohibited by RFC4013 §2.3.
+          # A Regexp matching codepoints prohibited by RFC4013 §2.3.
           #
-          # See TABLES_PROHIBITED.
-          #
-          # Equal to +Regexp.union+ of the TABLES_PROHIBITED tables.  Redefined
-          # here to avoid loading the StringPrep module unless necessary.
+          # This combines all of the TABLES_PROHIBITED tables.
           PROHIBITED_OUTPUT = #{regex_str(*SASL_TABLES_PROHIBITED)}
 
-          # RFC4013 §2.5 Unassigned Code Points::
-          #   This profile specifies the \\StringPrep\\[\\"A.1\\"] table as its list of
-          #   unassigned code points.
+          # RFC4013 §2.5 Unassigned Code Points
+          # >>>
+          #   This profile specifies the \\StringPrep\\[\\"A.1\\"] table as its
+          #   list of unassigned code points.
+          #
+          # Equal to \\StringPrep\\[\\"A.1\\"].
+          # Redefined here to avoid loading StringPrep::Tables unless necessary.
           UNASSIGNED = #{regex_str "A.1"}
 
-          # Matches codepoints prohibited by RFC4013 §2.3 and §2.5.
+          # A Regexp matching codepoints prohibited by RFC4013 §2.3 and §2.5.
           #
-          # See TABLES_PROHIBITED_STORED.
+          # This combines PROHIBITED_OUTPUT and UNASSIGNED.
           PROHIBITED_OUTPUT_STORED = Regexp.union(
             UNASSIGNED, PROHIBITED_OUTPUT
           ).freeze
 
           # Bidirectional Characters [StringPrep, §6]
+          #
+          # A Regexp for strings that don't satisfy StringPrep's Bidirectional
+          # Characters rules.
+          #
+          # Equal to StringPrep::Tables::BIDI_FAILURE.
+          # Redefined here to avoid loading StringPrep::Tables unless necessary.
           BIDI_FAILURE = #{bidi_failure_regexp.inspect}.freeze
 
-          # Matches strings prohibited by RFC4013 §2.3 and §2.4.
+          # A Regexp matching strings prohibited by RFC4013 §2.3 and §2.4.
           #
-          # This checks prohibited output and bidirectional characters.
+          # This combines PROHIBITED_OUTPUT and BIDI_FAILURE.
           PROHIBITED = Regexp.union(
             PROHIBITED_OUTPUT, BIDI_FAILURE,
           )
 
-          # Matches strings prohibited by RFC4013 §2.3, §2.4, and §2.5.
+          # A Regexp matching strings prohibited by RFC4013 §2.3, §2.4, and §2.5.
           #
-          # This checks prohibited output, bidirectional characters, and
-          # unassigned codepoints.
+          # This combines PROHIBITED_OUTPUT_STORED and BIDI_FAILURE.
           PROHIBITED_STORED = Regexp.union(
             PROHIBITED_OUTPUT_STORED, BIDI_FAILURE,
           )
@@ -282,6 +306,15 @@ class StringPrepTablesGenerator
     (table.is_a?(Hash) ? table.keys : table)
       .map{|range| range.split(?-).map{|cp| Integer cp, 16} }
       .map{|s,e| s..(e || s)}
+  end
+
+  # TODO: DRY with unicode_normalize
+  def to_map(table)
+    table = table.to_hash
+      .transform_keys { Integer _1, 16 }
+      .transform_keys { [_1].pack("U*") }
+      .transform_values {|cps| cps.map { Integer _1, 16 } }
+      .transform_values { _1.pack("U*") }
   end
 
   # Starting from a codepoints array (rather than ranges) to deduplicate merged
@@ -350,6 +383,13 @@ class StringPrepTablesGenerator
 
   def asgn_table(name, negate: false)
     asgn_regex(name, regexp_for(name, negate: negate), negate: negate)
+  end
+
+  def asgn_mapping(name, replacement = to_map(tables[name]))
+    cname = name.tr(?., ?_).upcase
+    "# Replacements for %s\n%s%s = %p.freeze" % [
+      "IN_#{name}", "  " * 2, "MAP_#{cname}", replacement,
+    ]
   end
 
   def regexp_const_desc(name, negate: false)
