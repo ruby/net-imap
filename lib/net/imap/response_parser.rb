@@ -1483,66 +1483,55 @@ module Net
       end
       alias sort_data mailbox_data__search
 
+      # RFC5256: THREAD
+      #   thread-data     = "THREAD" [SP 1*thread-list]
       def thread_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-
-        if token.symbol == T_SPACE
-          threads = []
-
-          while true
-            shift_token
-            token = lookahead
-
-            case token.symbol
-            when T_LPAR
-              threads << thread_branch(token)
-            when T_CRLF
-              break
-            end
-          end
-        else
-          # no member
-          threads = []
+        name    = label("THREAD")
+        threads = []
+        if SP?
+          threads << thread_list while lookahead_thread_list?
         end
-
-        return UntaggedResponse.new(name, threads, @str)
+        UntaggedResponse.new(name, threads, @str)
       end
 
-      def thread_branch(token)
-        rootmember = nil
-        lastmember = nil
+      alias lookahead_thread_list?   lookahead_lpar?
+      alias lookahead_thread_nested? lookahead_thread_list?
 
-        while true
-          shift_token    # ignore first T_LPAR
-          token = lookahead
+      # RFC5256: THREAD
+      #   thread-list     = "(" (thread-members / thread-nested) ")"
+      def thread_list
+        lpar
+        thread = if lookahead_thread_nested?
+                   ThreadMember.new(nil, thread_nested)
+                 else
+                   thread_members
+                 end
+        rpar
+        thread
+      end
 
-          case token.symbol
-          when T_NUMBER
-            # new member
-            newmember = ThreadMember.new(number, [])
-            if rootmember.nil?
-              rootmember = newmember
-            else
-              lastmember.children << newmember
-            end
-            lastmember = newmember
-          when T_SPACE
-            # do nothing
-          when T_LPAR
-            if rootmember.nil?
-              # dummy member
-              lastmember = rootmember = ThreadMember.new(nil, [])
-            end
-
-            lastmember.children << thread_branch(token)
-          when T_RPAR
-            break
+      # RFC5256: THREAD
+      #   thread-members  = nz-number *(SP nz-number) [SP thread-nested]
+      def thread_members
+        members = []
+        members << nz_number # thread root
+        while SP?
+          case lookahead!(T_NUMBER, T_LPAR).symbol
+          when T_NUMBER then members << nz_number
+          else               nested = thread_nested; break
           end
         end
+        members.reverse.inject(nested || []) {|subthreads, number|
+          [ThreadMember.new(number, subthreads)]
+        }.first
+      end
 
-        return rootmember
+      # RFC5256: THREAD
+      #   thread-nested   = 2*thread-list
+      def thread_nested
+        nested = [thread_list, thread_list]
+        while lookahead_thread_list? do nested << thread_list end
+        nested
       end
 
       #   mailbox-data    =/ "STATUS" SP mailbox SP "(" [status-att-list] ")"
