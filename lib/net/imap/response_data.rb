@@ -763,6 +763,19 @@ module Net
       #
       # An array of Net::IMAP::ThreadMember objects for mail items that are
       # children of this in the thread.
+
+      # Returns a SequenceSet containing #seqno and all #children's seqno,
+      # recursively.
+      def to_sequence_set
+        SequenceSet.new all_seqnos
+      end
+
+      protected
+
+      def all_seqnos(node = self)
+        [node.seqno].concat node.children.flat_map { _1.all_seqnos }
+      end
+
     end
 
     # Net::IMAP::BodyStructure is included by all of the structs that can be
