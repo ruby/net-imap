@@ -14,3 +14,14 @@
       - :Seen
       - :Draft
       raw_data: "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n"
+
+  test_flags_with_various_flag_types:
+    :response: "* FLAGS (\\foo bAR $Etc \\baz)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FLAGS
+      data:
+      - :Foo
+      - bAR
+      - $Etc
+      - :Baz
+      raw_data: "* FLAGS (\\foo bAR $Etc \\baz)\r\n"
