@@ -556,6 +556,50 @@ module Net
         NIL? ? nil : case_insensitive__string
       end
 
+      # tagged-ext-comp     = astring /
+      #                       tagged-ext-comp *(SP tagged-ext-comp) /
+      #                       "(" tagged-ext-comp ")"
+      #                       ; Extensions that follow this general
+      #                       ; syntax should use nstring instead of
+      #                       ; astring when appropriate in the context
+      #                       ; of the extension.
+      #                       ; Note that a message set or a "number"
+      #                       ; can always be represented as an "atom".
+      #                       ; A URL should be represented as
+      #                       ; a "quoted" string.
+      def tagged_ext_comp
+        vals = []
+        while true
+          vals << case lookahead!(*ASTRING_TOKENS, T_LPAR).symbol
+                  when T_LPAR   then lpar; ary = tagged_ext_comp; rpar; ary
+                  when T_NUMBER then number
+                  else               astring
+                  end
+          SP? or break
+        end
+        vals
+      end
+
+      # tagged-ext-simple is a subset of atom
+      # TODO: recognize sequence-set in the lexer
+      #
+      # tagged-ext-simple   = sequence-set / number / number64
+      def tagged_ext_simple
+        number? || sequence_set
+      end
+
+      # tagged-ext-val      = tagged-ext-simple /
+      #                       "(" [tagged-ext-comp] ")"
+      def tagged_ext_val
+        if lpar?
+          _ = peek_rpar? ? [] : tagged_ext_comp
+          rpar
+          _
+        else
+          tagged_ext_simple
+        end
+      end
+
       # valid number ranges are not enforced by parser
       #   number64        = 1*DIGIT
       #                       ; Unsigned 63-bit integer
