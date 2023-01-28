@@ -591,32 +591,40 @@ class IMAPTest < Test::Unit::TestCase
       sock = server.accept
       begin
         sock.print("* OK test server\r\n")
-        sock.gets
+        sock.gets # Integer: 0
         sock.print("RUBY0001 OK TEST completed\r\n")
-        sock.gets
+        sock.gets # Integer: 2**32 - 1
         sock.print("RUBY0002 OK TEST completed\r\n")
-        sock.gets
+        sock.gets # MessageSet: 1
         sock.print("RUBY0003 OK TEST completed\r\n")
-        sock.gets
+        sock.gets # MessageSet: 2**32 - 1
         sock.print("RUBY0004 OK TEST completed\r\n")
-        sock.gets
+        sock.gets # SequenceSet: -1 => "*"
+        sock.print("RUBY0005 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 1
+        sock.print("RUBY0006 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 2**32 - 1
+        sock.print("RUBY0007 OK TEST completed\r\n")
+        sock.gets # LOGOUT
         sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0005 OK LOGOUT completed\r\n")
+        sock.print("RUBY0008 OK LOGOUT completed\r\n")
       ensure
         sock.close
         server.close
       end
     end
     begin
+      # regular numbers may be any uint32
       imap = Net::IMAP.new(server_addr, :port => port)
       assert_raise(Net::IMAP::DataFormatError) do
         imap.__send__(:send_command, "TEST", -1)
       end
       imap.__send__(:send_command, "TEST", 0)
-      imap.__send__(:send_command, "TEST", 4294967295)
+      imap.__send__(:send_command, "TEST", 2**32 - 1)
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", 4294967296)
+        imap.__send__(:send_command, "TEST", 2**32)
       end
+      # MessageSet numbers may be non-zero uint32
       assert_raise(Net::IMAP::DataFormatError) do
         imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
       end
@@ -624,9 +632,19 @@ class IMAPTest < Test::Unit::TestCase
         imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
       end
       imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
-      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967295))
+      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32 - 1))
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(4294967296))
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32))
+      end
+      # SequenceSet numbers may be non-zero uint3, and -1 is translated to *
+      imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(-1))
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(0))
+      end
+      imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(1))
+      imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(2**32-1))
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(2**32))
       end
       imap.logout
     ensure

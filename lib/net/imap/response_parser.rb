@@ -464,7 +464,7 @@ module Net
       def sequence_set
         str = combine_adjacent(*SEQUENCE_SET_TOKENS)
         if Patterns::SEQUENCE_SET_STR.match?(str)
-          SequenceSet.new(str)
+          SequenceSet[str]
         else
           parse_error("unexpected atom %p, expected sequence-set", str)
         end
