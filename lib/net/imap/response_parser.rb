@@ -94,8 +94,44 @@ module Net
           SP        = / /n
         end
 
-        include RFC5234
+        # UTF-8, a transformation format of ISO 10646
+        # >>>
+        #   UTF8-1      = %x00-7F
+        #   UTF8-tail   = %x80-BF
+        #   UTF8-2      = %xC2-DF UTF8-tail
+        #   UTF8-3      = %xE0 %xA0-BF UTF8-tail / %xE1-EC 2( UTF8-tail ) /
+        #                 %xED %x80-9F UTF8-tail / %xEE-EF 2( UTF8-tail )
+        #   UTF8-4      = %xF0 %x90-BF 2( UTF8-tail ) / %xF1-F3 3( UTF8-tail ) /
+        #                 %xF4 %x80-8F 2( UTF8-tail )
+        #   UTF8-char   = UTF8-1 / UTF8-2 / UTF8-3 / UTF8-4
+        #   UTF8-octets = *( UTF8-char )
+        #
+        # n.b. String * Integer is used for repetition, rather than /x{3}/,
+        # because ruby 3.2's linear-time cache-based optimization doesn't work
+        # with "bounded or fixed times repetition nesting in another repetition
+        # (e.g. /(a{2,3})*/). It is an implementation issue entirely, but we
+        # believe it is hard to support this case correctly."
+        # See https://bugs.ruby-lang.org/issues/19104
+        module RFC3629
+          UTF8_1      = /[\x00-\x7f]/n # aka ASCII 7bit
+          UTF8_TAIL   = /[\x80-\xBF]/n
+          UTF8_2      = /[\xC2-\xDF]#{UTF8_TAIL}/n
+          UTF8_3      = Regexp.union(/\xE0[\xA0-\xBF]#{UTF8_TAIL}/n,
+                                     /\xED[\x80-\x9F]#{UTF8_TAIL}/n,
+                                     /[\xE1-\xEC]#{    UTF8_TAIL.source * 2}/n,
+                                     /[\xEE-\xEF]#{    UTF8_TAIL.source * 2}/n)
+          UTF8_4      = Regexp.union(/[\xF1-\xF3]#{    UTF8_TAIL.source * 3}/n,
+                                     /\xF0[\x90-\xBF]#{UTF8_TAIL.source * 2}/n,
+                                     /\xF4[\x80-\x8F]#{UTF8_TAIL.source * 2}/n)
+          UTF8_CHAR   = Regexp.union(UTF8_1, UTF8_2, UTF8_3, UTF8_4)
+          UTF8_OCTETS = /#{UTF8_CHAR}*/n
+        end
 
+        include RFC5234
+        include RFC3629
+
+        # quoted-specials = DQUOTE / "\"
+        QUOTED_SPECIALS   = /["\\]/n
         # resp-specials   = "]"
         RESP_SPECIALS     = /[\]]/n
 
@@ -107,8 +143,43 @@ module Net
         CODE_TEXT         = /#{CODE_TEXT_CHAR}+/n
 
         # RFC3501:
+        #   QUOTED-CHAR   = <any TEXT-CHAR except quoted-specials> /
+        #                   "\" quoted-specials
+        # RFC9051:
+        #   QUOTED-CHAR   = <any TEXT-CHAR except quoted-specials> /
+        #                   "\" quoted-specials / UTF8-2 / UTF8-3 / UTF8-4
+        # RFC3501 & RFC9051:
+        #   quoted          = DQUOTE *QUOTED-CHAR DQUOTE
+        QUOTED_CHAR_safe  = TEXT_CHAR - QUOTED_SPECIALS
+        QUOTED_CHAR_esc   = /\\#{QUOTED_SPECIALS}/n
+        QUOTED_CHAR_rev1  = Regexp.union(QUOTED_CHAR_safe, QUOTED_CHAR_esc)
+        QUOTED_CHAR_rev2  = Regexp.union(QUOTED_CHAR_rev1,
+                                         UTF8_2, UTF8_3, UTF8_4)
+        QUOTED_rev1       = /"(#{QUOTED_CHAR_rev1}*)"/n
+        QUOTED_rev2       = /"(#{QUOTED_CHAR_rev2}*)"/n
+
+        # RFC3501:
         #   text          = 1*TEXT-CHAR
+        # RFC9051:
+        #   text          = 1*(TEXT-CHAR / UTF8-2 / UTF8-3 / UTF8-4)
+        #                     ; Non-ASCII text can only be returned
+        #                     ; after ENABLE IMAP4rev2 command
         TEXT_rev1         = /#{TEXT_CHAR}+/
+        TEXT_rev2         = /#{Regexp.union TEXT_CHAR, UTF8_2, UTF8_3, UTF8_4}+/
+
+        module_function
+
+        def unescape_quoted!(quoted)
+          quoted
+            &.gsub!(/\\(#{QUOTED_SPECIALS})/n, "\\1")
+            &.force_encoding("UTF-8")
+        end
+
+        def unescape_quoted(quoted)
+          quoted
+            &.gsub(/\\(#{QUOTED_SPECIALS})/n, "\\1")
+            &.force_encoding("UTF-8")
+        end
 
       end
 
@@ -118,7 +189,7 @@ module Net
 (?# 2:  NIL     )(NIL)(?=[\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+])|\
 (?# 3:  NUMBER  )(\d+)(?=[\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+])|\
 (?# 4:  ATOM    )([^\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+]+)|\
-(?# 5:  QUOTED  )"((?:[^\x00\r\n"\\]|\\["\\])*)"|\
+(?# 5:  QUOTED  )#{Patterns::QUOTED_rev2}|\
 (?# 6:  LPAR    )(\()|\
 (?# 7:  RPAR    )(\))|\
 (?# 8:  BSLASH  )(\\)|\
@@ -136,13 +207,13 @@ module Net
 (?# 1:  SPACE   )( )|\
 (?# 2:  NIL     )(NIL)|\
 (?# 3:  NUMBER  )(\d+)|\
-(?# 4:  QUOTED  )"((?:[^\x00\r\n"\\]|\\["\\])*)"|\
+(?# 4:  QUOTED  )#{Patterns::QUOTED_rev2}|\
 (?# 5:  LITERAL )\{(\d+)\}\r\n|\
 (?# 6:  LPAR    )(\()|\
 (?# 7:  RPAR    )(\)))/ni
 
       # text, after 'resp-text-code "]"'
-      TEXT_REGEXP = /\G(#{Patterns::TEXT_rev1})/n
+      TEXT_REGEXP = /\G(#{Patterns::TEXT_rev2})/n
 
       # resp-text-code, after 'atom SP'
       CTEXT_REGEXP = /\G(#{Patterns::CODE_TEXT})/n
@@ -1190,15 +1261,20 @@ module Net
         data
       end
 
-      # text            = 1*TEXT-CHAR
-      # TEXT-CHAR       = <any CHAR except CR and LF>
+      #   TEXT-CHAR       = <any CHAR except CR and LF>
+      # RFC3501:
+      #   text            = 1*TEXT-CHAR
+      # RFC9051:
+      #   text            = 1*(TEXT-CHAR / UTF8-2 / UTF8-3 / UTF8-4)
+      #                     ; Non-ASCII text can only be returned
+      #                     ; after ENABLE IMAP4rev2 command
       def text
-        match_re(TEXT_REGEXP, "text")[0]
+        match_re(TEXT_REGEXP, "text")[0].force_encoding("UTF-8")
       end
 
       # an "accept" versiun of #text
       def text?
-        accept_re(TEXT_REGEXP)&.[](0)
+        accept_re(TEXT_REGEXP)&.[](0)&.force_encoding("UTF-8")
       end
 
       # RFC3501:
@@ -1349,9 +1425,7 @@ module Net
           mailbox = $3
           host = $4
           for s in [name, route, mailbox, host]
-            if s
-              s.gsub!(/\\(["\\])/n, "\\1")
-            end
+            Patterns.unescape_quoted! s
           end
         else
           name = nstring
@@ -1533,8 +1607,7 @@ module Net
             elsif $4
               return Token.new(T_ATOM, $+)
             elsif $5
-              return Token.new(T_QUOTED,
-                               $+.gsub(/\\(["\\])/n, "\\1"))
+              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $6
               return Token.new(T_LPAR, $+)
             elsif $7
@@ -1577,8 +1650,7 @@ module Net
             elsif $3
               return Token.new(T_NUMBER, $+)
             elsif $4
-              return Token.new(T_QUOTED,
-                               $+.gsub(/\\(["\\])/n, "\\1"))
+              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $5
               len = $+.to_i
               val = @str[@pos, len]

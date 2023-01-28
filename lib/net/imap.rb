@@ -489,12 +489,9 @@ module Net
   # - #move, #uid_move: Moves the specified messages to the end of the
   #   specified destination mailbox, expunging them from the current mailbox.
   #
-  #--
-  # ==== RFC6855: UTF8=ACCEPT
-  # TODO...
-  # ==== RFC6855: UTF8=ONLY
-  # TODO...
-  #++
+  # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
+  #
+  # - See #enable for information about support foi UTF-8 string encoding.
   #
   #--
   # ==== RFC7888: <tt>LITERAL+</tt>, +LITERAL-+
@@ -679,6 +676,11 @@ module Net
   #   Gulbrandsen, A. and N. Freed, Ed., "Internet Message Access Protocol
   #   (\IMAP) - MOVE Extension", RFC 6851, DOI 10.17487/RFC6851, January 2013,
   #   <https://www.rfc-editor.org/info/rfc6851>.
+  # [UTF8=ACCEPT[https://tools.ietf.org/html/rfc6855]]::
+  # [UTF8=ONLY[https://tools.ietf.org/html/rfc6855]]::
+  #   Resnick, P., Ed., Newman, C., Ed., and S. Shen, Ed.,
+  #   "IMAP Support for UTF-8", RFC 6855, DOI 10.17487/RFC6855, March 2013,
+  #   <https://www.rfc-editor.org/info/rfc6855>.
   #
   # === IANA registries
   #
@@ -704,6 +706,12 @@ module Net
   #
   class IMAP < Protocol
     VERSION = "0.3.4"
+
+    # Aliases for supported capabilities, to be used with the #enable command.
+    ENABLE_ALIASES = {
+      utf8:          "UTF8=ACCEPT",
+      "UTF8=ONLY" => "UTF8=ACCEPT",
+    }.freeze
 
     autoload :SASL,       File.expand_path("imap/sasl",       __dir__)
     autoload :StringPrep, File.expand_path("imap/stringprep", __dir__)
@@ -812,12 +820,14 @@ module Net
     # Capability requirements—other than +IMAP4rev1+—are listed in the
     # documentation for each command method.
     #
+    # Related: #enable
+    #
     # ===== Basic IMAP4rev1 capabilities
     #
     # All IMAP4rev1 servers must include +IMAP4rev1+ in their capabilities list.
     # All IMAP4rev1 servers must _implement_ the +STARTTLS+,
     # <tt>AUTH=PLAIN</tt>, and +LOGINDISABLED+ capabilities, and clients must
-    # respect their presence or absence.  See the capabilites requirements on
+    # respect their presence or absence.  See the capabilities requirements on
     # #starttls, #login, and #authenticate.
     #
     # ===== Using IMAP4rev1 extensions
@@ -1886,26 +1896,84 @@ module Net
 
     # Sends an {ENABLE command [RFC5161 §3.2]}[https://www.rfc-editor.org/rfc/rfc5161#section-3.1]
     # {[IMAP4rev2 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.3.1]
-    # to enable the specified extenstions, which may be either an
-    # array or a string.  Returns a list of the extensions that were enabled.
-    #
-    # Some of the extensions that use ENABLE permit the server to send
-    # syntax that this class cannot parse. Caution is advised.
+    # to enable the specified server +capabilities+.  Each capability may be an
+    # array, string, or symbol.  Returns a list of the capabilities that were
+    # enabled.
     #
     # The +ENABLE+ command is only valid in the _authenticated_ state, before
     # any mailbox is selected.
     #
+    # Related: #capability
+    #
     # ===== Capabilities
     #
-    # The server's capabilities must include +ENABLE+
-    # [RFC5161[https://tools.ietf.org/html/rfc5161]] or IMAP4REV2
-    # [RFC9051[https://tools.ietf.org/html/rfc9051]].
+    # The server's capabilities must include
+    # +ENABLE+ [RFC5161[https://tools.ietf.org/html/rfc5161]]
+    # or +IMAP4REV2+ [RFC9051[https://tools.ietf.org/html/rfc9051]].
     #
     # Additionally, the server capabilities must include a capability matching
     # each enabled extension (usually the same name as the enabled extension).
-    def enable(extensions)
+    # The following capabilities may be enabled:
+    #
+    # [+:utf8+ --- an alias for <tt>"UTF8=ACCEPT"</tt>]
+    #
+    #   In a future release, <tt>enable(:utf8)</tt> will enable either
+    #   <tt>"UTF8=ACCEPT"</tt> or <tt>"IMAP4rev2"</tt>, depending on server
+    #   capabilities.
+    #
+    # [<tt>"UTF8=ACCEPT"</tt> [RFC6855[https://tools.ietf.org/html/rfc6855]]]
+    #
+    #   The server's capabilities must include <tt>UTF8=ACCEPT</tt> _or_
+    #   <tt>UTF8=ONLY</tt>.
+    #
+    #   This allows the server to send strings encoded as UTF-8 which might
+    #   otherwise need to use a 7-bit encoding, such as {modified
+    #   UTF-7}[::decode_utf7] for mailbox names, or RFC2047 encoded-words for
+    #   message headers.
+    #
+    #   *Note:* For now, strings with 8-bit characters are still _sent_ using
+    #   "literal" syntax.  A future update will change how commands send UTF-8
+    #   strings when <tt>UTF8=ACCEPT</tt> is enabled.  This update should be
+    #   backward-compatible.
+    #
+    #   *Note:* <em>A future update may set string encodings slightly
+    #   differently</em>, e.g: "US-ASCII" when UTF-8 is not enabled, and "UTF-8"
+    #   when it is.  Currently, the encoding of strings sent as "quoted" or
+    #   "text" will _always_ be "UTF-8", even when a 7-bit encoding is used
+    #   (e.g. UTF-7, encoded-words, quoted-printable, base64).  And currently,
+    #   string "literals" sent by the server will always have an "ASCII-8BIT"
+    #   (binary) encoding, even if they must contain UTF-8 data---although a
+    #   server _should_ use "quoted" strings once <tt>UTF8=ACCEPT</tt> is
+    #   enabled.
+    #
+    # [<tt>"UTF8=ONLY"</tt> [RFC6855[https://tools.ietf.org/html/rfc6855]]]
+    #
+    #   A server that reports the <tt>UTF8=ONLY</tt> #capability _requires_ that
+    #   the client <tt>enable("UTF8=ACCEPT")</tt> before any mailboxes may be
+    #   selected.  For convenience, <tt>enable("UTF8=ONLY")</tt> is aliased to
+    #   <tt>enable("UTF8=ACCEPT")</tt>.
+    #
+    # ===== Unsupported capabilities
+    #
+    # *Note:* Some extensions that use ENABLE permit the server to send syntax
+    # that Net::IMAP cannot parse, which may raise an exception and disconnect.
+    # Some extensions may work, but the support may be incomplete, untested, or
+    # experimental.
+    #
+    # Until a capability is documented here as supported, enabling it may result
+    # in undocumented behavior and a future release may update with incompatible
+    # behavior <em>without warning or deprecation</em>.
+    #
+    # <em>Caution is advised.</em>
+    #
+    def enable(*capabilities)
+      capabilities = capabilities
+        .flatten
+        .map {|e| ENABLE_ALIASES[e] || e }
+        .uniq
+        .join(' ')
       synchronize do
-        send_command("ENABLE #{[extensions].flatten.join(' ')}")
+        send_command("ENABLE #{capabilities}")
         return @responses.delete("ENABLED")[-1]
       end
     end

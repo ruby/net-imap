@@ -1,0 +1,23 @@
+
+---
+:tests:
+
+  test_utf8_in_list_mailbox:
+    :response: "* LIST () \"/\" \"☃️&☺️\"\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: LIST
+      data: !ruby/struct:Net::IMAP::MailboxList
+        attr: []
+        delim: "/"
+        name: "☃️&☺️"
+      raw_data: !binary |-
+        KiBMSVNUICgpICIvIiAi4piD77iPJuKYuu+4jyINCg==
+
+  test_utf8_in_resp_text:
+    :response: "* OK 𝖀𝖓𝖎𝖈𝖔𝖉𝖊 «α-ω» ほげ ふが ʇɐɥʍ\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: "𝖀𝖓𝖎𝖈𝖔𝖉𝖊 «α-ω» ほげ ふが ʇɐɥʍ"
+      raw_data: !binary |-
+        KiBPSyDwnZaA8J2Wk/Cdlo7wnZaI8J2WlPCdlonwnZaKIMKrzrEtz4nCuyDjgbvjgZIg44G144 GMIMqHyZDJpcqNDQo=
