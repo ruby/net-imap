@@ -40,7 +40,7 @@ module NetIMAPTestHelpers
         case type
 
         when :parser_assert_equal
-          response = test.fetch(:response)
+          response = test.fetch(:response).force_encoding "ASCII-8BIT"
           expected = test.fetch(:expected)
 
           define_method name do

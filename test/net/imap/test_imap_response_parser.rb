@@ -31,6 +31,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
   generate_tests_from fixture_file: "rfc3501_examples.yml"
 
+  # §4.3: Strings (also §5.1, §9, and RFC6855):
+  generate_tests_from fixture_file: "utf8_responses.yml"
+
   # §7.1: Generic Status Responses (OK, NO, BAD, PREAUTH, BYE, codes, text)
   generate_tests_from fixture_file: "resp_code_examples.yml"
   generate_tests_from fixture_file: "resp_cond_examples.yml"

@@ -4,7 +4,8 @@ prelude: |2
     require "net/imap"
 
     def load_response(file, name)
-      YAML.unsafe_load_file(file).dig(:tests, name, :response) \
+      YAML.unsafe_load_file(file).dig(:tests, name, :response)
+        .force_encoding "ASCII-8BIT" \
         or abort "ERRORO: missing %p fixture data in %p" % [name, file]
     end
 
@@ -559,6 +560,16 @@ benchmark:
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/thread_responses.yml",
                                "thread_rfc5256_example5")
+  script: parser.parse(response)
+- name: utf8_in_list_mailbox
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/utf8_responses.yml",
+                               "test_utf8_in_list_mailbox")
+  script: parser.parse(response)
+- name: utf8_in_resp_text
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/utf8_responses.yml",
+                               "test_utf8_in_resp_text")
   script: parser.parse(response)
 - name: xlist_inbox
   prelude: |2
