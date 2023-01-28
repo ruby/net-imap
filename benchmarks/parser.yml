@@ -116,6 +116,11 @@ benchmark:
       response = load_response("../test/net/imap/fixtures/response_parser/fetch_responses.yml",
                                "test_fetch_msg_att_uid")
   script: parser.parse(response)
+- name: flags_with_various_flag_types
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/flags_responses.yml",
+                               "test_flags_with_various_flag_types")
+  script: parser.parse(response)
 - name: id_gmail
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/id_responses.yml",
@@ -191,10 +196,10 @@ benchmark:
       response = load_response("../test/net/imap/fixtures/response_parser/thread_responses.yml",
                                "test_invalid_thread_empty_response")
   script: parser.parse(response)
-- name: list_with_various_flag_types_and_capitalizations
+- name: list_with_various_flag_capitalizations
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/list_responses.yml",
-                               "test_list_with_various_flag_types_and_capitalizations")
+                               "test_list_with_various_flag_capitalizations")
   script: parser.parse(response)
 - name: resp_code_ALREADYEXISTS_rfc9051_7.1_example
   prelude: |2
@@ -375,6 +380,11 @@ benchmark:
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/resp_code_examples.yml",
                                "test_resp_code_UNSEEN_rfc3501_6.3.1_example")
+  script: parser.parse(response)
+- name: resp_text_PERMANENTFLAGS_with_various_flag_types
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/resp_code_examples.yml",
+                               "test_resp_text_PERMANENTFLAGS_with_various_flag_types")
   script: parser.parse(response)
 - name: resp_text_with_T_LBRA
   prelude: |2

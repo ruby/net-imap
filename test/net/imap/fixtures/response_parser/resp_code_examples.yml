@@ -86,6 +86,22 @@
         text: No permanent flags permitted
       raw_data: "* OK [PERMANENTFLAGS ()] No permanent flags permitted\r\n"
 
+  test_resp_text_PERMANENTFLAGS_with_various_flag_types:
+    :response: "* ok [PERMANENTFLAGS (\\foo \\* bAR $Etc \\baz)] flags saved\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: flags saved
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: PERMANENTFLAGS
+          data:
+          - :Foo
+          - :*
+          - bAR
+          - $Etc
+          - :Baz
+      raw_data: "* ok [PERMANENTFLAGS (\\foo \\* bAR $Etc \\baz)] flags saved\r\n"
+
   test_resp_code_READ-ONLY_rfc3501_6.3.2_example:
     :response: "A932 OK [READ-ONLY] EXAMINE completed\r\n"
     :expected: !ruby/struct:Net::IMAP::TaggedResponse
