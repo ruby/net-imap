@@ -9,6 +9,7 @@ module Net
     # Parses an \IMAP server response.
     class ResponseParser
       include ParserUtils
+      extend  ParserUtils::Generator
 
       # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
       def initialize
@@ -38,9 +39,6 @@ module Net
 
       EXPR_BEG   = :EXPR_BEG     # the default, used in most places
       EXPR_DATA  = :EXPR_DATA    # envelope, body(structure), namespaces
-      EXPR_TEXT  = :EXPR_TEXT    # text, after 'resp-text-code "]"'
-      EXPR_RTEXT = :EXPR_RTEXT   # resp-text, before "["
-      EXPR_CTEXT = :EXPR_CTEXT   # resp-text-code, after 'atom SP'
 
       T_SPACE    = :SPACE        # atom special
       T_ATOM     = :ATOM         # atom (subset of astring chars)
@@ -59,6 +57,60 @@ module Net
       T_CRLF     = :CRLF         # atom special; text special; quoted special
       T_TEXT     = :TEXT         # any char except CRLF
       T_EOF      = :EOF          # end of response string
+
+      module Patterns
+
+        module CharClassSubtraction
+          refine Regexp do
+            def -(rhs); /[#{source}&&[^#{rhs.source}]]/n.freeze end
+          end
+        end
+        using CharClassSubtraction
+
+        # From RFC5234, "Augmented BNF for Syntax Specifications: ABNF"
+        # >>>
+        #   ALPHA   =  %x41-5A / %x61-7A   ; A-Z / a-z
+        #   CHAR    = %x01-7F
+        #   CRLF    =  CR LF
+        #                   ; Internet standard newline
+        #   CTL     = %x00-1F / %x7F
+        #                ; controls
+        #   DIGIT   =  %x30-39
+        #                   ; 0-9
+        #   DQUOTE  =  %x22
+        #                   ; " (Double Quote)
+        #   HEXDIG  =  DIGIT / "A" / "B" / "C" / "D" / "E" / "F"
+        #   OCTET   = %x00-FF
+        #   SP      =  %x20
+        module RFC5234
+          ALPHA     = /[A-Za-z]/n
+          CHAR      = /[\x01-\x7f]/n
+          CRLF      = /\r\n/n
+          CTL       = /[\x00-\x1F\x7F]/n
+          DIGIT     = /\d/n
+          DQUOTE    = /"/n
+          HEXDIG    = /\h/
+          OCTET     = /[\x00-\xFF]/n # not using /./m for embedding purposes
+          SP        = / /n
+        end
+
+        include RFC5234
+
+        # resp-specials   = "]"
+        RESP_SPECIALS     = /[\]]/n
+
+        # TEXT-CHAR       = <any CHAR except CR and LF>
+        TEXT_CHAR         = CHAR - /[\r\n]/
+
+        # resp-text-code  = ... / atom [SP 1*<any TEXT-CHAR except "]">]
+        CODE_TEXT_CHAR    = TEXT_CHAR - RESP_SPECIALS
+        CODE_TEXT         = /#{CODE_TEXT_CHAR}+/n
+
+        # RFC3501:
+        #   text          = 1*TEXT-CHAR
+        TEXT_rev1         = /#{TEXT_CHAR}+/
+
+      end
 
       # the default, used in most places
       BEG_REGEXP = /\G(?:\
@@ -90,19 +142,17 @@ module Net
 (?# 7:  RPAR    )(\)))/ni
 
       # text, after 'resp-text-code "]"'
-      TEXT_REGEXP = /\G(?:\
-(?# 1:  TEXT    )([^\x00\r\n]*))/ni
-
-      # resp-text, before "["
-      RTEXT_REGEXP = /\G(?:\
-(?# 1:  LBRA    )(\[)|\
-(?# 2:  TEXT    )([^\x00\r\n]*))/ni
+      TEXT_REGEXP = /\G(#{Patterns::TEXT_rev1})/n
 
       # resp-text-code, after 'atom SP'
-      CTEXT_REGEXP = /\G(?:\
-(?# 1:  TEXT    )([^\x00\r\n\]]*))/ni
+      CTEXT_REGEXP = /\G(#{Patterns::CODE_TEXT})/n
 
       Token = Struct.new(:symbol, :value)
+
+      def_char_matchers :SP,   " ", :T_SPACE
+
+      def_char_matchers :lbra, "[", :T_LBRA
+      def_char_matchers :rbra, "]", :T_RBRA
 
       # atom            = 1*ATOM-CHAR
       #
@@ -1143,20 +1193,27 @@ module Net
       # text            = 1*TEXT-CHAR
       # TEXT-CHAR       = <any CHAR except CR and LF>
       def text
-        match(T_TEXT, lex_state: EXPR_TEXT).value
+        match_re(TEXT_REGEXP, "text")[0]
       end
 
-      # resp-text       = ["[" resp-text-code "]" SP] text
+      # an "accept" versiun of #text
+      def text?
+        accept_re(TEXT_REGEXP)&.[](0)
+      end
+
+      # RFC3501:
+      #   resp-text       = ["[" resp-text-code "]" SP] text
+      # RFC9051:
+      #   resp-text       = ["[" resp-text-code "]" SP] [text]
+      #
+      # We leniently re-interpret this as
+      #   resp-text       = ["[" resp-text-code "]" [SP [text]] / [text]
       def resp_text
-        token = match(T_LBRA, T_TEXT, lex_state: EXPR_RTEXT)
-        case token.symbol
-        when T_LBRA
-          code = resp_text_code
-          match(T_RBRA)
-          accept_space # violating RFC
-          ResponseText.new(code, text)
-        when T_TEXT
-          ResponseText.new(nil, token.value)
+        if lbra?
+          code = resp_text_code; rbra
+          ResponseText.new(code, SP? && text? || "")
+        else
+          ResponseText.new(nil, text? || "")
         end
       end
 
@@ -1198,13 +1255,17 @@ module Net
           token = lookahead
           if token.symbol == T_SPACE
             shift_token
-            token = match(T_TEXT, lex_state: EXPR_CTEXT)
-            result = ResponseCode.new(name, token.value)
+            result = ResponseCode.new(name, text_chars_except_rbra)
           else
             result = ResponseCode.new(name, nil)
           end
         end
         return result
+      end
+
+      # 1*<any TEXT-CHAR except "]">
+      def text_chars_except_rbra
+        match_re(CTEXT_REGEXP, '1*<any TEXT-CHAR except "]">')[0]
       end
 
       def charset_list
@@ -1447,21 +1508,6 @@ module Net
 
       SPACES_REGEXP = /\G */n
 
-      # This advances @pos directly so it's safe before changing @lex_state.
-      def accept_space
-        if @token
-          if @token.symbol == T_SPACE
-            shift_token
-            " "
-          end
-        elsif @str[@pos] == " "
-          @pos += 1
-          " "
-        end
-      end
-
-      alias SP? accept_space
-
       # The RFC is very strict about this and usually we should be too.
       # But skipping spaces is usually a safe workaround for buggy servers.
       #
@@ -1547,44 +1593,6 @@ module Net
             end
           else
             @str.index(/\S*/n, @pos)
-            parse_error("unknown token - %s", $&.dump)
-          end
-        when EXPR_TEXT
-          if @str.index(TEXT_REGEXP, @pos)
-            @pos = $~.end(0)
-            if $1
-              return Token.new(T_TEXT, $+)
-            else
-              parse_error("[Net::IMAP BUG] TEXT_REGEXP is invalid")
-            end
-          else
-            @str.index(/\S*/n, @pos)
-            parse_error("unknown token - %s", $&.dump)
-          end
-        when EXPR_RTEXT
-          if @str.index(RTEXT_REGEXP, @pos)
-            @pos = $~.end(0)
-            if $1
-              return Token.new(T_LBRA, $+)
-            elsif $2
-              return Token.new(T_TEXT, $+)
-            else
-              parse_error("[Net::IMAP BUG] RTEXT_REGEXP is invalid")
-            end
-          else
-            @str.index(/\S*/n, @pos)
-            parse_error("unknown token - %s", $&.dump)
-          end
-        when EXPR_CTEXT
-          if @str.index(CTEXT_REGEXP, @pos)
-            @pos = $~.end(0)
-            if $1
-              return Token.new(T_TEXT, $+)
-            else
-              parse_error("[Net::IMAP BUG] CTEXT_REGEXP is invalid")
-            end
-          else
-            @str.index(/\S*/n, @pos) #/
             parse_error("unknown token - %s", $&.dump)
           end
         else
