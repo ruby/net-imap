@@ -891,13 +891,6 @@ module Net
     #                   should use BodyTypeBasic.
     # BodyTypeMultipart:: for <tt>multipart/*</tt> parts
     #
-    # ==== Deprecated BodyStructure classes
-    # The following classes represent invalid server responses or parser bugs:
-    # BodyTypeExtension:: parser bug: used for <tt>message/*</tt> where
-    #                     BodyTypeBasic should have been used.
-    # BodyTypeAttachment:: server bug: some servers sometimes return the
-    #                      "Content-Disposition: attachment" data where the
-    #                      entire body structure for a message part is expected.
     module BodyStructure
     end
 
@@ -914,6 +907,7 @@ module Net
                                      :param, :content_id,
                                      :description, :encoding, :size,
                                      :md5, :disposition, :language,
+                                     :location,
                                      :extension)
       include BodyStructure
 
@@ -1049,6 +1043,7 @@ module Net
                                     :description, :encoding, :size,
                                     :lines,
                                     :md5, :disposition, :language,
+                                    :location,
                                     :extension)
       include BodyStructure
 
@@ -1094,6 +1089,7 @@ module Net
                                        :description, :encoding, :size,
                                        :envelope, :body, :lines,
                                        :md5, :disposition, :language,
+                                       :location,
                                        :extension)
       include BodyStructure
 
@@ -1126,36 +1122,41 @@ module Net
       end
     end
 
-    # === WARNING
-    # BodyTypeAttachment represents a <tt>body-fld-dsp</tt> that is
-    # incorrectly in a position where the IMAP4rev1 grammar expects a nested
-    # +body+ structure.
+    # BodyTypeAttachment is not used and will be removed in an upcoming release.
     #
-    # >>>
-    #   \IMAP body structures are parenthesized lists and assign their fields
-    #   positionally, so missing fields change the intepretation of all
-    #   following fields.  Buggy \IMAP servers sometimes leave fields missing
-    #   rather than empty, which inevitably confuses parsers.
-    #   BodyTypeAttachment was an attempt to parse a common type of buggy body
-    #   structure without crashing.
+    # === Bug Analysis
     #
-    #   Currently, when Net::IMAP::ResponseParser sees "attachment" as the first
-    #   entry in a <tt>body-type-1part</tt>, which is where the MIME type should
-    #   be, it uses BodyTypeAttachment to capture the rest.  "attachment" is not
-    #   a valid MIME type, but _is_ a common <tt>Content-Disposition</tt>.  What
-    #   might have happened was that buggy server could not parse the message
-    #   (which might have been incorrectly formatted) and output a
-    #   <tt>body-type-dsp</tt> where a Net::IMAP::ResponseParser expected to see
-    #   a +body+.
+    # \IMAP body structures are parenthesized lists and assign their fields
+    # positionally, so missing fields change the intepretation of all
+    # following fields.  Additionally, different body types have a different
+    # number of required fields, followed by optional "extension" fields.
     #
-    # A future release will replace this, probably with a ContentDisposition
-    # nested inside another body structure object, maybe BodyTypeBasic, or
-    # perhaps a new body structure class that represents any unparsable body
-    # structure.
+    # BodyTypeAttachment was previously returned when a "message/rfc822" part,
+    # which should be sent as <tt>body-type-msg</tt> with ten required fields,
+    # was actually sent as a <tt>body-type-basic</tt> with _seven_ required
+    # fields.
+    #
+    #   basic => type, subtype, param, id, desc, enc, octets, md5=nil,  dsp=nil, lang=nil, loc=nil, *ext
+    #   msg   => type, subtype, param, id, desc, enc, octets, envelope, body,    lines,    md5=nil, ...
+    #
+    # Normally, +envelope+ and +md5+ are incompatible, but Net::IMAP leniently
+    # allowed buggy servers to send +NIL+ for +envelope+.  As a result, when a
+    # server sent a <tt>message/rfc822</tt> part with +NIL+ for +md5+ and a
+    # non-<tt>NIL</tt> +dsp+, Net::IMAP mis-interpreted the
+    # <tt>Content-Disposition</tt> as if it were a strange body type.  In all
+    # reported cases, the <tt>Content-Disposition</tt> was "attachment", so
+    # BodyTypeAttachment was created as the workaround.
+    #
+    # === Current behavior
+    #
+    # When interpreted strictly, +envelope+ and +md5+ are incompatible.  So the
+    # current parsing algorithm peeks ahead after it has recieved the seventh
+    # body field.  If the next token is not the start of an +envelope+, we assume
+    # the server has incorrectly sent us a <tt>body-type-basic</tt> and return
+    # BodyTypeBasic.  As a result, what was previously BodyTypeMessage#body =>
+    # BodyTypeAttachment is now BodyTypeBasic#disposition => ContentDisposition.
     #
     class BodyTypeAttachment < Struct.new(:dsp_type, :_unused_, :param)
-      include BodyStructure
-
       # *invalid for BodyTypeAttachment*
       def media_type
         warn(<<~WARN, uplevel: 1)
@@ -1190,11 +1191,14 @@ module Net
       end
     end
 
+    deprecate_constant :BodyTypeAttachment
+
     # Net::IMAP::BodyTypeMultipart represents body structures of messages and
     # message parts, when <tt>Content-Type</tt> is <tt>multipart/*</tt>.
     class BodyTypeMultipart < Struct.new(:media_type, :subtype,
                                          :parts,
                                          :param, :disposition, :language,
+                                         :location,
                                          :extension)
       include BodyStructure
 
@@ -1265,23 +1269,24 @@ module Net
       end
     end
 
-    # === WARNING:
+    # === Obsolete
+    # BodyTypeExtension is not used and will be removed in an upcoming release.
+    #
     # >>>
-    #   BodyTypeExtension is (incorrectly) used for <tt>message/*</tt> parts
+    #   BodyTypeExtension was (incorrectly) used for <tt>message/*</tt> parts
     #   (besides <tt>message/rfc822</tt>, which correctly uses BodyTypeMessage).
     #
-    # A future release will replace this class with:
-    # * BodyTypeMessage for <tt>message/rfc822</tt> and <tt>message/global</tt>
-    # * BodyTypeBasic for any other <tt>message/*</tt>
+    #   Net::IMAP now (correctly) parses all message types (other than
+    #   <tt>message/rfc822</tt> or <tt>message/global</tt>) as BodyTypeBasic.
     class BodyTypeExtension < Struct.new(:media_type, :subtype,
                                          :params, :content_id,
                                          :description, :encoding, :size)
-      include BodyStructure
-
       def multipart?
         return false
       end
     end
+
+    deprecate_constant :BodyTypeExtension
 
   end
 end

@@ -20,6 +20,16 @@ module Net
             class_eval <<~RUBY, __FILE__, __LINE__ + 1
               # frozen_string_literal: true
 
+              # force use of #next_token; no string peeking
+              def lookahead_#{name}?
+                #{LOOKAHEAD}&.symbol == #{token}
+              end
+
+              # use token or string peek
+              def peek_#{name}?
+                @token ? @token.symbol == #{token} : @str[@pos] == #{char}
+              end
+
               # like accept(token_symbols); returns token or nil
               def #{name}?
                 if @token&.symbol == #{token}
@@ -147,6 +157,16 @@ module Net
 
         def lookahead
           @token ||= next_token
+        end
+
+        def peek_str?(str)
+          assert_no_lookahead if Net::IMAP.debug
+          @str[@pos, str.length] == str
+        end
+
+        def peek_re(re)
+          assert_no_lookahead if Net::IMAP.debug
+          re.match(@str, @pos)
         end
 
         def accept_re(re)
