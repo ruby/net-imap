@@ -4,6 +4,16 @@ require "net/imap"
 require "test/unit"
 require "yaml"
 
+# Compatibility with older versions, e.g. the version comes with ruby 2.7
+module YAMLPolyfill
+  unless YAML.respond_to? :unsafe_load_file
+    refine YAML.singleton_class do
+      def unsafe_load_file(...) load_file(...) end
+    end
+  end
+end
+using YAMLPolyfill
+
 module NetIMAPTestHelpers
   module TestFixtureGenerators
 
@@ -30,7 +40,9 @@ module NetIMAPTestHelpers
         case type
 
         when :parser_assert_equal
-          test => response:, expected:;
+          response = test.fetch(:response)
+          expected = test.fetch(:expected)
+
           define_method name do
             with_debug do
               parser = Net::IMAP::ResponseParser.new
@@ -40,18 +52,21 @@ module NetIMAPTestHelpers
           end
 
         when :parser_pending
-          test => response:;
+          response = test.fetch(:response)
+
           define_method name do
             with_debug do
               parser = Net::IMAP::ResponseParser.new
               actual = parser.parse response
-              puts YAML.dump name => {response:, expected: actual}
+              puts YAML.dump name => {response: response, expected: actual}
               pend "update tests with expected data..."
             end
           end
 
         when :assert_parse_failure
-          test => response:, message:;
+          response = test.fetch(:response)
+          message  = test.fetch(:message)
+
           define_method name do
             err = assert_raise(Net::IMAP::ResponseParseError) do
               Net::IMAP::ResponseParser.new.parse response
