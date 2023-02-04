@@ -228,13 +228,19 @@ module Net
       def_char_matchers :lbra, "[", :T_LBRA
       def_char_matchers :rbra, "]", :T_RBRA
 
+      # valid number ranges are not enforced by parser
+      #   number          = 1*DIGIT
+      #                       ; Unsigned 32-bit integer
+      #                       ; (0 <= n < 4,294,967,296)
+      def_token_matchers :number, T_NUMBER, coerce: Integer
+
       def_token_matchers :quoted, T_QUOTED
 
       #   string          = quoted / literal
       def_token_matchers :string,  T_QUOTED, T_LITERAL
 
       # use where string represents "LABEL" values
-      def_token_matchers :case_insensitive_string,
+      def_token_matchers :case_insensitive__string,
                          T_QUOTED, T_LITERAL,
                          send: :upcase
 
@@ -312,6 +318,18 @@ module Net
       def nquoted
         NIL? ? nil : quoted
       end
+
+      # use where nstring represents "LABEL" values
+      def case_insensitive__nstring
+        NIL? ? nil : case_insensitive__string
+      end
+
+      # valid number ranges are not enforced by parser
+      #   number64        = 1*DIGIT
+      #                       ; Unsigned 63-bit integer
+      #                       ; (0 <= n <= 9,223,372,036,854,775,807)
+      alias number64    number
+      alias number64?   number?
 
       def response
         token = lookahead
@@ -552,331 +570,258 @@ module Net
         return name, data
       end
 
+      # RFC-3501 & RFC-9051:
+      #   body            = "(" (body-type-1part / body-type-mpart) ")"
       def body
         @lex_state = EXPR_DATA
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          result = nil
-        else
-          match(T_LPAR)
-          token = lookahead
-          if token.symbol == T_LPAR
-            result = body_type_mpart
-          else
-            result = body_type_1part
-          end
-          match(T_RPAR)
-        end
+        lpar; result = peek_lpar? ? body_type_mpart : body_type_1part; rpar
+        result
+      ensure
         @lex_state = EXPR_BEG
-        return result
       end
+      alias lookahead_body? lookahead_lpar?
 
+      # RFC-3501 & RFC9051:
+      #   body-type-1part = (body-type-basic / body-type-msg / body-type-text)
+      #                     [SP body-ext-1part]
       def body_type_1part
-        token = lookahead
-        case token.value
-        when /\A(?:TEXT)\z/ni
-          return body_type_text
-        when /\A(?:MESSAGE)\z/ni
-          return body_type_msg
-        when /\A(?:ATTACHMENT)\z/ni
-          return body_type_attachment
-        when /\A(?:MIXED)\z/ni
-          return body_type_mixed
-        else
-          return body_type_basic
+        # This regexp peek is a performance optimization.
+        # The lookahead fallback would work fine too.
+        m = peek_re(/\G(?:
+            (?<TEXT>     "TEXT"    \s "[^"]+"             )
+            |(?<MESSAGE> "MESSAGE" \s "(?:RFC822|GLOBAL)" )
+            |(?<BASIC>   "[^"]+"   \s "[^"]+"             )
+            |(?<MIXED>   "MIXED"                          )
+           )/nix)
+        choice = m&.named_captures&.compact&.keys&.first
+        # In practice, the following line should never be used. But the ABNF
+        # *does* allow literals, and this will handle them.
+        choice ||= lookahead_case_insensitive_string!
+        case choice
+        when "BASIC"   then body_type_basic # => BodyTypeBasic
+        when "MESSAGE" then body_type_msg   # => BodyTypeMessage | BodyTypeBasic
+        when "TEXT"    then body_type_text  # => BodyTypeText
+        when "MIXED"   then body_type_mixed # => BodyTypeMultipart (server bug)
+        else                body_type_basic # might be a bug; server's or ours?
         end
       end
 
+      # RFC-3501 & RFC9051:
+      #   body-type-basic = media-basic SP body-fields
       def body_type_basic
-        mtype, msubtype = media_type
-        token = lookahead
-        if token.symbol == T_RPAR
-          return BodyTypeBasic.new(mtype, msubtype)
-        end
-        match(T_SPACE)
-        param, content_id, desc, enc, size = body_fields
-        md5, disposition, language, extension = body_ext_1part
-        return BodyTypeBasic.new(mtype, msubtype,
-                                 param, content_id,
-                                 desc, enc, size,
-                                 md5, disposition, language, extension)
+        type = media_basic # n.b. "basic" type isn't enforced here
+        if lookahead_rpar? then return BodyTypeBasic.new(*type) end # invalid
+        SP!;    flds = body_fields
+        SP? and exts = body_ext_1part
+        BodyTypeBasic.new(*type, *flds, *exts)
       end
 
+      # RFC-3501 & RFC-9051:
+      #   body-type-text  = media-text SP body-fields SP body-fld-lines
       def body_type_text
-        mtype, msubtype = media_type
-        match(T_SPACE)
-        param, content_id, desc, enc, size = body_fields
-        match(T_SPACE)
-        lines = number
-        md5, disposition, language, extension = body_ext_1part
-        return BodyTypeText.new(mtype, msubtype,
-                                param, content_id,
-                                desc, enc, size,
-                                lines,
-                                md5, disposition, language, extension)
+        type = media_text
+        SP!;   flds  = body_fields
+        SP!;   lines = body_fld_lines
+        SP? and exts = body_ext_1part
+        BodyTypeText.new(*type, *flds, lines, *exts)
       end
 
+      # RFC-3501 & RFC-9051:
+      #   body-type-msg   = media-message SP body-fields SP envelope
+      #                     SP body SP body-fld-lines
       def body_type_msg
-        mtype, msubtype = media_type
-        match(T_SPACE)
-        param, content_id, desc, enc, size = body_fields
+        # n.b. "message/rfc822" type isn't enforced here
+        type = media_message
+        SP!; flds = body_fields
 
-        token = lookahead
-        if token.symbol == T_RPAR
-          # If this is not message/rfc822, we shouldn't apply the RFC822
-          # spec to it.  We should handle anything other than
-          # message/rfc822 using multipart extension data [rfc3501] (i.e.
-          # the data itself won't be returned, we would have to retrieve it
-          # with BODYSTRUCTURE instead of with BODY
-
-          # Also, sometimes a message/rfc822 is included as a large
-          # attachment instead of having all of the other details
-          # (e.g. attaching a .eml file to an email)
-          if msubtype == "RFC822"
-            return BodyTypeMessage.new(mtype, msubtype, param, content_id,
-                                       desc, enc, size, nil, nil, nil, nil,
-                                       nil, nil, nil)
-          else
-            return BodyTypeExtension.new(mtype, msubtype,
-                                         param, content_id,
-                                         desc, enc, size)
-          end
+        # Sometimes servers send body-type-basic when body-type-msg should be.
+        # E.g: when a message/rfc822 part has "Content-Disposition: attachment".
+        #
+        # * SP "("     --> SP envelope       --> continue as body-type-msg
+        # * ")"        --> no body-ext-1part --> completed body-type-basic
+        # * SP nstring --> SP body-fld-md5
+        #              --> SP body-ext-1part --> continue as body-type-basic
+        #
+        # It's probably better to return BodyTypeBasic---even for
+        # "message/rfc822"---than BodyTypeMessage with invalid fields.
+        unless peek_str?(" (")
+          SP? and exts = body_ext_1part
+          return BodyTypeBasic.new(*type, *flds, *exts)
         end
 
-        match(T_SPACE)
-        env = envelope
-        match(T_SPACE)
-        b = body
-        match(T_SPACE)
-        lines = number
-        md5, disposition, language, extension = body_ext_1part
-        return BodyTypeMessage.new(mtype, msubtype,
-                                   param, content_id,
-                                   desc, enc, size,
-                                   env, b, lines,
-                                   md5, disposition, language, extension)
+        SP!; env   = envelope
+        SP!; bdy   = body
+        SP!; lines = body_fld_lines
+        SP? and exts = body_ext_1part
+        BodyTypeMessage.new(*type, *flds, env, bdy, lines, *exts)
       end
 
-      def body_type_attachment
-        mtype = case_insensitive_string
-        match(T_SPACE)
-        param = body_fld_param
-        return BodyTypeAttachment.new(mtype, nil, param)
-      end
-
+      # This is a malformed body-type-mpart with no subparts.
       def body_type_mixed
-        mtype = "MULTIPART"
-        msubtype = case_insensitive_string
-        param, disposition, language, extension = body_ext_mpart
-        return BodyTypeBasic.new(mtype, msubtype, param, nil, nil, nil, nil, nil, disposition, language, extension)
+        # warn "malformed body-type-mpart: multipart/mixed with no parts."
+        type = media_subtype # => "MIXED"
+        SP? and exts = body_ext_mpart
+        BodyTypeMultipart.new("MULTIPART", type, nil, *exts)
       end
 
+      # RFC-3501 & RFC-9051:
+      #   body-type-mpart = 1*body SP media-subtype
+      #                     [SP body-ext-mpart]
       def body_type_mpart
-        parts = []
-        while true
-          token = lookahead
-          if token.symbol == T_SPACE
-            shift_token
-            break
-          end
-          parts.push(body)
-        end
-        mtype = "MULTIPART"
-        msubtype = case_insensitive_string
-        param, disposition, language, extension = body_ext_mpart
-        return BodyTypeMultipart.new(mtype, msubtype, parts,
-                                     param, disposition, language,
-                                     extension)
+        parts = [body]; parts << body until SP?; msubtype = media_subtype
+        SP? and exts = body_ext_mpart
+        BodyTypeMultipart.new("MULTIPART", msubtype, parts, *exts)
       end
 
+      # n.b. this handles both type and subtype
+      #
+      # RFC-3501 vs RFC-9051:
+      #   media-basic     = ((DQUOTE ("APPLICATION" / "AUDIO" / "IMAGE" /
+      #                     "MESSAGE" /
+      #                     "VIDEO") DQUOTE) / string) SP media-subtype
+      #   media-basic     = ((DQUOTE ("APPLICATION" / "AUDIO" / "IMAGE" /
+      #                     "FONT" / "MESSAGE" / "MODEL" /
+      #                     "VIDEO") DQUOTE) / string) SP media-subtype
+      #
+      #   media-message   = DQUOTE "MESSAGE" DQUOTE SP
+      #                     DQUOTE "RFC822" DQUOTE
+      #   media-message   = DQUOTE "MESSAGE" DQUOTE SP
+      #                     DQUOTE ("RFC822" / "GLOBAL") DQUOTE
+      #
+      # RFC-3501 & RFC-9051:
+      #   media-text      = DQUOTE "TEXT" DQUOTE SP media-subtype
+      #   media-subtype   = string
       def media_type
-        mtype = case_insensitive_string
-        token = lookahead
-        if token.symbol != T_SPACE
-          return mtype, nil
-        end
-        match(T_SPACE)
-        msubtype = case_insensitive_string
+        mtype = case_insensitive__string
+        SP? or return mtype, nil # ??? quirky!
+        msubtype = media_subtype
         return mtype, msubtype
       end
 
+      # TODO: check types
+      alias media_basic   media_type # */* --- catchall
+      alias media_message media_type # message/rfc822, message/global
+      alias media_text    media_type # text/*
+
+      alias media_subtype case_insensitive__string
+
+      # RFC-3501 & RFC-9051:
+      #   body-fields     = body-fld-param SP body-fld-id SP body-fld-desc SP
+      #                     body-fld-enc SP body-fld-octets
       def body_fields
-        param = body_fld_param
-        match(T_SPACE)
-        content_id = nstring
-        match(T_SPACE)
-        desc = nstring
-        match(T_SPACE)
-        enc = case_insensitive_string
-        match(T_SPACE)
-        size = number
-        return param, content_id, desc, enc, size
+        fields = []
+        fields << body_fld_param; SP!
+        fields << body_fld_id;    SP!
+        fields << body_fld_desc;  SP!
+        fields << body_fld_enc;   SP!
+        fields << body_fld_octets
+        fields
       end
 
+      # RFC3501, RFC9051:
+      # body-fld-param  = "(" string SP string *(SP string SP string) ")" / nil
       def body_fld_param
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        end
-        match(T_LPAR)
+        return if NIL?
         param = {}
-        while true
-          token = lookahead
-          case token.symbol
-          when T_RPAR
-            shift_token
-            break
-          when T_SPACE
-            shift_token
-          end
-          name = case_insensitive_string
-          match(T_SPACE)
-          val = string
-          param[name] = val
+        lpar
+        name = case_insensitive__string; SP!; param[name] = string
+        while SP?
+          name = case_insensitive__string; SP!; param[name] = string
         end
-        return param
+        rpar
+        param
       end
 
+      # RFC2060
+      #   body_ext_1part  ::= body_fld_md5 [SPACE body_fld_dsp
+      #                       [SPACE body_fld_lang
+      #                       [SPACE 1#body_extension]]]
+      #                       ;; MUST NOT be returned on non-extensible
+      #                       ;; "BODY" fetch
+      # RFC3501 & RFC9051
+      #   body-ext-1part  = body-fld-md5 [SP body-fld-dsp [SP body-fld-lang
+      #                     [SP body-fld-loc *(SP body-extension)]]]
+      #                       ; MUST NOT be returned on non-extensible
+      #                       ; "BODY" fetch
       def body_ext_1part
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return nil
-        end
-        md5 = nstring
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return md5
-        end
-        disposition = body_fld_dsp
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return md5, disposition
-        end
-        language = body_fld_lang
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return md5, disposition, language
-        end
-
-        extension = body_extensions
-        return md5, disposition, language, extension
+        fields = [];          fields << body_fld_md5
+        SP? or return fields; fields << body_fld_dsp
+        SP? or return fields; fields << body_fld_lang
+        SP? or return fields; fields << body_fld_loc
+        SP? or return fields; fields << body_extensions
+        fields
       end
 
+      # RFC-2060:
+      #   body_ext_mpart  = body_fld_param [SP body_fld_dsp SP body_fld_lang
+      #                     [SP 1#body_extension]]
+      #                       ;; MUST NOT be returned on non-extensible
+      #                       ;; "BODY" fetch
+      # RFC-3501 & RFC-9051:
+      #   body-ext-mpart  = body-fld-param [SP body-fld-dsp [SP body-fld-lang
+      #                     [SP body-fld-loc *(SP body-extension)]]]
+      #                       ; MUST NOT be returned on non-extensible
+      #                       ; "BODY" fetch
       def body_ext_mpart
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return nil
-        end
-        param = body_fld_param
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return param
-        end
-        disposition = body_fld_dsp
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return param, disposition
-        end
-        language = body_fld_lang
-
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-        else
-          return param, disposition, language
-        end
-
-        extension = body_extensions
-        return param, disposition, language, extension
+        fields = [];          fields << body_fld_param
+        SP? or return fields; fields << body_fld_dsp
+        SP? or return fields; fields << body_fld_lang
+        SP? or return fields; fields << body_fld_loc
+        SP? or return fields; fields << body_extensions
+        fields
       end
 
+      alias body_fld_desc   nstring
+      alias body_fld_id     nstring
+      alias body_fld_loc    nstring
+      alias body_fld_lines  number64 # number in 3501, number64 in 9051
+      alias body_fld_md5    nstring
+      alias body_fld_octets number
+
+      # RFC-3501 & RFC-9051:
+      #   body-fld-enc    = (DQUOTE ("7BIT" / "8BIT" / "BINARY" / "BASE64"/
+      #                     "QUOTED-PRINTABLE") DQUOTE) / string
+      alias body_fld_enc case_insensitive__string
+
+      #   body-fld-dsp    = "(" string SP body-fld-param ")" / nil
       def body_fld_dsp
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        end
-        match(T_LPAR)
-        dsp_type = case_insensitive_string
-        match(T_SPACE)
-        param = body_fld_param
-        match(T_RPAR)
-        return ContentDisposition.new(dsp_type, param)
+        return if NIL?
+        lpar; dsp_type = case_insensitive__string
+        SP!;  param    = body_fld_param
+        rpar
+        ContentDisposition.new(dsp_type, param)
       end
 
+      #   body-fld-lang   = nstring / "(" string *(SP string) ")"
       def body_fld_lang
-        token = lookahead
-        if token.symbol == T_LPAR
-          shift_token
-          result = []
-          while true
-            token = lookahead
-            case token.symbol
-            when T_RPAR
-              shift_token
-              return result
-            when T_SPACE
-              shift_token
-            end
-            result.push(case_insensitive_string)
-          end
+        if lpar?
+          result = [case_insensitive__string]
+          result << case_insensitive__string while SP?
+          result
         else
-          lang = nstring
-          if lang
-            return lang.upcase
-          else
-            return lang
-          end
+          case_insensitive__nstring
         end
       end
 
+      #   body-extension *(SP body-extension)
       def body_extensions
         result = []
-        while true
-          token = lookahead
-          case token.symbol
-          when T_RPAR
-            return result
-          when T_SPACE
-            shift_token
-          end
-          result.push(body_extension)
-        end
+        result << body_extension; while SP? do result << body_extension end
+        result
       end
 
+      #   body-extension  = nstring / number / number64 /
+      #                      "(" body-extension *(SP body-extension) ")"
+      #                       ; Future expansion.  Client implementations
+      #                       ; MUST accept body-extension fields.  Server
+      #                       ; implementations MUST NOT generate
+      #                       ; body-extension fields except as defined by
+      #                       ; future Standard or Standards Track
+      #                       ; revisions of this specification.
       def body_extension
-        token = lookahead
-        case token.symbol
-        when T_LPAR
-          shift_token
-          result = body_extensions
-          match(T_RPAR)
-          return result
-        when T_NUMBER
-          return number
-        else
-          return nstring
+        if (uint = number64?) then uint
+        elsif lpar?           then exts = body_extensions; rpar; exts
+        else                       nstring
         end
       end
 
@@ -1509,16 +1454,6 @@ module Net
         else
           atom
         end
-      end
-
-      def number
-        token = lookahead
-        if token.symbol == T_NIL
-          shift_token
-          return nil
-        end
-        token = match(T_NUMBER)
-        return token.value.to_i
       end
 
       # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
