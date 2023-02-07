@@ -74,7 +74,7 @@ module Net
     end
 
     def send_quoted_string(str)
-      put_string('"' + str.gsub(/["\\]/n, "\\\\\\&") + '"')
+      put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
     def send_literal(str, tag = nil)
