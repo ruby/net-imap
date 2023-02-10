@@ -1,0 +1,9 @@
+---
+:tests:
+  test_invalid_noop_response_is_ignored:
+    :comment: |
+      This should probably use UntaggedResponse, perhaps with an
+      UnparsedResponseData object for its #data.
+    :response: "* NOOP\r\n"
+    :expected: !ruby/struct:Net::IMAP::IgnoredResponse
+      raw_data: "* NOOP\r\n"

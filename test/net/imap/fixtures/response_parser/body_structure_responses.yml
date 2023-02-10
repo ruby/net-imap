@@ -1,0 +1,525 @@
+---
+:tests:
+
+  test_bodystructure_bug7146_msg_delivery_status:
+    :comment: |
+      [Bug #7146]
+      This was part of a larger response that caused crashes, but this was the
+      minimal test case to demonstrate it
+    :response: "* 4902 FETCH (BODY ((\"MESSAGE\" \"DELIVERY-STATUS\" NIL NIL NIL \"7BIT\"
+      324) \"REPORT\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 4902
+        attr:
+          BODY: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: REPORT
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeExtension
+              media_type: MESSAGE
+              subtype: DELIVERY-STATUS
+              params:
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 324
+            param:
+            disposition:
+            language:
+            extension:
+      raw_data: "* 4902 FETCH (BODY ((\"MESSAGE\" \"DELIVERY-STATUS\" NIL NIL NIL \"7BIT\" 324) \"REPORT\"))\r\n"
+
+  test_bodystructure_bug7147_message_rfc822_attachment:
+    :comments: |
+      [Bug #7147]
+    :response: "* 5441 FETCH (BODY (((\"TEXT\" \"PLAIN\" (\"CHARSET\" \"iso-8859-1\")
+      NIL NIL \"QUOTED-PRINTABLE\" 69 1)(\"TEXT\" \"HTML\" (\"CHARSET\" \"iso-8859-1\")
+      NIL NIL \"QUOTED-PRINTABLE\" 455 12) \"ALTERNATIVE\")(\"MESSAGE\" \"RFC822\"
+      (\"NAME\" \"ATT00026.eml\") NIL NIL \"7BIT\" 4079755) \"MIXED\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 5441
+        attr:
+          BODY: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: MIXED
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeMultipart
+              media_type: MULTIPART
+              subtype: ALTERNATIVE
+              parts:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: PLAIN
+                param:
+                  CHARSET: iso-8859-1
+                content_id:
+                description:
+                encoding: QUOTED-PRINTABLE
+                size: 69
+                lines: 1
+                md5:
+                disposition:
+                language:
+                extension:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: HTML
+                param:
+                  CHARSET: iso-8859-1
+                content_id:
+                description:
+                encoding: QUOTED-PRINTABLE
+                size: 455
+                lines: 12
+                md5:
+                disposition:
+                language:
+                extension:
+              param:
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeMessage
+              media_type: MESSAGE
+              subtype: RFC822
+              param:
+                NAME: ATT00026.eml
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 4079755
+              envelope:
+              body:
+              lines:
+              md5:
+              disposition:
+              language:
+              extension:
+            param:
+            disposition:
+            language:
+            extension:
+      raw_data: "* 5441 FETCH (BODY (((\"TEXT\" \"PLAIN\" (\"CHARSET\" \"iso-8859-1\")
+        NIL NIL \"QUOTED-PRINTABLE\" 69 1)(\"TEXT\" \"HTML\" (\"CHARSET\" \"iso-8859-1\")
+        NIL NIL \"QUOTED-PRINTABLE\" 455 12) \"ALTERNATIVE\")(\"MESSAGE\" \"RFC822\"
+        (\"NAME\" \"ATT00026.eml\") NIL NIL \"7BIT\" 4079755) \"MIXED\"))\r\n"
+
+  test_invalid_bodystructure_bug7153_mixed:
+    :comments: |
+      [Bug #7153]
+    :response: "* 1038 FETCH (BODY (\"MIXED\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1038
+        attr:
+          BODY: !ruby/struct:Net::IMAP::BodyTypeBasic
+            media_type: MULTIPART
+            subtype: MIXED
+            param:
+            content_id:
+            description:
+            encoding:
+            size:
+            md5:
+            disposition:
+            language:
+            extension:
+      raw_data: "* 1038 FETCH (BODY (\"MIXED\"))\r\n"
+
+  test_bodystructure_bug8167_delivery_status_with_extra_data:
+    :comment: |
+      [Bug #8167]
+    :response: &bug8167 "* 29021 FETCH (RFC822.SIZE 3162 UID 113622 RFC822.HEADER {1155}\r\nReturn-path:
+      <>\r\nEnvelope-to: info@xxxxxxxx.si\r\nDelivery-date: Tue, 26 Mar 2013 12:42:58
+      +0100\r\nReceived: from mail by xxxx.xxxxxxxxxxx.net with spam-scanned (Exim
+      4.76)\r\n\tid 1UKSHI-000Cwl-AR\r\n\tfor info@xxxxxxxx.si; Tue, 26 Mar 2013 12:42:58
+      +0100\r\nX-Spam-Checker-Version: SpamAssassin 3.3.1 (2010-03-16) on xxxx.xxxxxxxxxxx.net\r\nX-Spam-Level:
+      **\r\nX-Spam-Status: No, score=2.1 required=7.0 tests=DKIM_ADSP_NXDOMAIN,RDNS_NONE\r\n\tautolearn=no
+      version=3.3.1\r\nReceived: from [xx.xxx.xxx.xx] (port=56890 helo=xxxxxx.localdomain)\r\n\tby
+      xxxx.xxxxxxxxxxx.net with esmtp (Exim 4.76)\r\n\tid 1UKSHI-000Cwi-9j\r\n\tfor
+      info@xxxxxxxx.si; Tue, 26 Mar 2013 12:42:56 +0100\r\nReceived: by xxxxxx.localdomain
+      (Postfix)\r\n\tid 72725BEA64A; Tue, 26 Mar 2013 12:42:55 +0100 (CET)\r\nDate:
+      Tue, 26 Mar 2013 12:42:55 +0100 (CET)\r\nFrom: MAILER-DAEMON@xxxxxx.localdomain
+      (Mail Delivery System)\r\nSubject: Undelivered Mail Returned to Sender\r\nTo:
+      info@xxxxxxxx.si\r\nAuto-Submitted: auto-replied\r\nMIME-Version: 1.0\r\nContent-Type:
+      multipart/report; report-type=delivery-status;\r\n\tboundary=\"27797BEA649.1364298175/xxxxxx.localdomain\"\r\nMessage-Id:
+      <20130326114255.72725BEA64A@xxxxxx.localdomain>\r\n\r\n BODYSTRUCTURE ((\"text\"
+      \"plain\" (\"charset\" \"us-ascii\") NIL \"Notification\" \"7bit\" 510 14 NIL
+      NIL NIL NIL)(\"message\" \"delivery-status\" NIL NIL \"Delivery report\" \"7bit\"
+      410 NIL NIL NIL NIL)(\"text\" \"rfc822-headers\" (\"charset\" \"us-ascii\")
+      NIL \"Undelivered Message Headers\" \"7bit\" 612 15 NIL NIL NIL NIL) \"report\"
+      (\"report-type\" \"delivery-status\" \"boundary\" \"27797BEA649.1364298175/xxxxxx.localdomain\")
+      NIL NIL NIL))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 29021
+        attr:
+          RFC822.SIZE: 3162
+          UID: 113622
+          RFC822.HEADER: "Return-path: <>\r\nEnvelope-to: info@xxxxxxxx.si\r\nDelivery-date:
+            Tue, 26 Mar 2013 12:42:58 +0100\r\nReceived: from mail by xxxx.xxxxxxxxxxx.net
+            with spam-scanned (Exim 4.76)\r\n\tid 1UKSHI-000Cwl-AR\r\n\tfor info@xxxxxxxx.si;
+            Tue, 26 Mar 2013 12:42:58 +0100\r\nX-Spam-Checker-Version: SpamAssassin
+            3.3.1 (2010-03-16) on xxxx.xxxxxxxxxxx.net\r\nX-Spam-Level: **\r\nX-Spam-Status:
+            No, score=2.1 required=7.0 tests=DKIM_ADSP_NXDOMAIN,RDNS_NONE\r\n\tautolearn=no
+            version=3.3.1\r\nReceived: from [xx.xxx.xxx.xx] (port=56890 helo=xxxxxx.localdomain)\r\n\tby
+            xxxx.xxxxxxxxxxx.net with esmtp (Exim 4.76)\r\n\tid 1UKSHI-000Cwi-9j\r\n\tfor
+            info@xxxxxxxx.si; Tue, 26 Mar 2013 12:42:56 +0100\r\nReceived: by xxxxxx.localdomain
+            (Postfix)\r\n\tid 72725BEA64A; Tue, 26 Mar 2013 12:42:55 +0100 (CET)\r\nDate:
+            Tue, 26 Mar 2013 12:42:55 +0100 (CET)\r\nFrom: MAILER-DAEMON@xxxxxx.localdomain
+            (Mail Delivery System)\r\nSubject: Undelivered Mail Returned to Sender\r\nTo:
+            info@xxxxxxxx.si\r\nAuto-Submitted: auto-replied\r\nMIME-Version: 1.0\r\nContent-Type:
+            multipart/report; report-type=delivery-status;\r\n\tboundary=\"27797BEA649.1364298175/xxxxxx.localdomain\"\r\nMessage-Id:
+            <20130326114255.72725BEA64A@xxxxxx.localdomain>\r\n\r\n"
+          BODYSTRUCTURE: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: REPORT
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeText
+              media_type: TEXT
+              subtype: PLAIN
+              param:
+                CHARSET: us-ascii
+              content_id:
+              description: Notification
+              encoding: 7BIT
+              size: 510
+              lines: 14
+              md5:
+              disposition:
+              language:
+              extension:
+              -
+            - !ruby/struct:Net::IMAP::BodyTypeMessage
+              media_type: MESSAGE
+              subtype: DELIVERY-STATUS
+              param:
+              content_id:
+              description: Delivery report
+              encoding: 7BIT
+              size: 410
+              envelope:
+              body:
+              lines:
+              md5:
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeText
+              media_type: TEXT
+              subtype: RFC822-HEADERS
+              param:
+                CHARSET: us-ascii
+              content_id:
+              description: Undelivered Message Headers
+              encoding: 7BIT
+              size: 612
+              lines: 15
+              md5:
+              disposition:
+              language:
+              extension:
+              -
+            param:
+              REPORT-TYPE: delivery-status
+              BOUNDARY: 27797BEA649.1364298175/xxxxxx.localdomain
+            disposition:
+            language:
+            extension:
+            -
+      raw_data: *bug8167
+
+  test_bodystructure_bug11128_ext_mpart_without_lang:
+    :comment: |
+      [Bug #11128]
+    :response: "* 4 FETCH (BODY (((\"text\" \"plain\" (\"charset\" \"utf-8\") NIL
+      NIL \"7bit\" 257 9 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"utf-8\")
+      NIL NIL \"quoted-printable\" 655 9 NIL NIL NIL NIL) \"alternative\" (\"boundary\"
+      \"001a1137a5047848dd05157ddaa1\") NIL)(\"application\" \"pdf\" (\"name\" \"test.xml\"
+      \"x-apple-part-url\" \"9D00D9A2-98AB-4EFB-85BA-FB255F8BF3D7\") NIL NIL \"base64\"
+      4383638 NIL (\"attachment\" (\"filename\" \"test.xml\")) NIL NIL) \"mixed\"
+      (\"boundary\" \"001a1137a5047848e405157ddaa3\") NIL))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 4
+        attr:
+          BODY: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: MIXED
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeMultipart
+              media_type: MULTIPART
+              subtype: ALTERNATIVE
+              parts:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: PLAIN
+                param:
+                  CHARSET: utf-8
+                content_id:
+                description:
+                encoding: 7BIT
+                size: 257
+                lines: 9
+                md5:
+                disposition:
+                language:
+                extension:
+                -
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: HTML
+                param:
+                  CHARSET: utf-8
+                content_id:
+                description:
+                encoding: QUOTED-PRINTABLE
+                size: 655
+                lines: 9
+                md5:
+                disposition:
+                language:
+                extension:
+                -
+              param:
+                BOUNDARY: 001a1137a5047848dd05157ddaa1
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeBasic
+              media_type: APPLICATION
+              subtype: PDF
+              param:
+                NAME: test.xml
+                X-APPLE-PART-URL: 9D00D9A2-98AB-4EFB-85BA-FB255F8BF3D7
+              content_id:
+              description:
+              encoding: BASE64
+              size: 4383638
+              md5:
+              disposition: !ruby/struct:Net::IMAP::ContentDisposition
+                dsp_type: ATTACHMENT
+                param:
+                  FILENAME: test.xml
+              language:
+              extension:
+              -
+            param:
+              BOUNDARY: 001a1137a5047848e405157ddaa3
+            disposition:
+            language:
+            extension:
+      raw_data: "* 4 FETCH (BODY (((\"text\" \"plain\" (\"charset\" \"utf-8\") NIL
+        NIL \"7bit\" 257 9 NIL NIL NIL NIL)(\"text\" \"html\" (\"charset\" \"utf-8\")
+        NIL NIL \"quoted-printable\" 655 9 NIL NIL NIL NIL) \"alternative\" (\"boundary\"
+        \"001a1137a5047848dd05157ddaa1\") NIL)(\"application\" \"pdf\" (\"name\" \"test.xml\"
+        \"x-apple-part-url\" \"9D00D9A2-98AB-4EFB-85BA-FB255F8BF3D7\") NIL NIL \"base64\"
+        4383638 NIL (\"attachment\" (\"filename\" \"test.xml\")) NIL NIL) \"mixed\"
+        (\"boundary\" \"001a1137a5047848e405157ddaa3\") NIL))\r\n"
+
+  test_bodystructure_mixed_boundary:
+    :response: &mixed "* 2688 FETCH (UID 179161 BODYSTRUCTURE ((\"TEXT\" \"PLAIN\" (\"CHARSET\"
+      \"iso-8859-1\") NIL NIL \"QUOTED-PRINTABLE\" 200 4 NIL NIL NIL)(\"MESSAGE\"
+      \"DELIVERY-STATUS\" NIL NIL NIL \"7BIT\" 318 NIL NIL NIL)(\"MESSAGE\" \"RFC822\"
+      NIL NIL NIL \"7BIT\" 2177 (\"Tue, 11 May 2010 18:28:16 -0400\" \"Re: Welcome
+      letter\" ((\"David\" NIL \"info\" \"xxxxxxxx.si\")) ((\"David\" NIL \"info\"
+      \"xxxxxxxx.si\")) ((\"David\" NIL \"info\" \"xxxxxxxx.si\")) ((\"Doretha\" NIL
+      \"doretha.info\" \"xxxxxxxx.si\")) NIL NIL \"<AC1D15E06EA82F47BDE18E851CC32F330717704E@localdomain>\"
+      \"<AANLkTikKMev1I73L2E7XLjRs67IHrEkb23f7ZPmD4S_9@localdomain>\") (\"MIXED\"
+      (\"BOUNDARY\" \"000e0cd29212e3e06a0486590ae2\") NIL NIL) 37 NIL NIL NIL) \"REPORT\"
+      (\"BOUNDARY\" \"16DuG.4XbaNOvCi.9ggvq.8Ipnyp3\" \"REPORT-TYPE\" \"delivery-status\")
+      NIL NIL))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 2688
+        attr:
+          UID: 179161
+          BODYSTRUCTURE: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: REPORT
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeText
+              media_type: TEXT
+              subtype: PLAIN
+              param:
+                CHARSET: iso-8859-1
+              content_id:
+              description:
+              encoding: QUOTED-PRINTABLE
+              size: 200
+              lines: 4
+              md5:
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeMessage
+              media_type: MESSAGE
+              subtype: DELIVERY-STATUS
+              param:
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 318
+              envelope:
+              body:
+              lines:
+              md5:
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeMessage
+              media_type: MESSAGE
+              subtype: RFC822
+              param:
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 2177
+              envelope: !ruby/struct:Net::IMAP::Envelope
+                date: Tue, 11 May 2010 18:28:16 -0400
+                subject: 'Re: Welcome letter'
+                from:
+                - !ruby/struct:Net::IMAP::Address
+                  name: David
+                  route:
+                  mailbox: info
+                  host: xxxxxxxx.si
+                sender:
+                - !ruby/struct:Net::IMAP::Address
+                  name: David
+                  route:
+                  mailbox: info
+                  host: xxxxxxxx.si
+                reply_to:
+                - !ruby/struct:Net::IMAP::Address
+                  name: David
+                  route:
+                  mailbox: info
+                  host: xxxxxxxx.si
+                to:
+                - !ruby/struct:Net::IMAP::Address
+                  name: Doretha
+                  route:
+                  mailbox: doretha.info
+                  host: xxxxxxxx.si
+                cc:
+                bcc:
+                in_reply_to: "<AC1D15E06EA82F47BDE18E851CC32F330717704E@localdomain>"
+                message_id: "<AANLkTikKMev1I73L2E7XLjRs67IHrEkb23f7ZPmD4S_9@localdomain>"
+              body: !ruby/struct:Net::IMAP::BodyTypeBasic
+                media_type: MULTIPART
+                subtype: MIXED
+                param:
+                  BOUNDARY: 000e0cd29212e3e06a0486590ae2
+                content_id:
+                description:
+                encoding:
+                size:
+                md5:
+                disposition:
+                language:
+                extension:
+              lines: 37
+              md5:
+              disposition:
+              language:
+              extension:
+            param:
+              BOUNDARY: 16DuG.4XbaNOvCi.9ggvq.8Ipnyp3
+              REPORT-TYPE: delivery-status
+            disposition:
+            language:
+            extension:
+      raw_data: *mixed
+
+  test_invalid_bodystructure_message_sent_as_basic:
+    :comment: |
+      [Bug #6397] [ruby-core:44849]
+    :response: &attachment "* 980 FETCH (UID 2862 BODYSTRUCTURE (((\"TEXT\" \"PLAIN\" (\"CHARSET\"
+      \"iso-8859-1\") NIL NIL \"7BIT\" 416 21 NIL NIL NIL)(\"TEXT\" \"HTML\" (\"CHARSET\"
+      \"iso-8859-1\") NIL NIL \"7BIT\" 1493 32 NIL NIL NIL) \"ALTERNATIVE\" (\"BOUNDARY\"
+      \"Boundary_(ID_IaecgfnXwG5bn3x8lIeGIQ)\") NIL NIL)(\"MESSAGE\" \"RFC822\" (\"NAME\"
+      \"Fw_ ____ _____ ____.eml\") NIL NIL \"7BIT\" 1980088 NIL (\"ATTACHMENT\" (\"FILENAME\"
+      \"Fw_ ____ _____ ____.eml\")) NIL) \"MIXED\" (\"BOUNDARY\" \"Boundary_(ID_eDdLc/j0mBIzIlR191pHjA)\")
+      NIL NIL))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 980
+        attr:
+          UID: 2862
+          BODYSTRUCTURE: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: MIXED
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeMultipart
+              media_type: MULTIPART
+              subtype: ALTERNATIVE
+              parts:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: PLAIN
+                param:
+                  CHARSET: iso-8859-1
+                content_id:
+                description:
+                encoding: 7BIT
+                size: 416
+                lines: 21
+                md5:
+                disposition:
+                language:
+                extension:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: HTML
+                param:
+                  CHARSET: iso-8859-1
+                content_id:
+                description:
+                encoding: 7BIT
+                size: 1493
+                lines: 32
+                md5:
+                disposition:
+                language:
+                extension:
+              param:
+                BOUNDARY: Boundary_(ID_IaecgfnXwG5bn3x8lIeGIQ)
+              disposition:
+              language:
+              extension:
+            - !ruby/struct:Net::IMAP::BodyTypeMessage
+              media_type: MESSAGE
+              subtype: RFC822
+              param:
+                NAME: Fw_ ____ _____ ____.eml
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 1980088
+              envelope:
+              body: !ruby/struct:Net::IMAP::BodyTypeAttachment
+                dsp_type: ATTACHMENT
+                _unused_:
+                param:
+                  FILENAME: Fw_ ____ _____ ____.eml
+              lines:
+              md5:
+              disposition:
+              language:
+              extension:
+            param:
+              BOUNDARY: Boundary_(ID_eDdLc/j0mBIzIlR191pHjA)
+            disposition:
+            language:
+            extension:
+      raw_data: *attachment

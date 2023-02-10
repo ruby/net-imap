@@ -1,0 +1,50 @@
+---
+:tests:
+  # n.b: The RFC9051 examples would be identical to these RFC3501 examples.
+
+  rfc3501_6.2.2_example_continuation_request:
+    :response: "+ YGgGCSqGSIb3EgECAgIAb1kwV6ADAgEFoQMCAQ+iSzBJoAMCAQGiQgRAtHTEuOP2BXb9sBYFR4SJlDZxmg39IxmRBOhXRKdDA0uHTCOT9Bq3OsUTXUlk0CsFLoa8j+gvGDlgHuqzWHPSQg==\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "YGgGCSqGSIb3EgECAgIAb1kwV6ADAgEFoQMCAQ+iSzBJoAMCAQGiQgRAtHTEuOP2BXb9sBYFR4SJlDZxmg39IxmRBOhXRKdDA0uHTCOT9Bq3OsUTXUlk0CsFLoa8j+gvGDlgHuqzWHPSQg=="
+      raw_data: "+ YGgGCSqGSIb3EgECAgIAb1kwV6ADAgEFoQMCAQ+iSzBJoAMCAQGiQgRAtHTEuOP2BXb9sBYFR4SJlDZxmg39IxmRBOhXRKdDA0uHTCOT9Bq3OsUTXUlk0CsFLoa8j+gvGDlgHuqzWHPSQg==\r\n"
+
+  rfc3501_6.3.11_example_continuation_request:
+    :response: "+ Ready for literal data\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Ready for literal data"
+      raw_data: "+ Ready for literal data\r\n"
+
+  # 7.5.    Server Responses - Command Continuation Request
+  #
+  #    The command continuation request response is indicated by a "+" token
+  #    instead of a tag.  This form of response indicates that the server is
+  #    ready to accept the continuation of a command from the client.  The
+  #    remainder of this response is a line of text.
+  # ...
+  #    Example:    C: A001 LOGIN {11}
+  #                S: + Ready for additional command text
+  #                C: FRED FOOBAR {7}
+  #                S: + Ready for additional command text
+  #                C: fat man
+  #                S: A001 OK LOGIN completed
+  #                C: A044 BLURDYBLOOP {102856}
+  #                S: A044 BAD No such command as "BLURDYBLOOP"
+  rfc3501_7.5_continuation_request_example:
+    :response: "+ Ready for additional command text\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Ready for additional command text"
+      raw_data: "+ Ready for additional command text\r\n"
+
+  test_continuation_request_without_response_text:
+    :response: "+\r\n"
+    :expected: !ruby/struct:Net::IMAP::ContinuationRequest
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: ''
+      raw_data: "+\r\n"

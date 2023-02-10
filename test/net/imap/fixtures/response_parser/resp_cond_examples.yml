@@ -1,0 +1,119 @@
+---
+:tests:
+  # The RFC9051 examples aren't significantly different from RFC3501.
+
+  # 7.1.    Server Responses - Status Responses
+  #
+  #    Status responses are OK, NO, BAD, PREAUTH and BYE.  OK, NO, and BAD
+  #    can be tagged or untagged.  PREAUTH and BYE are always untagged.
+
+  # 7.1.1.  OK Response
+  #
+  # Example:    S: * OK IMAP4rev1 server ready
+  #             C: A001 LOGIN fred blurdybloop
+  #             S: * OK [ALERT] System shutdown in 10 minutes
+  #             S: A001 OK LOGIN Completed
+
+  rfc3501_7.1.1_OK_response_example_1:
+    :response: "* OK IMAP4rev1 server ready\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "IMAP4rev1 server ready"
+      raw_data: "* OK IMAP4rev1 server ready\r\n"
+
+  rfc3501_7.1.1_OK_response_example_2:
+    :response: "* OK [ALERT] System shutdown in 10 minutes\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: ALERT
+          data:
+        text: "System shutdown in 10 minutes"
+      raw_data: "* OK [ALERT] System shutdown in 10 minutes\r\n"
+
+  rfc3501_7.1.1_OK_response_example_3:
+    :response: "A001 OK LOGIN Completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A001
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "LOGIN Completed"
+      raw_data: "A001 OK LOGIN Completed\r\n"
+
+  # 7.1.2.  NO Response
+  #
+  # S: * NO Disk is 98% full, please delete unnecessary data
+  # S: A222 OK COPY completed
+  # C: A223 COPY 3:200 blurdybloop
+  # S: * NO Disk is 98% full, please delete unnecessary data
+  # S: * NO Disk is 99% full, please delete unnecessary data
+  # S: A223 NO COPY failed: disk is full
+
+  rfc3501_7.1.2_NO_response_example_1:
+    :response: "* NO Disk is 98% full, please delete unnecessary data\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: "NO"
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Disk is 98% full, please delete unnecessary data"
+      raw_data: "* NO Disk is 98% full, please delete unnecessary data\r\n"
+
+  rfc3501_7.1.2_NO_response_example_4:
+    :response: "A223 NO COPY failed: disk is full\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A223
+      name: "NO"
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "COPY failed: disk is full"
+      raw_data: "A223 NO COPY failed: disk is full\r\n"
+
+  # 7.1.3.  BAD Response
+  #
+  # Example:    C: ...very long command line...
+  #             S: * BAD Command line too long
+  #             C: ...empty line...
+  #             S: * BAD Empty command line
+  #             C: A443 EXPUNGE
+  #             S: * BAD Disk crash, attempting salvage to a new disk!
+  #             S: * OK Salvage successful, no data lost
+  #             S: A443 OK Expunge completed
+
+  rfc3501_7.1.3_BAD_response_example:
+    :response: "* BAD Disk crash, attempting salvage to a new disk!\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: BAD
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Disk crash, attempting salvage to a new disk!"
+      raw_data: "* BAD Disk crash, attempting salvage to a new disk!\r\n"
+
+  # 7.1.4.  PREAUTH Response
+  #
+  # Example:    S: * PREAUTH IMAP4rev1 server logged in as Smith
+
+  rfc3501_7.1.4_PREAUTH_response_example:
+    :response: "* PREAUTH IMAP4rev1 server logged in as Smith\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: PREAUTH
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "IMAP4rev1 server logged in as Smith"
+      raw_data: "* PREAUTH IMAP4rev1 server logged in as Smith\r\n"
+
+  # 7.1.5.  BYE Response
+  #
+  # Example:    S: * BYE Autologout; idle for too long
+
+  rfc3501_7.1.5_BYE_response_example:
+    :response: "* BYE Autologout; idle for too long\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: BYE
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: "Autologout; idle for too long"
+      raw_data: "* BYE Autologout; idle for too long\r\n"

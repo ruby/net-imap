@@ -1,0 +1,91 @@
+---
+:tests:
+  # 7.4.2.  FETCH Response
+  #
+  #    Example:    S: * 23 FETCH (FLAGS (\Seen) RFC822.SIZE 44827)
+  rfc3501_7.4.2_FETCH_response_example:
+    :response: "* 23 FETCH (FLAGS (\\Seen) RFC822.SIZE 44827)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 23
+        attr:
+          FLAGS:
+          - :Seen
+          RFC822.SIZE: 44827
+      raw_data: "* 23 FETCH (FLAGS (\\Seen) RFC822.SIZE 44827)\r\n"
+
+  test_fetch_msg_att_uid:
+    :response: "* 1 FETCH (UID 92285)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          UID: 92285
+      raw_data: "* 1 FETCH (UID 92285)\r\n"
+
+  test_fetch_msg_att_flags_and_uid:
+    :response: "* 1 FETCH (FLAGS (\\Seen $MDNSent \\Flagged Custom) UID 5)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          FLAGS:
+          - :Seen
+          - "$MDNSent"
+          - :Flagged
+          - Custom
+          UID: 5
+      raw_data: "* 1 FETCH (FLAGS (\\Seen $MDNSent \\Flagged Custom) UID 5)\r\n"
+
+  test_invalid_fetch_msg_att_extra_space:
+    :response: "* 1 FETCH (UID 92285 )\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          UID: 92285
+      raw_data: "* 1 FETCH (UID 92285 )\r\n"
+
+  test_fetch_msg_att_modseq:
+    :comments: |
+      [Bug #10119]
+    :response: "* 1 FETCH (FLAGS (Seen) MODSEQ (12345) UID 5)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          FLAGS:
+          - Seen
+          MODSEQ: 12345
+          UID: 5
+      raw_data: "* 1 FETCH (FLAGS (Seen) MODSEQ (12345) UID 5)\r\n"
+
+  test_fetch_msg_att_rfc822:
+    :response: "* 123 FETCH (RFC822 {5}\r\nfoo\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 123
+        attr:
+          RFC822: "foo\r\n"
+      raw_data: "* 123 FETCH (RFC822 {5}\r\nfoo\r\n)\r\n"
+
+  test_invalid_fetch_msg_att_rfc822_with_brackets:
+    :response: "* 123 FETCH (RFC822[] {5}\r\nfoo\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 123
+        attr:
+          RFC822: "foo\r\n"
+      raw_data: "* 123 FETCH (RFC822[] {5}\r\nfoo\r\n)\r\n"
+
+  test_invalid_fetch_msg_att_unknown_fails:
+    :test_type: :assert_parse_failure
+    :response: "* 123 FETCH (UNKNOWN 92285)\r\n"
+    :message: !ruby/regexp / for \{123\}/

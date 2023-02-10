@@ -1,0 +1,89 @@
+---
+:tests:
+  # 7.2.5.  SEARCH Response
+  #
+  #    Example:    S: * SEARCH 2 3 6
+  rfc3501_7.2.5_SEARCH_response_example:
+    :response: "* SEARCH 2 3 6\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data:
+      - 2
+      - 3
+      - 6
+      raw_data: "* SEARCH 2 3 6\r\n"
+
+  test_search_response_empty:
+    :response: "* SEARCH\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: []
+      # data: !ruby/array:Net::IMAP::SearchResult
+      #   internal: []
+      #   ivars:
+      #     "@modseq":
+      raw_data: "* SEARCH\r\n"
+
+  test_search_response_single_seq_nums_returned:
+    :response: "* SEARCH 1\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: # !ruby/array:Net::IMAP::SearchResult
+      #   internal:
+        - 1
+      #   ivars:
+      #     "@modseq":
+      raw_data: "* SEARCH 1\r\n"
+
+  test_search_response_multiple_seq_nums_returned:
+    :response: "* SEARCH 1 2 3\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: # !ruby/array:Net::IMAP::SearchResult
+        # internal:
+        - 1
+        - 2
+        - 3
+        # ivars:
+          # "@modseq":
+      raw_data: "* SEARCH 1 2 3\r\n"
+
+  test_invalid_search_response_single_result_with_trailing_space:
+    :quirky_servers: Yahoo
+    :response: "* SEARCH 1 \r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: # !ruby/array:Net::IMAP::SearchResult
+        # internal:
+        - 1
+        # ivars:
+          # "@modseq":
+      raw_data: "* SEARCH 1 \r\n"
+
+  test_invalid_search_response_multiple_result_with_trailing_space:
+    :quirky_servers: Yahoo
+    :response: "* SEARCH 1 2 3 \r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: # !ruby/array:Net::IMAP::SearchResult
+        # internal:
+        - 1
+        - 2
+        - 3
+        # ivars:
+          # "@modseq":
+      raw_data: "* SEARCH 1 2 3 \r\n"
+
+  test_search_response_with_condstore_modseq:
+    :comment: |
+      [Bug #10112]
+    :response: "* SEARCH 87216 87221 (MODSEQ 7667567)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: SEARCH
+      data: # !ruby/array:Net::IMAP::SearchResult
+        # internal:
+        - 87216
+        - 87221
+        # ivars:
+          # "@modseq": 7667567
+      raw_data: "* SEARCH 87216 87221 (MODSEQ 7667567)\r\n"

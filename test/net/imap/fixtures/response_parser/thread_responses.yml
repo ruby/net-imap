@@ -1,0 +1,347 @@
+---
+:tests:
+  thread_rfc5256_example1:
+    :response: "* THREAD (166)(167)(168)(169)(172)(170)(171)(173)(174 (175)(176)(178)(181)(180))(179)(177(183)(182)(188)(184)(185)(186)(187)(189))(190)(191)(192)(193)(194
+      195)(196 (197)(198))(199)(200 202)(201)(203)(204)(205)(206 207)(208)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data:
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 166
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 167
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 168
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 169
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 172
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 170
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 171
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 173
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 174
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 175
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 176
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 178
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 181
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 180
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 179
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 177
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 183
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 182
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 188
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 184
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 185
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 186
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 187
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 189
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 190
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 191
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 192
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 193
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 194
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 195
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 196
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 197
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 198
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 199
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 200
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 202
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 201
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 203
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 204
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 205
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 206
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 207
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 208
+        children: []
+      raw_data: "* THREAD (166)(167)(168)(169)(172)(170)(171)(173)(174 (175)(176)(178)(181)(180))(179)(177(183)(182)(188)(184)(185)(186)(187)(189))(190)(191)(192)(193)(194
+        195)(196 (197)(198))(199)(200 202)(201)(203)(204)(205)(206 207)(208)\r\n"
+  thread_rfc5256_example2:
+    :response: "* THREAD (166)(167)(168)(169)(172)((170)(179))(171)(173)((174)(175)(176)(178)(181)(180))((177)(183)(182)(188
+      (184)(189))(185 186)(187))(190)(191)(192)(193)((194)(195 196))(197 198)(199)(200
+      202)(201)(203)(204)(205 206 207)(208)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data:
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 166
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 167
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 168
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 169
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 172
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno:
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 170
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 179
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 171
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 173
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno:
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 174
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 175
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 176
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 178
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 181
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 180
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno:
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 177
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 183
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 182
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 188
+          children:
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 184
+            children: []
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 189
+            children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 185
+          children:
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 186
+            children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 187
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 190
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 191
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 192
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 193
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno:
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 194
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 195
+          children:
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 196
+            children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 197
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 198
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 199
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 200
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 202
+          children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 201
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 203
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 204
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 205
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 206
+          children:
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 207
+            children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 208
+        children: []
+      raw_data: "* THREAD (166)(167)(168)(169)(172)((170)(179))(171)(173)((174)(175)(176)(178)(181)(180))((177)(183)(182)(188
+        (184)(189))(185 186)(187))(190)(191)(192)(193)((194)(195 196))(197 198)(199)(200
+        202)(201)(203)(204)(205 206 207)(208)\r\n"
+  thread_rfc5256_example3:
+    :response: "* THREAD\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data: []
+      raw_data: "* THREAD\r\n"
+  test_invalid_thread_empty_response:
+    :response: "* THREAD \r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data: []
+      raw_data: "* THREAD \r\n"
+  thread_rfc5256_example4:
+    :response: "* THREAD (2)(3 6 (4 23)(44 7 96))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data:
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 2
+        children: []
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno: 3
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 6
+          children:
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 4
+            children:
+            - !ruby/struct:Net::IMAP::ThreadMember
+              seqno: 23
+              children: []
+          - !ruby/struct:Net::IMAP::ThreadMember
+            seqno: 44
+            children:
+            - !ruby/struct:Net::IMAP::ThreadMember
+              seqno: 7
+              children:
+              - !ruby/struct:Net::IMAP::ThreadMember
+                seqno: 96
+                children: []
+      raw_data: "* THREAD (2)(3 6 (4 23)(44 7 96))\r\n"
+  thread_rfc5256_example5:
+    :response: "* THREAD ((3)(5))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: THREAD
+      data:
+      - !ruby/struct:Net::IMAP::ThreadMember
+        seqno:
+        children:
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 3
+          children: []
+        - !ruby/struct:Net::IMAP::ThreadMember
+          seqno: 5
+          children: []
+      raw_data: "* THREAD ((3)(5))\r\n"

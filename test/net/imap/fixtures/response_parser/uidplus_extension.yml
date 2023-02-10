@@ -1,0 +1,95 @@
+---
+:tests:
+
+  # Identical to the example in RFC4315
+  test_resp_code_APPENDUID_rfc9051_6.3.12_example:
+    :response: "A003 OK [APPENDUID 38505 3955] APPEND completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A003
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: APPENDUID
+          data: !ruby/struct:Net::IMAP::UIDPlusData
+            uidvalidity: 38505
+            source_uids:
+            assigned_uids:
+            - 3955
+        text: APPEND completed
+      raw_data: "A003 OK [APPENDUID 38505 3955] APPEND completed\r\n"
+
+  # Identical to the example in RFC4315
+  test_resp_code_COPYUID_rfc9051_6.3.12_example:
+    :response: "A004 OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A004
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: COPYUID
+          data: !ruby/struct:Net::IMAP::UIDPlusData
+            uidvalidity: 38505
+            source_uids:
+            - 304
+            - 319
+            - 320
+            assigned_uids:
+            - 3956
+            - 3957
+            - 3958
+        text: Done
+      raw_data: "A004 OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"
+
+  test_resp_code_APPENDUID_with_MULTIAPPEND_compatibility:
+    :response: "A003 OK [APPENDUID 2 4,6:7,9] APPEND completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A003
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: APPENDUID
+          data: !ruby/struct:Net::IMAP::UIDPlusData
+            uidvalidity: 2
+            source_uids:
+            assigned_uids:
+            - 4
+            - 6
+            - 7
+            - 9
+        text: APPEND completed
+      raw_data: "A003 OK [APPENDUID 2 4,6:7,9] APPEND completed\r\n"
+
+  test_resp_code_COPYUID_with_reversed_ranges_and_mixed_case:
+    comment: |
+      From RFC4315 ABNF:
+      > and all values between these two *regardless of order*.
+      > Example: 2:4 and 4:2 are equivalent.
+    :response: "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A004
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: COPYUID
+          data: !ruby/struct:Net::IMAP::UIDPlusData
+            uidvalidity: 9999
+            source_uids:
+            - 19
+            - 20
+            - 495
+            - 496
+            - 497
+            - 498
+            - 499
+            - 500
+            assigned_uids:
+            - 92
+            - 93
+            - 94
+            - 95
+            - 96
+            - 97
+            - 100
+            - 101
+        text: Done
+      raw_data: "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"

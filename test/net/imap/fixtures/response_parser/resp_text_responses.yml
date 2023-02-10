@@ -1,0 +1,14 @@
+---
+:tests:
+
+  test_resp_text_with_T_LBRA:
+    :response: "RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: RUBY0004
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: READ-WRITE
+          data:
+        text: "[Gmail]/Sent Mail selected. (Success)"
+      raw_data: "RUBY0004 OK [READ-WRITE] [Gmail]/Sent Mail selected. (Success)\r\n"

@@ -1,0 +1,16 @@
+---
+:tests:
+  # 7.2.6.  FLAGS Response
+  #
+  #    Example:    S: * FLAGS (\Answered \Flagged \Deleted \Seen \Draft)
+  rfc3501_7.2.6_FLAGS_response_example:
+    :response: "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FLAGS
+      data:
+      - :Answered
+      - :Flagged
+      - :Deleted
+      - :Seen
+      - :Draft
+      raw_data: "* FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)\r\n"

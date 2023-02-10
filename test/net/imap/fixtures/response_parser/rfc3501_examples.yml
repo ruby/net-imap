@@ -1,0 +1,190 @@
+---
+:tests:
+
+  # 8.      Sample IMAP4rev1 connection
+  #
+  #    The following is a transcript of an IMAP4rev1 connection.  A long
+  #    line in this sample is broken for editorial clarity.
+  #
+  # S:   * OK IMAP4rev1 Service Ready
+  # C:   a001 login mrc secret
+  # S:   a001 OK LOGIN completed
+  # C:   a002 select inbox
+  # S:   * 18 EXISTS
+  # S:   * FLAGS (\Answered \Flagged \Deleted \Seen \Draft)
+  # S:   * 2 RECENT
+  # S:   * OK [UNSEEN 17] Message 17 is the first unseen message
+  # S:   * OK [UIDVALIDITY 3857529045] UIDs valid
+  # S:   a002 OK [READ-WRITE] SELECT completed
+  # C:   a003 fetch 12 full
+  # S:   * 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700"
+  #       RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)"
+  #       "IMAP4rev1 WG mtg summary and minutes"
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       ((NIL NIL "imap" "cac.washington.edu"))
+  #       ((NIL NIL "minutes" "CNRI.Reston.VA.US")
+  #       ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL
+  #       "<B27397-0100000@cac.washington.edu>")
+  #        BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028
+  #        92))
+  # S:    a003 OK FETCH completed
+  # C:    a004 fetch 12 body[header]
+  # S:    * 12 FETCH (BODY[HEADER] {342}
+  # S:    Date: Wed, 17 Jul 1996 02:23:25 -0700 (PDT)
+  # S:    From: Terry Gray <gray@cac.washington.edu>
+  # S:    Subject: IMAP4rev1 WG mtg summary and minutes
+  # S:    To: imap@cac.washington.edu
+  # S:    cc: minutes@CNRI.Reston.VA.US, John Klensin <KLENSIN@MIT.EDU>
+  # S:    Message-Id: <B27397-0100000@cac.washington.edu>
+  # S:    MIME-Version: 1.0
+  # S:    Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+  # S:
+  # S:    )
+  # S:    a004 OK FETCH completed
+  # C:    a005 store 12 +flags \deleted
+  # S:    * 12 FETCH (FLAGS (\Seen \Deleted))
+  # S:    a005 OK +FLAGS completed
+  # C:    a006 logout
+  # S:    * BYE IMAP4rev1 server terminating connection
+  # S:    a006 OK LOGOUT completed
+
+  # S:   * OK [UNSEEN 17] Message 17 is the first unseen message
+  rfc3501_8_example_1_UNSEEN_response_code:
+    :response: "* OK [UNSEEN 17] Message 17 is the first unseen message\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UNSEEN
+          data: 17
+        text: Message 17 is the first unseen message
+      raw_data: "* OK [UNSEEN 17] Message 17 is the first unseen message\r\n"
+
+  # S:   * OK [UIDVALIDITY 3857529045] UIDs valid
+  rfc3501_8_example_2_UIDVALIDITY_response_code:
+    :response: "* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UIDVALIDITY
+          data: 3857529045
+        text: UIDs valid
+      raw_data: "* OK [UIDVALIDITY 3857529045] UIDs valid\r\n"
+
+  # S:   * 12 FETCH (FLAGS (\Seen) INTERNALDATE "17-Jul-1996 02:44:25 -0700"
+  #       RFC822.SIZE 4286 ENVELOPE ("Wed, 17 Jul 1996 02:23:25 -0700 (PDT)"
+  #       "IMAP4rev1 WG mtg summary and minutes"
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       (("Terry Gray" NIL "gray" "cac.washington.edu"))
+  #       ((NIL NIL "imap" "cac.washington.edu"))
+  #       ((NIL NIL "minutes" "CNRI.Reston.VA.US")
+  #       ("John Klensin" NIL "KLENSIN" "MIT.EDU")) NIL NIL
+  #       "<B27397-0100000@cac.washington.edu>")
+  #        BODY ("TEXT" "PLAIN" ("CHARSET" "US-ASCII") NIL NIL "7BIT" 3028
+  #        92))
+  rfc3501_8_example_3_FETCH_ENVELOPE:
+    :response: "* 12 FETCH (FLAGS (\\Seen) INTERNALDATE \"17-Jul-1996 02:44:25 -0700\" RFC822.SIZE 4286 ENVELOPE (\"Wed, 17 Jul 1996 02:23:25 -0700 (PDT)\" \"IMAP4rev1 WG mtg summary and minutes\" ((\"Terry Gray\" NIL \"gray\" \"cac.washington.edu\")) ((\"Terry Gray\" NIL \"gray\" \"cac.washington.edu\")) ((\"Terry Gray\" NIL \"gray\" \"cac.washington.edu\")) ((NIL NIL \"imap\" \"cac.washington.edu\")) ((NIL NIL \"minutes\" \"CNRI.Reston.VA.US\")(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) NIL NIL \"<B27397-0100000@cac.washington.edu>\") BODY (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\") NIL NIL \"7BIT\" 3028 92))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 12
+        attr:
+          FLAGS:
+          - :Seen
+          INTERNALDATE: 17-Jul-1996 02:44:25 -0700
+          RFC822.SIZE: 4286
+          ENVELOPE: !ruby/struct:Net::IMAP::Envelope
+            date: Wed, 17 Jul 1996 02:23:25 -0700 (PDT)
+            subject: IMAP4rev1 WG mtg summary and minutes
+            from:
+            - !ruby/struct:Net::IMAP::Address
+              name: Terry Gray
+              route:
+              mailbox: gray
+              host: cac.washington.edu
+            sender:
+            - !ruby/struct:Net::IMAP::Address
+              name: Terry Gray
+              route:
+              mailbox: gray
+              host: cac.washington.edu
+            reply_to:
+            - !ruby/struct:Net::IMAP::Address
+              name: Terry Gray
+              route:
+              mailbox: gray
+              host: cac.washington.edu
+            to:
+            - !ruby/struct:Net::IMAP::Address
+              name:
+              route:
+              mailbox: imap
+              host: cac.washington.edu
+            cc:
+            - !ruby/struct:Net::IMAP::Address
+              name:
+              route:
+              mailbox: minutes
+              host: CNRI.Reston.VA.US
+            - !ruby/struct:Net::IMAP::Address
+              name: John Klensin
+              route:
+              mailbox: KLENSIN
+              host: MIT.EDU
+            bcc:
+            in_reply_to:
+            message_id: "<B27397-0100000@cac.washington.edu>"
+          BODY: !ruby/struct:Net::IMAP::BodyTypeText
+            media_type: TEXT
+            subtype: PLAIN
+            param:
+              CHARSET: US-ASCII
+            content_id:
+            description:
+            encoding: 7BIT
+            size: 3028
+            lines: 92
+            md5:
+            disposition:
+            language:
+            extension:
+      raw_data: "* 12 FETCH (FLAGS (\\Seen) INTERNALDATE \"17-Jul-1996 02:44:25 -0700\"
+        RFC822.SIZE 4286 ENVELOPE (\"Wed, 17 Jul 1996 02:23:25 -0700 (PDT)\" \"IMAP4rev1
+        WG mtg summary and minutes\" ((\"Terry Gray\" NIL \"gray\" \"cac.washington.edu\"))
+        ((\"Terry Gray\" NIL \"gray\" \"cac.washington.edu\")) ((\"Terry Gray\" NIL \"gray\"
+        \"cac.washington.edu\")) ((NIL NIL \"imap\" \"cac.washington.edu\")) ((NIL NIL \"minutes\"
+        \"CNRI.Reston.VA.US\")(\"John Klensin\" NIL \"KLENSIN\" \"MIT.EDU\")) NIL NIL \"<B27397-0100000@cac.washington.edu>\")
+        BODY (\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\") NIL NIL \"7BIT\" 3028 92))\r\n"
+
+  # S:    * 12 FETCH (BODY[HEADER] {342}
+  # S:    Date: Wed, 17 Jul 1996 02:23:25 -0700 (PDT)
+  # S:    From: Terry Gray <gray@cac.washington.edu>
+  # S:    Subject: IMAP4rev1 WG mtg summary and minutes
+  # S:    To: imap@cac.washington.edu
+  # S:    cc: minutes@CNRI.Reston.VA.US, John Klensin <KLENSIN@MIT.EDU>
+  # S:    Message-Id: <B27397-0100000@cac.washington.edu>
+  # S:    MIME-Version: 1.0
+  # S:    Content-Type: TEXT/PLAIN; CHARSET=US-ASCII
+  # S:
+  # S:    )
+  rfc3501_8_example_4_FETCH_BODY[HEADER]:
+    :response: "* 12 FETCH (BODY[HEADER] {342}\r\nDate: Wed, 17 Jul 1996 02:23:25 -0700 (PDT)\r\nFrom: Terry Gray <gray@cac.washington.edu>\r\nSubject: IMAP4rev1 WG mtg summary and minutes\r\nTo: imap@cac.washington.edu\r\ncc: minutes@CNRI.Reston.VA.US, John Klensin <KLENSIN@MIT.EDU>\r\nMessage-Id: <B27397-0100000@cac.washington.edu>\r\nMIME-Version: 1.0\r\nContent-Type: TEXT/PLAIN; CHARSET=US-ASCII\r\n\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 12
+        attr:
+          BODY[HEADER]: "Date: Wed, 17 Jul 1996 02:23:25 -0700 (PDT)\r\nFrom: Terry Gray
+            <gray@cac.washington.edu>\r\nSubject: IMAP4rev1 WG mtg summary and minutes\r\nTo:
+            imap@cac.washington.edu\r\ncc: minutes@CNRI.Reston.VA.US, John Klensin <KLENSIN@MIT.EDU>\r\nMessage-Id:
+            <B27397-0100000@cac.washington.edu>\r\nMIME-Version: 1.0\r\nContent-Type: TEXT/PLAIN;
+            CHARSET=US-ASCII\r\n\r\n"
+      raw_data: "* 12 FETCH (BODY[HEADER] {342}\r\nDate: Wed, 17 Jul 1996 02:23:25 -0700
+        (PDT)\r\nFrom: Terry Gray <gray@cac.washington.edu>\r\nSubject: IMAP4rev1 WG mtg
+        summary and minutes\r\nTo: imap@cac.washington.edu\r\ncc: minutes@CNRI.Reston.VA.US,
+        John Klensin <KLENSIN@MIT.EDU>\r\nMessage-Id: <B27397-0100000@cac.washington.edu>\r\nMIME-Version:
+        1.0\r\nContent-Type: TEXT/PLAIN; CHARSET=US-ASCII\r\n\r\n)\r\n"

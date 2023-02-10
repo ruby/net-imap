@@ -36,30 +36,31 @@ module Net
 
       # :stopdoc:
 
-      EXPR_BEG          = :EXPR_BEG
-      EXPR_DATA         = :EXPR_DATA
-      EXPR_TEXT         = :EXPR_TEXT
-      EXPR_RTEXT        = :EXPR_RTEXT
-      EXPR_CTEXT        = :EXPR_CTEXT
+      EXPR_BEG   = :EXPR_BEG     # the default, used in most places
+      EXPR_DATA  = :EXPR_DATA    # envelope, body(structure), namespaces
+      EXPR_TEXT  = :EXPR_TEXT    # text, after 'resp-text-code "]"'
+      EXPR_RTEXT = :EXPR_RTEXT   # resp-text, before "["
+      EXPR_CTEXT = :EXPR_CTEXT   # resp-text-code, after 'atom SP'
 
-      T_SPACE   = :SPACE
-      T_NIL     = :NIL
-      T_NUMBER  = :NUMBER
-      T_ATOM    = :ATOM
-      T_QUOTED  = :QUOTED
-      T_LPAR    = :LPAR
-      T_RPAR    = :RPAR
-      T_BSLASH  = :BSLASH
-      T_STAR    = :STAR
-      T_LBRA    = :LBRA
-      T_RBRA    = :RBRA
-      T_LITERAL = :LITERAL
-      T_PLUS    = :PLUS
-      T_PERCENT = :PERCENT
-      T_CRLF    = :CRLF
-      T_EOF     = :EOF
-      T_TEXT    = :TEXT
+      T_SPACE    = :SPACE        # atom special
+      T_ATOM     = :ATOM         # atom (subset of astring chars)
+      T_NIL      = :NIL          # subset of atom and label
+      T_NUMBER   = :NUMBER       # subset of atom
+      T_LBRA     = :LBRA         # subset of atom
+      T_PLUS     = :PLUS         # subset of atom; tag special
+      T_RBRA     = :RBRA         # atom special; resp_special; valid astring char
+      T_QUOTED   = :QUOTED       # starts/end with atom special
+      T_BSLASH   = :BSLASH       # atom special; quoted special
+      T_LPAR     = :LPAR         # atom special; paren list delimiter
+      T_RPAR     = :RPAR         # atom special; paren list delimiter
+      T_STAR     = :STAR         # atom special; list wildcard
+      T_PERCENT  = :PERCENT      # atom special; list wildcard
+      T_LITERAL  = :LITERAL      # starts with atom special
+      T_CRLF     = :CRLF         # atom special; text special; quoted special
+      T_TEXT     = :TEXT         # any char except CRLF
+      T_EOF      = :EOF          # end of response string
 
+      # the default, used in most places
       BEG_REGEXP = /\G(?:\
 (?# 1:  SPACE   )( +)|\
 (?# 2:  NIL     )(NIL)(?=[\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+])|\
@@ -78,6 +79,7 @@ module Net
 (?# 15: CRLF    )(\r\n)|\
 (?# 16: EOF     )(\z))/ni
 
+      # envelope, body(structure), namespaces
       DATA_REGEXP = /\G(?:\
 (?# 1:  SPACE   )( )|\
 (?# 2:  NIL     )(NIL)|\
@@ -87,13 +89,16 @@ module Net
 (?# 6:  LPAR    )(\()|\
 (?# 7:  RPAR    )(\)))/ni
 
+      # text, after 'resp-text-code "]"'
       TEXT_REGEXP = /\G(?:\
 (?# 1:  TEXT    )([^\x00\r\n]*))/ni
 
+      # resp-text, before "["
       RTEXT_REGEXP = /\G(?:\
 (?# 1:  LBRA    )(\[)|\
 (?# 2:  TEXT    )([^\x00\r\n]*))/ni
 
+      # resp-text-code, after 'atom SP'
       CTEXT_REGEXP = /\G(?:\
 (?# 1:  TEXT    )([^\x00\r\n\]]*))/ni
 

@@ -1,0 +1,11 @@
+---
+:tests:
+
+  rfc9051_7.2.1_ENABLED_example:
+    :response: "* ENABLED CONDSTORE QRESYNC\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ENABLED
+      data:
+      - CONDSTORE
+      - QRESYNC
+      :raw_data: "* ENABLED CONDSTORE QRESYNC\r\n"
