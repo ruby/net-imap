@@ -23,7 +23,10 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # Tests that do no more than parse an example response and assert the result
   # data has the correct values have been moved to yml test fixtures.
   #
-  # TODO: add instructions for how to quickly add or update yaml tests
+  # The simplest way to add or update new test cases is to add only the test
+  # name and response string to the yaml file, and then re-run the tests.  The
+  # test will be marked pending, and the parsed result will be serialized and
+  # printed on stdout.  This can then be copied into the yaml file.
   ############################################################################
   # Core IMAP, by RFC9051 section (w/obsolete in relative RFC3501 section):
   generate_tests_from fixture_file: "rfc3501_examples.yml"
@@ -92,28 +95,5 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # More interesting tests about the behavior, either of the test or of the
   # response data, should still use normal tests, below
   ############################################################################
-
-  # todo: move this to response data tests file
-  # it's testing the mapping fn, not the parsing.
-  def test_uidplus_copyuid__uid_mapping
-    parser = Net::IMAP::ResponseParser.new
-    response = parser.parse(
-      "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
-    )
-    code = response.data.code
-    assert_equal(
-      {
-         19 =>  92,
-         20 =>  93,
-        495 =>  94,
-        496 =>  95,
-        497 =>  96,
-        498 =>  97,
-        499 => 100,
-        500 => 101,
-      },
-      code.data.uid_mapping
-    )
-  end
 
 end
