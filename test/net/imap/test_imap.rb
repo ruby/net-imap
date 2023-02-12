@@ -870,23 +870,18 @@ EOF
   end
 
   def test_enable
-    server = create_tcp_server
-    port = server.addr[1]
-    requests = []
-    start_server do
-      sock = server.accept
-      begin
-        sock.print("* OK test server\r\n")
-        requests.push(sock.gets)
-        sock.print("* ENABLED SMTPUTF8\r\n")
-        sock.print("RUBY0001 OK \r\n")
-        sock.gets
-        sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0002 OK LOGOUT completed\r\n")
-      ensure
-        sock.close
-        server.close
-      end
+    requests = Queue.new
+    port = yields_in_test_server_thread do |sock|
+      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
+      sock.print "* ENABLED SMTPUTF8\r\n"
+      sock.print "#{tag} OK \r\n"
+      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
+      sock.print "* ENABLED CONDSTORE UTF8=ACCEPT\r\n"
+      sock.print "#{tag} OK \r\n"
+      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
+      sock.print "* ENABLED \r\n"
+      sock.print "#{tag} OK \r\n"
+      sock.getcmd # waits for logout command
     end
 
     begin
@@ -894,6 +889,13 @@ EOF
       response = imap.enable(["SMTPUTF8", "X-NO-SUCH-THING"])
       assert_equal("RUBY0001 ENABLE SMTPUTF8 X-NO-SUCH-THING\r\n", requests.pop)
       assert_equal(response, ["SMTPUTF8"])
+      response = imap.enable(:utf8, "condstore QResync", "x-pig-latin")
+      assert_equal("RUBY0002 ENABLE UTF8=ACCEPT condstore QResync x-pig-latin\r\n",
+                   requests.pop)
+      response = imap.enable(:utf8, "UTF8=ACCEPT", "UTF8=ONLY")
+      assert_equal(response, [])
+      assert_equal("RUBY0003 ENABLE UTF8=ACCEPT\r\n",
+                   requests.pop)
       imap.logout
     ensure
       imap.disconnect if imap

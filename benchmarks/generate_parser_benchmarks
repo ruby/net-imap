@@ -28,7 +28,8 @@ init = <<RUBY
   require "net/imap"
 
   def load_response(file, name)
-    YAML.unsafe_load_file(file).dig(:tests, name, :response) \\
+    YAML.unsafe_load_file(file).dig(:tests, name, :response)
+      .force_encoding "ASCII-8BIT" \\
       or abort "ERRORO: missing %p fixture data in %p" % [name, file]
   end
 
