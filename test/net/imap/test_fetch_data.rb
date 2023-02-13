@@ -164,4 +164,25 @@ class FetchDataTest < Test::Unit::TestCase
     assert_equal "partial mime", data.mime(1, 2, offset: 456)
   end
 
+  test "#binary(1, 2, 3, offset: 1) returns the BINARY[1.2.3]<1> attr" do
+    data = FetchData.new(1, {
+      "BINARY[]" => "binary\0whole".b,
+      "BINARY[1.2.3]" => "binary\0part".b,
+      "BINARY[1.2.3]<1>" => "inary\0pa".b,
+    })
+    assert_equal "binary\0whole".b, data.binary
+    assert_equal "binary\0part".b,  data.binary(1, 2, 3)
+    assert_equal "inary\0pa".b,     data.binary(1, 2, 3, offset: 1)
+  end
+
+  test "#binary_size(1, 2, 3) returns the BINARY.SIZE[1.2.3] attr" do
+    data = FetchData.new(1, {
+      "BINARY.SIZE[]"      => 987_654,
+      "BINARY.SIZE[1.2.3]" => 123_456,
+    })
+    assert_equal 987_654, data.binary_size
+    assert_equal 123_456, data.binary_size(1, 2, 3)
+    assert_equal 123_456, data.binary_size([1, 2, 3])
+  end
+
 end

@@ -404,18 +404,18 @@ module Net
   #
   # Although IMAP4rev2[https://tools.ietf.org/html/rfc9051] is not supported
   # yet, Net::IMAP supports several extensions that have been folded into it:
-  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+, and +UNSELECT+.
+  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+, +UNSELECT+, and
+  # the fetch side of +BINARY+.
   # Commands for these extensions are listed with the {Core IMAP
   # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
   #
   # >>>
   #   <em>The following are folded into +IMAP4rev2+ but are currently
   #   unsupported or incompletely supported by</em> Net::IMAP<em>: RFC4466
-  #   extensions, +ESEARCH+, +SEARCHRES+, +LIST-EXTENDED+,
-  #   +LIST-STATUS+, +LITERAL-+, +BINARY+ fetch, and +SPECIAL-USE+.  The
-  #   following extensions are implicitly supported, but will be updated with
-  #   more direct support: RFC5530 response codes, <tt>STATUS=SIZE</tt>, and
-  #   <tt>STATUS=DELETED</tt>.</em>
+  #   extensions, +ESEARCH+, +SEARCHRES+, +LIST-EXTENDED+, +LIST-STATUS+,
+  #   +LITERAL-+, and +SPECIAL-USE+.  The following extensions are implicitly
+  #   supported, but will be updated with more direct support: RFC5530 response
+  #   codes, <tt>STATUS=SIZE</tt>, and <tt>STATUS=DELETED</tt>.</em>
   #
   # ==== RFC2087: +QUOTA+
   # - #getquota: returns the resource usage and limits for a quota root
@@ -436,6 +436,15 @@ module Net
   #
   # ==== RFC2971: +ID+
   # - #id: exchanges client and server implementation information.
+  #
+  # ==== RFC3516: +BINARY+
+  # The fetch side of +BINARY+ has been folded into
+  # IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #fetch and #uid_fetch with the +BINARY+, +BINARY.PEEK+, and
+  #   +BINARY.SIZE+ items.  See FetchData#binary and FetchData#binary_size.
+  #
+  # >>>
+  #   *NOTE:* The binary extension the #append command is _not_ supported yet.
   #
   # ==== RFC3691: +UNSELECT+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051] and also included
@@ -612,6 +621,10 @@ module Net
   # [ID[https://tools.ietf.org/html/rfc2971]]::
   #   Showalter, T., "IMAP4 ID extension", RFC 2971, DOI 10.17487/RFC2971,
   #   October 2000, <https://www.rfc-editor.org/info/rfc2971>.
+  # [BINARY[https://tools.ietf.org/html/rfc3516]]::
+  #   Nerenberg, L., "IMAP4 Binary Content Extension", RFC 3516,
+  #   DOI 10.17487/RFC3516, April 2003,
+  #   <https://www.rfc-editor.org/info/rfc3516>.
   # [ACL[https://tools.ietf.org/html/rfc4314]]::
   #   Melnikov, A., "IMAP4 Access Control List (ACL) Extension", RFC 4314,
   #   DOI 10.17487/RFC4314, December 2005,

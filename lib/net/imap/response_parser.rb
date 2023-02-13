@@ -54,6 +54,7 @@ module Net
       T_STAR     = :STAR         # atom special; list wildcard
       T_PERCENT  = :PERCENT      # atom special; list wildcard
       T_LITERAL  = :LITERAL      # starts with atom special
+      T_LITERAL8 = :LITERAL8     # starts with atom char "~"
       T_CRLF     = :CRLF         # atom special; text special; quoted special
       T_TEXT     = :TEXT         # any char except CRLF
       T_EOF      = :EOF          # end of response string
@@ -279,6 +280,16 @@ module Net
         #                        ; sent from server to the client.
         LITERAL              = /\{(\d+)\}\r\n/n
 
+        # RFC3516 (BINARY):
+        #   literal8         =   "~{" number "}" CRLF *OCTET
+        #                        ; <number> represents the number of OCTETs
+        #                        ; in the response string.
+        # RFC9051:
+        #   literal8         =  "~{" number64 "}" CRLF *OCTET
+        #                        ; <number64> represents the number of OCTETs
+        #                        ; in the response string.
+        LITERAL8             = /~\{(\d+)\}\r\n/n
+
         module_function
 
         def unescape_quoted!(quoted)
@@ -298,27 +309,28 @@ module Net
       # the default, used in most places
       BEG_REGEXP = /\G(?:\
 (?# 1:  SPACE   )( )|\
-(?# 2:  ATOM prefixed with a compatible subtype)\
+(?# 2:  LITERAL8)#{Patterns::LITERAL8}|\
+(?# 3:  ATOM prefixed with a compatible subtype)\
 ((?:\
-(?# 3:  NIL     )(NIL)|\
-(?# 4:  NUMBER  )(\d+)|\
-(?# 5:  PLUS    )(\+))\
-(?# 6:  ATOM remaining after prefix )(#{Patterns::ATOMISH})?\
+(?# 4:  NIL     )(NIL)|\
+(?# 5:  NUMBER  )(\d+)|\
+(?# 6:  PLUS    )(\+))\
+(?# 7:  ATOM remaining after prefix )(#{Patterns::ATOMISH})?\
 (?# This enables greedy alternation without lookahead, in linear time.)\
 )|\
 (?# Also need to check for ATOM without a subtype prefix.)\
-(?# 7:  ATOM    )(#{Patterns::ATOMISH})|\
-(?# 8:  QUOTED  )#{Patterns::QUOTED_rev2}|\
-(?# 9: LPAR    )(\()|\
-(?# 10: RPAR    )(\))|\
-(?# 11: BSLASH  )(\\)|\
-(?# 12: STAR    )(\*)|\
-(?# 13: LBRA    )(\[)|\
-(?# 14: RBRA    )(\])|\
-(?# 15: LITERAL )#{Patterns::LITERAL}|\
-(?# 16: PERCENT )(%)|\
-(?# 17: CRLF    )(\r\n)|\
-(?# 18: EOF     )(\z))/ni
+(?# 8:  ATOM    )(#{Patterns::ATOMISH})|\
+(?# 9:  QUOTED  )#{Patterns::QUOTED_rev2}|\
+(?# 10: LPAR    )(\()|\
+(?# 11: RPAR    )(\))|\
+(?# 12: BSLASH  )(\\)|\
+(?# 13: STAR    )(\*)|\
+(?# 14: LBRA    )(\[)|\
+(?# 15: RBRA    )(\])|\
+(?# 16: LITERAL )#{Patterns::LITERAL}|\
+(?# 17: PERCENT )(%)|\
+(?# 18: CRLF    )(\r\n)|\
+(?# 19: EOF     )(\z))/ni
 
       # envelope, body(structure), namespaces
       DATA_REGEXP = /\G(?:\
@@ -358,6 +370,9 @@ module Net
 
       #   string          = quoted / literal
       def_token_matchers :string,  T_QUOTED, T_LITERAL
+
+      # used by nstring8 = nstring / literal8
+      def_token_matchers :string8, T_QUOTED, T_LITERAL, T_LITERAL8
 
       # use where string represents "LABEL" values
       def_token_matchers :case_insensitive__string,
@@ -458,6 +473,10 @@ module Net
       #   nstring         = string / nil
       def nstring
         NIL? ? nil : string
+      end
+
+      def nstring8
+        NIL? ? nil : string8
       end
 
       def nquoted
@@ -740,6 +759,8 @@ module Net
             when "ENVELOPE"             then envelope
             when "INTERNALDATE"         then date_time
             when "RFC822.SIZE"          then number64
+            when /\ABINARY\[/ni         then nstring8           # BINARY, IMAP4rev2
+            when /\ABINARY\.SIZE\[/ni   then number             # BINARY, IMAP4rev2
             when "RFC822"               then nstring            # not in rev2
             when "RFC822.HEADER"        then nstring            # not in rev2
             when "RFC822.TEXT"          then nstring            # not in rev2
@@ -762,10 +783,17 @@ module Net
           lbra? and rbra
         when "BODY"
           peek_lbra? and name << section and
-            peek_str?("<") and name << atom # partial
+            peek_str?("<") and name << gt__number__lt # partial
+        when "BINARY", "BINARY.SIZE"
+          name << section_binary
+          # see https://www.rfc-editor.org/errata/eid7246 and the note above
+          peek_str?("<") and name << gt__number__lt # partial
         end
         name
       end
+
+      # this represents the partial size for BODY or BINARY
+      alias gt__number__lt atom
 
       def envelope
         @lex_state = EXPR_DATA
@@ -1070,6 +1098,13 @@ module Net
         str << rbra
       end
 
+      # section-binary  = "[" [section-part] "]"
+      def section_binary
+        str = +lbra
+        str << section_part unless peek_rbra?
+        str << rbra
+      end
+
       # section-spec    = section-msgtext / (section-part ["." section-text])
       # section-msgtext = "HEADER" /
       #                   "HEADER.FIELDS" [".NOT"] SP header-list /
@@ -1099,6 +1134,11 @@ module Net
         str << " "  << header_fld_name while SP?
         str << rpar
       end
+
+      # section-part    = nz-number *("." nz-number)
+      #                     ; body part reference.
+      #                     ; Allows for accessing nested body parts.
+      alias section_part atom
 
       # RFC3501 & RFC9051:
       #   header-fld-name = astring
@@ -1789,42 +1829,47 @@ module Net
             @pos = $~.end(0)
             if $1
               return Token.new(T_SPACE, $+)
-            elsif $2 && $6
+            elsif $2
+              len = $+.to_i
+              val = @str[@pos, len]
+              @pos += len
+              return Token.new(T_LITERAL8, val)
+            elsif $3 && $7
               # greedily match ATOM, prefixed with NUMBER, NIL, or PLUS.
-              return Token.new(T_ATOM, $2)
-            elsif $3
-              return Token.new(T_NIL, $+)
+              return Token.new(T_ATOM, $3)
             elsif $4
-              return Token.new(T_NUMBER, $+)
+              return Token.new(T_NIL, $+)
             elsif $5
+              return Token.new(T_NUMBER, $+)
+            elsif $6
               return Token.new(T_PLUS, $+)
-            elsif $7
+            elsif $8
               # match ATOM, without a NUMBER, NIL, or PLUS prefix
               return Token.new(T_ATOM, $+)
-            elsif $8
-              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $9
-              return Token.new(T_LPAR, $+)
+              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $10
-              return Token.new(T_RPAR, $+)
+              return Token.new(T_LPAR, $+)
             elsif $11
-              return Token.new(T_BSLASH, $+)
+              return Token.new(T_RPAR, $+)
             elsif $12
-              return Token.new(T_STAR, $+)
+              return Token.new(T_BSLASH, $+)
             elsif $13
-              return Token.new(T_LBRA, $+)
+              return Token.new(T_STAR, $+)
             elsif $14
-              return Token.new(T_RBRA, $+)
+              return Token.new(T_LBRA, $+)
             elsif $15
+              return Token.new(T_RBRA, $+)
+            elsif $16
               len = $+.to_i
               val = @str[@pos, len]
               @pos += len
               return Token.new(T_LITERAL, val)
-            elsif $16
-              return Token.new(T_PERCENT, $+)
             elsif $17
-              return Token.new(T_CRLF, $+)
+              return Token.new(T_PERCENT, $+)
             elsif $18
+              return Token.new(T_CRLF, $+)
+            elsif $19
               return Token.new(T_EOF, $+)
             else
               parse_error("[Net::IMAP BUG] BEG_REGEXP is invalid")
