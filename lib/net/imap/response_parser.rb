@@ -130,10 +130,38 @@ module Net
         include RFC5234
         include RFC3629
 
+        # CHAR8           = %x01-ff
+        #                     ; any OCTET except NUL, %x00
+        CHAR8             = /[\x01-\xff]/n
+
+        # list-wildcards  = "%" / "*"
+        LIST_WILDCARDS    = /[%*]/n
         # quoted-specials = DQUOTE / "\"
         QUOTED_SPECIALS   = /["\\]/n
         # resp-specials   = "]"
         RESP_SPECIALS     = /[\]]/n
+
+        # atomish         = 1*<any ATOM-CHAR except "[">
+        #                 ; We use "atomish" for msg-att and section, in order
+        #                 ; to simplify "BODY[HEADER.FIELDS (foo bar)]".
+        #
+        # atom-specials   = "(" / ")" / "{" / SP / CTL / list-wildcards /
+        #                   quoted-specials / resp-specials
+        # ATOM-CHAR       = <any CHAR except atom-specials>
+        # atom            = 1*ATOM-CHAR
+        # ASTRING-CHAR    = ATOM-CHAR / resp-specials
+        # tag             = 1*<any ASTRING-CHAR except "+">
+
+        ATOM_SPECIALS     = /[(){ \x00-\x1f\x7f%*"\\\]]/n
+        ASTRING_SPECIALS  = /[(){ \x00-\x1f\x7f%*"\\]/n
+
+        ASTRING_CHAR      = CHAR - ASTRING_SPECIALS
+        ATOM_CHAR         = CHAR - ATOM_SPECIALS
+
+        ATOM              = /#{ATOM_CHAR}+/n
+        ASTRING_CHARS     = /#{ASTRING_CHAR}+/n
+        ATOMISH           = /#{ATOM_CHAR    - /[\[]/ }+/
+        TAG               = /#{ASTRING_CHAR - /[+]/  }+/
 
         # TEXT-CHAR       = <any CHAR except CR and LF>
         TEXT_CHAR         = CHAR - /[\r\n]/
@@ -167,6 +195,19 @@ module Net
         TEXT_rev1         = /#{TEXT_CHAR}+/
         TEXT_rev2         = /#{Regexp.union TEXT_CHAR, UTF8_2, UTF8_3, UTF8_4}+/
 
+        # RFC3501:
+        #   literal          = "{" number "}" CRLF *CHAR8
+        #                        ; Number represents the number of CHAR8s
+        # RFC9051:
+        #   literal          = "{" number64 ["+"] "}" CRLF *CHAR8
+        #                        ; <number64> represents the number of CHAR8s.
+        #                        ; A non-synchronizing literal is distinguished
+        #                        ; from a synchronizing literal by the presence of
+        #                        ; "+" before the closing "}".
+        #                        ; Non-synchronizing literals are not allowed when
+        #                        ; sent from server to the client.
+        LITERAL              = /\{(\d+)\}\r\n/n
+
         module_function
 
         def unescape_quoted!(quoted)
@@ -185,22 +226,28 @@ module Net
 
       # the default, used in most places
       BEG_REGEXP = /\G(?:\
-(?# 1:  SPACE   )( +)|\
-(?# 2:  NIL     )(NIL)(?=[\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+])|\
-(?# 3:  NUMBER  )(\d+)(?=[\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+])|\
-(?# 4:  ATOM    )([^\x80-\xff(){ \x00-\x1f\x7f%*"\\\[\]+]+)|\
-(?# 5:  QUOTED  )#{Patterns::QUOTED_rev2}|\
-(?# 6:  LPAR    )(\()|\
-(?# 7:  RPAR    )(\))|\
-(?# 8:  BSLASH  )(\\)|\
-(?# 9:  STAR    )(\*)|\
-(?# 10: LBRA    )(\[)|\
-(?# 11: RBRA    )(\])|\
-(?# 12: LITERAL )\{(\d+)\}\r\n|\
-(?# 13: PLUS    )(\+)|\
-(?# 14: PERCENT )(%)|\
-(?# 15: CRLF    )(\r\n)|\
-(?# 16: EOF     )(\z))/ni
+(?# 1:  SPACE   )( )|\
+(?# 2:  ATOM prefixed with a compatible subtype)\
+((?:\
+(?# 3:  NIL     )(NIL)|\
+(?# 4:  NUMBER  )(\d+)|\
+(?# 5:  PLUS    )(\+))\
+(?# 6:  ATOM remaining after prefix )(#{Patterns::ATOMISH})?\
+(?# This enables greedy alternation without lookahead, in linear time.)\
+)|\
+(?# Also need to check for ATOM without a subtype prefix.)\
+(?# 7:  ATOM    )(#{Patterns::ATOMISH})|\
+(?# 8:  QUOTED  )#{Patterns::QUOTED_rev2}|\
+(?# 9: LPAR    )(\()|\
+(?# 10: RPAR    )(\))|\
+(?# 11: BSLASH  )(\\)|\
+(?# 12: STAR    )(\*)|\
+(?# 13: LBRA    )(\[)|\
+(?# 14: RBRA    )(\])|\
+(?# 15: LITERAL )#{Patterns::LITERAL}|\
+(?# 16: PERCENT )(%)|\
+(?# 17: CRLF    )(\r\n)|\
+(?# 18: EOF     )(\z))/ni
 
       # envelope, body(structure), namespaces
       DATA_REGEXP = /\G(?:\
@@ -208,7 +255,7 @@ module Net
 (?# 2:  NIL     )(NIL)|\
 (?# 3:  NUMBER  )(\d+)|\
 (?# 4:  QUOTED  )#{Patterns::QUOTED_rev2}|\
-(?# 5:  LITERAL )\{(\d+)\}\r\n|\
+(?# 5:  LITERAL )#{Patterns::LITERAL}|\
 (?# 6:  LPAR    )(\()|\
 (?# 7:  RPAR    )(\)))/ni
 
@@ -1501,38 +1548,42 @@ module Net
             @pos = $~.end(0)
             if $1
               return Token.new(T_SPACE, $+)
-            elsif $2
-              return Token.new(T_NIL, $+)
+            elsif $2 && $6
+              # greedily match ATOM, prefixed with NUMBER, NIL, or PLUS.
+              return Token.new(T_ATOM, $2)
             elsif $3
-              return Token.new(T_NUMBER, $+)
+              return Token.new(T_NIL, $+)
             elsif $4
-              return Token.new(T_ATOM, $+)
+              return Token.new(T_NUMBER, $+)
             elsif $5
-              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
-            elsif $6
-              return Token.new(T_LPAR, $+)
+              return Token.new(T_PLUS, $+)
             elsif $7
-              return Token.new(T_RPAR, $+)
+              # match ATOM, without a NUMBER, NIL, or PLUS prefix
+              return Token.new(T_ATOM, $+)
             elsif $8
-              return Token.new(T_BSLASH, $+)
+              return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $9
-              return Token.new(T_STAR, $+)
+              return Token.new(T_LPAR, $+)
             elsif $10
-              return Token.new(T_LBRA, $+)
+              return Token.new(T_RPAR, $+)
             elsif $11
-              return Token.new(T_RBRA, $+)
+              return Token.new(T_BSLASH, $+)
             elsif $12
+              return Token.new(T_STAR, $+)
+            elsif $13
+              return Token.new(T_LBRA, $+)
+            elsif $14
+              return Token.new(T_RBRA, $+)
+            elsif $15
               len = $+.to_i
               val = @str[@pos, len]
               @pos += len
               return Token.new(T_LITERAL, val)
-            elsif $13
-              return Token.new(T_PLUS, $+)
-            elsif $14
-              return Token.new(T_PERCENT, $+)
-            elsif $15
-              return Token.new(T_CRLF, $+)
             elsif $16
+              return Token.new(T_PERCENT, $+)
+            elsif $17
+              return Token.new(T_CRLF, $+)
+            elsif $18
               return Token.new(T_EOF, $+)
             else
               parse_error("[Net::IMAP BUG] BEG_REGEXP is invalid")
