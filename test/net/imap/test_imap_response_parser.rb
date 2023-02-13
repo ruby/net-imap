@@ -99,4 +99,53 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # response data, should still use normal tests, below
   ############################################################################
 
+  # Strangly, there are no example responses for BINARY[section] in either
+  # RFC3516 or RFC9051!  The closest I found was RFC5259, and those examples
+  # aren't FETCH responses.
+  def test_fetch_binary_and_binary_size
+    debug, Net::IMAP.debug = Net::IMAP.debug, true
+    png      = File.binread(File.join(TEST_FIXTURE_PATH, "ruby.png"))
+    size     = png.bytesize
+    parser   = Net::IMAP::ResponseParser.new
+    # with literal8
+    response = "* 1 FETCH (UID 5 BINARY[3.2] ~{%d}\r\n%s)\r\n".b % [size, png]
+    parsed   = parser.parse response
+    assert_equal png,              parsed.data.attr["BINARY[3.2]"]
+    assert_equal png,              parsed.data.binary(3, 2)
+    assert_equal png.bytesize,     parsed.data.attr["BINARY[3.2]"].bytesize
+    assert_equal Encoding::BINARY, parsed.data.attr["BINARY[3.2]"].encoding
+    # binary.size and partial
+    partial  = png[0, 32]
+    response = "* 1 FETCH (BINARY.SIZE[5] %d BINARY[5]<0> ~{32}\r\n%s)\r\n".b %
+      [png.bytesize, partial]
+    parsed   = parser.parse response
+    assert_equal png.bytesize, parsed.data.attr["BINARY.SIZE[5]"]
+    assert_equal png.bytesize, parsed.data.binary_size(5)
+    assert_equal 32,           parsed.data.attr["BINARY[5]<0>"].bytesize
+    assert_equal partial,      parsed.data.attr["BINARY[5]<0>"]
+    assert_equal partial,      parsed.data.binary(5, offset: 0)
+    # test every type of value
+    literal8 = "\x00 to \xff\r\n".b * 8
+    literal  = "\x01 to \xff\r\n".b * 8
+    quoted   = "\x01 to \x7f\b\t".b * 8
+    response = "* 1 FETCH (" \
+               "BINARY[1] ~{%d}\r\n%s " \
+               "BINARY[2] {%d}\r\n%s " \
+               "BINARY[3] \"%s\" " \
+               "BINARY[4] NIL)\r\n".b % [
+                 literal8.bytesize, literal8, literal.bytesize, literal, quoted
+               ]
+    parsed   = parser.parse response
+    assert_equal literal8, parsed.data.attr["BINARY[1]"]
+    assert_equal literal8, parsed.data.binary(1)
+    assert_equal literal,  parsed.data.attr["BINARY[2]"]
+    assert_equal literal,  parsed.data.binary(2)
+    assert_equal quoted,   parsed.data.attr["BINARY[3]"]
+    assert_equal quoted,   parsed.data.binary(3)
+    assert_nil             parsed.data.attr["BINARY[4]"]
+    assert_nil             parsed.data.binary(4)
+  ensure
+    Net::IMAP.debug = debug
+  end
+
 end

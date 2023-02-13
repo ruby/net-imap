@@ -33,6 +33,14 @@ module Net
     # * <b><tt>"INTERNALDATE"</tt></b> --- See #internaldate.
     # * <b><tt>"RFC822.SIZE"</tt></b> --- See #rfc822_size.
     #
+    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] adds the
+    # additional fetch items from the +BINARY+ extension
+    # {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516.html]:
+    #
+    # * <b><tt>"BINARY[#{part}]"</tt></b>,
+    #   <b><tt>"BINARY[#{part}]<#{offset}>"</tt></b> -- See #binary.
+    # * <b><tt>"BINARY.SIZE[#{part}]"</tt></b> -- See #binary_size.
+    #
     # Several static message attributes in
     # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] are obsolete and
     # been removed from
@@ -47,8 +55,7 @@ module Net
     #
     # [Note:]
     #   >>>
-    #     Additional static fields are defined in \IMAP extensions and
-    #     IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html], but
+    #     Additional static fields are defined in other \IMAP extensions, but
     #     Net::IMAP can't parse them yet.
     #
     # ==== Dynamic message attributes
@@ -388,6 +395,49 @@ module Net
       #
       # This is the same as getting the value for <tt>"UID"</tt> from #attr.
       def uid; attr["UID"] end
+
+      # :call-seq:
+      #   binary(*part_nums, offset: nil) -> string or nil
+      #
+      # Returns the binary representation of a particular MIME part, which has
+      # already been decoded according to its Content-Transfer-Encoding.
+      #
+      # See #part for a description of +part_nums+ and +offset+.
+      #
+      # This is the same as getting the value of
+      # <tt>"BINARY[#{part_nums.join(".")}]"</tt> or
+      # <tt>"BINARY[#{part_nums.join(".")}]<#{offset}>"</tt> from #attr.
+      #
+      # The server must support either
+      # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]
+      # or the +BINARY+ extension
+      # {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516.html].
+      #
+      # See also: #binary_size, #mime
+      def binary(*part_nums, offset: nil)
+        attr[section_attr("BINARY", part_nums, offset: offset)]
+      end
+
+      # :call-seq:
+      #   binary_size(*part_nums) -> integer or nil
+      #
+      # Returns the decoded size of a particular MIME part (the size to expect
+      # in response to a <tt>BINARY</tt> fetch request).
+      #
+      # See #part for a description of +part_nums+.
+      #
+      # This is the same as getting the value of
+      # <tt>"BINARY.SIZE[#{part_nums.join(".")}]"</tt> from #attr.
+      #
+      # The server must support either
+      # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]
+      # or the +BINARY+ extension
+      # {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516.html].
+      #
+      # See also: #binary, #mime
+      def binary_size(*part_nums)
+        attr[section_attr("BINARY.SIZE", part_nums)]
+      end
 
       # :call-seq: modseq -> Integer
       #
