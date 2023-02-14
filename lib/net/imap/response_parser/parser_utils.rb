@@ -170,6 +170,16 @@ module Net
           @token ||= next_token
         end
 
+        # like match, without consuming the token
+        def lookahead!(*args)
+          if args.include?((@token ||= next_token)&.symbol)
+            @token
+          else
+            parse_error('unexpected token %s (expected %s)',
+                        @token&.symbol, args.join(" or "))
+          end
+        end
+
         def peek_str?(str)
           assert_no_lookahead if Net::IMAP.debug
           @str[@pos, str.length] == str

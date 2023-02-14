@@ -326,6 +326,9 @@ module Net
       # TODO: add to lexer and only match tagged-ext-label
       def_token_matchers :tagged_ext_label, T_ATOM, T_NIL, send: :upcase
 
+      def_token_matchers :CRLF, T_CRLF
+      def_token_matchers :EOF,  T_EOF
+
       # atom            = 1*ATOM-CHAR
       # ATOM-CHAR       = <any CHAR except atom-specials>
       ATOM_TOKENS = [T_ATOM, T_NUMBER, T_NIL, T_LBRA, T_PLUS]
@@ -403,23 +406,25 @@ module Net
       alias number64    number
       alias number64?   number?
 
+      # [RFC3501 & RFC9051:]
+      #   response        = *(continue-req / response-data) response-done
+      #
+      # For simplicity, response isn't interpreted as the combination of the
+      # three response types, but instead represents any individual server
+      # response.  Our simplified interpretation is defined as:
+      #   response        = continue-req | response_data | response-tagged
+      #
+      # n.b: our "response-tagged" definition parses "greeting" too.
       def response
-        token = lookahead
-        case token.symbol
-        when T_PLUS
-          result = continue_req
-        when T_STAR
-          result = response_untagged
-        else
-          result = response_tagged
-        end
-        while lookahead.symbol == T_SPACE
-          # Ignore trailing space for Microsoft Exchange Server
-          shift_token
-        end
-        match(T_CRLF)
-        match(T_EOF)
-        return result
+        resp = case lookahead!(T_PLUS, T_STAR, *TAG_TOKENS).symbol
+               when T_PLUS then continue_req
+               when T_STAR then response_data
+               else             response_tagged
+               end
+        accept_spaces # QUIRKY: Ignore trailing space (MS Exchange Server?)
+        CRLF!
+        EOF!
+        resp
       end
 
       # RFC3501 & RFC9051:
@@ -434,7 +439,7 @@ module Net
         ContinuationRequest.new(SP? ? resp_text : ResponseText::EMPTY, @str)
       end
 
-      def response_untagged
+      def response_data
         match(T_STAR)
         match(T_SPACE)
         token = lookahead
@@ -1566,10 +1571,10 @@ module Net
       #
       # This advances @pos directly so it's safe before changing @lex_state.
       def accept_spaces
-        shift_token if @token&.symbol == T_SPACE
-        if @str.index(SPACES_REGEXP, @pos)
+        return false unless SP?
+        @str.index(SPACES_REGEXP, @pos) and
           @pos = $~.end(0)
-        end
+        true
       end
 
       def next_token
