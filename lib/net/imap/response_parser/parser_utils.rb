@@ -81,6 +81,16 @@ module Net
             class_eval <<~RUBY, __FILE__, __LINE__ + 1
               # frozen_string_literal: true
 
+              # lookahead version of match, returning the value
+              def lookahead_#{name}!
+                token = #{LOOKAHEAD}
+                if #{matcher}
+                  #{value}
+                else
+                  #{raise_parse_error}
+                end
+              end
+
               def #{name}?
                 token = #{LOOKAHEAD}
                 if #{matcher}
@@ -99,6 +109,7 @@ module Net
                 end
               end
             RUBY
+
           end
 
         end
