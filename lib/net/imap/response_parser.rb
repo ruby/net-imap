@@ -283,6 +283,7 @@ module Net
       Token = Struct.new(:symbol, :value)
 
       def_char_matchers :SP,   " ", :T_SPACE
+      def_char_matchers :PLUS, "+", :T_PLUS
 
       def_char_matchers :lpar, "(", :T_LPAR
       def_char_matchers :rpar, ")", :T_RPAR
@@ -421,15 +422,16 @@ module Net
         return result
       end
 
+      # RFC3501 & RFC9051:
+      #   continue-req    = "+" SP (resp-text / base64) CRLF
+      #
+      # n.b: base64 is valid resp-text.  And in the spirit of RFC9051 Appx E 23
+      # (and to workaround existing servers), we use the following grammar:
+      #
+      #   continue-req    = "+" (SP (resp-text)) CRLF
       def continue_req
-        match(T_PLUS)
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          return ContinuationRequest.new(resp_text, @str)
-        else
-          return ContinuationRequest.new(ResponseText.new(nil, ""), @str)
-        end
+        PLUS!
+        ContinuationRequest.new(SP? ? resp_text : ResponseText::EMPTY, @str)
       end
 
       def response_untagged
