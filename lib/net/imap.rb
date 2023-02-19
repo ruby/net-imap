@@ -505,6 +505,10 @@ module Net
   # ==== RFC7162: +CONDSTORE+
   #
   # - Updates #status with the +HIGHESTMODSEQ+ status attribute.
+  # - Updates #search, #uid_search, #sort, and #uid_sort with the +MODSEQ+
+  #   search criterion, and adds SearchResult#modseq to the search response.
+  # - Updates #thread and #uid_thread with the +MODSEQ+ search criterion
+  #   <em>(but thread responses are unchanged)</em>.
   #
   # ==== RFC8438: <tt>STATUS=SIZE</tt>
   # - Updates #status with the +SIZE+ status attribute.
@@ -1887,6 +1891,10 @@ module Net
     # string holding the entire search string, or a single-dimension array of
     # search keywords and arguments.
     #
+    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
+    # capability has been enabled.
+    #
     # Related: #uid_search
     #
     # ===== Search criteria
@@ -1935,6 +1943,15 @@ module Net
     #   p imap.search(["SUBJECT", "hello", "NOT", "NEW"])
     #   #=> [1, 6, 7, 8]
     #
+    # ===== Capabilities
+    #
+    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # and enabled for the selected mailbox, a non-empty SearchResult will
+    # include a +MODSEQ+ value.
+    #   imap.select("mbox", condstore: true)
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
+    #   result.modseq # => 5594
     def search(keys, charset = nil)
       return search_internal("SEARCH", keys, charset)
     end
@@ -1942,6 +1959,10 @@ module Net
     # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to search the mailbox for messages that match the given searching
     # criteria, and returns unique identifiers (<tt>UID</tt>s).
+    #
+    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
+    # capability has been enabled.
     #
     # See #search for documentation of search criteria.
     def uid_search(keys, charset = nil)

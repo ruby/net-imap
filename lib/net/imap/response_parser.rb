@@ -1467,9 +1467,10 @@ module Net
         while _ = SP? && nz_number? do data << _ end
         if lpar?
           label("MODSEQ"); SP!
-          mod_sequence_value
+          modseq = mod_sequence_value
           rpar
         end
+        data = SearchResult.new(data, modseq: modseq)
         UntaggedResponse.new(name, data, @str)
       end
       alias sort_data mailbox_data__search

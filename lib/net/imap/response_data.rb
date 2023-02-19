@@ -3,6 +3,7 @@
 module Net
   class IMAP < Protocol
     autoload :FetchData,        "#{__dir__}/fetch_data"
+    autoload :SearchResult,     "#{__dir__}/search_result"
     autoload :SequenceSet,      "#{__dir__}/sequence_set"
 
     # Net::IMAP::ContinuationRequest represents command continuation requests.
