@@ -1452,34 +1452,15 @@ module Net
       #   mailbox-data        = obsolete-search-response / ...
       #   obsolete-search-response = "SEARCH" *(SP nz-number)
       def mailbox_data__search
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          data = []
-          while true
-            token = lookahead
-            case token.symbol
-            when T_CRLF
-              break
-            when T_SPACE
-              shift_token
-            when T_NUMBER
-              data.push(number)
-            when T_LPAR
-              # TODO: include the MODSEQ value in a response
-              shift_token
-              match(T_ATOM)
-              match(T_SPACE)
-              match(T_NUMBER)
-              match(T_RPAR)
-            end
-          end
-        else
-          data = []
+        name = label_in("SEARCH", "SORT")
+        data = []
+        while _ = SP? && nz_number? do data << _ end
+        if lpar?
+          label("MODSEQ"); SP!
+          mod_sequence_value
+          rpar
         end
-        return UntaggedResponse.new(name, data, @str)
+        UntaggedResponse.new(name, data, @str)
       end
       alias sort_data mailbox_data__search
 
