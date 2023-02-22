@@ -491,7 +491,7 @@ module Net
   #
   # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
   #
-  # - See #enable for information about support foi UTF-8 string encoding.
+  # - See #enable for information about support for UTF-8 string encoding.
   #
   #--
   # ==== RFC7888: <tt>LITERAL+</tt>, +LITERAL-+
@@ -1974,7 +1974,10 @@ module Net
         .join(' ')
       synchronize do
         send_command("ENABLE #{capabilities}")
-        return @responses.delete("ENABLED")[-1]
+        result = @responses.delete("ENABLED")[-1]
+        @utf8_strings ||= result.include? "SMTPUTF8"
+        @utf8_strings ||= result.include? "IMAP4REV2"
+        result
       end
     end
 
@@ -2222,6 +2225,7 @@ module Net
       @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
       @tag_prefix = "RUBY"
       @tagno = 0
+      @utf8_strings = false
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
       @parser = ResponseParser.new
