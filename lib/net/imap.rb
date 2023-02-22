@@ -1975,7 +1975,7 @@ module Net
       synchronize do
         send_command("ENABLE #{capabilities}")
         result = @responses.delete("ENABLED")[-1]
-        @utf8_strings ||= result.include? "SMTPUTF8"
+        @utf8_strings ||= result.include? "UTF8=ACCEPT"
         @utf8_strings ||= result.include? "IMAP4REV2"
         result
       end
