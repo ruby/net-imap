@@ -52,13 +52,20 @@ module Net
     end
 
     def send_string_data(str, tag = nil)
-      case str
-      when ""
+      if str.empty?
         put_string('""')
-      when /[\x80-\xff\r\n]/n
-        # literal
+      elsif str.match?(/[\r\n]/n)
+        # literal, because multiline
         send_literal(str, tag)
-      when /[(){ \x00-\x1f\x7f%*"\\]/n
+      elsif !str.ascii_only?
+        if @utf8_strings
+          # quoted string
+          send_quoted_string(str)
+        else
+          # literal, because of non-ASCII bytes
+          send_literal(str, tag)
+        end
+      elsif str.match?(/[(){ \x00-\x1f\x7f%*"\\]/n)
         # quoted string
         send_quoted_string(str)
       else
@@ -67,7 +74,7 @@ module Net
     end
 
     def send_quoted_string(str)
-      put_string('"' + str.gsub(/["\\]/n, "\\\\\\&") + '"')
+      put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
     def send_literal(str, tag = nil)

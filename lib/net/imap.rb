@@ -491,7 +491,7 @@ module Net
   #
   # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
   #
-  # - See #enable for information about support foi UTF-8 string encoding.
+  # - See #enable for information about support for UTF-8 string encoding.
   #
   #--
   # ==== RFC7888: <tt>LITERAL+</tt>, +LITERAL-+
@@ -1931,20 +1931,14 @@ module Net
     #   UTF-7}[::decode_utf7] for mailbox names, or RFC2047 encoded-words for
     #   message headers.
     #
-    #   *Note:* For now, strings with 8-bit characters are still _sent_ using
-    #   "literal" syntax.  A future update will change how commands send UTF-8
-    #   strings when <tt>UTF8=ACCEPT</tt> is enabled.  This update should be
-    #   backward-compatible.
-    #
     #   *Note:* <em>A future update may set string encodings slightly
     #   differently</em>, e.g: "US-ASCII" when UTF-8 is not enabled, and "UTF-8"
     #   when it is.  Currently, the encoding of strings sent as "quoted" or
-    #   "text" will _always_ be "UTF-8", even when a 7-bit encoding is used
-    #   (e.g. UTF-7, encoded-words, quoted-printable, base64).  And currently,
-    #   string "literals" sent by the server will always have an "ASCII-8BIT"
-    #   (binary) encoding, even if they must contain UTF-8 data---although a
-    #   server _should_ use "quoted" strings once <tt>UTF8=ACCEPT</tt> is
-    #   enabled.
+    #   "text" will _always_ be "UTF-8", even when only ASCII characters are
+    #   used (e.g. "Subject: Agenda") And currently, string "literals" sent
+    #   by the server will always have an "ASCII-8BIT" (binary)
+    #   encoding, even if they generally contain UTF-8 data, if they are
+    #   text at all.
     #
     # [<tt>"UTF8=ONLY"</tt> [RFC6855[https://tools.ietf.org/html/rfc6855]]]
     #
@@ -1974,7 +1968,10 @@ module Net
         .join(' ')
       synchronize do
         send_command("ENABLE #{capabilities}")
-        return @responses.delete("ENABLED")[-1]
+        result = @responses.delete("ENABLED")[-1]
+        @utf8_strings ||= result.include? "UTF8=ACCEPT"
+        @utf8_strings ||= result.include? "IMAP4REV2"
+        result
       end
     end
 
@@ -2222,6 +2219,7 @@ module Net
       @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
       @tag_prefix = "RUBY"
       @tagno = 0
+      @utf8_strings = false
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
       @parser = ResponseParser.new
