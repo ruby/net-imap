@@ -2524,8 +2524,10 @@ module Net
         normalize_searching_criteria(search_keys)
       end
       normalize_searching_criteria(search_keys)
-      send_command(cmd, algorithm, charset, *search_keys)
-      return @responses.delete("THREAD")[-1]
+      synchronize do
+        send_command(cmd, algorithm, charset, *search_keys)
+        @responses.delete("THREAD")[-1]
+      end
     end
 
     def normalize_searching_criteria(keys)
