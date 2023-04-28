@@ -27,15 +27,6 @@ class IMAPRegexpsTest < Test::Unit::TestCase
       exclude_map: {
         Net::IMAP => %i[BodyTypeAttachment BodyTypeExtension], # deprecated
       },
-      exclude: [
-        /\n(?!\z)/n, # TODO (in Net::IMAP#put_string)
-        Net::IMAP::StringPrep::Tables::BIDI_FAILS_REQ2, # TODO
-        Net::IMAP::StringPrep::Tables::BIDI_FAILS_REQ3, # TODO
-        # The following regexps are built using BIDI_FAILS_REQ{2,3}
-        Net::IMAP::StringPrep::Tables::BIDI_FAILURE,
-        Net::IMAP::StringPrep::SASLprep::PROHIBITED,
-        Net::IMAP::StringPrep::SASLprep::PROHIBITED_STORED,
-      ]
     ).to_h
   )
 

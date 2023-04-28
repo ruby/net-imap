@@ -1,0 +1,27 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+# See also: test/net/imap/regexp_collector.rb
+# See also: test/net/imap/test_regexps.rb
+
+def traverse(m=Object, s=Set.new, &b)
+  m.constants(false).map{m.const_get _1 rescue nil}.select{_1 in Module}.each do
+    next if s.include?(_1); s << _1
+    b and b[_1]
+    traverse(_1, s, &b)
+  end
+end
+
+def collect_regexps = ObjectSpace
+  .each_object(Regexp)
+  .reject{Regexp.linear_time? _1}
+
+2.times{traverse}
+before = collect_regexps
+
+$LOAD_PATH.unshift "./lib"
+require 'net/imap'
+2.times{traverse}
+traverse(Net::IMAP) { puts _1.name }
+after = collect_regexps - before
+p before: before.count, count: after.count, after:;
