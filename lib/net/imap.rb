@@ -2443,8 +2443,8 @@ module Net
         if @debug_output_bol
           $stderr.print("C: ")
         end
-        $stderr.print(str.gsub(/\n(?!\z)/n, "\nC: "))
-        if /\r\n\z/n.match(str)
+        $stderr.print(str.gsub(/\n/n) { $'.empty? ? $& : "\nC: " })
+        if /\n\z/n.match(str)
           @debug_output_bol = true
         else
           @debug_output_bol = false

@@ -416,40 +416,22 @@ class StringPrepTablesGenerator
   def bidi_L        ; regexp_for "D.2" end
 
   def bidi_fails_req2
-    / # RandALCat followed by LCat
-      (?<r_and_al_cat>#{bidi_R_AL.source})
-        .*?
-        (?<l_cat>#{bidi_L.source})
-      | # RandALCat preceded by LCat
-        \g<l_cat> .*? \g<r_and_al_cat>
-    /mux
+    Regexp.union(
+      /#{bidi_R_AL}.*?#{bidi_L}/mu, # RandALCat followed by LCat
+      /#{bidi_L}.*?#{bidi_R_AL}/mu, # RandALCat preceded by LCat
+    )
   end
 
   def bidi_fails_req3
-    / # contains RandALCat but doesn't start with RandALCat
-      \A(?<not_r_nor_al>#{bidi_not_R_AL})
-        .*?
-        (?<r_and_al_cat>#{bidi_R_AL})
-      | # contains RandALCat but doesn't end with RandALCat
-        \g<r_and_al_cat> .*? \g<not_r_nor_al>\z
-    /mux
+    # contains RandALCat:
+    Regexp.union(
+      /\A#{bidi_not_R_AL}.*?#{bidi_R_AL}/mu, # but doesn't start with RandALCat
+      /#{bidi_R_AL}.*?#{bidi_not_R_AL}\z/mu, # but doesn't end   with RandALCat
+    )
   end
 
-  # shares the bidi_R_AL definition between both req2 and req3
   def bidi_failure_regexp
-    req3_with_backref = bidi_fails_req3.source
-      .gsub(%r{\(\?\<r_and_al_cat\>\(.*?\)\)}, "\g<r_and_al_cat>")
-      .then{|re|"(?mx-i:#{re})"}
-    /#{bidi_fails_req2} | #{req3_with_backref}/mux
-  end
-
-  def bidi_consts
-    <<~RUBY
-      #############
-          # Bidirectional checks.
-          #
-
-    RUBY
+    Regexp.union(bidi_fails_req2, bidi_fails_req3)
   end
 
   SASL_TABLES_PROHIBITED = %w[
