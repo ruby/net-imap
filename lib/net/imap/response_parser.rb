@@ -284,6 +284,7 @@ module Net
 
       def_char_matchers :SP,   " ", :T_SPACE
       def_char_matchers :PLUS, "+", :T_PLUS
+      def_char_matchers :STAR, "*", :T_STAR
 
       def_char_matchers :lpar, "(", :T_LPAR
       def_char_matchers :rpar, ")", :T_RPAR
@@ -440,46 +441,35 @@ module Net
       end
 
       def response_data
-        match(T_STAR)
-        match(T_SPACE)
-        token = lookahead
-        if token.symbol == T_NUMBER
-          return numeric_response
-        elsif token.symbol == T_ATOM
-          case token.value
-          when /\A(?:OK|NO|BAD|BYE|PREAUTH)\z/ni
-            return response_cond
-          when /\A(?:FLAGS)\z/ni
-            return flags_response
-          when /\A(?:ID)\z/ni
-            return id_response
-          when /\A(?:LIST|LSUB|XLIST)\z/ni
-            return list_response
-          when /\A(?:NAMESPACE)\z/ni
-            return namespace_response
-          when /\A(?:QUOTA)\z/ni
-            return getquota_response
-          when /\A(?:QUOTAROOT)\z/ni
-            return getquotaroot_response
-          when /\A(?:ACL)\z/ni
-            return getacl_response
-          when /\A(?:SEARCH|SORT)\z/ni
-            return search_response
-          when /\A(?:THREAD)\z/ni
-            return thread_response
-          when /\A(?:STATUS)\z/ni
-            return status_response
-          when /\A(?:CAPABILITY)\z/ni
-            return capability_data__untagged
-          when /\A(?:NOOP)\z/ni
-            return ignored_response
-          when /\A(?:ENABLED)\z/ni
-            return enable_data
-          else
-            return unparsed_response
+        STAR!; SP!
+        token = lookahead!(T_NUMBER, T_ATOM)
+        case token.symbol
+        when T_NUMBER then numeric_response
+        when T_ATOM
+          case token.value.upcase
+          when "OK"         then response_cond             # RFC3501, RFC9051
+          when "BAD"        then response_cond             # RFC3501, RFC9051
+          when "NO"         then response_cond             # RFC3501, RFC9051
+          when "PREAUTH"    then response_cond             # RFC3501, RFC9051
+          when "BYE"        then response_cond             # RFC3501, RFC9051
+          when "FLAGS"      then flags_response            # RFC3501, RFC9051
+          when "ID"         then id_response               # RFC2971
+          when "LIST"       then list_response             # RFC3501, RFC9051
+          when "LSUB"       then list_response             # RFC3501 (obsolete)
+          when "XLIST"      then list_response             # deprecated
+          when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
+          when "QUOTA"      then getquota_response         # RFC2087, RFC9208
+          when "QUOTAROOT"  then getquotaroot_response     # RFC2087, RFC9208
+          when "ACL"        then getacl_response           # RFC4314
+          when "SEARCH"     then search_response           # RFC3501 (obsolete)
+          when "SORT"       then search_response           # RFC5256, RFC7162
+          when "THREAD"     then thread_response           # RFC5256
+          when "STATUS"     then status_response           # RFC3501, RFC9051
+          when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
+          when "ENABLED"    then enable_data               # RFC5161, RFC9051
+          when "NOOP"       then ignored_response
+          else                   unparsed_response
           end
-        else
-          parse_error("unexpected token %s", token.symbol)
         end
       end
 
