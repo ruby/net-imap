@@ -29,6 +29,10 @@ class IMAPDataEncodingTest < Test::Unit::TestCase
     s = Net::IMAP.decode_utf7("&,yH,Iv8j-")
     utf8 = "\357\274\241\357\274\242\357\274\243".dup.force_encoding("UTF-8")
     assert_equal(utf8, s)
+
+    assert_linear_performance([1, 10, 100], pre: ->(n) {'&'*(n*1_000)}) do |s|
+      Net::IMAP.decode_utf7(s)
+    end
   end
 
   def test_encode_date
