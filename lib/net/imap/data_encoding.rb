@@ -54,9 +54,9 @@ module Net
     # Net::IMAP does _not_ automatically encode and decode
     # mailbox names to and from UTF-7.
     def self.decode_utf7(s)
-      return s.gsub(/&([^-]+)?-/n) {
-        if $1
-          ($1.tr(",", "/") + "===").unpack1("m").encode(Encoding::UTF_8, Encoding::UTF_16BE)
+      return s.gsub(/&([A-Za-z0-9+,]+)?-/n) {
+        if base64 = $1
+          (base64.tr(",", "/") + "===").unpack1("m").encode(Encoding::UTF_8, Encoding::UTF_16BE)
         else
           "&"
         end
