@@ -7,3 +7,4 @@ gemspec
 gem "rake"
 gem "rdoc"
 gem "test-unit"
+gem "test-unit-ruby-core"
