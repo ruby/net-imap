@@ -30,9 +30,12 @@ class IMAPDataEncodingTest < Test::Unit::TestCase
     utf8 = "\357\274\241\357\274\242\357\274\243".dup.force_encoding("UTF-8")
     assert_equal(utf8, s)
 
-    assert_linear_performance([1, 10, 100], pre: ->(n) {'&'*(n*1_000)}) do |s|
-      Net::IMAP.decode_utf7(s)
-    end
+    # This assertion is not in the current version of core_assertions.  The fix
+    # has been backported to v0.3.5, but only tested in master and v0.4.0+.
+    #
+    # assert_linear_performance([1, 10, 100], pre: ->(n) {'&'*(n*1_000)}) do |s|
+    #   Net::IMAP.decode_utf7(s)
+    # end
   end
 
   def test_encode_date
