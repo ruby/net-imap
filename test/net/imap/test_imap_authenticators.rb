@@ -5,11 +5,17 @@ require "test/unit"
 
 class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
+  def test_net_imap_authenticator_deprecated
+    assert_warn(/Net::IMAP\.authenticator .+deprecated./) do
+      Net::IMAP.authenticator("PLAIN", "user", "pass")
+    end
+  end
+
   # ----------------------
   # PLAIN
   # ----------------------
 
-  def plain(...) Net::IMAP.authenticator("PLAIN", ...) end
+  def plain(...) Net::IMAP::SASL.authenticator("PLAIN", ...) end
 
   def test_plain_authenticator_matches_mechanism
     assert_kind_of(Net::IMAP::SASL::PlainAuthenticator, plain("user", "pass"))
@@ -36,7 +42,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # XOAUTH2
   # ----------------------
 
-  def xoauth2(...) Net::IMAP.authenticator("XOAUTH2", ...) end
+  def xoauth2(...) Net::IMAP::SASL.authenticator("XOAUTH2", ...) end
 
   def test_xoauth2_authenticator_matches_mechanism
     assert_kind_of(Net::IMAP::SASL::XOAuth2Authenticator, xoauth2("user", "tok"))
@@ -59,7 +65,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # ----------------------
 
   def login(*args, warn_deprecation: false, **kwargs, &block)
-    Net::IMAP.authenticator(
+    Net::IMAP::SASL.authenticator(
       "LOGIN", *args, warn_deprecation: warn_deprecation, **kwargs, &block
     )
   end
@@ -74,7 +80,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_login_authenticator_deprecated
     assert_warn(/LOGIN.+deprecated.+PLAIN/) do
-      Net::IMAP.authenticator("LOGIN", "user", "pass")
+      Net::IMAP::SASL.authenticator("LOGIN", "user", "pass")
     end
   end
 
@@ -89,7 +95,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # ----------------------
 
   def cram_md5(*args, warn_deprecation: false, **kwargs, &block)
-    Net::IMAP.authenticator(
+    Net::IMAP::SASL.authenticator(
       "CRAM-MD5", *args, warn_deprecation: warn_deprecation, **kwargs, &block
     )
   end
@@ -104,7 +110,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_cram_md5_authenticator_deprecated
     assert_warn(/CRAM-MD5.+deprecated./) do
-      Net::IMAP.authenticator("CRAM-MD5", "user", "pass")
+      Net::IMAP::SASL.authenticator("CRAM-MD5", "user", "pass")
     end
   end
 
@@ -119,7 +125,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # ----------------------
 
   def digest_md5(*args, warn_deprecation: false, **kwargs, &block)
-    Net::IMAP.authenticator(
+    Net::IMAP::SASL.authenticator(
       "DIGEST-MD5", *args, warn_deprecation: warn_deprecation, **kwargs, &block
     )
   end
@@ -131,7 +137,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_digest_md5_authenticator_deprecated
     assert_warn(/DIGEST-MD5.+deprecated.+RFC6331/) do
-      Net::IMAP.authenticator("DIGEST-MD5", "user", "pass")
+      Net::IMAP::SASL.authenticator("DIGEST-MD5", "user", "pass")
     end
   end
 

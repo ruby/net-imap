@@ -1,67 +1,31 @@
 # frozen_string_literal: true
 
-# Registry for SASL authenticators used by Net::IMAP.
+# Backward compatible delegators from Net::IMAP to Net::IMAP::SASL.
 module Net::IMAP::Authenticators
 
-  # Adds an authenticator for Net::IMAP#authenticate to use.  +mechanism+ is the
-  # {SASL mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
-  # implemented by +authenticator+ (for instance, <tt>"PLAIN"</tt>).
-  #
-  # The +authenticator+ must respond to +#new+ (or #call), receiving the
-  # authenticator configuration and return a configured authentication session.
-  # The authenticator session must respond to +#process+, receiving the server's
-  # challenge and returning the client's response.
-  #
-  # See PlainAuthenticator, XOAuth2Authenticator, and DigestMD5Authenticator for
-  # examples.
-  def add_authenticator(auth_type, authenticator)
-    authenticators[auth_type] = authenticator
+  # Deprecated.  Use Net::IMAP::SASL.add_authenticator instead.
+  def add_authenticator(...)
+    warn(
+      "%s.%s is deprecated.  Use %s.%s instead." % [
+        Net::IMAP, __method__, Net::IMAP::SASL, __method__
+      ],
+      uplevel: 1
+    )
+    Net::IMAP::SASL.add_authenticator(...)
   end
 
-  # :call-seq:
-  #   authenticator(mechanism, ...)                            -> authenticator
-  #   authenticator(mech, *creds, **props) {|prop, auth| val } -> authenticator
-  #   authenticator(mechanism, authnid, creds, authzid=nil)    -> authenticator
-  #   authenticator(mechanism, **properties)                   -> authenticator
-  #   authenticator(mechanism) {|propname, authctx| value }    -> authenticator
-  #
-  # Builds a new authentication session context for +mechanism+.
-  #
-  # [Note]
-  #   This method is intended for internal use by connection protocol code only.
-  #   Protocol client users should see refer to their client's documentation,
-  #   e.g. Net::IMAP#authenticate for Net::IMAP.
-  #
-  # The call signatures documented for this method are recommendations for
-  # authenticator implementors.  All arguments (other than +mechanism+) are
-  # forwarded to the registered authenticator's +#new+ (or +#call+) method, and
-  # each authenticator must document its own arguments.
-  #
-  # The returned object represents a single authentication exchange and <em>must
-  # not</em> be reused for multiple authentication attempts.
-  def authenticator(mechanism, ...)
-    auth = authenticators.fetch(mechanism.upcase) do
-      raise ArgumentError, 'unknown auth type - "%s"' % mechanism
-    end
-    auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
+  # Deprecated.  Use Net::IMAP::SASL.authenticator instead.
+  def authenticator(...)
+    warn(
+      "%s.%s is deprecated.  Use %s.%s instead." % [
+        Net::IMAP, __method__, Net::IMAP::SASL, __method__
+      ],
+      uplevel: 1
+    )
+    Net::IMAP::SASL.authenticator(...)
   end
 
-  private
-
-  def authenticators
-    @authenticators ||= {}
-  end
-
-end
-
-class Net::IMAP
-  extend Authenticators
-  add_authenticator "PLAIN",      SASL::PlainAuthenticator
-  add_authenticator "XOAUTH2",    SASL::XOAuth2Authenticator
-
-  add_authenticator "CRAM-MD5",   SASL::CramMD5Authenticator   # deprecated
-  add_authenticator "LOGIN",      SASL::LoginAuthenticator     # deprecated
-  add_authenticator "DIGEST-MD5", SASL::DigestMD5Authenticator # deprecated
+  Net::IMAP.extend self
 end
 
 class Net::IMAP

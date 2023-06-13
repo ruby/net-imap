@@ -33,12 +33,25 @@ module Net
       autoload :BidiStringError,     sasl_stringprep_rb
 
       sasl_dir = File.expand_path("sasl", __dir__)
+      autoload :Authenticators,           "#{sasl_dir}/authenticators"
+
       autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
       autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
 
       autoload :CramMD5Authenticator,     "#{sasl_dir}/cram_md5_authenticator"
       autoload :DigestMD5Authenticator,   "#{sasl_dir}/digest_md5_authenticator"
       autoload :LoginAuthenticator,       "#{sasl_dir}/login_authenticator"
+
+      # Returns the default global SASL::Authenticators instance.
+      def self.authenticators
+        @authenticators ||= Authenticators.new(use_defaults: true)
+      end
+
+      # Delegates to ::authenticators.  See Authenticators#authenticator.
+      def self.authenticator(...)     authenticators.authenticator(...) end
+
+      # Delegates to ::authenticators.  See Authenticators#add_authenticator.
+      def self.add_authenticator(...) authenticators.add_authenticator(...) end
 
       module_function
 
