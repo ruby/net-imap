@@ -33,11 +33,11 @@ module Net::IMAP::SASL
     def initialize(use_defaults: false)
       @authenticators = {}
       if use_defaults
-        add_authenticator "PLAIN",      PlainAuthenticator
-        add_authenticator "XOAUTH2",    XOAuth2Authenticator
-        add_authenticator "LOGIN",      LoginAuthenticator     # deprecated
-        add_authenticator "CRAM-MD5",   CramMD5Authenticator   # deprecated
-        add_authenticator "DIGEST-MD5", DigestMD5Authenticator # deprecated
+        add_authenticator "Plain",      PlainAuthenticator
+        add_authenticator "XOAuth2",    XOAuth2Authenticator
+        add_authenticator "Login",      LoginAuthenticator     # deprecated
+        add_authenticator "Cram-MD5",   CramMD5Authenticator   # deprecated
+        add_authenticator "Digest-MD5", DigestMD5Authenticator # deprecated
       end
     end
 
@@ -60,8 +60,9 @@ module Net::IMAP::SASL
     # When only a single argument is given, the authenticator class will be
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
     # preserved and non-alphanumeric characters are removed..
-    def add_authenticator(auth_type, authenticator)
-      @authenticators[auth_type] = authenticator
+    def add_authenticator(name, authenticator)
+      key = name.upcase.to_sym
+      @authenticators[key] = authenticator
     end
 
     # :call-seq:
@@ -81,7 +82,7 @@ module Net::IMAP::SASL
     #   only.  Protocol client users should see refer to their client's
     #   documentation, e.g. Net::IMAP#authenticate.
     def authenticator(mechanism, ...)
-      auth = @authenticators.fetch(mechanism.upcase) do
+      auth = @authenticators.fetch(mechanism.upcase.to_sym) do
         raise ArgumentError, 'unknown auth type - "%s"' % mechanism
       end
       auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
