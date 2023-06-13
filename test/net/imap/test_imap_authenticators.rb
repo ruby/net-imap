@@ -11,6 +11,24 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     end
   end
 
+  test ".authenticator mechanism name is case insensitive" do
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator("PLAIN", "user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator("plain", "user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator("pLaIn", "user", "pass"))
+  end
+
+  test ".authenticator mechanism name can be a symbol" do
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator(:PLAIN, "user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator(:plain, "user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator,
+                   Net::IMAP::SASL.authenticator(:pLaIN, "user", "pass"))
+  end
+
   # ----------------------
   # PLAIN
   # ----------------------
