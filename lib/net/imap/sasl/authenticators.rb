@@ -33,11 +33,11 @@ module Net::IMAP::SASL
     def initialize(use_defaults: false)
       @authenticators = {}
       if use_defaults
-        add_authenticator "Plain",      PlainAuthenticator
-        add_authenticator "XOAuth2",    XOAuth2Authenticator
-        add_authenticator "Login",      LoginAuthenticator     # deprecated
-        add_authenticator "Cram-MD5",   CramMD5Authenticator   # deprecated
-        add_authenticator "Digest-MD5", DigestMD5Authenticator # deprecated
+        add_authenticator "Plain"
+        add_authenticator "XOAuth2"
+        add_authenticator "Login"      # deprecated
+        add_authenticator "Cram-MD5"   # deprecated
+        add_authenticator "Digest-MD5" # deprecated
       end
     end
 
@@ -60,8 +60,16 @@ module Net::IMAP::SASL
     # When only a single argument is given, the authenticator class will be
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
     # preserved and non-alphanumeric characters are removed..
-    def add_authenticator(name, authenticator)
+    def add_authenticator(name, authenticator = nil)
       key = name.upcase.to_sym
+      authenticator ||= begin
+        class_name = "#{name.gsub(/[^a-zA-Z0-9]/, "")}Authenticator".to_sym
+        auth_class = nil
+        ->(*creds, **props, &block) {
+          auth_class ||= Net::IMAP::SASL.const_get(class_name)
+          auth_class.new(*creds, **props, &block)
+        }
+      end
       @authenticators[key] = authenticator
     end
 
