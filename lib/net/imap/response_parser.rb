@@ -643,7 +643,7 @@ module Net
         choice = m&.named_captures&.compact&.keys&.first
         # In practice, the following line should never be used. But the ABNF
         # *does* allow literals, and this will handle them.
-        choice ||= lookahead_case_insensitive_string!
+        choice ||= lookahead_case_insensitive__string!
         case choice
         when "BASIC"   then body_type_basic # => BodyTypeBasic
         when "MESSAGE" then body_type_msg   # => BodyTypeMessage | BodyTypeBasic
