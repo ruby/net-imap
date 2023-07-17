@@ -2,6 +2,7 @@
 
 require "net/imap"
 require "test/unit"
+require_relative "fake_server"
 
 class IMAPTest < Test::Unit::TestCase
   CA_FILE = File.expand_path("../fixtures/cacert.pem", __dir__)
@@ -775,72 +776,28 @@ EOF
     end
   end
 
-  def test_uid_expunge
-    server = create_tcp_server
-    port = server.addr[1]
-    requests = []
-    start_server do
-      sock = server.accept
-      begin
-        sock.print("* OK test server\r\n")
-        requests.push(sock.gets)
-        sock.print("* 1 EXPUNGE\r\n")
-        sock.print("* 1 EXPUNGE\r\n")
-        sock.print("* 1 EXPUNGE\r\n")
-        sock.print("RUBY0001 OK UID EXPUNGE completed\r\n")
-        sock.gets
-        sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0002 OK LOGOUT completed\r\n")
-      ensure
-        sock.close
-        server.close
+  def test_uidplus_uid_expunge
+    with_fake_server(select: "INBOX",
+                     extensions: %i[UIDPLUS]) do |server, imap|
+      server.on "UID EXPUNGE" do |resp|
+        resp.untagged("1 EXPUNGE")
+        resp.untagged("1 EXPUNGE")
+        resp.untagged("1 EXPUNGE")
+        resp.done_ok
       end
-    end
-
-    begin
-      imap = Net::IMAP.new(server_addr, :port => port)
       response = imap.uid_expunge(1000..1003)
-      assert_equal("RUBY0001 UID EXPUNGE 1000:1003\r\n", requests.pop)
+      cmd = server.commands.pop
+      assert_equal ["UID EXPUNGE", "1000:1003"], [cmd.name, cmd.args]
       assert_equal(response, [1, 1, 1])
-      imap.logout
-    ensure
-      imap.disconnect if imap
     end
   end
 
-  def test_uidplus_responses
-    server = create_tcp_server
-    port = server.addr[1]
-    requests = []
-    start_server do
-      sock = server.accept
-      begin
-        sock.print("* OK test server\r\n")
-        line = sock.gets
-        size = line.slice(/{(\d+)}\r\n/, 1).to_i
-        sock.print("+ Ready for literal data\r\n")
-        sock.read(size)
-        sock.gets
-        sock.print("RUBY0001 OK [APPENDUID 38505 3955] APPEND completed\r\n")
-        requests.push(sock.gets)
-        sock.print("RUBY0002 OK [COPYUID 38505 3955,3960:3962 3963:3966] " \
-                   "COPY completed\r\n")
-        requests.push(sock.gets)
-        sock.print("RUBY0003 OK [COPYUID 38505 3955 3967] COPY completed\r\n")
-        sock.gets
-        sock.print("* NO [UIDNOTSTICKY] Non-persistent UIDs\r\n")
-        sock.print("RUBY0004 OK SELECT completed\r\n")
-        sock.gets
-        sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0005 OK LOGOUT completed\r\n")
-      ensure
-        sock.close
-        server.close
+  def test_uidplus_appenduid
+    with_fake_server(select: "INBOX",
+                     extensions: %i[UIDPLUS]) do |server, imap|
+      server.on "APPEND" do |cmd|
+        cmd.done_ok code: "APPENDUID 38505 3955"
       end
-    end
-
-    begin
-      imap = Net::IMAP.new(server_addr, :port => port)
       resp = imap.append("inbox", <<~EOF.gsub(/\n/, "\r\n"), [:Seen], Time.now)
         Subject: hello
         From: shugo@ruby-lang.org
@@ -849,120 +806,76 @@ EOF
         hello world
       EOF
       assert_equal([38505, nil, [3955]], resp.data.code.data.to_a)
+      assert_equal "APPEND", server.commands.pop.name
+    end
+  end
+
+  def test_uidplus_copyuid_multiple
+    with_fake_server(select: "INBOX",
+                     extensions: %i[UIDPLUS]) do |server, imap|
+      server.on "UID COPY" do |cmd|
+        cmd.done_ok code: "COPYUID 38505 3955,3960:3962 3963:3966"
+      end
       resp = imap.uid_copy([3955,3960..3962], 'trash')
-      assert_equal(requests.pop, "RUBY0002 UID COPY 3955,3960:3962 trash\r\n")
+      cmd  = server.commands.pop
+      assert_equal(["UID COPY", "3955,3960:3962 trash"], [cmd.name, cmd.args])
       assert_equal(
         [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]],
         resp.data.code.data.to_a
       )
+    end
+  end
+
+  def test_uidplus_copyuid_single
+    with_fake_server(select: "INBOX",
+                     extensions: %i[UIDPLUS]) do |server, imap|
+      server.on "UID COPY" do |cmd|
+        cmd.done_ok code: "COPYUID 38505 3955 3967"
+      end
       resp = imap.uid_copy(3955, 'trash')
-      assert_equal(requests.pop, "RUBY0003 UID COPY 3955 trash\r\n")
+      cmd  = server.commands.pop
+      assert_equal(["UID COPY", "3955 trash"], [cmd.name, cmd.args])
       assert_equal([38505, [3955], [3967]], resp.data.code.data.to_a)
+    end
+  end
+
+  def test_uidplus_uidnotsticky
+    with_fake_server(extensions: %i[UIDPLUS]) do |server, imap|
+      server.config.mailboxes["trash"] = { uidnotsticky: true }
       imap.select('trash')
-      assert_equal(
-        imap.responses("NO", &:last).code,
-        Net::IMAP::ResponseCode.new('UIDNOTSTICKY', nil)
-      )
-      imap.logout
-    ensure
-      imap.disconnect if imap
+      assert imap.responses("NO", &:to_a).any? {
+        _1.code == Net::IMAP::ResponseCode.new('UIDNOTSTICKY', nil)
+      }
     end
   end
 
   def test_enable
-    requests = Queue.new
-    port = yields_in_test_server_thread do |sock|
-      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
-      sock.print "* ENABLED SMTPUTF8\r\n"
-      sock.print "#{tag} OK \r\n"
-      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
-      sock.print "* ENABLED CONDSTORE UTF8=ACCEPT\r\n"
-      sock.print "#{tag} OK \r\n"
-      requests << (tag, = sock.getcmd).join(" ") + "\r\n"
-      sock.print "* ENABLED \r\n"
-      sock.print "#{tag} OK \r\n"
-      sock.getcmd # waits for logout command
-    end
+    with_fake_server(
+      with_extensions: %i[ENABLE CONDSTORE UTF8=ACCEPT],
+      capabilities_enablable: %w[CONDSTORE UTF8=ACCEPT]
+    ) do |server, imap|
+      cmdq = server.commands
 
-    begin
-      imap = Net::IMAP.new(server_addr, port: port)
-      response = imap.enable(["SMTPUTF8", "X-NO-SUCH-THING"])
-      assert_equal("RUBY0001 ENABLE SMTPUTF8 X-NO-SUCH-THING\r\n", requests.pop)
-      assert_equal(response, ["SMTPUTF8"])
-      response = imap.enable(:utf8, "condstore QResync", "x-pig-latin")
-      assert_equal("RUBY0002 ENABLE UTF8=ACCEPT condstore QResync x-pig-latin\r\n",
-                   requests.pop)
-      response = imap.enable(:utf8, "UTF8=ACCEPT", "UTF8=ONLY")
-      assert_equal(response, [])
-      assert_equal("RUBY0003 ENABLE UTF8=ACCEPT\r\n",
-                   requests.pop)
-      imap.logout
-    ensure
-      imap.disconnect if imap
+      result1 = imap.enable(%w[CONDSTORE x-pig-latin])
+      result2 = imap.enable(:utf8, "condstore QResync")
+      result3 = imap.enable(:utf8, "UTF8=ACCEPT", "UTF8=ONLY")
+      cmd1, cmd2, cmd3 = Array.new(3) { cmdq.pop.raw.strip }
+
+      assert_equal "RUBY0001 ENABLE CONDSTORE x-pig-latin",         cmd1
+      assert_equal "RUBY0002 ENABLE UTF8=ACCEPT condstore QResync", cmd2
+      assert_equal "RUBY0003 ENABLE UTF8=ACCEPT",                   cmd3
+      assert_empty cmdq
+
+      assert_equal %w[CONDSTORE],   result1
+      assert_equal %w[UTF8=ACCEPT], result2
+      assert_equal [],              result3
     end
   end
-
-  def yields_in_test_server_thread(
-    read_timeout: 2, # requires ruby 3.2+
-    timeout: 10,
-    greeting: "* OK [CAPABILITY IMAP4rev1 AUTH=PLAIN STARTTLS] test server\r\n"
-  )
-    server = create_tcp_server
-    port   = server.addr[1]
-    last_tag, last_cmd, last_args = nil
-    @threads << Thread.start do
-      Timeout.timeout(timeout) do
-        sock = server.accept
-        sock.timeout = read_timeout if sock.respond_to? :timeout # ruby 3.2+
-        sock.singleton_class.define_method(:getcmd) do
-          buf = "".b
-          buf << (sock.gets || "") until /\A([^ ]+) ([^ ]+) ?(.*)\r\n\z/mn =~ buf
-          [last_tag = $1, last_cmd = $2, last_args = $3]
-        end
-        begin
-          sock.print(greeting)
-          yield sock
-        ensure
-          begin
-            sock.print("* BYE terminating connection\r\n")
-            last_cmd =~ /LOGOUT/i and
-              sock.print("#{last_tag} OK LOGOUT completed\r\n")
-          ensure
-            sock.close
-            server.close
-          end
-        end
-      end
-    end
-    port
-  end
-
-  # SELECT returns many different untagged results, so this is useful for
-  # several different tests.
-  RFC3501_6_3_1_SELECT_EXAMPLE_DATA = <<~RESPONSES
-    * 172 EXISTS
-    * 1 RECENT
-    * OK [UNSEEN 12] Message 12 is first unseen
-    * OK [UIDVALIDITY 3857529045] UIDs valid
-    * OK [UIDNEXT 4392] Predicted next UID
-    * FLAGS (\\Answered \\Flagged \\Deleted \\Seen \\Draft)
-    * OK [PERMANENTFLAGS (\\Deleted \\Seen \\*)] Limited
-    %{tag} OK [READ-WRITE] SELECT completed
-  RESPONSES
-    .split("\n").join("\r\n").concat("\r\n").freeze
 
   def test_responses
-    port = yields_in_test_server_thread do |sock|
-      tag, name, = sock.getcmd
-      if name == "SELECT"
-        sock.print RFC3501_6_3_1_SELECT_EXAMPLE_DATA % {tag: tag}
-      end
-      sock.getcmd # waits for logout command
-    end
-    begin
-      imap = Net::IMAP.new(server_addr, port: port)
+    with_fake_server do |server, imap|
       # responses available before SELECT/EXAMINE
-      assert_equal(%w[IMAP4REV1 AUTH=PLAIN STARTTLS],
+      assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
                    imap.responses("CAPABILITY", &:last))
       resp = imap.select "INBOX"
       # responses are cleared after SELECT/EXAMINE
@@ -978,22 +891,11 @@ EOF
       #   assert_equal(%i[Answered Flagged Deleted Seen Draft],
       #                imap.responses["FLAGS"]&.last)
       # end
-      imap.logout
-    ensure
-      imap.disconnect if imap
     end
   end
 
   def test_clear_responses
-    port = yields_in_test_server_thread do |sock|
-      tag, name, = sock.getcmd
-      if name == "SELECT"
-        sock.print RFC3501_6_3_1_SELECT_EXAMPLE_DATA % {tag: tag}
-      end
-      sock.getcmd # waits for logout command
-    end
-    begin
-      imap = Net::IMAP.new(server_addr, port: port)
+    with_fake_server do |server, imap|
       resp = imap.select "INBOX"
       assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
                    [resp.class, resp.tag, resp.name])
@@ -1013,53 +915,54 @@ EOF
       assert_equal(3, responses["PERMANENTFLAGS"].last&.size)
       assert_equal({}, imap.responses(&:itself))
       assert_equal({}, imap.clear_responses)
-      imap.logout
-    ensure
-      imap.disconnect if imap
     end
   end
 
   def test_close
-    requests = Queue.new
-    port = yields_in_test_server_thread do |sock|
-      requests << sock.getcmd
-      sock.print("RUBY0001 OK CLOSE completed\r\n")
-      requests << sock.getcmd
-    end
-    begin
-      imap = Net::IMAP.new(server_addr, :port => port)
+    with_fake_server(select: "inbox") do |server, imap|
       resp = imap.close
-      assert_equal(["RUBY0001", "CLOSE", ""], requests.pop)
-      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+      assert_equal("RUBY0002 CLOSE", server.commands.pop.raw.strip)
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0002", "OK"],
                    [resp.class, resp.tag, resp.name])
-      imap.logout
-      assert_equal(["RUBY0002", "LOGOUT", ""], requests.pop)
-    ensure
-      imap.disconnect if imap
+      assert_empty server.commands
     end
   end
 
   def test_unselect
-    requests = Queue.new
-    port = yields_in_test_server_thread do |sock|
-      requests << sock.getcmd
-      sock.print("RUBY0001 OK UNSELECT completed\r\n")
-      requests << sock.getcmd
-    end
-    begin
-      imap = Net::IMAP.new(server_addr, port: port)
+    with_fake_server(select: "inbox") do |server, imap|
       resp = imap.unselect
-      assert_equal(["RUBY0001", "UNSELECT", ""], requests.pop)
-      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+      sent = server.commands.pop
+      assert_equal(["UNSELECT", nil], [sent.name, sent.args])
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0002", "OK"],
                    [resp.class, resp.tag, resp.name])
-      imap.logout
-      assert_equal(["RUBY0002", "LOGOUT", ""], requests.pop)
-    ensure
-      imap.disconnect if imap
+      assert_empty server.commands
     end
   end
 
   private
+
+  def with_fake_server(select: nil, timeout: 5, **opts)
+    Timeout.timeout(timeout) do
+      server = Net::IMAP::FakeServer.new(timeout: timeout, **opts)
+      @threads << Thread.new do server.run end
+      tls = opts[:implicit_tls]
+      tls = {ca_file: server.config.tls[:ca_file]} if tls == true
+      client = Net::IMAP.new("localhost", port: server.port, ssl: tls)
+      begin
+        if select
+          client.select(select)
+          server.commands.pop
+          assert server.state.selected?
+        end
+        yield server, client
+      ensure
+        client.logout rescue pp $!
+        client.disconnect if !client.disconnected?
+      end
+    ensure
+      server&.shutdown
+    end
+  end
 
   def imaps_test
     server = create_tcp_server
