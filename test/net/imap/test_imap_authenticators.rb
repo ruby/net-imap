@@ -153,4 +153,11 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
       )
     )
   end
+
+  def test_digest_md5_authenticator_garbage
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process('.')
+    end
+  end
 end
