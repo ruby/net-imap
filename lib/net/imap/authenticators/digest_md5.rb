@@ -15,7 +15,7 @@ class Net::IMAP::DigestMD5Authenticator
       @stage = STAGE_TWO
       sparams = {}
       c = StringScanner.new(challenge)
-      while c.scan(/(?:\s*,)?\s*(\w+)=("(?:[^\\"]+|\\.)*"|[^,]+)\s*/)
+      while c.scan(/(?:\s*,)?\s*(\w+)=("(?:[^\\"]|\\.)*"|[^,]+)\s*/)
         k, v = c[1], c[2]
         if v =~ /^"(.*)"$/
           v = $1
