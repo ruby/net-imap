@@ -26,7 +26,7 @@ class Net::IMAP::DigestMD5Authenticator
         sparams[k] = v
       end
 
-      raise Net::IMAP::DataFormatError, "Bad Challenge: '#{challenge}'" unless c.eos?
+      raise Net::IMAP::DataFormatError, "Bad Challenge: '#{challenge}'" unless c.eos? and sparams['qop']
       raise Net::IMAP::Error, "Server does not support auth (qop = #{sparams['qop'].join(',')})" unless sparams['qop'].include?("auth")
 
       response = {
