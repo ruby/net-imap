@@ -10,6 +10,8 @@ class Net::IMAP::FakeServer
     def initialize(tcp_socket, config:)
       @config     = config
       @tcp_socket = tcp_socket
+      @tls_socket = nil
+      @closed     = false
       use_tls if config.implicit_tls && tcp_socket
     end
 
