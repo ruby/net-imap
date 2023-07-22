@@ -42,6 +42,7 @@ class Net::IMAP::FakeServer
   autoload :ResponseWriter,        "#{dir}/response_writer"
   autoload :Socket,                "#{dir}/socket"
   autoload :Session,               "#{dir}/session"
+  autoload :TestHelper,            "#{dir}/test_helper"
 
   # Returns the server's FakeServer::Configuration
   attr_reader :config
