@@ -101,7 +101,7 @@ module Net
   #   end
   #   imap.expunge
   #
-  # == Server capabilities and protocol extensions
+  # == Capabilities
   #
   # Net::IMAP does not _currently_ modify its behaviour according to the
   # server's advertised #capabilities.  Users of this class must check that the
@@ -144,12 +144,12 @@ module Net
   #
   # === Caching +CAPABILITY+ responses
   #
-  # Net::IMAP stores and discards capability
-  # data according to the requirements and recommendations in IMAP4rev2
-  # {§6.1.1}[https://www.rfc-editor.org/rfc/rfc9051#section-6.1.1],
+  # Net::IMAP automatically stores and discards capability data according to the
+  # the requirements and recommendations in
+  # {IMAP4rev2 §6.1.1}[https://www.rfc-editor.org/rfc/rfc9051#section-6.1.1],
   # {§6.2}[https://www.rfc-editor.org/rfc/rfc9051#section-6.2], and
   # {§7.1}[https://www.rfc-editor.org/rfc/rfc9051#section-7.1].
-  # Use #capable?, #auth_capable?, or #capabilities to this caching and avoid
+  # Use #capable?, #auth_capable?, or #capabilities to use this cache and avoid
   # sending the #capability command unnecessarily.
   #
   # The server may advertise its initial capabilities using the +CAPABILITY+
@@ -166,6 +166,10 @@ module Net
   #
   # === Using IMAP4rev1 extensions
   #
+  # See the {IANA IMAP4 capabilities
+  # registry}[http://www.iana.org/assignments/imap4-capabilities] for a list of
+  # all standard capabilities, and their reference RFCs.
+  #
   # IMAP4rev1 servers must not activate behavior that is incompatible with the
   # base specification until an explicit client action invokes a capability,
   # e.g. sending a command or command argument specific to that capability.
@@ -179,7 +183,7 @@ module Net
   # BadResponseError, or cause other unexpected behavior.
   #
   # Some capabilities must be explicitly activated using the #enable command.
-  # See #enable for more details.
+  # See #enable for details.
   #
   # == Thread Safety
   #
@@ -751,44 +755,34 @@ module Net
       return @sock.closed?
     end
 
+    # Returns whether the server supports a given +capability+.  When available,
+    # cached #capabilities are used without sending a new #capability command to
+    # the server.
+    #
+    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
+    # according to the server's advertised capabilities.</em>
+    #
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
+    #
+    # Related: #auth_capable?, #capabilities, #capability, #enable
+    #
+    def capable?(capability) capabilities.include? capability.to_s.upcase end
+    alias capability? capable?
+
     # Returns the server capabilities.  When available, cached capabilities are
     # used without sending a new #capability command to the server.
     #
-    # To ensure case-insensitive capability comparison, use #capable? instead.
+    # To ensure a case-insensitive comparison, #capable? can be used instead.
+    #
+    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
+    # according to the server's advertised capabilities.</em>
+    #
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
     #
     # Related: #capable?, #auth_capable?, #capability
     def capabilities
       @capabilities || capability
     end
-
-    # Returns whether the server supports a given +capability+.  When available,
-    # cached #capabilities are used without sending a new #capability command to
-    # the server.
-    #
-    # See the {IANA IMAP4 capabilities
-    # registry}[http://www.iana.org/assignments/imap4-capabilities] for a list
-    # of all standard capabilities, and their reference RFCs.
-    #
-    # >>>
-    #   <em>*NOTE:* Net::IMAP does not _currently_ modify its behaviour
-    #   according to the server's advertised capabilities.  Users of this class
-    #   must check that the server is #capable? of extension commands or command
-    #   arguments before sending them.</em>
-    #
-    #   <em>Capability requirements—other than +IMAP4rev1+—are listed in the
-    #   documentation for each command method.</em>
-    #
-    # Related: #auth_capable?, #capabilities, #capability, #enable
-    #
-    # ===== Caching +CAPABILITY+ responses
-    #
-    # Servers may send their capability list unsolicited, using the +CAPABILITY+
-    # response code or an untagged +CAPABILITY+ response.  Cached capabilities
-    # are discarded after #starttls, #login, or #authenticate.  Caching and
-    # cache invalidation are handled internally by Net::IMAP.
-    #
-    def capable?(capability) capabilities.include? capability.to_s.upcase end
-    alias capability? capable?
 
     # Returns the #authenticate mechanisms that the server claims to support.
     # These are derived from the #capabilities with an <tt>AUTH=</tt> prefix.
@@ -797,19 +791,24 @@ module Net
     # servers will drop all <tt>AUTH=</tt> mechanisms from #capabilities after
     # the connection has authenticated.
     #
-    # Related: #auth_capable?, #capabilities
-    #
-    # ===== Example
-    #
     #    imap = Net::IMAP.new(hostname, ssl: false)
     #    imap.capabilities    # => ["IMAP4REV1", "LOGINDISABLED"]
     #    imap.auth_mechanisms # => []
+    #
     #    imap.starttls
     #    imap.capabilities    # => ["IMAP4REV1", "AUTH=PLAIN", "AUTH=XOAUTH2",
-    #                               "AUTH=OAUTHBEARER", "AUTH=SCRAM-SHA-256"]
-    #    imap.auth_mechanisms # => ["PLAIN", "XOAUTH2", "SCRAM-SHA-256"]
-    #    imap.authenticate("OAUTHBEARER", username, oauth2_access_token)
+    #                         #     "AUTH=OAUTHBEARER"]
+    #    imap.auth_mechanisms # => ["PLAIN", "XOAUTH2", "OAUTHBEARER"]
+    #
+    #    imap.authenticate("XOAUTH2", username, oauth2_access_token)
     #    imap.auth_mechanisms # => []
+    #
+    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
+    # according to the server's advertised capabilities.</em>
+    #
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
+    #
+    # Related: #auth_capable?, #capabilities
     #
     def auth_mechanisms
       capabilities
@@ -823,11 +822,14 @@ module Net
     # available, cached capabilities are used without sending a new #capability
     # command to the server.
     #
-    # Per {[IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2],
-    #
     #   imap.capable?      "AUTH=PLAIN"  # => true
     #   imap.auth_capable? "PLAIN"       # => true
     #   imap.auth_capable? "blurdybloop" # => false
+    #
+    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
+    # according to the server's advertised capabilities.</em>
+    #
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
     #
     # Related: #authenticate, #capable?, #capabilities
     def auth_capable?(mechanism)
@@ -837,16 +839,22 @@ module Net
     # Returns whether capabilities have been cached.  When true, #capable? and
     # #capabilities don't require sending a #capability command to the server.
     #
-
-    # Returns whether capabilities have been cached.  When true, #capable? and
-    # #capabilities don't require sending a #capability command to the server.
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
+    #
+    # Related: #capable?, #capability, #clear_cached_capabilities
     def capabilities_cached?
       !!@capabilities
     end
 
-    # Clears capabilities that are currently cached by the Net::IMAP client.
-    # This forces a #capability command to be sent the next time that #capable?
-    # or #capabilities? are called.
+    # Clears capabilities that have been remembered by the Net::IMAP client.
+    # This forces a #capability command to be sent the next time a #capabilities
+    # query method is called.
+    #
+    # Net::IMAP automatically discards its cached capabilities when they can
+    # change.  Explicitly calling this _should_ be unnecessary for well-behaved
+    # servers.
+    #
+    # Related: #capable?, #capability, #capabilities_cached?
     def clear_cached_capabilities
       synchronize do
         clear_responses("CAPABILITY")
@@ -856,23 +864,22 @@ module Net
 
     # Sends a {CAPABILITY command [IMAP4rev1 §6.1.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.1.1]
     # and returns an array of capabilities that are supported by the server.
-    # The result will be stored for use by #capable? and #capabilities.
+    # The result is stored for use by #capable? and #capabilities.
     #
-    # In general, #capable? or #capabilities should be used instead.  They cache
-    # the capability result to avoid sending unnecessary commands.  They also
-    # ensure cache invalidation is handled correctly.
+    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
+    # according to the server's advertised capabilities.</em>
     #
-    # >>>
-    #   <em>*NOTE:* Net::IMAP does not _currently_ modify its behaviour
-    #   according to the server's advertised capabilities.  Users of this class
-    #   must check that the server is #capable? of extension commands or command
-    #   arguments before sending them.</em>
+    # Net::IMAP automatically stores and discards capability data according to
+    # the requirements and recommendations in
+    # {IMAP4rev2 §6.1.1}[https://www.rfc-editor.org/rfc/rfc9051#section-6.1.1],
+    # {§6.2}[https://www.rfc-editor.org/rfc/rfc9051#section-6.2], and
+    # {§7.1}[https://www.rfc-editor.org/rfc/rfc9051#section-7.1].
+    # Use #capable?, #auth_capable?, or #capabilities to this cache and avoid
+    # sending the #capability command unnecessarily.
     #
-    #   <em>Capability requirements—other than +IMAP4rev1+—are listed in the
-    #   documentation for each command method.</em>
+    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
     #
     # Related: #capable?, #auth_capable?, #capability, #enable
-    #
     def capability
       synchronize do
         send_command("CAPABILITY")
@@ -994,7 +1001,7 @@ module Net
     #
     # An exception Net::IMAP::NoResponseError is raised if authentication fails.
     #
-    # Related: #login, #starttls
+    # Related: #login, #starttls, #auth_capable?, #auth_mechanisms
     #
     # ==== Supported SASL Mechanisms
     #
@@ -1024,39 +1031,27 @@ module Net
     # for information on these and other SASL mechanisms.
     #
     # ===== Capabilities
-    # Clients should not call #authenticate with mechanisms that are included in the server #capabilities as <tt>"AUTH=#{mechanism}"</tt>.
+    #
+    # The server should list <tt>"AUTH=#{mechanism}"</tt> capabilities for
+    # supported mechanisms.  Check #auth_capable? or #auth_mechanisms before
+    # using a particular mechanism.
+    #
+    #    if imap.auth_capable? "XOAUTH2"
+    #      imap.authenticate "XOAUTH2", username, oauth2_access_token
+    #    elsif imap.auth_capable? "PLAIN"
+    #      imap.authenticate "PLAIN", username, password
+    #    elsif imap.auth_capable? "DIGEST-MD5"
+    #      imap.authenticate "DIGEST-MD5", username, password
+    #    elsif !imap.capability? "LOGINDISABLED"
+    #      imap.login username, password
+    #    else
+    #      raise "No acceptable authentication mechanism is available"
+    #    end
     #
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Cached #capabilities will be cleared when this method completes.
     # If the TaggedResponse to #authenticate includes updated capabilities, they
     # will be cached.
-    #
-    # ===== Example
-    # Use auth_capable? to discover which mechanisms are suuported by the
-    # server.  For authenticators that ignore unhandled keyword arguments, the
-    # same config can be used for multiple mechanisms:
-    #
-    #    password  = nil # saved locally, so we don't ask more than once
-    #    accesstok = nil # saved locally...
-    #    creds = {
-    #      authcid:      username,
-    #      password:     proc { password  ||= ui.prompt_for_password },
-    #      oauth2_token: proc { accesstok ||= kms.fresh_access_token },
-    #    }
-    #    mechanism = %w[
-    #      OAUTHBEARER XOAUTH2
-    #      SCRAM-SHA-256 SCRAM-SHA-1
-    #      PLAIN
-    #    ].find {|m|
-    #      imap.auth_capable?(m)
-    #    }
-    #    if mechanism
-    #      imap.authenticate mechanism, **creds
-    #    elsif capable? "LOGINDISABLED"
-    #      raise "the server has disabled login"
-    #    else
-    #      imap.login username, password
-    #    end
     #
     def authenticate(mechanism, ...)
       authenticator = self.class.authenticator(mechanism, ...)
@@ -1085,9 +1080,16 @@ module Net
     #
     # Related: #authenticate, #starttls
     #
-    # ==== Capabilities
-    # An IMAP client MUST NOT call #login unless the server advertises the
+    # ===== Capabilities
+    #
+    # An IMAP client MUST NOT call #login when the server advertises the
     # +LOGINDISABLED+ capability.
+    #
+    #    if imap.capability? "LOGINDISABLED"
+    #      raise "Remote server has disabled the login command"
+    #    else
+    #      imap.login username, password
+    #    end
     #
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Cached capabilities _must_ be invalidated after this method completes.
