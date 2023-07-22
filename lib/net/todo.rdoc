@@ -1,0 +1,70 @@
+Moved from lib/net/imap.rb
+
+==== RFC3502: +MULTIAPPEND+
+TODO...
+
+==== RFC3516: +BINARY+
+TODO...
+
+==== RFC4466: Collected Extensions to IMAP4 ABNF
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], this RFC updates
+the protocol to enable new optional parameters to many commands: #select,
+#examine, #create, #rename, #fetch, #uid_fetch, #store, #uid_store, #search,
+#uid_search, and #append.  However, specific parameters are not defined.
+Extensions to these commands use this syntax whenever possible.  Net::IMAP
+may be partially compatible with extensions to these commands, even without
+any explicit support.
+
+==== RFC4731 +ESEARCH+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+- Updates #search, #uid_search to accept result options: +MIN+, +MAX+,
+  +ALL+, +COUNT+, and to return ExtendedSearchData.
+
+==== RFC4959: +SASL-IR+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+- Updates #authenticate to reduce round-trips for supporting mechanisms.
+
+==== RFC4978: COMPRESS=DEFLATE
+TODO...
+
+==== RFC5182 +SEARCHRES+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+- Updates #search, #uid_search with the +SAVE+ result option.
+- Updates #copy, #uid_copy, #fetch, #uid_fetch, #move, #uid_move, #search,
+  #uid_search, #store, #uid_store, and #uid_expunge with ability to
+  reference the saved result of a previous #search or #uid_search command.
+
+==== RFC5258 +LIST-EXTENDED+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], this updates the
+protocol with new optional parameters to the #list command, adding a few of
+its own.  Net::IMAP may be forward-compatible with future #list extensions,
+even without any explicit support.
+- Updates #list to accept selection options: +SUBSCRIBED+, +REMOTE+, and
+  +RECURSIVEMATCH+, and return options: +SUBSCRIBED+ and +CHILDREN+.
+
+==== RFC5819 +LIST-STATUS+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+- Updates #list with +STATUS+ return option.
+
+==== RFC6154 +SPECIAL-USE+
+TODO...
+Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+- Updates #list with the +SPECIAL-USE+ selection and return options.
+
+==== RFC7888: <tt>LITERAL+</tt>, +LITERAL-+
+TODO...
+==== RFC7162: +QRESYNC+
+TODO...
+==== RFC7162: +CONDSTORE+
+TODO...
+==== RFC8474: +OBJECTID+
+TODO...
+==== RFC9208: +QUOTA+
+TODO...
+
