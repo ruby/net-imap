@@ -139,4 +139,28 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
       )
     )
   end
+
+  def test_digest_md5_authenticator_garbage
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process('.')
+    end
+  end
+
+  def test_digest_md5_authenticator_no_qop
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process('Qop=""')
+    end
+  end
+
+  def test_digest_md5_authenticator_illinear
+    pre = ->(n) {'qop="a' + ',x'*n}
+    assert_linear_performance([5, 10, 15, 20], pre: pre) do |challenge|
+      auth = digest_md5("user", "pass")
+      assert_raise(Net::IMAP::DataFormatError) do
+        auth.process(challenge)
+      end
+    end
+  end
 end
