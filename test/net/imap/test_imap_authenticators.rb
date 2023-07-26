@@ -169,6 +169,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_digest_md5_authenticator_illinear
+    pend "Need to backport #151 for assert_linear_performance"
     pre = ->(n) {'qop="a' + ',x'*n}
     assert_linear_performance([5, 10, 15, 20], pre: pre) do |challenge|
       auth = digest_md5("user", "pass")
