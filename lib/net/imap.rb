@@ -103,9 +103,9 @@ module Net
   #
   # == Capabilities
   #
-  # Net::IMAP does not _currently_ modify its behaviour according to the
-  # server's advertised #capabilities.  Users of this class must check that the
-  # server is capable of extension commands or command arguments before
+  # Most Net::IMAP methods do not _currently_ modify their behaviour according
+  # to the server's advertised #capabilities.  Users of this class must check
+  # that the server is capable of extension commands or command arguments before
   # sending them.  Special care should be taken to follow the #capabilities
   # requirements for #starttls, #login, and #authenticate.
   #
@@ -404,14 +404,14 @@ module Net
   #
   # Although IMAP4rev2[https://tools.ietf.org/html/rfc9051] is not supported
   # yet, Net::IMAP supports several extensions that have been folded into it:
-  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +UIDPLUS+, and +UNSELECT+.  Commands
-  # for these extensions are listed with the
-  # {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
+  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+, and +UNSELECT+.
+  # Commands for these extensions are listed with the {Core IMAP
+  # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
   #
   # >>>
   #   <em>The following are folded into +IMAP4rev2+ but are currently
   #   unsupported or incompletely supported by</em> Net::IMAP<em>: RFC4466
-  #   extensions, +ESEARCH+, +SEARCHRES+, +SASL-IR+, +LIST-EXTENDED+,
+  #   extensions, +ESEARCH+, +SEARCHRES+, +LIST-EXTENDED+,
   #   +LIST-STATUS+, +LITERAL-+, +BINARY+ fetch, and +SPECIAL-USE+.  The
   #   following extensions are implicitly supported, but will be updated with
   #   more direct support: RFC5530 response codes, <tt>STATUS=SIZE</tt>, and
@@ -456,6 +456,10 @@ module Net
   # - Updates #select, #examine with the +UIDNOTSTICKY+ ResponseCode
   # - Updates #append with the +APPENDUID+ ResponseCode
   # - Updates #copy, #move with the +COPYUID+ ResponseCode
+  #
+  # ==== RFC4959: +SASL-IR+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #authenticate with the option to send an initial response.
   #
   # ==== RFC5161: +ENABLE+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051] and also included
@@ -983,19 +987,17 @@ module Net
     end
 
     # :call-seq:
-    #   authenticate(mechanism, ...)                               -> ok_resp
-    #   authenticate(mech, *creds, **props) {|prop, auth| val }    -> ok_resp
-    #   authenticate(mechanism, authnid, credentials, authzid=nil) -> ok_resp
-    #   authenticate(mechanism, **properties)                      -> ok_resp
-    #   authenticate(mechanism) {|propname, authctx| prop_value }  -> ok_resp
+    #   authenticate(mechanism, ...) -> ok_resp
+    #   authenticate(mech, *creds, sasl_ir: true, **attrs, &callback) -> ok_resp
     #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.  If successful, the connection enters the
     # "_authenticated_" state.
     #
     # +mechanism+ is the name of the \SASL authentication mechanism to be used.
-    # All other arguments are forwarded to the authenticator for the requested
-    # mechanism.  The listed call signatures are suggestions.  <em>The
+    # +sasl_ir+ allows or disallows sending an "initial response" (see the
+    # +SASL-IR+ capability, below).  All other arguments are forwarded to the
+    # registered SASL authenticator for the requested mechanism.  <em>The
     # documentation for each individual mechanism must be consulted for its
     # specific parameters.</em>
     #
@@ -1048,19 +1050,40 @@ module Net
     #      raise "No acceptable authentication mechanism is available"
     #    end
     #
-    # Server capabilities may change after #starttls, #login, and #authenticate.
-    # Cached #capabilities will be cleared when this method completes.
-    # If the TaggedResponse to #authenticate includes updated capabilities, they
-    # will be cached.
+    # The SASL exchange provides a method for server challenges and client
+    # responses, but many mechanisms expect the client to "respond" first.  When
+    # the server's capabilities include +SASL-IR+
+    # [RFC4959[https://tools.ietf.org/html/rfc4959]], this "initial response"
+    # may be sent as an argument to the +AUTHENTICATE+ command, saving a
+    # round-trip.  The initial response will _only_ be sent when it is supported
+    # by both the mechanism and the server.  Set +sasl_ir+ to +false+ to prevent
+    # sending an initial response, even when it is supported.
     #
-    def authenticate(mechanism, ...)
-      authenticator = self.class.authenticator(mechanism, ...)
-      send_command("AUTHENTICATE", mechanism) do |resp|
+    # Although servers _should_ advertise all supported auth mechanisms, it is
+    # possible to attempt to authenticate with a +mechanism+ that isn't listed.
+    # However the initial response will not be sent unless the appropriate
+    # <tt>"AUTH=#{mechanism}"</tt> capability is also present.
+    #
+    # Server capabilities may change after #starttls, #login, and #authenticate.
+    # Previously cached #capabilities will be cleared when this method
+    # completes.  If the TaggedResponse to #authenticate includes updated
+    # capabilities, they will be cached.
+    def authenticate(mechanism, *creds, sasl_ir: true, **props, &callback)
+      authenticator = self.class.authenticator(mechanism,
+                                               *creds,
+                                               **props,
+                                               &callback)
+      cmdargs = ["AUTHENTICATE", mechanism]
+      if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
+          SASL.initial_response?(authenticator)
+        cmdargs << [authenticator.process(nil)].pack("m0")
+      end
+      send_command(*cmdargs) do |resp|
         if resp.instance_of?(ContinuationRequest)
-          data = authenticator.process(resp.data.text.unpack("m")[0])
-          s = [data].pack("m0")
-          send_string_data(s)
-          put_string(CRLF)
+          challenge = resp.data.text.unpack1("m")
+          response  = authenticator.process(challenge)
+          response  = [response].pack("m0")
+          put_string(response + CRLF)
         end
       end
         .tap { @capabilities = capabilities_from_resp_code _1 }

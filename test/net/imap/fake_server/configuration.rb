@@ -22,6 +22,7 @@ class Net::IMAP::FakeServer
       encrypted_login: true,
       cleartext_auth:  false,
       sasl_mechanisms: %i[PLAIN].freeze,
+      sasl_ir: false,
 
       rev1: true,
       rev2: false,
@@ -66,6 +67,7 @@ class Net::IMAP::FakeServer
     alias cleartext_auth?        cleartext_auth
     alias greeting_bye?          greeting_bye
     alias greeting_capabilities? greeting_capabilities
+    alias sasl_ir?               sasl_ir
 
     def on(event, &handler)
       handler or raise ArgumentError
@@ -104,6 +106,7 @@ class Net::IMAP::FakeServer
       capa << "STARTTLS"            if starttls?
       capa << "LOGINDISABLED"   unless cleartext_login?
       capa.concat auth_capabilities if cleartext_auth?
+      capa << "SASL-IR" if sasl_ir? && cleartext_auth?
       capa
     end
 
@@ -111,6 +114,7 @@ class Net::IMAP::FakeServer
       capa = basic_capabilities
       capa << "LOGINDISABLED" unless encrypted_login?
       capa.concat auth_capabilities
+      capa << "SASL-IR" if sasl_ir?
       capa
     end
 

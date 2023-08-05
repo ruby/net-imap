@@ -55,7 +55,17 @@ class Net::IMAP::FakeServer
       resp.args.nil? or return resp.fail_bad_args
       resp.bye
       state.logout
-      resp.done_ok
+      begin
+        resp.done_ok
+      rescue IOError
+        # TODO: fix whatever is causing this!
+        warn "connection issue after bye but before LOGOUT could complete"
+        if $!.respond_to :detailed_message
+          warn $!.detailed_message highlight: true, order: :bottom
+        else
+          warn $!.full_message     highlight: true, order: :bottom
+        end
+      end
     end
 
     on "STARTTLS" do |resp|
@@ -79,8 +89,14 @@ class Net::IMAP::FakeServer
     on "AUTHENTICATE" do |resp|
       state.not_authenticated?           or return resp.fail_bad_state(state)
       args = resp.command.args
-      args == "PLAIN"                    or return resp.fail_no "unsupported"
-      response_b64 = resp.request_continuation("") || ""
+      (1..2) === args.length             or return resp.fail_bad_args
+      args.first == "PLAIN"              or return resp.fail_no "unsupported"
+      if args.length == 2
+        response_b64 = args.last
+      else
+        response_b64 = resp.request_continuation("") || ""
+        state.commands << {continuation: response_b64}
+      end
       response = Base64.decode64(response_b64)
       response.empty?                   and return resp.fail_bad "canceled"
       # TODO: support mechanisms other than PLAIN.

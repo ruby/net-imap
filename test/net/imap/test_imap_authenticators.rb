@@ -9,12 +9,15 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # PLAIN
   # ----------------------
 
-  def plain(*args, **kwargs, &block)
-    Net::IMAP.authenticator("PLAIN", *args, **kwargs, &block)
-  end
+  def plain(...) Net::IMAP.authenticator("PLAIN", ...) end
 
   def test_plain_authenticator_matches_mechanism
     assert_kind_of(Net::IMAP::PlainAuthenticator, plain("user", "pass"))
+  end
+
+  def test_plain_supports_initial_response
+    assert plain("foo", "bar").initial_response?
+    assert Net::IMAP::SASL.initial_response?(plain("foo", "bar"))
   end
 
   def test_plain_response
@@ -33,11 +36,22 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   # XOAUTH2
   # ----------------------
 
+  def xoauth2(...) Net::IMAP.authenticator("XOAUTH2", ...) end
+
+  def test_xoauth2_authenticator_matches_mechanism
+    assert_kind_of(Net::IMAP::XOauth2Authenticator, xoauth2("user", "pass"))
+  end
+
   def test_xoauth2
     assert_equal(
       "user=username\1auth=Bearer token\1\1",
-      Net::IMAP::XOauth2Authenticator.new("username", "token").process(nil)
+      xoauth2("username", "token").process(nil)
     )
+  end
+
+  def test_xoauth2_supports_initial_response
+    assert xoauth2("foo", "bar").initial_response?
+    assert Net::IMAP::SASL.initial_response?(xoauth2("foo", "bar"))
   end
 
   # ----------------------
@@ -52,6 +66,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_login_authenticator_matches_mechanism
     assert_kind_of(Net::IMAP::LoginAuthenticator, login("n", "p"))
+  end
+
+  def test_login_does_not_support_initial_response
+    refute Net::IMAP::SASL.initial_response?(login("foo", "bar"))
   end
 
   def test_login_authenticator_deprecated
@@ -78,6 +96,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_cram_md5_authenticator_matches_mechanism
     assert_kind_of(Net::IMAP::CramMD5Authenticator, cram_md5("n", "p"))
+  end
+
+  def test_cram_md5_does_not_support_initial_response
+    refute Net::IMAP::SASL.initial_response?(cram_md5("foo", "bar"))
   end
 
   def test_cram_md5_authenticator_deprecated
@@ -110,6 +132,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     assert_warn(/DIGEST-MD5.+deprecated.+RFC6331/) do
       Net::IMAP.authenticator("DIGEST-MD5", "user", "pass")
     end
+  end
+
+  def test_digest_md5_does_not_support_initial_response
+    refute Net::IMAP::SASL.initial_response?(digest_md5("foo", "bar"))
   end
 
   def test_digest_md5_authenticator

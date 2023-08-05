@@ -39,6 +39,10 @@ module Net
         Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
       end
 
+      def initial_response?(mechanism)
+        mechanism.respond_to?(:initial_response?) && mechanism.initial_response?
+      end
+
     end
   end
 
