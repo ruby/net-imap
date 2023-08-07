@@ -2,7 +2,7 @@
 
 module Net::IMAP::SASL
 
-  # Alias for Net::IMAP::StringPrep::SASLPrep.
+  # Alias for Net::IMAP::StringPrep::SASLprep.
   SASLprep            = Net::IMAP::StringPrep::SASLprep
   StringPrep          = Net::IMAP::StringPrep                      # :nodoc:
   BidiStringError     = Net::IMAP::StringPrep::BidiStringError     # :nodoc:
