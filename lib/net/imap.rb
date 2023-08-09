@@ -1015,7 +1015,7 @@ module Net
     # +PLAIN+::     See PlainAuthenticator.
     #               Login using clear-text username and password.
     #
-    # +XOAUTH2+::   See XOauth2Authenticator.
+    # +XOAUTH2+::   See XOAuth2Authenticator.
     #               Login using a username and OAuth2 access token.
     #               Non-standard and obsoleted by +OAUTHBEARER+, but widely
     #               supported.

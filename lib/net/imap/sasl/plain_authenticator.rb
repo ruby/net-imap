@@ -9,7 +9,7 @@
 # RFC8314[https://tools.ietf.org/html/rfc8314] recommends TLS version 1.2 or
 # greater be used for all traffic, and deprecate cleartext access ASAP.  +PLAIN+
 # can be secured by TLS encryption.
-class Net::IMAP::PlainAuthenticator
+class Net::IMAP::SASL::PlainAuthenticator
 
   def initial_response?; true end
 
@@ -39,5 +39,4 @@ class Net::IMAP::PlainAuthenticator
     @authzid  = authzid
   end
 
-  Net::IMAP.add_authenticator "PLAIN", self
 end

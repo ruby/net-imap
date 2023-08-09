@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-class Net::IMAP::XOauth2Authenticator
+class Net::IMAP::SASL::XOAuth2Authenticator
 
   def initial_response?; true end
 
@@ -19,5 +19,4 @@ class Net::IMAP::XOauth2Authenticator
     format("user=%s\1auth=Bearer %s\1\1", user, oauth2_token)
   end
 
-  Net::IMAP.add_authenticator 'XOAUTH2', self
 end

@@ -8,7 +8,7 @@
 # "+DIGEST-MD5+" has been deprecated by
 # {RFC6331}[https://tools.ietf.org/html/rfc6331] and should not be relied on for
 # security.  It is included for compatibility with existing servers.
-class Net::IMAP::DigestMD5Authenticator
+class Net::IMAP::SASL::DigestMD5Authenticator
   def process(challenge)
     case @stage
     when STAGE_ONE
@@ -111,5 +111,4 @@ class Net::IMAP::DigestMD5Authenticator
     end
   end
 
-  Net::IMAP.add_authenticator "DIGEST-MD5", self
 end

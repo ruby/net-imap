@@ -13,7 +13,7 @@
 # Additionally, RFC8314[https://tools.ietf.org/html/rfc8314] discourage the use
 # of cleartext and recommends TLS version 1.2 or greater be used for all
 # traffic.  With TLS +CRAM-MD5+ is okay, but so is +PLAIN+
-class Net::IMAP::CramMD5Authenticator
+class Net::IMAP::SASL::CramMD5Authenticator
   def process(challenge)
     digest = hmac_md5(challenge, @password)
     return @user + " " + digest
@@ -47,5 +47,4 @@ class Net::IMAP::CramMD5Authenticator
     return Digest::MD5.hexdigest(k_opad + digest)
   end
 
-  Net::IMAP.add_authenticator "CRAM-MD5", self
 end

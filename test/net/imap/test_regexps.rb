@@ -25,7 +25,11 @@ class IMAPRegexpsTest < Test::Unit::TestCase
     RegexpCollector.new(
       Net::IMAP,
       exclude_map: {
-        Net::IMAP => %i[BodyTypeAttachment BodyTypeExtension], # deprecated
+        Net::IMAP => %i[
+          BodyTypeAttachment BodyTypeExtension
+          PlainAuthenticator
+          XOauth2Authenticator
+        ], # deprecated
       },
     ).to_h
   )

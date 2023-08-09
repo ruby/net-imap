@@ -32,6 +32,14 @@ module Net
       autoload :ProhibitedCodepoint, sasl_stringprep_rb
       autoload :BidiStringError,     sasl_stringprep_rb
 
+      sasl_dir = File.expand_path("sasl", __dir__)
+      autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
+      autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
+
+      autoload :CramMD5Authenticator,     "#{sasl_dir}/cram_md5_authenticator"
+      autoload :DigestMD5Authenticator,   "#{sasl_dir}/digest_md5_authenticator"
+      autoload :LoginAuthenticator,       "#{sasl_dir}/login_authenticator"
+
       module_function
 
       # See Net::IMAP::StringPrep::SASLprep#saslprep.

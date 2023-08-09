@@ -12,7 +12,7 @@ module Net::IMAP::Authenticators
   # The authenticator session must respond to +#process+, receiving the server's
   # challenge and returning the client's response.
   #
-  # See PlainAuthenticator, XOauth2Authenticator, and DigestMD5Authenticator for
+  # See PlainAuthenticator, XOAuth2Authenticator, and DigestMD5Authenticator for
   # examples.
   def add_authenticator(auth_type, authenticator)
     authenticators[auth_type] = authenticator
@@ -54,11 +54,20 @@ module Net::IMAP::Authenticators
 
 end
 
-Net::IMAP.extend Net::IMAP::Authenticators
+class Net::IMAP
+  extend Authenticators
+  add_authenticator "PLAIN",      SASL::PlainAuthenticator
+  add_authenticator "XOAUTH2",    SASL::XOAuth2Authenticator
 
-require_relative "authenticators/plain"
+  add_authenticator "CRAM-MD5",   SASL::CramMD5Authenticator   # deprecated
+  add_authenticator "LOGIN",      SASL::LoginAuthenticator     # deprecated
+  add_authenticator "DIGEST-MD5", SASL::DigestMD5Authenticator # deprecated
+end
 
-require_relative "authenticators/login"
-require_relative "authenticators/cram_md5"
-require_relative "authenticators/digest_md5"
-require_relative "authenticators/xoauth2"
+class Net::IMAP
+  PlainAuthenticator = SASL::PlainAuthenticator # :nodoc:
+  deprecate_constant :PlainAuthenticator
+
+  XOauth2Authenticator = SASL::XOAuth2Authenticator # :nodoc:
+  deprecate_constant :XOauth2Authenticator
+end

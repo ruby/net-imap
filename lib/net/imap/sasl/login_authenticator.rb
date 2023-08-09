@@ -17,7 +17,7 @@
 # compatibility with existing servers.  See
 # {draft-murchison-sasl-login}[https://www.iana.org/go/draft-murchison-sasl-login]
 # for both specification and deprecation.
-class Net::IMAP::LoginAuthenticator
+class Net::IMAP::SASL::LoginAuthenticator
   def process(data)
     case @state
     when STATE_USER
@@ -42,5 +42,4 @@ class Net::IMAP::LoginAuthenticator
     @state = STATE_USER
   end
 
-  Net::IMAP.add_authenticator "LOGIN", self
 end

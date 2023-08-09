@@ -12,7 +12,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   def plain(...) Net::IMAP.authenticator("PLAIN", ...) end
 
   def test_plain_authenticator_matches_mechanism
-    assert_kind_of(Net::IMAP::PlainAuthenticator, plain("user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::PlainAuthenticator, plain("user", "pass"))
   end
 
   def test_plain_supports_initial_response
@@ -39,7 +39,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   def xoauth2(...) Net::IMAP.authenticator("XOAUTH2", ...) end
 
   def test_xoauth2_authenticator_matches_mechanism
-    assert_kind_of(Net::IMAP::XOauth2Authenticator, xoauth2("user", "pass"))
+    assert_kind_of(Net::IMAP::SASL::XOAuth2Authenticator, xoauth2("user", "tok"))
   end
 
   def test_xoauth2
@@ -65,7 +65,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_login_authenticator_matches_mechanism
-    assert_kind_of(Net::IMAP::LoginAuthenticator, login("n", "p"))
+    assert_kind_of(Net::IMAP::SASL::LoginAuthenticator, login("n", "p"))
   end
 
   def test_login_does_not_support_initial_response
@@ -95,7 +95,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_cram_md5_authenticator_matches_mechanism
-    assert_kind_of(Net::IMAP::CramMD5Authenticator, cram_md5("n", "p"))
+    assert_kind_of(Net::IMAP::SASL::CramMD5Authenticator, cram_md5("n", "p"))
   end
 
   def test_cram_md5_does_not_support_initial_response
@@ -125,7 +125,8 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_digest_md5_authenticator_matches_mechanism
-    assert_kind_of(Net::IMAP::DigestMD5Authenticator, digest_md5("n", "p", "z"))
+    assert_kind_of(Net::IMAP::SASL::DigestMD5Authenticator,
+                   digest_md5("n", "p", "z"))
   end
 
   def test_digest_md5_authenticator_deprecated
