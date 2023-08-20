@@ -24,9 +24,9 @@ end
 module Net
 
   # Net::IMAP implements Internet Message Access Protocol (\IMAP) client
-  # functionality.  The protocol is described in
-  # [IMAP4rev1[https://tools.ietf.org/html/rfc3501]] and
-  # [IMAP4rev2[https://tools.ietf.org/html/rfc9051]].
+  # functionality.  The protocol is described
+  # in {IMAP4rev1 [RFC3501]}[https://tools.ietf.org/html/rfc3501]
+  # and {IMAP4rev2 [RFC9051]}[https://tools.ietf.org/html/rfc9051].
   #
   # == \IMAP Overview
   #
