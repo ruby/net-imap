@@ -15,6 +15,7 @@ module Net::IMAP::FakeServer::TestHelper
         if select
           client.select(select)
           server.commands.pop
+          assert server.state.selected?
         end
         yield server, client
       ensure
