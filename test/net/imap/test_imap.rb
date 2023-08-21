@@ -9,6 +9,8 @@ class IMAPTest < Test::Unit::TestCase
   SERVER_KEY = File.expand_path("../fixtures/server.key", __dir__)
   SERVER_CERT = File.expand_path("../fixtures/server.crt", __dir__)
 
+  include Net::IMAP::FakeServer::TestHelper
+
   def setup
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
@@ -1030,29 +1032,6 @@ EOF
   end
 
   private
-
-  def with_fake_server(select: nil, timeout: 5, **opts)
-    Timeout.timeout(timeout) do
-      server = Net::IMAP::FakeServer.new(timeout: timeout, **opts)
-      @threads << Thread.new do server.run end
-      tls = opts[:implicit_tls]
-      tls = {ca_file: server.config.tls[:ca_file]} if tls == true
-      client = Net::IMAP.new("localhost", port: server.port, ssl: tls)
-      begin
-        if select
-          client.select(select)
-          server.commands.pop
-          assert server.state.selected?
-        end
-        yield server, client
-      ensure
-        client.logout rescue pp $!
-        client.disconnect if !client.disconnected?
-      end
-    ensure
-      server&.shutdown
-    end
-  end
 
   def imaps_test(timeout: 10)
     Timeout.timeout(timeout) do
