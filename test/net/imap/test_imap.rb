@@ -1054,46 +1054,48 @@ EOF
     end
   end
 
-  def imaps_test
-    server = create_tcp_server
-    port = server.addr[1]
-    ctx = OpenSSL::SSL::SSLContext.new
-    ctx.ca_file = CA_FILE
-    ctx.key = File.open(SERVER_KEY) { |f|
-      OpenSSL::PKey::RSA.new(f)
-    }
-    ctx.cert = File.open(SERVER_CERT) { |f|
-      OpenSSL::X509::Certificate.new(f)
-    }
-    ssl_server = OpenSSL::SSL::SSLServer.new(server, ctx)
-    started = false
-    ths = Thread.start do
-      Thread.current.report_on_exception = false # always join-ed
-      begin
-        started = true
-        sock = ssl_server.accept
+  def imaps_test(timeout: 10)
+    Timeout.timeout(timeout) do
+      server = create_tcp_server
+      port = server.addr[1]
+      ctx = OpenSSL::SSL::SSLContext.new
+      ctx.ca_file = CA_FILE
+      ctx.key = File.open(SERVER_KEY) { |f|
+        OpenSSL::PKey::RSA.new(f)
+      }
+      ctx.cert = File.open(SERVER_CERT) { |f|
+        OpenSSL::X509::Certificate.new(f)
+      }
+      ssl_server = OpenSSL::SSL::SSLServer.new(server, ctx)
+      started = false
+      ths = Thread.start do
+        Thread.current.report_on_exception = false # always join-ed
         begin
-          sock.print("* OK test server\r\n")
-          sock.gets
-          sock.print("* BYE terminating connection\r\n")
-          sock.print("RUBY0001 OK LOGOUT completed\r\n")
-        ensure
-          sock.close
+          started = true
+          sock = ssl_server.accept
+          begin
+            sock.print("* OK test server\r\n")
+            sock.gets
+            sock.print("* BYE terminating connection\r\n")
+            sock.print("RUBY0001 OK LOGOUT completed\r\n")
+          ensure
+            sock.close
+          end
+        rescue Errno::EPIPE, Errno::ECONNRESET, Errno::ECONNABORTED
         end
-      rescue Errno::EPIPE, Errno::ECONNRESET, Errno::ECONNABORTED
       end
-    end
-    sleep 0.1 until started
-    begin
+      sleep 0.1 until started
       begin
-        imap = yield(port)
-        imap.logout
+        begin
+          imap = yield(port)
+          imap.logout
+        ensure
+          imap.disconnect if imap
+        end
       ensure
-        imap.disconnect if imap
+        ssl_server.close
+        ths.join
       end
-    ensure
-      ssl_server.close
-      ths.join
     end
   end
 
