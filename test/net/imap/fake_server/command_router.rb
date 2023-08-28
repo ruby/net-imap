@@ -60,7 +60,7 @@ class Net::IMAP::FakeServer
       rescue IOError
         # TODO: fix whatever is causing this!
         warn "connection issue after bye but before LOGOUT could complete"
-        if $!.respond_to :detailed_message
+        if $!.respond_to? :detailed_message
           warn $!.detailed_message highlight: true, order: :bottom
         else
           warn $!.full_message     highlight: true, order: :bottom
