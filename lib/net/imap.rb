@@ -679,28 +679,6 @@ module Net
       include SSL
     end
 
-    # Returns the initial greeting the server, an UntaggedResponse.
-    attr_reader :greeting
-
-    # Seconds to wait until a connection is opened.
-    # If the IMAP object cannot open a connection within this time,
-    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    attr_reader :open_timeout
-
-    # Seconds to wait until an IDLE response is received.
-    attr_reader :idle_response_timeout
-
-    # The hostname this client connected to
-    attr_reader :host
-
-    # The port this client connected to
-    attr_reader :port
-
-    # Returns true after the TLS negotiation has completed and the remote
-    # hostname has been verified.  Returns false when TLS has been established
-    # but peer verification was disabled.
-    def tls_verified?; @tls_verified end
-
     # Returns the debug mode.
     def self.debug
       return @@debug
@@ -726,6 +704,122 @@ module Net
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
     end
+
+    # Returns the initial greeting the server, an UntaggedResponse.
+    attr_reader :greeting
+
+    # Seconds to wait until a connection is opened.
+    # If the IMAP object cannot open a connection within this time,
+    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
+    attr_reader :open_timeout
+
+    # Seconds to wait until an IDLE response is received.
+    attr_reader :idle_response_timeout
+
+    # The hostname this client connected to
+    attr_reader :host
+
+    # The port this client connected to
+    attr_reader :port
+
+    # :call-seq:
+    #    Net::IMAP.new(host, options = {})
+    #
+    # Creates a new Net::IMAP object and connects it to the specified
+    # +host+.
+    #
+    # +options+ is an option hash, each key of which is a symbol.
+    #
+    # The available options are:
+    #
+    # port::  Port number (default value is 143 for imap, or 993 for imaps)
+    # ssl::   If +options[:ssl]+ is true, then an attempt will be made
+    #         to use SSL (now TLS) to connect to the server.
+    #         If +options[:ssl]+ is a hash, it's passed to
+    #         OpenSSL::SSL::SSLContext#set_params as parameters.
+    # open_timeout:: Seconds to wait until a connection is opened
+    # idle_response_timeout:: Seconds to wait until an IDLE response is received
+    #
+    # The most common errors are:
+    #
+    # Errno::ECONNREFUSED:: Connection refused by +host+ or an intervening
+    #                       firewall.
+    # Errno::ETIMEDOUT:: Connection timed out (possibly due to packets
+    #                    being dropped by an intervening firewall).
+    # Errno::ENETUNREACH:: There is no route to that network.
+    # SocketError:: Hostname not known or other socket error.
+    # Net::IMAP::ByeResponseError:: The connected to the host was successful, but
+    #                               it immediately said goodbye.
+    def initialize(host, port_or_options = {},
+                   usessl = false, certs = nil, verify = true)
+      super()
+      @host = host
+      begin
+        options = port_or_options.to_hash
+      rescue NoMethodError
+        # for backward compatibility
+        options = {}
+        options[:port] = port_or_options
+        if usessl
+          options[:ssl] = create_ssl_params(certs, verify)
+        end
+      end
+      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
+      @tag_prefix = "RUBY"
+      @tagno = 0
+      @utf8_strings = false
+      @open_timeout = options[:open_timeout] || 30
+      @idle_response_timeout = options[:idle_response_timeout] || 5
+      @tls_verified = false
+      @parser = ResponseParser.new
+      @sock = tcp_socket(@host, @port)
+      begin
+        if options[:ssl]
+          start_tls_session(options[:ssl])
+          @usessl = true
+        else
+          @usessl = false
+        end
+        @responses = Hash.new {|h, k| h[k] = [] }
+        @tagged_responses = {}
+        @response_handlers = []
+        @tagged_response_arrival = new_cond
+        @continued_command_tag = nil
+        @continuation_request_arrival = new_cond
+        @continuation_request_exception = nil
+        @idle_done_cond = nil
+        @logout_command_tag = nil
+        @debug_output_bol = true
+        @exception = nil
+
+        @greeting = get_response
+        if @greeting.nil?
+          raise Error, "connection closed"
+        end
+        record_untagged_response_code @greeting
+        @capabilities = capabilities_from_resp_code @greeting
+        if @greeting.name == "BYE"
+          raise ByeResponseError, @greeting
+        end
+
+        @client_thread = Thread.current
+        @receiver_thread = Thread.start {
+          begin
+            receive_responses
+          rescue Exception
+          end
+        }
+        @receiver_thread_terminating = false
+      rescue Exception
+        @sock.close
+        raise
+      end
+    end
+
+    # Returns true after the TLS negotiation has completed and the remote
+    # hostname has been verified.  Returns false when TLS has been established
+    # but peer verification was disabled.
+    def tls_verified?; @tls_verified end
 
     def client_thread # :nodoc:
       warn "Net::IMAP#client_thread is deprecated and will be removed soon."
@@ -2217,100 +2311,6 @@ module Net
     SSL_PORT = 993   # :nodoc:
 
     @@debug = false
-
-    # :call-seq:
-    #    Net::IMAP.new(host, options = {})
-    #
-    # Creates a new Net::IMAP object and connects it to the specified
-    # +host+.
-    #
-    # +options+ is an option hash, each key of which is a symbol.
-    #
-    # The available options are:
-    #
-    # port::  Port number (default value is 143 for imap, or 993 for imaps)
-    # ssl::   If +options[:ssl]+ is true, then an attempt will be made
-    #         to use SSL (now TLS) to connect to the server.
-    #         If +options[:ssl]+ is a hash, it's passed to
-    #         OpenSSL::SSL::SSLContext#set_params as parameters.
-    # open_timeout:: Seconds to wait until a connection is opened
-    # idle_response_timeout:: Seconds to wait until an IDLE response is received
-    #
-    # The most common errors are:
-    #
-    # Errno::ECONNREFUSED:: Connection refused by +host+ or an intervening
-    #                       firewall.
-    # Errno::ETIMEDOUT:: Connection timed out (possibly due to packets
-    #                    being dropped by an intervening firewall).
-    # Errno::ENETUNREACH:: There is no route to that network.
-    # SocketError:: Hostname not known or other socket error.
-    # Net::IMAP::ByeResponseError:: The connected to the host was successful, but
-    #                               it immediately said goodbye.
-    def initialize(host, port_or_options = {},
-                   usessl = false, certs = nil, verify = true)
-      super()
-      @host = host
-      begin
-        options = port_or_options.to_hash
-      rescue NoMethodError
-        # for backward compatibility
-        options = {}
-        options[:port] = port_or_options
-        if usessl
-          options[:ssl] = create_ssl_params(certs, verify)
-        end
-      end
-      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
-      @tag_prefix = "RUBY"
-      @tagno = 0
-      @utf8_strings = false
-      @open_timeout = options[:open_timeout] || 30
-      @idle_response_timeout = options[:idle_response_timeout] || 5
-      @tls_verified = false
-      @parser = ResponseParser.new
-      @sock = tcp_socket(@host, @port)
-      begin
-        if options[:ssl]
-          start_tls_session(options[:ssl])
-          @usessl = true
-        else
-          @usessl = false
-        end
-        @responses = Hash.new {|h, k| h[k] = [] }
-        @tagged_responses = {}
-        @response_handlers = []
-        @tagged_response_arrival = new_cond
-        @continued_command_tag = nil
-        @continuation_request_arrival = new_cond
-        @continuation_request_exception = nil
-        @idle_done_cond = nil
-        @logout_command_tag = nil
-        @debug_output_bol = true
-        @exception = nil
-
-        @greeting = get_response
-        if @greeting.nil?
-          raise Error, "connection closed"
-        end
-        record_untagged_response_code @greeting
-        @capabilities = capabilities_from_resp_code @greeting
-        if @greeting.name == "BYE"
-          raise ByeResponseError, @greeting
-        end
-
-        @client_thread = Thread.current
-        @receiver_thread = Thread.start {
-          begin
-            receive_responses
-          rescue Exception
-          end
-        }
-        @receiver_thread_terminating = false
-      rescue Exception
-        @sock.close
-        raise
-      end
-    end
 
     def tcp_socket(host, port)
       s = Socket.tcp(host, port, :connect_timeout => @open_timeout)
