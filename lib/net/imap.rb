@@ -722,34 +722,79 @@ module Net
     # The port this client connected to
     attr_reader :port
 
-    # :call-seq:
-    #    Net::IMAP.new(host, options = {})
-    #
     # Creates a new Net::IMAP object and connects it to the specified
     # +host+.
     #
-    # +options+ is an option hash, each key of which is a symbol.
+    # ==== Options
     #
-    # The available options are:
+    # Accepts the following options:
     #
-    # port::  Port number (default value is 143 for imap, or 993 for imaps)
-    # ssl::   If +options[:ssl]+ is true, then an attempt will be made
-    #         to use SSL (now TLS) to connect to the server.
-    #         If +options[:ssl]+ is a hash, it's passed to
-    #         OpenSSL::SSL::SSLContext#set_params as parameters.
-    # open_timeout:: Seconds to wait until a connection is opened
-    # idle_response_timeout:: Seconds to wait until an IDLE response is received
+    # [port]
+    #   Port number.  Defaults to 993 when +ssl+ is truthy, and 143 otherwise.
+    #
+    # [ssl]
+    #   If +true+, the connection will use TLS with the default params set by
+    #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
+    #   If +ssl+ is a hash, it's passed to
+    #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
+    #   the keys are names of attribute assignment methods on
+    #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    # [open_timeout]
+    #   Seconds to wait until a connection is opened
+    # [idle_response_timeout]
+    #   Seconds to wait until an IDLE response is received
+    #
+    # See DeprecatedClientOptions for obsolete backwards compatible arguments.
+    #
+    # ==== Examples
+    #
+    # Connect to cleartext port 143 at mail.example.com and recieve the server greeting:
+    #   imap = Net::IMAP.new('mail.example.com', ssl: false) # => #<Net::IMAP:0x00007f79b0872bd0>
+    #   imap.port          => 143
+    #   imap.tls_verified? => false
+    #   imap.greeting      => name: ("OK" | "PREAUTH") => status
+    #   status # => "OK"
+    #   # The client is connected in the "Not Authenticated" state.
+    #
+    # Connect with TLS to port 993 at mail.example.com:
+    #   imap = Net::IMAP.new('mail.example.com', ssl: true) # => #<Net::IMAP:0x00007f79b0872bd0>
+    #   imap.port          => 993
+    #   imap.tls_verified? => true
+    #   imap.greeting      => name: ("OK" | "PREAUTH") => status
+    #   status # => "OK"
+    #   # The client is connected in the "Not Authenticated" state.
+    #
+    # Connect with prior authentication, for example using an SSL certificate:
+    #   ssl_ctx_params = {
+    #     cert: OpenSSL::X509::Certificate.new(File.read("client.crt")),
+    #     key:  OpenSSL::PKey::EC.new(File.read('client.key')),
+    #     extra_chain_cert: [
+    #       OpenSSL::X509::Certificate.new(File.read("intermediate.crt")),
+    #     ],
+    #   }
+    #   imap = Net::IMAP.new('mail.example.com', ssl: ssl_ctx_params)
+    #   imap.port          => 993
+    #   imap.tls_verified? => true
+    #   imap.greeting      => name: "PREAUTH"
+    #   # The client is connected in the "Authenticated" state.
+    #
+    # ==== Exceptions
     #
     # The most common errors are:
     #
-    # Errno::ECONNREFUSED:: Connection refused by +host+ or an intervening
-    #                       firewall.
-    # Errno::ETIMEDOUT:: Connection timed out (possibly due to packets
-    #                    being dropped by an intervening firewall).
-    # Errno::ENETUNREACH:: There is no route to that network.
-    # SocketError:: Hostname not known or other socket error.
-    # Net::IMAP::ByeResponseError:: The connected to the host was successful, but
-    #                               it immediately said goodbye.
+    # [Errno::ECONNREFUSED]
+    #   Connection refused by +host+ or an intervening firewall.
+    # [Errno::ETIMEDOUT]
+    #   Connection timed out (possibly due to packets being dropped by an
+    #   intervening firewall).
+    # [Errno::ENETUNREACH]
+    #   There is no route to that network.
+    # [SocketError]
+    #   Hostname not known or other socket error.
+    # [Net::IMAP::ByeResponseError]
+    #   Connected to the host successfully, but it immediately said goodbye.
+    #
     def initialize(host, port_or_options = {},
                    usessl = false, certs = nil, verify = true)
       super()
