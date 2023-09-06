@@ -795,70 +795,50 @@ module Net
     # [Net::IMAP::ByeResponseError]
     #   Connected to the host successfully, but it immediately said goodbye.
     #
-    def initialize(host, port_or_options = {},
-                   usessl = false, certs = nil, verify = true)
+    def initialize(host, options = {}, *deprecated)
       super()
+      options = convert_deprecated_options(options, *deprecated)
+
+      # Config options
       @host = host
-      begin
-        options = port_or_options.to_hash
-      rescue NoMethodError
-        # for backward compatibility
-        options = {}
-        options[:port] = port_or_options
-        if usessl
-          options[:ssl] = create_ssl_params(certs, verify)
-        end
-      end
       @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
-      @tag_prefix = "RUBY"
-      @tagno = 0
-      @utf8_strings = false
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
-      @tls_verified = false
+      ssl_ctx_params = options[:ssl]
+
+      # Basic Client State
+      @utf8_strings = false
+      @debug_output_bol = true
+      @exception = nil
+      @greeting = nil
+      @capabilities = nil
+
+      # Client Protocol Reciever
       @parser = ResponseParser.new
+      @responses = Hash.new {|h, k| h[k] = [] }
+      @response_handlers = []
+      @receiver_thread = nil
+      @receiver_thread_exception = nil
+      @receiver_thread_terminating = false
+
+      # Client Protocol Sender (including state for currently running commands)
+      @tag_prefix = "RUBY"
+      @tagno = 0
+      @tagged_responses = {}
+      @tagged_response_arrival = new_cond
+      @continued_command_tag = nil
+      @continuation_request_arrival = new_cond
+      @continuation_request_exception = nil
+      @idle_done_cond = nil
+      @logout_command_tag = nil
+
+      # Connection
+      @tls_verified = false
       @sock = tcp_socket(@host, @port)
-      begin
-        if options[:ssl]
-          start_tls_session(options[:ssl])
-          @usessl = true
-        else
-          @usessl = false
-        end
-        @responses = Hash.new {|h, k| h[k] = [] }
-        @tagged_responses = {}
-        @response_handlers = []
-        @tagged_response_arrival = new_cond
-        @continued_command_tag = nil
-        @continuation_request_arrival = new_cond
-        @continuation_request_exception = nil
-        @idle_done_cond = nil
-        @logout_command_tag = nil
-        @debug_output_bol = true
-        @exception = nil
+      start_imap_connection(ssl_ctx_params)
 
-        @greeting = get_response
-        if @greeting.nil?
-          raise Error, "connection closed"
-        end
-        record_untagged_response_code @greeting
-        @capabilities = capabilities_from_resp_code @greeting
-        if @greeting.name == "BYE"
-          raise ByeResponseError, @greeting
-        end
-
-        @client_thread = Thread.current
-        @receiver_thread = Thread.start {
-          begin
-            receive_responses
-          rescue Exception
-          end
-        }
-        @receiver_thread_terminating = false
-      rescue Exception
-        @sock.close
-        raise
-      end
+      # DEPRECATED: to remove in next version
+      @client_thread = Thread.current
     end
 
     # Returns true after the TLS negotiation has completed and the remote
@@ -2356,6 +2336,47 @@ module Net
     SSL_PORT = 993   # :nodoc:
 
     @@debug = false
+
+    def convert_deprecated_options(
+      port_or_options = {}, usessl = false, certs = nil, verify = true
+    )
+      port_or_options.to_hash
+    rescue NoMethodError
+      # for backward compatibility
+      options = {}
+      options[:port] = port_or_options
+      if usessl
+        options[:ssl] = create_ssl_params(certs, verify)
+      end
+      options
+    end
+
+    def start_imap_connection(ssl_ctx_params)
+      start_tls_session(ssl_ctx_params) if ssl_ctx_params
+      @greeting        = get_server_greeting
+      @capabilities    = capabilities_from_resp_code @greeting
+      @receiver_thread = start_receiver_thread
+    rescue Exception
+      @sock.close
+      raise
+    end
+
+    def get_server_greeting
+      greeting = get_response
+      raise Error, "No server greeting - connection closed" unless greeting
+      record_untagged_response_code greeting
+      raise ByeResponseError, greeting if greeting.name == "BYE"
+      greeting
+    end
+
+    def start_receiver_thread
+      Thread.start do
+        receive_responses
+      rescue Exception => ex
+        @receiver_thread_exception = ex
+        # don't exit the thread with an exception
+      end
+    end
 
     def tcp_socket(host, port)
       s = Socket.tcp(host, port, :connect_timeout => @open_timeout)
