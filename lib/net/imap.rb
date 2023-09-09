@@ -24,9 +24,9 @@ end
 module Net
 
   # Net::IMAP implements Internet Message Access Protocol (\IMAP) client
-  # functionality.  The protocol is described in
-  # [IMAP4rev1[https://tools.ietf.org/html/rfc3501]] and
-  # [IMAP4rev2[https://tools.ietf.org/html/rfc9051]].
+  # functionality.  The protocol is described
+  # in {IMAP4rev1 [RFC3501]}[https://tools.ietf.org/html/rfc3501]
+  # and {IMAP4rev2 [RFC9051]}[https://tools.ietf.org/html/rfc9051].
   #
   # == \IMAP Overview
   #
@@ -768,13 +768,12 @@ module Net
     # cached #capabilities are used without sending a new #capability command to
     # the server.
     #
-    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
-    # according to the server's advertised capabilities.</em>
+    # <em>*NOTE:* Most Net::IMAP methods do not _currently_ modify their
+    # behaviour according to the server's advertised #capabilities.</em>
     #
     # See Net::IMAP@Capabilities for more about \IMAP capabilities.
     #
     # Related: #auth_capable?, #capabilities, #capability, #enable
-    #
     def capable?(capability) capabilities.include? capability.to_s.upcase end
     alias capability? capable?
 
@@ -783,12 +782,12 @@ module Net
     #
     # To ensure a case-insensitive comparison, #capable? can be used instead.
     #
-    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
-    # according to the server's advertised capabilities.</em>
+    # <em>*NOTE:* Most Net::IMAP methods do not _currently_ modify their
+    # behaviour according to the server's advertised #capabilities.</em>
     #
     # See Net::IMAP@Capabilities for more about \IMAP capabilities.
     #
-    # Related: #capable?, #auth_capable?, #capability
+    # Related: #capable?, #auth_capable?, #auth_mechanisms, #capability, #enable
     def capabilities
       @capabilities || capability
     end
@@ -812,13 +811,7 @@ module Net
     #    imap.authenticate("XOAUTH2", username, oauth2_access_token)
     #    imap.auth_mechanisms # => []
     #
-    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
-    # according to the server's advertised capabilities.</em>
-    #
-    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
-    #
-    # Related: #auth_capable?, #capabilities
-    #
+    # Related: #authenticate, #auth_capable?, #capabilities
     def auth_mechanisms
       capabilities
         .grep(/\AAUTH=/i)
@@ -835,12 +828,7 @@ module Net
     #   imap.auth_capable? "PLAIN"       # => true
     #   imap.auth_capable? "blurdybloop" # => false
     #
-    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
-    # according to the server's advertised capabilities.</em>
-    #
-    # See Net::IMAP@Capabilities for more about \IMAP capabilities.
-    #
-    # Related: #authenticate, #capable?, #capabilities
+    # Related: #authenticate, #auth_mechanisms, #capable?, #capabilities
     def auth_capable?(mechanism)
       capable? "AUTH=#{mechanism}"
     end
@@ -875,8 +863,8 @@ module Net
     # and returns an array of capabilities that are supported by the server.
     # The result is stored for use by #capable? and #capabilities.
     #
-    # <em>*NOTE:* Net::IMAP does not</em> currently <em>modify its behaviour
-    # according to the server's advertised capabilities.</em>
+    # <em>*NOTE:* Most Net::IMAP methods do not _currently_ modify their
+    # behaviour according to the server's advertised #capabilities.</em>
     #
     # Net::IMAP automatically stores and discards capability data according to
     # the requirements and recommendations in
@@ -992,82 +980,76 @@ module Net
     end
 
     # :call-seq:
-    #   authenticate(mechanism, ...) -> ok_resp
-    #   authenticate(mech, *creds, sasl_ir: true, **attrs, &callback) -> ok_resp
+    #   authenticate(mechanism, *, sasl_ir: true, **, &) -> ok_resp
     #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.  If successful, the connection enters the
     # "_authenticated_" state.
     #
     # +mechanism+ is the name of the \SASL authentication mechanism to be used.
-    # +sasl_ir+ allows or disallows sending an "initial response" (see the
-    # +SASL-IR+ capability, below).  All other arguments are forwarded to the
-    # registered SASL authenticator for the requested mechanism.  <em>The
-    # documentation for each individual mechanism must be consulted for its
-    # specific parameters.</em>
     #
-    # An exception Net::IMAP::NoResponseError is raised if authentication fails.
+    # +sasl_ir+ allows or disallows sending an "initial response" (see the
+    # +SASL-IR+ capability, below).
+    #
+    # All other arguments are forwarded to the registered SASL authenticator for
+    # the requested mechanism.  <em>The documentation for each individual
+    # mechanism must be consulted for its specific parameters.</em>
     #
     # Related: #login, #starttls, #auth_capable?, #auth_mechanisms
     #
-    # ==== Supported SASL Mechanisms
+    # ==== Mechanisms
     #
-    # +PLAIN+::     See PlainAuthenticator.
-    #               Login using clear-text username and password.
+    # Each mechanism has different properties and requirements.  Please consult
+    # the documentation for the specific mechanisms you are using:
     #
-    # +XOAUTH2+::   See XOAuth2Authenticator.
-    #               Login using a username and OAuth2 access token.
-    #               Non-standard and obsoleted by +OAUTHBEARER+, but widely
-    #               supported.
+    # +PLAIN+::
+    #     See PlainAuthenticator[Net::IMAP::SASL::PlainAuthenticator].
     #
-    # >>>
-    #   *Deprecated:*  <em>Obsolete mechanisms are available for backwards
-    #   compatibility.</em>
+    #     Login using clear-text username and password.
     #
-    #   For +DIGEST-MD5+ see DigestMD5Authenticator.
+    # +XOAUTH2+::
+    #     See XOAuth2Authenticator[Net::IMAP::SASL::XOAuth2Authenticator].
     #
-    #   For +LOGIN+, see LoginAuthenticator.
+    #     Login using a username and an OAuth2 access token.  Non-standard and
+    #     obsoleted by +OAUTHBEARER+, but widely supported.
     #
-    #   For +CRAM-MD5+, see CramMD5Authenticator.
-    #
-    #   <em>Using a deprecated mechanism will print a warning.</em>
-    #
-    # See Net::IMAP::Authenticators for information on plugging in
-    # authenticators for other mechanisms.  See the {SASL mechanism
+    # See the {SASL mechanism
     # registry}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
-    # for information on these and other SASL mechanisms.
+    # for a list of all SASL mechanisms and their specifications.  To register
+    # new authenticators, see Authenticators.
     #
-    # ===== Capabilities
+    # ===== Deprecated mechanisms
     #
-    # The server should list <tt>"AUTH=#{mechanism}"</tt> capabilities for
-    # supported mechanisms.  Check #auth_capable? or #auth_mechanisms before
-    # using a particular mechanism.
+    # <em>Obsolete mechanisms should be avoided, but are still available for
+    # backwards compatibility.  See</em> Net::IMAP::SASL@Deprecated+mechanisms.
+    # <em>Using a deprecated mechanism will print a warning.</em>
+    #
+    # ==== Capabilities
+    #
+    # <tt>"AUTH=#{mechanism}"</tt> capabilities indicate server support for
+    # mechanisms.  Use #auth_capable? or #auth_mechanisms to check for support
+    # before using a particular mechanism.
     #
     #    if imap.auth_capable? "XOAUTH2"
     #      imap.authenticate "XOAUTH2", username, oauth2_access_token
     #    elsif imap.auth_capable? "PLAIN"
     #      imap.authenticate "PLAIN", username, password
-    #    elsif imap.auth_capable? "DIGEST-MD5"
-    #      imap.authenticate "DIGEST-MD5", username, password
     #    elsif !imap.capability? "LOGINDISABLED"
     #      imap.login username, password
     #    else
     #      raise "No acceptable authentication mechanism is available"
     #    end
     #
-    # The SASL exchange provides a method for server challenges and client
-    # responses, but many mechanisms expect the client to "respond" first.  When
-    # the server's capabilities include +SASL-IR+
-    # [RFC4959[https://tools.ietf.org/html/rfc4959]], this "initial response"
-    # may be sent as an argument to the +AUTHENTICATE+ command, saving a
-    # round-trip.  The initial response will _only_ be sent when it is supported
-    # by both the mechanism and the server.  Set +sasl_ir+ to +false+ to prevent
-    # sending an initial response, even when it is supported.
+    # Although servers should list all supported \SASL mechanisms, they may
+    # allow authentication with an unlisted +mechanism+.
     #
-    # Although servers _should_ advertise all supported auth mechanisms, it is
-    # possible to attempt to authenticate with a +mechanism+ that isn't listed.
-    # However the initial response will not be sent unless the appropriate
-    # <tt>"AUTH=#{mechanism}"</tt> capability is also present.
+    # If [SASL-IR[https://www.rfc-editor.org/rfc/rfc4959.html]] is supported
+    # and the appropriate <tt>"AUTH=#{mechanism}"</tt> capability is present,
+    # an "initial response" may be sent as an argument to the +AUTHENTICATE+
+    # command, saving a round-trip.  The SASL exchange allows for server
+    # challenges and client responses, but many mechanisms expect the client to
+    # "respond" first.  The initial response will only be sent for
+    # "client-first" mechanisms.
     #
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Previously cached #capabilities will be cleared when this method
@@ -1098,8 +1080,10 @@ module Net
     # this +user+.  If successful, the connection enters the "_authenticated_"
     # state.
     #
-    # Using #authenticate is generally preferred over #login.  The LOGIN command
-    # is not the same as #authenticate with the "LOGIN" +mechanism+.
+    # Using #authenticate {should be
+    # preferred}[https://www.rfc-editor.org/rfc/rfc9051.html#name-login-command]
+    # over #login.  The LOGIN command is not the same as #authenticate with the
+    # "LOGIN" +mechanism+.
     #
     # A Net::IMAP::NoResponseError is raised if authentication fails.
     #
