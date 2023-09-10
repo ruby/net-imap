@@ -760,7 +760,7 @@ module Net
     # [idle_response_timeout]
     #   Seconds to wait until an IDLE response is received
     #
-    # See DeprecatedClientOptions for obsolete backwards compatible arguments.
+    # See DeprecatedClientOptions.new for deprecated arguments.
     #
     # ==== Examples
     #
@@ -810,16 +810,15 @@ module Net
     # [Net::IMAP::ByeResponseError]
     #   Connected to the host successfully, but it immediately said goodbye.
     #
-    def initialize(host, options = {}, *deprecated)
+    def initialize(host, port: nil, ssl:  nil,
+                   open_timeout: 30, idle_response_timeout: 5)
       super()
-      options = convert_deprecated_options(options, *deprecated)
-
       # Config options
       @host = host
-      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
-      @open_timeout = options[:open_timeout] || 30
-      @idle_response_timeout = options[:idle_response_timeout] || 5
-      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options[:ssl])
+      @port = port || (ssl ? SSL_PORT : PORT)
+      @open_timeout = Integer(open_timeout)
+      @idle_response_timeout = Integer(idle_response_timeout)
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
       @utf8_strings = false
@@ -2354,20 +2353,6 @@ module Net
 
     @@debug = false
 
-    def convert_deprecated_options(
-      port_or_options = {}, usessl = false, certs = nil, verify = true
-    )
-      port_or_options.to_hash
-    rescue NoMethodError
-      # for backward compatibility
-      options = {}
-      options[:port] = port_or_options
-      if usessl
-        options[:ssl] = create_ssl_params(certs, verify)
-      end
-      options
-    end
-
     def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
@@ -2695,23 +2680,6 @@ module Net
       end
     end
 
-    def create_ssl_params(certs = nil, verify = true)
-      params = {}
-      if certs
-        if File.file?(certs)
-          params[:ca_file] = certs
-        elsif File.directory?(certs)
-          params[:ca_path] = certs
-        end
-      end
-      if verify
-        params[:verify_mode] = VERIFY_PEER
-      else
-        params[:verify_mode] = VERIFY_NONE
-      end
-      return params
-    end
-
     def start_tls_session
       raise "SSL extension not installed" unless defined?(OpenSSL::SSL)
       raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
@@ -2746,3 +2714,6 @@ require_relative "imap/flags"
 require_relative "imap/response_data"
 require_relative "imap/response_parser"
 require_relative "imap/authenticators"
+
+require_relative "imap/deprecated_client_options"
+Net::IMAP.prepend Net::IMAP::DeprecatedClientOptions
