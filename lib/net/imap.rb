@@ -1003,12 +1003,12 @@ module Net
     # the documentation for the specific mechanisms you are using:
     #
     # +PLAIN+::
-    #     See PlainAuthenticator[Net::IMAP::SASL::PlainAuthenticator].
+    #     See PlainAuthenticator[rdoc-ref:Net::IMAP::SASL::PlainAuthenticator].
     #
     #     Login using clear-text username and password.
     #
     # +XOAUTH2+::
-    #     See XOAuth2Authenticator[Net::IMAP::SASL::XOAuth2Authenticator].
+    #     See XOAuth2Authenticator[rdoc-ref:Net::IMAP::SASL::XOAuth2Authenticator].
     #
     #     Login using a username and an OAuth2 access token.  Non-standard and
     #     obsoleted by +OAUTHBEARER+, but widely supported.
