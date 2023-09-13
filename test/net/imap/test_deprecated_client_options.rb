@@ -115,4 +115,51 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
 
   end
 
+  class StartTLSTests < DeprecatedClientOptionsTest
+    test "Convert obsolete options hash to keywords" do
+      with_fake_server(preauth: false) do |server, imap|
+        imap.starttls(ca_file: server.config.tls[:ca_file], min_version: :TLS1_2)
+        assert_equal(
+          {ca_file: server.config.tls[:ca_file], min_version: :TLS1_2},
+          imap.ssl_ctx_params
+        )
+        assert imap.ssl_ctx.verify_hostname
+        assert_equal(server.config.tls[:ca_file], imap.ssl_ctx.ca_file)
+      end
+    end
+
+    test "Convert deprecated certs, verify with warning" do
+      with_fake_server(preauth: false) do |server, imap|
+        assert_deprecated_warning(/Call Net::IMAP#starttls with keyword/i) do
+          imap.starttls(server.config.tls[:ca_file], false)
+        end
+        assert_equal(
+          {
+            ca_file: server.config.tls[:ca_file],
+            verify_mode: OpenSSL::SSL::VERIFY_NONE,
+          },
+          imap.ssl_ctx_params
+        )
+        assert_equal server.config.tls[:ca_file], imap.ssl_ctx.ca_file
+      end
+    end
+
+    test "combined options hash and keyword args raises ArgumentError" do
+      with_fake_server(preauth: false) do |server, imap|
+        assert_raise(ArgumentError) do
+          imap.starttls({min_version: :TLS1_2},
+                        ca_file: server.config.tls[:ca_file])
+        end
+      end
+    end
+
+    test "combined options hash and ssl args raises ArgumentError" do
+      with_fake_server(preauth: false) do |server, imap|
+        assert_raise(ArgumentError) do
+          imap.starttls({min_version: :TLS1_2}, false)
+        end
+      end
+    end
+  end
+
 end

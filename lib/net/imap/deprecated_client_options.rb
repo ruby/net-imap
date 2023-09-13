@@ -91,6 +91,33 @@ module Net
         end
       end
 
+      # :call-seq:
+      #   starttls(**options) # standard
+      #   starttls(options = {}) # obsolete
+      #   starttls(certs = nil, verify = true) # deprecated
+      #
+      # Translates Net::IMAP#starttls arguments for backward compatibility.
+      #
+      # Support for +certs+ and +verify+ will be dropped in a future release.
+      #
+      # See ::new for interpretation of +certs+ and +verify+.
+      def starttls(*deprecated, **options)
+        if deprecated.empty?
+          super(**options)
+        elsif options.any?
+          # starttls(*__invalid__, **options)
+          raise ArgumentError, "Do not combine deprecated and keyword options"
+        elsif deprecated.first.respond_to?(:to_hash) && deprecated.length > 1
+          # starttls(*__invalid__, **options)
+          raise ArgumentError, "Do not use deprecated verify param with options hash"
+        elsif deprecated.first.respond_to?(:to_hash)
+          super(**Hash.try_convert(deprecated.first))
+        else
+          warn "DEPRECATED: Call Net::IMAP#starttls with keyword options", uplevel: 1
+          super(**create_ssl_params(*deprecated))
+        end
+      end
+
       private
 
       def create_ssl_params(certs = nil, verify = true)

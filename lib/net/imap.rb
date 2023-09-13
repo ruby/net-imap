@@ -1075,7 +1075,12 @@ module Net
     # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
     # to start a TLS session.
     #
-    # Any +options+ are forwarded to OpenSSL::SSL::SSLContext#set_params.
+    # Any +options+ are forwarded directly to
+    # {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
+    # the keys are names of attribute assignment methods on
+    # SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    # See DeprecatedClientOptions#starttls for deprecated arguments.
     #
     # This method returns after TLS negotiation and hostname verification are
     # both successful.  Any error indicates that the connection has not been
@@ -1097,14 +1102,8 @@ module Net
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Cached #capabilities will be cleared when this method completes.
     #
-    def starttls(options = {}, verify = true)
-      begin
-        # for backward compatibility
-        certs = options.to_str
-        options = create_ssl_params(certs, verify)
-      rescue NoMethodError
-      end
-      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options || {})
+    def starttls(**options)
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options)
       send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
           clear_cached_capabilities
