@@ -722,6 +722,21 @@ module Net
     # The port this client connected to
     attr_reader :port
 
+    # Returns the
+    # {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
+    # used by the SSLSocket when TLS is attempted, even when the TLS handshake
+    # is unsuccessful.  The context object will be frozen.
+    #
+    # Returns +nil+ for a plaintext connection.
+    attr_reader :ssl_ctx
+
+    # Returns the parameters that were sent to #ssl_ctx
+    # {set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params]
+    # when the connection tries to use TLS (even when unsuccessful).
+    #
+    # Returns +false+ for a plaintext connection.
+    attr_reader :ssl_ctx_params
+
     # Creates a new Net::IMAP object and connects it to the specified
     # +host+.
     #
@@ -804,7 +819,7 @@ module Net
       @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
-      ssl_ctx_params = options[:ssl]
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options[:ssl])
 
       # Basic Client State
       @utf8_strings = false
@@ -835,7 +850,8 @@ module Net
       # Connection
       @tls_verified = false
       @sock = tcp_socket(@host, @port)
-      start_imap_connection(ssl_ctx_params)
+      start_tls_session if ssl_ctx
+      start_imap_connection
 
       # DEPRECATED: to remove in next version
       @client_thread = Thread.current
@@ -1083,17 +1099,18 @@ module Net
     # Cached #capabilities will be cleared when this method completes.
     #
     def starttls(options = {}, verify = true)
+      begin
+        # for backward compatibility
+        certs = options.to_str
+        options = create_ssl_params(certs, verify)
+      rescue NoMethodError
+      end
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options || {})
       send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
-          begin
-            # for backward compatibility
-            certs = options.to_str
-            options = create_ssl_params(certs, verify)
-          rescue NoMethodError
-          end
           clear_cached_capabilities
           clear_responses
-          start_tls_session(options)
+          start_tls_session
         end
       end
     end
@@ -2351,8 +2368,7 @@ module Net
       options
     end
 
-    def start_imap_connection(ssl_ctx_params)
-      start_tls_session(ssl_ctx_params) if ssl_ctx_params
+    def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
       @receiver_thread = start_receiver_thread
@@ -2664,6 +2680,21 @@ module Net
       end
     end
 
+    def build_ssl_ctx(ssl)
+      if ssl
+        params = (Hash.try_convert(ssl) || {}).freeze
+        context = SSLContext.new
+        context.set_params(params)
+        if defined?(VerifyCallbackProc)
+          context.verify_callback = VerifyCallbackProc
+        end
+        context.freeze
+        [params, context]
+      else
+        false
+      end
+    end
+
     def create_ssl_params(certs = nil, verify = true)
       params = {}
       if certs
@@ -2681,28 +2712,15 @@ module Net
       return params
     end
 
-    def start_tls_session(params = {})
-      unless defined?(OpenSSL::SSL)
-        raise "SSL extension not installed"
-      end
-      if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
-        raise RuntimeError, "already using SSL"
-      end
-      begin
-        params = params.to_hash
-      rescue NoMethodError
-        params = {}
-      end
-      context = SSLContext.new
-      context.set_params(params)
-      if defined?(VerifyCallbackProc)
-        context.verify_callback = VerifyCallbackProc
-      end
-      @sock = SSLSocket.new(@sock, context)
+    def start_tls_session
+      raise "SSL extension not installed" unless defined?(OpenSSL::SSL)
+      raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
+      raise "cannot start TLS without SSLContext" unless ssl_ctx
+      @sock = SSLSocket.new(@sock, ssl_ctx)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, @open_timeout)
-      if context.verify_mode != VERIFY_NONE
+      if ssl_ctx.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
       end
