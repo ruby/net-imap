@@ -1002,13 +1002,20 @@ module Net
     # Each mechanism has different properties and requirements.  Please consult
     # the documentation for the specific mechanisms you are using:
     #
+    # +OAUTHBEARER+::
+    #     See OAuthBearerAuthenticator[rdoc-ref:Net::IMAP::SASL::OAuthBearerAuthenticator].
+    #
+    #     Login using an OAuth2 Bearer token.  This is the standard mechanism
+    #     for using OAuth2 with \SASL, but it is not yet deployed as widely as
+    #     +XOAUTH2+.
+    #
     # +PLAIN+::
-    #     See PlainAuthenticator[Net::IMAP::SASL::PlainAuthenticator].
+    #     See PlainAuthenticator[rdoc-ref:Net::IMAP::SASL::PlainAuthenticator].
     #
     #     Login using clear-text username and password.
     #
     # +XOAUTH2+::
-    #     See XOAuth2Authenticator[Net::IMAP::SASL::XOAuth2Authenticator].
+    #     See XOAuth2Authenticator[rdoc-ref:Net::IMAP::SASL::XOAuth2Authenticator].
     #
     #     Login using a username and an OAuth2 access token.  Non-standard and
     #     obsoleted by +OAUTHBEARER+, but widely supported.

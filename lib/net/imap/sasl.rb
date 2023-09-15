@@ -27,13 +27,20 @@ module Net
     # Each mechanism has different properties and requirements.  Please consult
     # the documentation for the specific mechanisms you are using:
     #
+    # +OAUTHBEARER+::
+    #     See OAuthBearerAuthenticator.
+    #
+    #     Login using an OAuth2 Bearer token.  This is the standard mechanism
+    #     for using OAuth2 with \SASL, but it is not yet deployed as widely as
+    #     +XOAUTH2+.
+    #
     # +PLAIN+::
-    #     See PlainAuthenticator[Net::IMAP::SASL::PlainAuthenticator].
+    #     See PlainAuthenticator.
     #
     #     Login using clear-text username and password.
     #
     # +XOAUTH2+::
-    #     See XOAuth2Authenticator[Net::IMAP::SASL::XOAuth2Authenticator].
+    #     See XOAuth2Authenticator.
     #
     #     Login using a username and an OAuth2 access token.  Non-standard and
     #     obsoleted by +OAUTHBEARER+, but widely supported.
@@ -69,7 +76,8 @@ module Net
 
       sasl_dir = File.expand_path("sasl", __dir__)
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
-
+      autoload :GS2Header,                "#{sasl_dir}/gs2_header"
+      autoload :OAuthBearerAuthenticator, "#{sasl_dir}/oauthbearer_authenticator"
       autoload :PlainAuthenticator,       "#{sasl_dir}/plain_authenticator"
       autoload :XOAuth2Authenticator,     "#{sasl_dir}/xoauth2_authenticator"
 
