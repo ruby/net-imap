@@ -1139,13 +1139,13 @@ module Net
     # the documentation for the specific mechanisms you are using:
     #
     # +ANONYMOUS+::
-    #     See AnonymousAuthenticator[Net::IMAP::SASL::AnonymousAuthenticator].
+    #     See AnonymousAuthenticator[rdoc-ref:Net::IMAP::SASL::AnonymousAuthenticator].
     #
     #     Allows the user to gain access to public services or resources without
     #     authenticating or disclosing an identity.
     #
     # +EXTERNAL+::
-    #     See ExternalAuthenticator[Net::IMAP::SASL::ExternalAuthenticator].
+    #     See ExternalAuthenticator[rdoc-ref:Net::IMAP::SASL::ExternalAuthenticator].
     #
     #     Authenticates using already established credentials, such as a TLS
     #     certificate or IPsec.
