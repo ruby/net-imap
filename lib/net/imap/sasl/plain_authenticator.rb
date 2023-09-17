@@ -10,17 +10,8 @@
 # greater be used for all traffic, and deprecate cleartext access ASAP.  +PLAIN+
 # can be secured by TLS encryption.
 class Net::IMAP::SASL::PlainAuthenticator
-
-  def initial_response?; true end
-
-  def process(data)
-    return "#@authzid\0#@username\0#@password"
-  end
-
-  # :nodoc:
   NULL = -"\0".b
-
-  private
+  private_constant :NULL
 
   # +username+ is the authentication identity, the identity whose +password+ is
   # used.  +username+ is referred to as +authcid+ by
@@ -37,6 +28,12 @@ class Net::IMAP::SASL::PlainAuthenticator
     @username = username
     @password = password
     @authzid  = authzid
+  end
+
+  def initial_response?; true end
+
+  def process(data)
+    return "#@authzid\0#@username\0#@password"
   end
 
 end

@@ -12,6 +12,12 @@ module Net
       # established external to SASL, for example by TLS certificate or IPsec.
       class ExternalAuthenticator
 
+        # Authorization identity: an identity to act as or on behalf of.
+        #
+        # If not explicitly provided, the server defaults to using the identity
+        # that was authenticated by the external credentials.
+        attr_reader :authzid
+
         # :call-seq:
         #   new(authzid: nil, **) -> authenticator
         #
@@ -29,12 +35,6 @@ module Net
             raise ArgumentError, "contains NULL"
           end
         end
-
-        # Authorization identity: an identity to act as or on behalf of.
-        #
-        # If not explicitly provided, the server defaults to using the identity
-        # that was authenticated by the external credentials.
-        attr_reader :authzid
 
         # :call-seq:
         #   initial_response? -> true

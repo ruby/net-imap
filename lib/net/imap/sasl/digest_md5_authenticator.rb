@@ -9,6 +9,21 @@
 # {RFC6331}[https://tools.ietf.org/html/rfc6331] and should not be relied on for
 # security.  It is included for compatibility with existing servers.
 class Net::IMAP::SASL::DigestMD5Authenticator
+  STAGE_ONE = :stage_one
+  STAGE_TWO = :stage_two
+  private_constant :STAGE_ONE, :STAGE_TWO
+
+  def initialize(user, password, authname = nil, warn_deprecation: true)
+    if warn_deprecation
+      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
+      # TODO: recommend SCRAM instead.
+    end
+    require "digest/md5"
+    require "strscan"
+    @user, @password, @authname = user, password, authname
+    @nc, @stage = {}, STAGE_ONE
+  end
+
   def process(challenge)
     case @stage
     when STAGE_ONE
@@ -74,22 +89,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     end
   end
 
-  def initialize(user, password, authname = nil, warn_deprecation: true)
-    if warn_deprecation
-      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
-      # TODO: recommend SCRAM instead.
-    end
-    require "digest/md5"
-    require "strscan"
-    @user, @password, @authname = user, password, authname
-    @nc, @stage = {}, STAGE_ONE
-  end
-
-
   private
-
-  STAGE_ONE = :stage_one
-  STAGE_TWO = :stage_two
 
   def nc(nonce)
     if @nc.has_key? nonce

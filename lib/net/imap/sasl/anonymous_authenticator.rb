@@ -9,6 +9,17 @@ module Net
       # Net::IMAP#authenticate.
       class AnonymousAuthenticator
 
+        # An optional token sent for the +ANONYMOUS+ mechanism., up to 255 UTF-8
+        # characters in length.
+        #
+        # If it contains an "@" sign, the message must be a valid email address
+        # (+addr-spec+ from RFC-2822[https://tools.ietf.org/html/rfc2822]).
+        # Email syntax is _not_ validated by AnonymousAuthenticator.
+        #
+        # Otherwise, it can be any UTF8 string which is permitted by the
+        # StringPrep::Trace profile.
+        attr_reader :anonymous_message
+
         # :call-seq:
         #   new(anonymous_message = "", **) -> authenticator
         #   new(anonymous_message:  "", **) -> authenticator
@@ -30,17 +41,6 @@ module Net
                   "anonymous_message is too long.  (%d codepoints)" % [size]
           end
         end
-
-        # An optional token sent for the +ANONYMOUS+ mechanism., up to 255 UTF-8
-        # characters in length.
-        #
-        # If it contains an "@" sign, the message must be a valid email address
-        # (+addr-spec+ from RFC-2822[https://tools.ietf.org/html/rfc2822]).
-        # Email syntax is _not_ validated by AnonymousAuthenticator.
-        #
-        # Otherwise, it can be any UTF8 string which is permitted by the
-        # StringPrep::Trace profile.
-        attr_reader :anonymous_message
 
         # :call-seq:
         #   initial_response? -> true

@@ -14,35 +14,6 @@ module Net
       class OAuthAuthenticator
         include GS2Header
 
-        # Creates an RFC7628[https://tools.ietf.org/html/rfc7628] OAuth
-        # authenticator.
-        #
-        # === Options
-        #
-        # See child classes for required configuration parameter(s).  The
-        # following parameters are all optional, but protocols or servers may
-        # add requirements for #authzid, #host, #port, or any other parameter.
-        #
-        # * #authzid ― Identity to act as or on behalf of.
-        # * #host — Hostname to which the client connected.
-        # * #port — Service port to which the client connected.
-        # * #mthd — HTTP method
-        # * #path — HTTP path data
-        # * #post — HTTP post data
-        # * #qs   — HTTP query string
-        #
-        def initialize(authzid: nil, host: nil, port: nil,
-                       mthd: nil, path: nil, post: nil, qs: nil, **)
-          @authzid = authzid
-          @host    = host
-          @port    = port
-          @mthd    = mthd
-          @path    = path
-          @post    = post
-          @qs      = qs
-          @done    = false
-        end
-
         # Authorization identity: an identity to act as or on behalf of.
         #
         # If no explicit authorization identity is provided, it is usually
@@ -73,6 +44,45 @@ module Net
         # this may hold information about the failure reason, as JSON.
         attr_reader :last_server_response
 
+        # Creates an RFC7628[https://tools.ietf.org/html/rfc7628] OAuth
+        # authenticator.
+        #
+        # === Options
+        #
+        # See child classes for required configuration parameter(s).  The
+        # following parameters are all optional, but protocols or servers may
+        # add requirements for #authzid, #host, #port, or any other parameter.
+        #
+        # * #authzid ― Identity to act as or on behalf of.
+        # * #host — Hostname to which the client connected.
+        # * #port — Service port to which the client connected.
+        # * #mthd — HTTP method
+        # * #path — HTTP path data
+        # * #post — HTTP post data
+        # * #qs   — HTTP query string
+        #
+        def initialize(authzid: nil, host: nil, port: nil,
+                       mthd: nil, path: nil, post: nil, qs: nil, **)
+          @authzid = authzid
+          @host    = host
+          @port    = port
+          @mthd    = mthd
+          @path    = path
+          @post    = post
+          @qs      = qs
+          @done    = false
+        end
+
+        # The {RFC7628 §3.1}[https://www.rfc-editor.org/rfc/rfc7628#section-3.1]
+        # formatted response.
+        def initial_client_response
+          kv_pairs = {
+            host: host, port: port, mthd: mthd, path: path, post: post, qs: qs,
+            auth: authorization, # authorization is implemented by subclasses
+          }.compact
+          [gs2_header, *kv_pairs.map {|kv| kv.join("=") }, "\1"].join("\1")
+        end
+
         # Returns initial_client_response the first time, then "<tt>^A</tt>".
         def process(data)
           @last_server_response = data
@@ -86,16 +96,6 @@ module Net
         # The authentication should not succeed unless this returns true, but it
         # does *not* indicate success.
         def done?; @done end
-
-        # The {RFC7628 §3.1}[https://www.rfc-editor.org/rfc/rfc7628#section-3.1]
-        # formatted response.
-        def initial_client_response
-          kv_pairs = {
-            host: host, port: port, mthd: mthd, path: path, post: post, qs: qs,
-            auth: authorization, # authorization is implemented by subclasses
-          }.compact
-          [gs2_header, *kv_pairs.map {|kv| kv.join("=") }, "\1"].join("\1")
-        end
 
         # Value of the HTTP Authorization header
         #
@@ -115,6 +115,9 @@ module Net
       # the resource server.  TLS _MUST_ be used for +OAUTHBEARER+ to protect
       # the bearer token.
       class OAuthBearerAuthenticator < OAuthAuthenticator
+
+        # An OAuth2 bearer token, generally the access token.
+        attr_reader :oauth2_token
 
         # :call-seq:
         #   new(oauth2_token,  **options) -> authenticator
@@ -144,9 +147,6 @@ module Net
           @oauth2_token = oauth2_token || oauth2_token_arg or
             raise ArgumentError, "missing oauth2_token"
         end
-
-        # An OAuth2 bearer token, generally the access token.
-        attr_reader :oauth2_token
 
         # :call-seq:
         #   initial_response? -> true
