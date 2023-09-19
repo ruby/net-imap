@@ -679,28 +679,6 @@ module Net
       include SSL
     end
 
-    # Returns the initial greeting the server, an UntaggedResponse.
-    attr_reader :greeting
-
-    # Seconds to wait until a connection is opened.
-    # If the IMAP object cannot open a connection within this time,
-    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    attr_reader :open_timeout
-
-    # Seconds to wait until an IDLE response is received.
-    attr_reader :idle_response_timeout
-
-    # The hostname this client connected to
-    attr_reader :host
-
-    # The port this client connected to
-    attr_reader :port
-
-    # Returns true after the TLS negotiation has completed and the remote
-    # hostname has been verified.  Returns false when TLS has been established
-    # but peer verification was disabled.
-    def tls_verified?; @tls_verified end
-
     # Returns the debug mode.
     def self.debug
       return @@debug
@@ -726,6 +704,163 @@ module Net
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
     end
+
+    # Returns the initial greeting the server, an UntaggedResponse.
+    attr_reader :greeting
+
+    # Seconds to wait until a connection is opened.
+    # If the IMAP object cannot open a connection within this time,
+    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
+    attr_reader :open_timeout
+
+    # Seconds to wait until an IDLE response is received.
+    attr_reader :idle_response_timeout
+
+    # The hostname this client connected to
+    attr_reader :host
+
+    # The port this client connected to
+    attr_reader :port
+
+    # Returns the
+    # {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
+    # used by the SSLSocket when TLS is attempted, even when the TLS handshake
+    # is unsuccessful.  The context object will be frozen.
+    #
+    # Returns +nil+ for a plaintext connection.
+    attr_reader :ssl_ctx
+
+    # Returns the parameters that were sent to #ssl_ctx
+    # {set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params]
+    # when the connection tries to use TLS (even when unsuccessful).
+    #
+    # Returns +false+ for a plaintext connection.
+    attr_reader :ssl_ctx_params
+
+    # Creates a new Net::IMAP object and connects it to the specified
+    # +host+.
+    #
+    # ==== Options
+    #
+    # Accepts the following options:
+    #
+    # [port]
+    #   Port number.  Defaults to 993 when +ssl+ is truthy, and 143 otherwise.
+    #
+    # [ssl]
+    #   If +true+, the connection will use TLS with the default params set by
+    #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
+    #   If +ssl+ is a hash, it's passed to
+    #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
+    #   the keys are names of attribute assignment methods on
+    #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    # [open_timeout]
+    #   Seconds to wait until a connection is opened
+    # [idle_response_timeout]
+    #   Seconds to wait until an IDLE response is received
+    #
+    # See DeprecatedClientOptions for obsolete backwards compatible arguments.
+    #
+    # ==== Examples
+    #
+    # Connect to cleartext port 143 at mail.example.com and recieve the server greeting:
+    #   imap = Net::IMAP.new('mail.example.com', ssl: false) # => #<Net::IMAP:0x00007f79b0872bd0>
+    #   imap.port          => 143
+    #   imap.tls_verified? => false
+    #   imap.greeting      => name: ("OK" | "PREAUTH") => status
+    #   status # => "OK"
+    #   # The client is connected in the "Not Authenticated" state.
+    #
+    # Connect with TLS to port 993 at mail.example.com:
+    #   imap = Net::IMAP.new('mail.example.com', ssl: true) # => #<Net::IMAP:0x00007f79b0872bd0>
+    #   imap.port          => 993
+    #   imap.tls_verified? => true
+    #   imap.greeting      => name: ("OK" | "PREAUTH") => status
+    #   status # => "OK"
+    #   # The client is connected in the "Not Authenticated" state.
+    #
+    # Connect with prior authentication, for example using an SSL certificate:
+    #   ssl_ctx_params = {
+    #     cert: OpenSSL::X509::Certificate.new(File.read("client.crt")),
+    #     key:  OpenSSL::PKey::EC.new(File.read('client.key')),
+    #     extra_chain_cert: [
+    #       OpenSSL::X509::Certificate.new(File.read("intermediate.crt")),
+    #     ],
+    #   }
+    #   imap = Net::IMAP.new('mail.example.com', ssl: ssl_ctx_params)
+    #   imap.port          => 993
+    #   imap.tls_verified? => true
+    #   imap.greeting      => name: "PREAUTH"
+    #   # The client is connected in the "Authenticated" state.
+    #
+    # ==== Exceptions
+    #
+    # The most common errors are:
+    #
+    # [Errno::ECONNREFUSED]
+    #   Connection refused by +host+ or an intervening firewall.
+    # [Errno::ETIMEDOUT]
+    #   Connection timed out (possibly due to packets being dropped by an
+    #   intervening firewall).
+    # [Errno::ENETUNREACH]
+    #   There is no route to that network.
+    # [SocketError]
+    #   Hostname not known or other socket error.
+    # [Net::IMAP::ByeResponseError]
+    #   Connected to the host successfully, but it immediately said goodbye.
+    #
+    def initialize(host, options = {}, *deprecated)
+      super()
+      options = convert_deprecated_options(options, *deprecated)
+
+      # Config options
+      @host = host
+      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
+      @open_timeout = options[:open_timeout] || 30
+      @idle_response_timeout = options[:idle_response_timeout] || 5
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options[:ssl])
+
+      # Basic Client State
+      @utf8_strings = false
+      @debug_output_bol = true
+      @exception = nil
+      @greeting = nil
+      @capabilities = nil
+
+      # Client Protocol Reciever
+      @parser = ResponseParser.new
+      @responses = Hash.new {|h, k| h[k] = [] }
+      @response_handlers = []
+      @receiver_thread = nil
+      @receiver_thread_exception = nil
+      @receiver_thread_terminating = false
+
+      # Client Protocol Sender (including state for currently running commands)
+      @tag_prefix = "RUBY"
+      @tagno = 0
+      @tagged_responses = {}
+      @tagged_response_arrival = new_cond
+      @continued_command_tag = nil
+      @continuation_request_arrival = new_cond
+      @continuation_request_exception = nil
+      @idle_done_cond = nil
+      @logout_command_tag = nil
+
+      # Connection
+      @tls_verified = false
+      @sock = tcp_socket(@host, @port)
+      start_tls_session if ssl_ctx
+      start_imap_connection
+
+      # DEPRECATED: to remove in next version
+      @client_thread = Thread.current
+    end
+
+    # Returns true after the TLS negotiation has completed and the remote
+    # hostname has been verified.  Returns false when TLS has been established
+    # but peer verification was disabled.
+    def tls_verified?; @tls_verified end
 
     def client_thread # :nodoc:
       warn "Net::IMAP#client_thread is deprecated and will be removed soon."
@@ -964,17 +1099,18 @@ module Net
     # Cached #capabilities will be cleared when this method completes.
     #
     def starttls(options = {}, verify = true)
+      begin
+        # for backward compatibility
+        certs = options.to_str
+        options = create_ssl_params(certs, verify)
+      rescue NoMethodError
+      end
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options || {})
       send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
-          begin
-            # for backward compatibility
-            certs = options.to_str
-            options = create_ssl_params(certs, verify)
-          rescue NoMethodError
-          end
           clear_cached_capabilities
           clear_responses
-          start_tls_session(options)
+          start_tls_session
         end
       end
     end
@@ -2218,97 +2354,43 @@ module Net
 
     @@debug = false
 
-    # :call-seq:
-    #    Net::IMAP.new(host, options = {})
-    #
-    # Creates a new Net::IMAP object and connects it to the specified
-    # +host+.
-    #
-    # +options+ is an option hash, each key of which is a symbol.
-    #
-    # The available options are:
-    #
-    # port::  Port number (default value is 143 for imap, or 993 for imaps)
-    # ssl::   If +options[:ssl]+ is true, then an attempt will be made
-    #         to use SSL (now TLS) to connect to the server.
-    #         If +options[:ssl]+ is a hash, it's passed to
-    #         OpenSSL::SSL::SSLContext#set_params as parameters.
-    # open_timeout:: Seconds to wait until a connection is opened
-    # idle_response_timeout:: Seconds to wait until an IDLE response is received
-    #
-    # The most common errors are:
-    #
-    # Errno::ECONNREFUSED:: Connection refused by +host+ or an intervening
-    #                       firewall.
-    # Errno::ETIMEDOUT:: Connection timed out (possibly due to packets
-    #                    being dropped by an intervening firewall).
-    # Errno::ENETUNREACH:: There is no route to that network.
-    # SocketError:: Hostname not known or other socket error.
-    # Net::IMAP::ByeResponseError:: The connected to the host was successful, but
-    #                               it immediately said goodbye.
-    def initialize(host, port_or_options = {},
-                   usessl = false, certs = nil, verify = true)
-      super()
-      @host = host
-      begin
-        options = port_or_options.to_hash
-      rescue NoMethodError
-        # for backward compatibility
-        options = {}
-        options[:port] = port_or_options
-        if usessl
-          options[:ssl] = create_ssl_params(certs, verify)
-        end
+    def convert_deprecated_options(
+      port_or_options = {}, usessl = false, certs = nil, verify = true
+    )
+      port_or_options.to_hash
+    rescue NoMethodError
+      # for backward compatibility
+      options = {}
+      options[:port] = port_or_options
+      if usessl
+        options[:ssl] = create_ssl_params(certs, verify)
       end
-      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
-      @tag_prefix = "RUBY"
-      @tagno = 0
-      @utf8_strings = false
-      @open_timeout = options[:open_timeout] || 30
-      @idle_response_timeout = options[:idle_response_timeout] || 5
-      @tls_verified = false
-      @parser = ResponseParser.new
-      @sock = tcp_socket(@host, @port)
-      begin
-        if options[:ssl]
-          start_tls_session(options[:ssl])
-          @usessl = true
-        else
-          @usessl = false
-        end
-        @responses = Hash.new {|h, k| h[k] = [] }
-        @tagged_responses = {}
-        @response_handlers = []
-        @tagged_response_arrival = new_cond
-        @continued_command_tag = nil
-        @continuation_request_arrival = new_cond
-        @continuation_request_exception = nil
-        @idle_done_cond = nil
-        @logout_command_tag = nil
-        @debug_output_bol = true
-        @exception = nil
+      options
+    end
 
-        @greeting = get_response
-        if @greeting.nil?
-          raise Error, "connection closed"
-        end
-        record_untagged_response_code @greeting
-        @capabilities = capabilities_from_resp_code @greeting
-        if @greeting.name == "BYE"
-          raise ByeResponseError, @greeting
-        end
+    def start_imap_connection
+      @greeting        = get_server_greeting
+      @capabilities    = capabilities_from_resp_code @greeting
+      @receiver_thread = start_receiver_thread
+    rescue Exception
+      @sock.close
+      raise
+    end
 
-        @client_thread = Thread.current
-        @receiver_thread = Thread.start {
-          begin
-            receive_responses
-          rescue Exception
-          end
-        }
-        @receiver_thread_terminating = false
-      rescue Exception
-        @sock.close
-        raise
+    def get_server_greeting
+      greeting = get_response
+      raise Error, "No server greeting - connection closed" unless greeting
+      record_untagged_response_code greeting
+      raise ByeResponseError, greeting if greeting.name == "BYE"
+      greeting
+    end
+
+    def start_receiver_thread
+      Thread.start do
+        receive_responses
+      rescue Exception => ex
+        @receiver_thread_exception = ex
+        # don't exit the thread with an exception
       end
     end
 
@@ -2598,6 +2680,21 @@ module Net
       end
     end
 
+    def build_ssl_ctx(ssl)
+      if ssl
+        params = (Hash.try_convert(ssl) || {}).freeze
+        context = SSLContext.new
+        context.set_params(params)
+        if defined?(VerifyCallbackProc)
+          context.verify_callback = VerifyCallbackProc
+        end
+        context.freeze
+        [params, context]
+      else
+        false
+      end
+    end
+
     def create_ssl_params(certs = nil, verify = true)
       params = {}
       if certs
@@ -2615,28 +2712,15 @@ module Net
       return params
     end
 
-    def start_tls_session(params = {})
-      unless defined?(OpenSSL::SSL)
-        raise "SSL extension not installed"
-      end
-      if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
-        raise RuntimeError, "already using SSL"
-      end
-      begin
-        params = params.to_hash
-      rescue NoMethodError
-        params = {}
-      end
-      context = SSLContext.new
-      context.set_params(params)
-      if defined?(VerifyCallbackProc)
-        context.verify_callback = VerifyCallbackProc
-      end
-      @sock = SSLSocket.new(@sock, context)
+    def start_tls_session
+      raise "SSL extension not installed" unless defined?(OpenSSL::SSL)
+      raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
+      raise "cannot start TLS without SSLContext" unless ssl_ctx
+      @sock = SSLSocket.new(@sock, ssl_ctx)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, @open_timeout)
-      if context.verify_mode != VERIFY_NONE
+      if ssl_ctx.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
       end

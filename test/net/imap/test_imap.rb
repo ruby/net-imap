@@ -57,6 +57,10 @@ class IMAPTest < Test::Unit::TestCase
       end
       assert_equal true, verified
       assert_equal true, imap.tls_verified?
+      assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
+      assert_equal(CA_FILE, imap.ssl_ctx.ca_file)
+      assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
+      assert imap.ssl_ctx.verify_hostname
     end
 
     def test_imaps_verify_none
@@ -76,6 +80,10 @@ class IMAPTest < Test::Unit::TestCase
       end
       assert_equal false, verified
       assert_equal false, imap.tls_verified?
+      assert_equal({verify_mode: OpenSSL::SSL::VERIFY_NONE},
+                   imap.ssl_ctx_params)
+      assert_equal(nil, imap.ssl_ctx.ca_file)
+      assert_equal(OpenSSL::SSL::VERIFY_NONE, imap.ssl_ctx.verify_mode)
     end
 
     def test_imaps_post_connection_check
@@ -92,16 +100,41 @@ class IMAPTest < Test::Unit::TestCase
   end
 
   if defined?(OpenSSL::SSL)
+    def test_starttls_unknown_ca
+      imap = nil
+      assert_raise(OpenSSL::SSL::SSLError) do
+        ex = nil
+        starttls_test do |port|
+          imap = Net::IMAP.new("localhost", port: port)
+          imap.starttls
+          imap
+        rescue => ex
+          imap
+        end
+        raise ex if ex
+      end
+      assert_equal false, imap.tls_verified?
+      assert_equal({}, imap.ssl_ctx_params)
+      assert_equal(nil, imap.ssl_ctx.ca_file)
+      assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
+    end
+
     def test_starttls
-      verified, imap = :unknown, nil
+      initial_verified, initial_ctx, initial_params = :unknown, :unknown, :unknown
+      imap = nil
       starttls_test do |port|
         imap = Net::IMAP.new("localhost", :port => port)
+        initial_verified = imap.tls_verified?
+        initial_params   = imap.ssl_ctx_params
+        initial_ctx      = imap.ssl_ctx
         imap.starttls(:ca_file => CA_FILE)
-        verified = imap.tls_verified?
         imap
       end
-      assert_equal true, verified
+      assert_equal false, initial_verified
+      assert_equal false, initial_params
+      assert_equal nil,   initial_ctx
       assert_equal true, imap.tls_verified?
+      assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
     rescue SystemCallError
       skip $!
     ensure
@@ -111,17 +144,18 @@ class IMAPTest < Test::Unit::TestCase
     end
 
     def test_starttls_stripping
-      verified, imap = :unknown, nil
+      imap = nil
       starttls_stripping_test do |port|
         imap = Net::IMAP.new("localhost", :port => port)
         assert_raise(Net::IMAP::UnknownResponseError) do
           imap.starttls(:ca_file => CA_FILE)
         end
-        verified = imap.tls_verified?
         imap
       end
-      assert_equal false, verified
       assert_equal false, imap.tls_verified?
+      assert_equal({ca_file: CA_FILE},        imap.ssl_ctx_params)
+      assert_equal(CA_FILE,                   imap.ssl_ctx.ca_file)
+      assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
     end
   end
 
@@ -1123,6 +1157,7 @@ EOF
         sock.gets
         sock.print("* BYE terminating connection\r\n")
         sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      rescue OpenSSL::SSL::SSLError
       ensure
         sock.close
         server.close
