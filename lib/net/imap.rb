@@ -109,7 +109,7 @@ module Net
   # sending them.  Special care should be taken to follow the #capabilities
   # requirements for #starttls, #login, and #authenticate.
   #
-  # See #capable?, #auth_capable, #capabilities, #auth_mechanisms to discover
+  # See #capable?, #auth_capable?, #capabilities, #auth_mechanisms to discover
   # server capabilities.  For relevant capability requirements, see the
   # documentation on each \IMAP command.
   #
@@ -1139,13 +1139,13 @@ module Net
     # the documentation for the specific mechanisms you are using:
     #
     # +ANONYMOUS+::
-    #     See AnonymousAuthenticator[Net::IMAP::SASL::AnonymousAuthenticator].
+    #     See AnonymousAuthenticator[rdoc-ref:Net::IMAP::SASL::AnonymousAuthenticator].
     #
     #     Allows the user to gain access to public services or resources without
     #     authenticating or disclosing an identity.
     #
     # +EXTERNAL+::
-    #     See ExternalAuthenticator[Net::IMAP::SASL::ExternalAuthenticator].
+    #     See ExternalAuthenticator[rdoc-ref:Net::IMAP::SASL::ExternalAuthenticator].
     #
     #     Authenticates using already established credentials, such as a TLS
     #     certificate or IPsec.

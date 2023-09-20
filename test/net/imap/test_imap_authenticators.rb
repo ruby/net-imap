@@ -88,7 +88,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     assert_kind_of(Net::IMAP::SASL::XOAuth2Authenticator, xoauth2("user", "tok"))
   end
 
-  def test_xoauth2
+  def test_xoauth2_response
     assert_equal(
       "user=username\1auth=Bearer token\1\1",
       xoauth2("username", "token").process(nil)

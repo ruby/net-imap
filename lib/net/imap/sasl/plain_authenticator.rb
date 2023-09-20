@@ -1,35 +1,55 @@
 # frozen_string_literal: true
 
 # Authenticator for the "+PLAIN+" SASL mechanism, specified in
-# RFC4616[https://tools.ietf.org/html/rfc4616].  See Net::IMAP#authenticate.
+# RFC-4616[https://tools.ietf.org/html/rfc4616].  See Net::IMAP#authenticate.
 #
 # +PLAIN+ authentication sends the password in cleartext.
-# RFC3501[https://tools.ietf.org/html/rfc3501] encourages servers to disable
+# RFC-3501[https://tools.ietf.org/html/rfc3501] encourages servers to disable
 # cleartext authentication until after TLS has been negotiated.
-# RFC8314[https://tools.ietf.org/html/rfc8314] recommends TLS version 1.2 or
+# RFC-8314[https://tools.ietf.org/html/rfc8314] recommends TLS version 1.2 or
 # greater be used for all traffic, and deprecate cleartext access ASAP.  +PLAIN+
 # can be secured by TLS encryption.
 class Net::IMAP::SASL::PlainAuthenticator
 
-  def initial_response?; true end
-
-  def process(data)
-    return "#@authzid\0#@username\0#@password"
-  end
-
-  # :nodoc:
   NULL = -"\0".b
+  private_constant :NULL
 
-  private
-
-  # +username+ is the authentication identity, the identity whose +password+ is
-  # used.  +username+ is referred to as +authcid+ by
-  # RFC4616[https://tools.ietf.org/html/rfc4616].
+  # Authentication identity: the identity that matches the #password.
   #
-  # +authzid+ is the authorization identity (identity to act as).  It can
-  # usually be left blank. When +authzid+ is left blank (nil or empty string)
-  # the server will derive an identity from the credentials and use that as the
-  # authorization identity.
+  # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
+  # this to +authcid+.
+  attr_reader :username
+
+  # A password or passphrase that matches the #username.
+  attr_reader :password
+
+  # Authorization identity: an identity to act as or on behalf of.  The identity
+  # form is application protocol specific.  If not provided or left blank, the
+  # server derives an authorization identity from the authentication identity.
+  # The server is responsible for verifying the client's credentials and
+  # verifying that the identity it associates with the client's authentication
+  # identity is allowed to act as (or on behalf of) the authorization identity.
+  #
+  # For example, an administrator or superuser might take on another role:
+  #
+  #     imap.authenticate "PLAIN", "root", passwd, authzid: "user"
+  #
+  attr_reader :authzid
+
+  # :call-seq:
+  #   new(username, password, authzid: nil) -> authenticator
+  #
+  # Creates an Authenticator for the "+PLAIN+" SASL mechanism.
+  #
+  # Called by Net::IMAP#authenticate and similar methods on other clients.
+  #
+  # === Parameters
+  #
+  # * #username ― Identity whose +password+ is used.
+  # * #password ― Password or passphrase associated with this username+.
+  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
+  #
+  # See attribute documentation for more details.
   def initialize(username, password, authzid: nil)
     raise ArgumentError, "username contains NULL" if username&.include?(NULL)
     raise ArgumentError, "password contains NULL" if password&.include?(NULL)
@@ -37,6 +57,17 @@ class Net::IMAP::SASL::PlainAuthenticator
     @username = username
     @password = password
     @authzid  = authzid
+  end
+
+  # :call-seq:
+  #   initial_response? -> true
+  #
+  # +PLAIN+ can send an initial client response.
+  def initial_response?; true end
+
+  # Responds with the client's credentials.
+  def process(data)
+    return "#@authzid\0#@username\0#@password"
   end
 
 end

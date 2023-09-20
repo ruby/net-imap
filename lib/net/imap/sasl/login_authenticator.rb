@@ -18,20 +18,9 @@
 # {draft-murchison-sasl-login}[https://www.iana.org/go/draft-murchison-sasl-login]
 # for both specification and deprecation.
 class Net::IMAP::SASL::LoginAuthenticator
-  def process(data)
-    case @state
-    when STATE_USER
-      @state = STATE_PASSWORD
-      return @user
-    when STATE_PASSWORD
-      return @password
-    end
-  end
-
-  private
-
   STATE_USER = :USER
   STATE_PASSWORD = :PASSWORD
+  private_constant :STATE_USER, :STATE_PASSWORD
 
   def initialize(user, password, warn_deprecation: true, **_ignored)
     if warn_deprecation
@@ -42,4 +31,13 @@ class Net::IMAP::SASL::LoginAuthenticator
     @state = STATE_USER
   end
 
+  def process(data)
+    case @state
+    when STATE_USER
+      @state = STATE_PASSWORD
+      return @user
+    when STATE_PASSWORD
+      return @password
+    end
+  end
 end

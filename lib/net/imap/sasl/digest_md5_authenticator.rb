@@ -1,14 +1,72 @@
 # frozen_string_literal: true
 
 # Net::IMAP authenticator for the "`DIGEST-MD5`" SASL mechanism type, specified
-# in RFC2831(https://tools.ietf.org/html/rfc2831).  See Net::IMAP#authenticate.
+# in RFC-2831[https://tools.ietf.org/html/rfc2831].  See Net::IMAP#authenticate.
 #
 # == Deprecated
 #
 # "+DIGEST-MD5+" has been deprecated by
-# {RFC6331}[https://tools.ietf.org/html/rfc6331] and should not be relied on for
+# RFC-6331[https://tools.ietf.org/html/rfc6331] and should not be relied on for
 # security.  It is included for compatibility with existing servers.
 class Net::IMAP::SASL::DigestMD5Authenticator
+  STAGE_ONE = :stage_one
+  STAGE_TWO = :stage_two
+  private_constant :STAGE_ONE, :STAGE_TWO
+
+  # Authentication identity: the identity that matches the #password.
+  #
+  # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+  # "Authentication identity" is the generic term used by
+  # RFC-4422[https://tools.ietf.org/html/rfc4422].
+  # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
+  # that to +authcid+.  So +authcid+ is available as an alias for #username.
+  attr_reader :username
+
+  # A password or passphrase that matches the #username.
+  #
+  # The +password+ will be used to create the response digest.
+  attr_reader :password
+
+  # Authorization identity: an identity to act as or on behalf of.  The identity
+  # form is application protocol specific.  If not provided or left blank, the
+  # server derives an authorization identity from the authentication identity.
+  # The server is responsible for verifying the client's credentials and
+  # verifying that the identity it associates with the client's authentication
+  # identity is allowed to act as (or on behalf of) the authorization identity.
+  #
+  # For example, an administrator or superuser might take on another role:
+  #
+  #     imap.authenticate "DIGEST-MD5", "root", ->{passwd}, authzid: "user"
+  #
+  attr_reader :authzid
+
+  # :call-seq:
+  #   new(username,  password,  authzid = nil) -> authenticator
+  #
+  # Creates an Authenticator for the "+DIGEST-MD5+" SASL mechanism.
+  #
+  # Called by Net::IMAP#authenticate and similar methods on other clients.
+  #
+  # ==== Parameters
+  #
+  # * #username — Identity whose #password is used.
+  # * #password — A password or passphrase associated with this #username.
+  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
+  # * +warn_deprecation+ — Set to +false+ to silence the warning.
+  #
+  # See the documentation for each attribute for more details.
+  def initialize(username, password, authzid = nil, warn_deprecation: true)
+    if warn_deprecation
+      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
+      # TODO: recommend SCRAM instead.
+    end
+    require "digest/md5"
+    require "strscan"
+    @username, @password, @authzid = username, password, authzid
+    @nc, @stage = {}, STAGE_ONE
+  end
+
+  # Responds to server challenge in two stages.
   def process(challenge)
     case @stage
     when STAGE_ONE
@@ -31,7 +89,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
 
       response = {
         :nonce => sparams['nonce'],
-        :username => @user,
+        :username => @username,
         :realm => sparams['realm'],
         :cnonce => Digest::MD5.hexdigest("%.15f:%.15f:%d" % [Time.now.to_f, rand, Process.pid.to_s]),
         :'digest-uri' => 'imap/' + sparams['realm'],
@@ -41,7 +99,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
         :charset => sparams['charset'],
       }
 
-      response[:authzid] = @authname unless @authname.nil?
+      response[:authzid] = @authzid unless @authzid.nil?
 
       # now, the real thing
       a0 = Digest::MD5.digest( [ response.values_at(:username, :realm), @password ].join(':') )
@@ -74,22 +132,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     end
   end
 
-  def initialize(user, password, authname = nil, warn_deprecation: true)
-    if warn_deprecation
-      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
-      # TODO: recommend SCRAM instead.
-    end
-    require "digest/md5"
-    require "strscan"
-    @user, @password, @authname = user, password, authname
-    @nc, @stage = {}, STAGE_ONE
-  end
-
-
   private
-
-  STAGE_ONE = :stage_one
-  STAGE_TWO = :stage_two
 
   def nc(nonce)
     if @nc.has_key? nonce

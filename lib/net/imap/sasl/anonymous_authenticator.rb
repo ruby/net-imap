@@ -9,6 +9,17 @@ module Net
       # Net::IMAP#authenticate.
       class AnonymousAuthenticator
 
+        # An optional token sent for the +ANONYMOUS+ mechanism., up to 255 UTF-8
+        # characters in length.
+        #
+        # If it contains an "@" sign, the message must be a valid email address
+        # (+addr-spec+ from RFC-2822[https://tools.ietf.org/html/rfc2822]).
+        # Email syntax is _not_ validated by AnonymousAuthenticator.
+        #
+        # Otherwise, it can be any UTF8 string which is permitted by the
+        # StringPrep::Trace profile.
+        attr_reader :anonymous_message
+
         # :call-seq:
         #   new(anonymous_message = "", **) -> authenticator
         #   new(anonymous_message:  "", **) -> authenticator
@@ -21,7 +32,7 @@ module Net
         # #anonymous_message is an optional message which is sent to the server.
         # It may be sent as a positional argument or as a keyword argument.
         #
-        # Any other keyword parameters are quietly ignored.
+        # Any other keyword arguments are silently ignored.
         def initialize(anon_msg = nil, anonymous_message: nil, **)
           message = (anonymous_message || anon_msg || "").to_str
           @anonymous_message = StringPrep::Trace.stringprep_trace message
@@ -31,16 +42,6 @@ module Net
           end
         end
 
-        # A token sent for the +ANONYMOUS+ mechanism.
-        #
-        # If it contains an "@" sign, the message must be a valid email address
-        # (+addr-spec+ from RFC-2822[https://tools.ietf.org/html/rfc2822]).
-        # Email syntax is _not_ validated by AnonymousAuthenticator.
-        #
-        # Otherwise, it can be any UTF8 string which is permitted by the
-        # StringPrep::Trace profile, up to 255 UTF-8 characters in length.
-        attr_reader :anonymous_message
-
         # :call-seq:
         #   initial_response? -> true
         #
@@ -48,7 +49,9 @@ module Net
         def initial_response?; true end
 
         # Returns #anonymous_message.
-        def process(_server_challenge_string) anonymous_message end
+        def process(_server_challenge_string)
+          anonymous_message
+        end
 
       end
     end
