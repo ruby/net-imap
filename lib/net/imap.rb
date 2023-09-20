@@ -109,7 +109,7 @@ module Net
   # sending them.  Special care should be taken to follow the #capabilities
   # requirements for #starttls, #login, and #authenticate.
   #
-  # See #capable?, #auth_capable, #capabilities, #auth_mechanisms to discover
+  # See #capable?, #auth_capable?, #capabilities, #auth_mechanisms to discover
   # server capabilities.  For relevant capability requirements, see the
   # documentation on each \IMAP command.
   #
