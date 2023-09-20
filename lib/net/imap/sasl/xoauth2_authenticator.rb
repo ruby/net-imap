@@ -32,8 +32,8 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   attr_reader :oauth2_token
 
   # :call-seq:
-  # :call-seq:
-  #   new(username,  oauth2_token) -> authenticator
+  #   new(username,  oauth2_token,  **) -> authenticator
+  #   new(username:, oauth2_token:, **) -> authenticator
   #
   # Creates an Authenticator for the "+XOAUTH2+" SASL mechanism, as specified by
   # Google[https://developers.google.com/gmail/imap/xoauth2-protocol],
@@ -47,9 +47,15 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   #   the service for #username.
   #
   # See the documentation for each attribute for more details.
-  def initialize(username, oauth2_token)
-    @username = username
-    @oauth2_token = oauth2_token
+  def initialize(user = nil, token = nil, username: nil, oauth2_token: nil, **)
+    @username = username || user or
+      raise ArgumentError, "missing username"
+    @oauth2_token = oauth2_token || token or
+      raise ArgumentError, "missing oauth2_token"
+    [username, user].compact.count == 1 or
+      raise ArgumentError, "conflicting values for username"
+    [oauth2_token, token].compact.count == 1 or
+      raise ArgumentError, "conflicting values for oauth2_token"
   end
 
   # :call-seq:
