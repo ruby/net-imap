@@ -29,7 +29,7 @@ module Net
         # #authzid is an optional identity to act as or on behalf of.
         #
         # Any other keyword parameters are quietly ignored.
-        def initialize(authzid: nil)
+        def initialize(authzid: nil, **)
           @authzid = authzid&.to_str&.encode "UTF-8"
           if @authzid&.match?(/\u0000/u) # also validates UTF8 encoding
             raise ArgumentError, "contains NULL"

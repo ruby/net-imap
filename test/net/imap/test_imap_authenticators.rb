@@ -95,6 +95,17 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     )
   end
 
+  def test_xoauth2_kwargs
+    assert_equal(
+      "user=arg\1auth=Bearer kwarg\1\1",
+      xoauth2("arg", oauth2_token: "kwarg").process(nil)
+    )
+    assert_equal(
+      "user=user\1auth=Bearer kwarg\1\1",
+      xoauth2(username: "user", oauth2_token: "kwarg").process(nil)
+    )
+  end
+
   def test_xoauth2_supports_initial_response
     assert xoauth2("foo", "bar").initial_response?
     assert Net::IMAP::SASL.initial_response?(xoauth2("foo", "bar"))

@@ -37,7 +37,8 @@ class Net::IMAP::SASL::PlainAuthenticator
   attr_reader :authzid
 
   # :call-seq:
-  #   new(username, password, authzid: nil) -> authenticator
+  #   new(username,  password,  authzid: nil, **) -> authenticator
+  #   new(username:, password:, authzid: nil, **) -> authenticator
   #
   # Creates an Authenticator for the "+PLAIN+" SASL mechanism.
   #
@@ -50,10 +51,13 @@ class Net::IMAP::SASL::PlainAuthenticator
   # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
   #
   # See attribute documentation for more details.
-  def initialize(username, password, authzid: nil)
-    raise ArgumentError, "username contains NULL" if username&.include?(NULL)
-    raise ArgumentError, "password contains NULL" if password&.include?(NULL)
-    raise ArgumentError, "authzid  contains NULL" if authzid&.include?(NULL)
+  def initialize(user = nil, pass = nil,
+                 username: nil, password: nil, authzid: nil, **)
+    username ||= user or raise ArgumentError, "missing username"
+    password ||= pass or raise ArgumentError, "missing password"
+    raise ArgumentError, "username contains NULL" if username.include?(NULL)
+    raise ArgumentError, "password contains NULL" if password.include?(NULL)
+    raise ArgumentError, "authzid contains NULL"  if authzid&.include?(NULL)
     @username = username
     @password = password
     @authzid  = authzid
