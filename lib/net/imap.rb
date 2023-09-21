@@ -760,7 +760,7 @@ module Net
     # [idle_response_timeout]
     #   Seconds to wait until an IDLE response is received
     #
-    # See DeprecatedClientOptions for obsolete backwards compatible arguments.
+    # See DeprecatedClientOptions.new for deprecated arguments.
     #
     # ==== Examples
     #
@@ -810,16 +810,15 @@ module Net
     # [Net::IMAP::ByeResponseError]
     #   Connected to the host successfully, but it immediately said goodbye.
     #
-    def initialize(host, options = {}, *deprecated)
+    def initialize(host, port: nil, ssl:  nil,
+                   open_timeout: 30, idle_response_timeout: 5)
       super()
-      options = convert_deprecated_options(options, *deprecated)
-
       # Config options
       @host = host
-      @port = options[:port] || (options[:ssl] ? SSL_PORT : PORT)
-      @open_timeout = options[:open_timeout] || 30
-      @idle_response_timeout = options[:idle_response_timeout] || 5
-      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options[:ssl])
+      @port = port || (ssl ? SSL_PORT : PORT)
+      @open_timeout = Integer(open_timeout)
+      @idle_response_timeout = Integer(idle_response_timeout)
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
       @utf8_strings = false
@@ -1076,7 +1075,12 @@ module Net
     # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
     # to start a TLS session.
     #
-    # Any +options+ are forwarded to OpenSSL::SSL::SSLContext#set_params.
+    # Any +options+ are forwarded directly to
+    # {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
+    # the keys are names of attribute assignment methods on
+    # SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    # See DeprecatedClientOptions#starttls for deprecated arguments.
     #
     # This method returns after TLS negotiation and hostname verification are
     # both successful.  Any error indicates that the connection has not been
@@ -1098,14 +1102,8 @@ module Net
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Cached #capabilities will be cleared when this method completes.
     #
-    def starttls(options = {}, verify = true)
-      begin
-        # for backward compatibility
-        certs = options.to_str
-        options = create_ssl_params(certs, verify)
-      rescue NoMethodError
-      end
-      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options || {})
+    def starttls(**options)
+      @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options)
       send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
           clear_cached_capabilities
@@ -2354,20 +2352,6 @@ module Net
 
     @@debug = false
 
-    def convert_deprecated_options(
-      port_or_options = {}, usessl = false, certs = nil, verify = true
-    )
-      port_or_options.to_hash
-    rescue NoMethodError
-      # for backward compatibility
-      options = {}
-      options[:port] = port_or_options
-      if usessl
-        options[:ssl] = create_ssl_params(certs, verify)
-      end
-      options
-    end
-
     def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
@@ -2695,23 +2679,6 @@ module Net
       end
     end
 
-    def create_ssl_params(certs = nil, verify = true)
-      params = {}
-      if certs
-        if File.file?(certs)
-          params[:ca_file] = certs
-        elsif File.directory?(certs)
-          params[:ca_path] = certs
-        end
-      end
-      if verify
-        params[:verify_mode] = VERIFY_PEER
-      else
-        params[:verify_mode] = VERIFY_NONE
-      end
-      return params
-    end
-
     def start_tls_session
       raise "SSL extension not installed" unless defined?(OpenSSL::SSL)
       raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
@@ -2746,3 +2713,6 @@ require_relative "imap/flags"
 require_relative "imap/response_data"
 require_relative "imap/response_parser"
 require_relative "imap/authenticators"
+
+require_relative "imap/deprecated_client_options"
+Net::IMAP.prepend Net::IMAP::DeprecatedClientOptions
