@@ -30,7 +30,8 @@ class Net::IMAP::FakeServer
 
     # TODO: convert bad command exception to tagged BAD response, when possible
     def parse(buf)
-      /\A([^ ]+) ((?:UID )?\w+)(?: (.+))?\r\n\z/min =~ buf or raise "bad request"
+      /\A([^ ]+) ((?:UID )?\w+)(?: (.+))?\r\n\z/min =~ buf or
+        raise "bad request: %p" [buf]
       case $2.upcase
       when "LOGIN", "SELECT", "ENABLE", "AUTHENTICATE"
         Command.new $1, $2, scan_astrings($3), buf

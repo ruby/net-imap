@@ -23,8 +23,7 @@ module Net::IMAP::FakeServer::TestHelper
     yield client
   ensure
     if client && !client.disconnected?
-      client.logout rescue pp $!
-      client.disconnect unless client.disconnected?
+      client.logout!
     end
   end
 

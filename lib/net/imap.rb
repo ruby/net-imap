@@ -868,7 +868,7 @@ module Net
 
     # Disconnects from the server.
     #
-    # Related: #logout
+    # Related: #logout, #logout!
     def disconnect
       return if disconnected?
       begin
@@ -1067,9 +1067,32 @@ module Net
     # to inform the command to inform the server that the client is done with
     # the connection.
     #
-    # Related: #disconnect
+    # Related: #disconnect, #logout!
     def logout
       send_command("LOGOUT")
+    end
+
+    # Calls #logout then, after receiving the TaggedResponse for the +LOGOUT+,
+    # calls #disconnect.  Returns the TaggedResponse from +LOGOUT+.  Returns
+    # +nil+ when the client is already disconnected, in contrast to #logout
+    # which raises an exception.
+    #
+    # If #logout raises a StandardError, a warning will be printed but the
+    # exception will not be re-raised.
+    #
+    # This is useful in situations where the connection must be dropped, for
+    # example for security or after tests.  If logout errors need to be handled,
+    # use #logout and #disconnect instead.
+    #
+    # Related: #logout, #disconnect
+    def logout!
+      logout unless disconnected?
+    rescue => ex
+      warn "%s during <Net::IMAP %s:%s>logout!: %s" % [
+        ex.class, host, port, ex
+      ]
+    ensure
+      disconnect
     end
 
     # Sends a {STARTTLS command [IMAP4rev1 §6.2.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.1]
