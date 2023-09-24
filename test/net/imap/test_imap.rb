@@ -847,6 +847,24 @@ EOF
     end
   end
 
+  test("#authenticate sends '=' as the initial reponse " \
+       "when the initial response is an empty string") do
+    with_fake_server(
+      preauth: false, cleartext_auth: true,
+      sasl_ir: true, sasl_mechanisms: %i[EXTERNAL],
+    ) do |server, imap|
+      server.on "AUTHENTICATE" do |cmd|
+        server.state.authenticate(server.config.user)
+        cmd.done_ok
+      end
+      imap.authenticate("EXTERNAL")
+      cmd = server.commands.pop
+      assert_equal "AUTHENTICATE", cmd.name
+      assert_equal %w[EXTERNAL =], cmd.args
+      assert_empty server.commands rescue pp server.commands.pop
+    end
+  end
+
   test("#authenticate never sends an initial response " \
        "when the server doesn't explicitly support the mechanism") do
     with_fake_server(
