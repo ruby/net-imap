@@ -1236,7 +1236,8 @@ module Net
       cmdargs = ["AUTHENTICATE", mechanism]
       if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
           SASL.initial_response?(authenticator)
-        cmdargs << [authenticator.process(nil)].pack("m0")
+        response = authenticator.process(nil)
+        cmdargs << (response.empty? ? "=" : [response].pack("m0"))
       end
       result = send_command(*cmdargs) do |resp|
         if resp.instance_of?(ContinuationRequest)
