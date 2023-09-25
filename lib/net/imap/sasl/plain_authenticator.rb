@@ -16,6 +16,9 @@ class Net::IMAP::SASL::PlainAuthenticator
 
   # Authentication identity: the identity that matches the #password.
   #
+  # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+  # "Authentication identity" is the generic term used by
+  # RFC-4422[https://tools.ietf.org/html/rfc4422].
   # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
   # this to +authcid+.
   attr_reader :username
@@ -53,6 +56,10 @@ class Net::IMAP::SASL::PlainAuthenticator
   # See attribute documentation for more details.
   def initialize(user = nil, pass = nil,
                  username: nil, password: nil, authzid: nil, **)
+    [username, user].compact.count == 1 or
+      raise ArgumentError, "conflicting values for username"
+    [password, pass].compact.count == 1 or
+      raise ArgumentError, "conflicting values for password"
     username ||= user or raise ArgumentError, "missing username"
     password ||= pass or raise ArgumentError, "missing password"
     raise ArgumentError, "username contains NULL" if username.include?(NULL)
