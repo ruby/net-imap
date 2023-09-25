@@ -21,11 +21,24 @@ Or install it yourself as:
 
 ## Usage
 
+### Connect with TLS to port 993
+
+```ruby
+imap = Net::IMAP.new('mail.example.com', ssl: true)
+imap.port          => 993
+imap.tls_verified? => true
+case imap.greeting.name
+in /OK/i
+  # The client is connected in the "Not Authenticated" state.
+  imap.authenticate("PLAIN", "joe_user", "joes_password")
+in /PREAUTH/i
+  # The client is connected in the "Authenticated" state.
+end
+```
+
 ### List sender and subject of all recent messages in the default mailbox
 
 ```ruby
-imap = Net::IMAP.new('mail.example.com')
-imap.authenticate('LOGIN', 'joe_user', 'joes_password')
 imap.examine('INBOX')
 imap.search(["RECENT"]).each do |message_id|
   envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
@@ -36,8 +49,6 @@ end
 ### Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
 
 ```ruby
-imap = Net::IMAP.new('mail.example.com')
-imap.authenticate('LOGIN', 'joe_user', 'joes_password')
 imap.select('Mail/sent-mail')
 if not imap.list('Mail/', 'sent-apr03')
   imap.create('Mail/sent-apr03')

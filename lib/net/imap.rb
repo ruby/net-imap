@@ -80,7 +80,7 @@ module Net
   # ==== List sender and subject of all recent messages in the default mailbox
   #
   #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('LOGIN', 'joe_user', 'joes_password')
+  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
   #   imap.examine('INBOX')
   #   imap.search(["RECENT"]).each do |message_id|
   #     envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
@@ -90,7 +90,7 @@ module Net
   # ==== Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
   #
   #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('LOGIN', 'joe_user', 'joes_password')
+  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
   #   imap.select('Mail/sent-mail')
   #   if not imap.list('Mail/', 'sent-apr03')
   #     imap.create('Mail/sent-apr03')
@@ -190,7 +190,7 @@ module Net
   # Net::IMAP supports concurrent threads. For example,
   #
   #   imap = Net::IMAP.new("imap.foo.net", "imap2")
-  #   imap.authenticate("cram-md5", "bar", "password")
+  #   imap.authenticate("scram-md5", "bar", "password")
   #   imap.select("inbox")
   #   fetch_thread = Thread.start { imap.fetch(1..-1, "UID") }
   #   search_result = imap.search(["BODY", "hello"])
@@ -772,13 +772,18 @@ module Net
     #   status # => "OK"
     #   # The client is connected in the "Not Authenticated" state.
     #
-    # Connect with TLS to port 993 at mail.example.com:
+    # Connect with TLS to port 993
     #   imap = Net::IMAP.new('mail.example.com', ssl: true) # => #<Net::IMAP:0x00007f79b0872bd0>
     #   imap.port          => 993
     #   imap.tls_verified? => true
-    #   imap.greeting      => name: ("OK" | "PREAUTH") => status
-    #   status # => "OK"
-    #   # The client is connected in the "Not Authenticated" state.
+    #   imap.greeting      => name: (/OK/i | /PREAUTH/i) => status
+    #   case status
+    #   in /OK/i
+    #     # The client is connected in the "Not Authenticated" state.
+    #     imap.authenticate("PLAIN", "joe_user", "joes_password")
+    #   in /PREAUTH/i
+    #     # The client is connected in the "Authenticated" state.
+    #   end
     #
     # Connect with prior authentication, for example using an SSL certificate:
     #   ssl_ctx_params = {
