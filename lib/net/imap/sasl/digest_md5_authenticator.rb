@@ -73,6 +73,8 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     @nc, @stage = {}, STAGE_ONE
   end
 
+  def initial_response?; false end
+
   # Responds to server challenge in two stages.
   def process(challenge)
     case @stage

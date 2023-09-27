@@ -1251,7 +1251,8 @@ module Net
       authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
       cmdargs = ["AUTHENTICATE", mechanism]
       if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
-          SASL.initial_response?(authenticator)
+          authenticator.respond_to?(:initial_response?) &&
+          authenticator.initial_response?
         response = authenticator.process(nil)
         cmdargs << (response.empty? ? "=" : [response].pack("m0"))
       end
@@ -1263,7 +1264,7 @@ module Net
           put_string(response + CRLF)
         end
       end
-      unless SASL.done?(authenticator)
+      if authenticator.respond_to?(:done?) && !authenticator.done?
         logout!
         raise SASL::AuthenticationFailed, "authentication ended prematurely"
       end

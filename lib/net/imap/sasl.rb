@@ -158,24 +158,6 @@ module Net
         Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
       end
 
-      # Returns whether +authenticator+ is client-first and supports sending an
-      # "initial response".
-      def initial_response?(authenticator)
-        authenticator.respond_to?(:initial_response?) &&
-          authenticator.initial_response?
-      end
-
-      # Returns whether +authenticator+ considers the authentication exchange to
-      # be complete.
-      #
-      # The authentication should not succeed if this returns false, but
-      # returning true does *not* indicate success.  Authentication succeeds
-      # when this method returns true and the server responds with a
-      # protocol-specific success.
-      def done?(authenticator)
-        !authenticator.respond_to?(:done?) || authenticator.done?
-      end
-
     end
   end
 end

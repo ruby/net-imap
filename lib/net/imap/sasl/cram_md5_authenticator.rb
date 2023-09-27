@@ -24,6 +24,8 @@ class Net::IMAP::SASL::CramMD5Authenticator
     @done = false
   end
 
+  def initial_response?; false end
+
   def process(challenge)
     digest = hmac_md5(challenge, @password)
     return @user + " " + digest

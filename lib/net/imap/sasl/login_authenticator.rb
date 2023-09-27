@@ -32,6 +32,8 @@ class Net::IMAP::SASL::LoginAuthenticator
     @state = STATE_USER
   end
 
+  def initial_response?; false end
+
   def process(data)
     case @state
     when STATE_USER
