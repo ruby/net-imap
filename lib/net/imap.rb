@@ -1182,6 +1182,8 @@ module Net
     # +sasl_ir+ allows or disallows sending an "initial response" (see the
     # +SASL-IR+ capability, below).
     #
+    # Override +registry+ to use a custom SASL::Authenticators registry.
+    #
     # All other arguments are forwarded to the registered SASL authenticator for
     # the requested mechanism.  <em>The documentation for each individual
     # mechanism must be consulted for its specific parameters.</em>
@@ -1276,27 +1278,9 @@ module Net
     # Previously cached #capabilities will be cleared when this method
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
-    def authenticate(mechanism, *creds, sasl_ir: true, **props, &callback)
-      mechanism = mechanism.to_s.tr("_", "-").upcase
-      authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
-      cmdargs = ["AUTHENTICATE", mechanism]
-      if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
-          authenticator.respond_to?(:initial_response?) &&
-          authenticator.initial_response?
-        response = authenticator.process(nil)
-        cmdargs << (response.empty? ? "=" : [response].pack("m0"))
-      end
-      result = send_command_with_continuations(*cmdargs) {|data|
-        challenge = data.unpack1("m")
-        response  = authenticator.process challenge
-        [response].pack("m0")
-      }
-      if authenticator.respond_to?(:done?) && !authenticator.done?
-        logout!
-        raise SASL::AuthenticationIncomplete, result
-      end
-      @capabilities = capabilities_from_resp_code result
-      result
+    def authenticate(...)
+      sasl_adapter.authenticate(...)
+        .tap { @capabilities = capabilities_from_resp_code _1 }
     end
 
     # Sends a {LOGIN command [IMAP4rev1 §6.2.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.3]
