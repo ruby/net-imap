@@ -670,8 +670,9 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
-    autoload :SASL,       File.expand_path("imap/sasl",       __dir__)
-    autoload :StringPrep, File.expand_path("imap/stringprep", __dir__)
+    autoload :SASL,        File.expand_path("imap/sasl",         __dir__)
+    autoload :SASLAdapter, File.expand_path("imap/sasl_adapter", __dir__)
+    autoload :StringPrep,  File.expand_path("imap/stringprep",   __dir__)
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
@@ -1142,7 +1143,10 @@ module Net
     end
 
     # :call-seq:
-    #   authenticate(mechanism, *, sasl_ir: true, **, &) -> ok_resp
+    #   authenticate(mechanism, *,
+    #                sasl_ir: true,
+    #                registry: Net::IMAP::SASL.authenticators,
+    #                **, &) -> ok_resp
     #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.  If successful, the connection enters the
@@ -2744,6 +2748,10 @@ module Net
         @sock.post_connection_check(@host)
         @tls_verified = true
       end
+    end
+
+    def sasl_adapter
+      SASLAdapter.new(self, &method(:send_command_with_continuations))
     end
 
     #--
