@@ -4,7 +4,8 @@ module Net
   class IMAP
     module SASL
 
-      # This API is *experimental*, and may change.
+      # AuthenticationExchange is used internally by Net::IMAP#authenticate.
+      # But the API is still *experimental*, and may change.
       #
       # TODO: use with more clients, to verify the API can accommodate them.
       # TODO: pass ClientAdapter#service to SASL.authenticator
