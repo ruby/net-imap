@@ -1256,14 +1256,11 @@ module Net
         response = authenticator.process(nil)
         cmdargs << (response.empty? ? "=" : [response].pack("m0"))
       end
-      result = send_command(*cmdargs) do |resp|
-        if resp.instance_of?(ContinuationRequest)
-          challenge = resp.data.text.unpack1("m")
-          response  = authenticator.process(challenge)
-          response  = [response].pack("m0")
-          put_string(response + CRLF)
-        end
-      end
+      result = send_command_with_continuations(*cmdargs) {|data|
+        challenge = data.unpack1("m")
+        response  = authenticator.process challenge
+        [response].pack("m0")
+      }
       if authenticator.respond_to?(:done?) && !authenticator.done?
         logout!
         raise SASL::AuthenticationIncomplete, result
@@ -2570,6 +2567,18 @@ module Net
     end
 
     #############################
+
+    # Calls send_command, yielding the text of each ContinuationRequest and
+    # responding with each block result.  Returns TaggedResponse.  Raises
+    # NoResponseError or BadResponseError.
+    def send_command_with_continuations(cmd, *args)
+      send_command(cmd, *args) do |server_response|
+        if server_response.instance_of?(ContinuationRequest)
+          client_response = yield server_response.data.text
+          put_string(client_response + CRLF)
+        end
+      end
+    end
 
     def send_command(cmd, *args, &block)
       synchronize do
