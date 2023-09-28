@@ -114,6 +114,18 @@ module Net
       # messages has not passed integrity checks.
       AuthenticationFailed = Class.new(Error)
 
+      # Indicates that authentication cannot proceed because one of the server's
+      # ended authentication prematurely.
+      class AuthenticationIncomplete < AuthenticationFailed
+        # The success response from the server
+        attr_reader :response
+
+        def initialize(response, message = "authentication ended prematurely")
+          super(message)
+          @response = response
+        end
+      end
+
       # autoloading to avoid loading all of the regexps when they aren't used.
       sasl_stringprep_rb = File.expand_path("sasl/stringprep", __dir__)
       autoload :StringPrep,          sasl_stringprep_rb

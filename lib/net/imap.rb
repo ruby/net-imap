@@ -1266,7 +1266,7 @@ module Net
       end
       if authenticator.respond_to?(:done?) && !authenticator.done?
         logout!
-        raise SASL::AuthenticationFailed, "authentication ended prematurely"
+        raise SASL::AuthenticationIncomplete, result
       end
       @capabilities = capabilities_from_resp_code result
       result
