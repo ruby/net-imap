@@ -83,6 +83,11 @@ module Net::IMAP::SASL
       @authenticators.delete(key)
     end
 
+    def mechanism?(name)
+      key = name.upcase.to_sym
+      @authenticators.key?(key)
+    end
+
     # :call-seq:
     #   authenticator(mechanism, ...) -> auth_session
     #
