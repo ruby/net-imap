@@ -966,7 +966,7 @@ EOF
         server.state.authenticate(server.config.user)
         cmd.done_ok
       end
-      assert_raise(Net::IMAP::SASL::AuthenticationFailed) do
+      assert_raise(Net::IMAP::SASL::AuthenticationIncomplete) do
         imap.authenticate("DIGEST-MD5", "test_user", "test-password",
                           warn_deprecation: false)
       end

@@ -114,6 +114,18 @@ module Net
       # messages has not passed integrity checks.
       AuthenticationFailed = Class.new(Error)
 
+      # Indicates that authentication cannot proceed because one of the server's
+      # ended authentication prematurely.
+      class AuthenticationIncomplete < AuthenticationFailed
+        # The success response from the server
+        attr_reader :response
+
+        def initialize(response, message = "authentication ended prematurely")
+          super(message)
+          @response = response
+        end
+      end
+
       # autoloading to avoid loading all of the regexps when they aren't used.
       sasl_stringprep_rb = File.expand_path("sasl/stringprep", __dir__)
       autoload :StringPrep,          sasl_stringprep_rb
@@ -141,9 +153,7 @@ module Net
       autoload :LoginAuthenticator,       "#{sasl_dir}/login_authenticator"
 
       # Returns the default global SASL::Authenticators instance.
-      def self.authenticators
-        @authenticators ||= Authenticators.new(use_defaults: true)
-      end
+      def self.authenticators; @authenticators ||= Authenticators.new end
 
       # Delegates to ::authenticators.  See Authenticators#authenticator.
       def self.authenticator(...)     authenticators.authenticator(...) end
@@ -156,24 +166,6 @@ module Net
       # See Net::IMAP::StringPrep::SASLprep#saslprep.
       def saslprep(string, **opts)
         Net::IMAP::StringPrep::SASLprep.saslprep(string, **opts)
-      end
-
-      # Returns whether +authenticator+ is client-first and supports sending an
-      # "initial response".
-      def initial_response?(authenticator)
-        authenticator.respond_to?(:initial_response?) &&
-          authenticator.initial_response?
-      end
-
-      # Returns whether +authenticator+ considers the authentication exchange to
-      # be complete.
-      #
-      # The authentication should not succeed if this returns false, but
-      # returning true does *not* indicate success.  Authentication succeeds
-      # when this method returns true and the server responds with a
-      # protocol-specific success.
-      def done?(authenticator)
-        !authenticator.respond_to?(:done?) || authenticator.done?
       end
 
     end

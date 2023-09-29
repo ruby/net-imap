@@ -41,7 +41,6 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_plain_supports_initial_response
     assert plain("foo", "bar").initial_response?
-    assert Net::IMAP::SASL.initial_response?(plain("foo", "bar"))
   end
 
   def test_plain_response
@@ -194,7 +193,6 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_xoauth2_supports_initial_response
     assert xoauth2("foo", "bar").initial_response?
-    assert Net::IMAP::SASL.initial_response?(xoauth2("foo", "bar"))
   end
 
   # ----------------------
@@ -276,7 +274,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_login_does_not_support_initial_response
-    refute Net::IMAP::SASL.initial_response?(login("foo", "bar"))
+    refute login("foo", "bar").initial_response?
   end
 
   def test_login_authenticator_deprecated
@@ -306,7 +304,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_cram_md5_does_not_support_initial_response
-    refute Net::IMAP::SASL.initial_response?(cram_md5("foo", "bar"))
+    refute cram_md5("foo", "bar").initial_response?
   end
 
   def test_cram_md5_authenticator_deprecated
@@ -343,7 +341,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_digest_md5_does_not_support_initial_response
-    refute Net::IMAP::SASL.initial_response?(digest_md5("foo", "bar"))
+    refute digest_md5("foo", "bar").initial_response?
   end
 
   def test_digest_md5_authenticator

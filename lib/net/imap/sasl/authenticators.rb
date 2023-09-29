@@ -26,24 +26,23 @@ module Net::IMAP::SASL
     # This class is usually not instantiated directly.  Use SASL.authenticators
     # to reuse the default global registry.
     #
-    # By default, the registry will be empty--without any registrations.  When
-    # +add_defaults+ is +true+, authenticators for all standard mechanisms will
-    # be registered.
-    #
-    def initialize(use_defaults: false)
+    # When +use_defaults+ is +false+, the registry will start empty.  When
+    # +use_deprecated+ is +false+, deprecated authenticators will not be
+    # included with the defaults.
+    def initialize(use_defaults: true, use_deprecated: true)
       @authenticators = {}
-      if use_defaults
-        add_authenticator "Anonymous"
-        add_authenticator "External"
-        add_authenticator "OAuthBearer"
-        add_authenticator "Plain"
-        add_authenticator "Scram-SHA-1"
-        add_authenticator "Scram-SHA-256"
-        add_authenticator "XOAuth2"
-        add_authenticator "Login"      # deprecated
-        add_authenticator "Cram-MD5"   # deprecated
-        add_authenticator "Digest-MD5" # deprecated
-      end
+      return unless use_defaults
+      add_authenticator "Anonymous"
+      add_authenticator "External"
+      add_authenticator "OAuthBearer"
+      add_authenticator "Plain"
+      add_authenticator "Scram-SHA-1"
+      add_authenticator "Scram-SHA-256"
+      add_authenticator "XOAuth2"
+      return unless use_deprecated
+      add_authenticator "Login"      # deprecated
+      add_authenticator "Cram-MD5"   # deprecated
+      add_authenticator "Digest-MD5" # deprecated
     end
 
     # Returns the names of all registered SASL mechanisms.
@@ -78,6 +77,12 @@ module Net::IMAP::SASL
       @authenticators[key] = authenticator
     end
 
+    # Removes the authenticator registered for +name+
+    def remove_authenticator(name)
+      key = name.upcase.to_sym
+      @authenticators.delete(key)
+    end
+
     # :call-seq:
     #   authenticator(mechanism, ...) -> auth_session
     #
@@ -100,6 +105,7 @@ module Net::IMAP::SASL
       end
       auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
     end
+    alias new authenticator
 
   end
 
