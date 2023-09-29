@@ -141,9 +141,7 @@ module Net
       autoload :LoginAuthenticator,       "#{sasl_dir}/login_authenticator"
 
       # Returns the default global SASL::Authenticators instance.
-      def self.authenticators
-        @authenticators ||= Authenticators.new(use_defaults: true)
-      end
+      def self.authenticators; @authenticators ||= Authenticators.new end
 
       # Delegates to ::authenticators.  See Authenticators#authenticator.
       def self.authenticator(...)     authenticators.authenticator(...) end
