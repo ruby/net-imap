@@ -77,6 +77,12 @@ module Net::IMAP::SASL
       @authenticators[key] = authenticator
     end
 
+    # Removes the authenticator registered for +name+
+    def remove_authenticator(name)
+      key = name.upcase.to_sym
+      @authenticators.delete(key)
+    end
+
     # :call-seq:
     #   authenticator(mechanism, ...) -> auth_session
     #
