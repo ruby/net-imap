@@ -99,6 +99,7 @@ module Net::IMAP::SASL
       end
       auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
     end
+    alias new authenticator
 
   end
 
