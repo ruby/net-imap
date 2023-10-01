@@ -1248,6 +1248,7 @@ module Net
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
     def authenticate(mechanism, *creds, sasl_ir: true, **props, &callback)
+      mechanism = mechanism.to_s.tr("_", "-").upcase
       authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
       cmdargs = ["AUTHENTICATE", mechanism]
       if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
