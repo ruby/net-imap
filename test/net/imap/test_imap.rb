@@ -934,7 +934,7 @@ EOF
         server.state.authenticate(server.config.user)
         cmd.done_ok
       end
-      imap.authenticate("DIGEST-MD5", "test_user", "test-password",
+      imap.authenticate(:digest_md5, "test_user", "test-password",
                         warn_deprecation: false)
       cmd, cont1, cont2 = 3.times.map { server.commands.pop }
       assert_equal %w[AUTHENTICATE DIGEST-MD5], [cmd.name, *cmd.args]
