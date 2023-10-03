@@ -34,6 +34,11 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # relying only the identity and scope authorized by the token.
   attr_reader :username
 
+  # Note that, unlike most other authenticators, #username is an alias for the
+  # authorization identity and not the authentication identity.  The
+  # authenticated identity is established for the client by the #oauth2_token.
+  alias authzid username
+
   # An OAuth2 access token which has been authorized with the appropriate OAuth2
   # scopes to use the service for #username.
   attr_reader :oauth2_token
@@ -41,6 +46,7 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # :call-seq:
   #   new(username,  oauth2_token,  **) -> authenticator
   #   new(username:, oauth2_token:, **) -> authenticator
+  #   new(authzid:,  oauth2_token:, **) -> authenticator
   #
   # Creates an Authenticator for the "+XOAUTH2+" SASL mechanism, as specified by
   # Google[https://developers.google.com/gmail/imap/xoauth2-protocol],
@@ -50,13 +56,21 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # === Properties
   #
   # * #username --- the username for the account being accessed.
+  #
+  #   #authzid  --- an alias for #username.
+  #
+  #   Note that, unlike some other authenticators, +username+ sets the
+  #   _authorization_ identity and not the _authentication_ identity.  The
+  #   authenticated identity is established for the client with the OAuth token.
+  #
   # * #oauth2_token --- An OAuth2.0 access token which is authorized to access
   #   the service for #username.
   #
   # Any other keyword parameters are quietly ignored.
-  def initialize(user = nil, token = nil, username: nil, oauth2_token: nil, **)
-    @username = username || user or
-      raise ArgumentError, "missing username"
+  def initialize(user = nil, token = nil, username: nil, oauth2_token: nil,
+                 authzid: nil, **)
+    @username = authzid || username || user or
+      raise ArgumentError, "missing username (authzid)"
     @oauth2_token = oauth2_token || token or
       raise ArgumentError, "missing oauth2_token"
     [username, user].compact.count == 1 or

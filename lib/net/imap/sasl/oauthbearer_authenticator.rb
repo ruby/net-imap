@@ -27,6 +27,7 @@ module Net
         #     imap.authenticate "PLAIN", "root", passwd, authzid: "user"
         #
         attr_reader :authzid
+        alias username authzid
 
         # Hostname to which the client connected.  (optional)
         attr_reader :host
@@ -45,6 +46,7 @@ module Net
 
         # The query string.  (optional)
         attr_reader :qs
+        alias query qs
 
         # Stores the most recent server "challenge".  When authentication fails,
         # this may hold information about the failure reason, as JSON.
@@ -61,6 +63,14 @@ module Net
         # #host or #port) <b>as are specific server implementations</b>.
         #
         # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+        #
+        #   _optional_ #username — An alias for #authzid.
+        #
+        #   Note that, unlike some other authenticators, +username+ sets the
+        #   _authorization_ identity and not the _authentication_ identity.  The
+        #   authentication identity is established for the client by the OAuth
+        #   token.
+        #
         # * _optional_ #host — Hostname to which the client connected.
         # * _optional_ #port — Service port to which the client connected.
         # * _optional_ #mthd — HTTP method
@@ -68,16 +78,19 @@ module Net
         # * _optional_ #post — HTTP post data
         # * _optional_ #qs   — HTTP query string
         #
+        #   _optional_ #query — An alias for #qs
+        #
         # Any other keyword parameters are quietly ignored.
         def initialize(authzid: nil, host: nil, port: nil,
+                       username: nil, query: nil,
                        mthd: nil, path: nil, post: nil, qs: nil, **)
-          @authzid = authzid
+          @authzid = authzid || username
           @host    = host
           @port    = port
           @mthd    = mthd
           @path    = path
           @post    = post
-          @qs      = qs
+          @qs      = qs || query
           @done    = false
         end
 
@@ -144,6 +157,14 @@ module Net
         # The most common ones are:
         #
         # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+        #
+        #   _optional_ #username — An alias for #authzid.
+        #
+        #   Note that, unlike some other authenticators, +username+ sets the
+        #   _authorization_ identity and not the _authentication_ identity.  The
+        #   authentication identity is established for the client by
+        #   #oauth2_token.
+        #
         # * _optional_ #host — Hostname to which the client connected.
         # * _optional_ #port — Service port to which the client connected.
         #

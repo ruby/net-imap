@@ -25,9 +25,12 @@ module Net
         #     imap.authenticate "PLAIN", "root", passwd, authzid: "user"
         #
         attr_reader :authzid
+        alias username authzid
 
         # :call-seq:
         #   new(authzid: nil, **) -> authenticator
+        #   new(username: nil, **) -> authenticator
+        #   new(username = nil, **) -> authenticator
         #
         # Creates an Authenticator for the "+EXTERNAL+" SASL mechanism, as
         # specified in RFC-4422[https://tools.ietf.org/html/rfc4422].  To use
@@ -38,8 +41,16 @@ module Net
         #
         # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
         #
+        #   _optional_ #username ― An alias for #authzid.
+        #
+        #   Note that, unlike some other authenticators, +username+ sets the
+        #   _authorization_ identity and not the _authentication_ identity.  The
+        #   authentication identity is established for the client by the
+        #   external credentials.
+        #
         # Any other keyword parameters are quietly ignored.
-        def initialize(authzid: nil, **)
+        def initialize(user = nil, authzid: nil, username: nil, **)
+          authzid ||= username || user
           @authzid = authzid&.to_str&.encode "UTF-8"
           if @authzid&.match?(/\u0000/u) # also validates UTF8 encoding
             raise ArgumentError, "contains NULL"

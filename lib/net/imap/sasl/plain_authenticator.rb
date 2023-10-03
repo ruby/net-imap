@@ -22,6 +22,7 @@ class Net::IMAP::SASL::PlainAuthenticator
   # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
   # this to +authcid+.
   attr_reader :username
+  alias authcid username
 
   # A password or passphrase that matches the #username.
   attr_reader :password
@@ -42,6 +43,7 @@ class Net::IMAP::SASL::PlainAuthenticator
   # :call-seq:
   #   new(username,  password,  authzid: nil, **) -> authenticator
   #   new(username:, password:, authzid: nil, **) -> authenticator
+  #   new(authcid:,  password:, authzid: nil, **) -> authenticator
   #
   # Creates an Authenticator for the "+PLAIN+" SASL mechanism.
   #
@@ -49,8 +51,11 @@ class Net::IMAP::SASL::PlainAuthenticator
   #
   # ==== Parameters
   #
-  # * #username ― Identity whose +password+ is used.
-  # * #password ― Password or passphrase associated with this username+.
+  # * #authcid ― Authentication identity that is associated with #password.
+  #
+  #   #username ― An alias for #authcid.
+  #
+  # * #password ― A password or passphrase associated with the #authcid.
   #
   # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
   #
@@ -59,12 +64,14 @@ class Net::IMAP::SASL::PlainAuthenticator
   #
   # Any other keyword parameters are quietly ignored.
   def initialize(user = nil, pass = nil,
+                 authcid: nil,
                  username: nil, password: nil, authzid: nil, **)
-    [username, user].compact.count == 1 or
-      raise ArgumentError, "conflicting values for username"
-    [password, pass].compact.count == 1 or
+    [authcid, username, user].compact.count <= 1 or
+      raise ArgumentError, "conflicting values for username (authcid)"
+    [password, pass].compact.count <= 1 or
       raise ArgumentError, "conflicting values for password"
-    username ||= user or raise ArgumentError, "missing username"
+    username ||= authcid || user or
+      raise ArgumentError, "missing username (authcid)"
     password ||= pass or raise ArgumentError, "missing password"
     raise ArgumentError, "username contains NULL" if username.include?(NULL)
     raise ArgumentError, "password contains NULL" if password.include?(NULL)

@@ -60,6 +60,7 @@ module Net
         # :call-seq:
         #   new(username,  password,  **options) -> auth_ctx
         #   new(username:, password:, **options) -> auth_ctx
+        #   new(authcid:,  password:, **options) -> auth_ctx
         #
         # Creates an authenticator for one of the "+SCRAM-*+" SASL mechanisms.
         # Each subclass defines #digest to match a specific mechanism.
@@ -68,14 +69,18 @@ module Net
         #
         # === Parameters
         #
-        # * #username ― Identity whose #password is used.  Aliased as #authcid.
+        # * #authcid  ― Identity whose #password is used.
+        #
+        #   #username - An alias for #authcid.
         # * #password ― Password or passphrase associated with this #username.
         # * _optional_ #authzid ― Alternate identity to act as or on behalf of.
         # * _optional_ #min_iterations - Overrides the default value (4096).
         #
         # Any other keyword parameters are quietly ignored.
         def initialize(username_arg = nil, password_arg = nil,
-                       username: nil, password: nil, authcid: nil, authzid: nil,
+                       authcid: nil, username: nil,
+                       authzid: nil,
+                       password: nil,
                        min_iterations: 4096, # see both RFC5802 and RFC7677
                        cnonce: nil, # must only be set in tests
                        **options)
@@ -92,6 +97,7 @@ module Net
           @min_iterations = Integer min_iterations
           @min_iterations.positive? or
             raise ArgumentError, "min_iterations must be positive"
+
           @cnonce = cnonce || SecureRandom.base64(32)
         end
 
