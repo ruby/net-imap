@@ -1019,7 +1019,7 @@ module Net
     def capability
       synchronize do
         send_command("CAPABILITY")
-        @capabilities = @responses.delete("CAPABILITY").last.freeze
+        @capabilities = clear_responses("CAPABILITY").last.freeze
       end
     end
 
@@ -1048,7 +1048,7 @@ module Net
     def id(client_id=nil)
       synchronize do
         send_command("ID", ClientID.new(client_id))
-        @responses.delete("ID")&.last
+        clear_responses("ID").last
       end
     end
 
@@ -1444,7 +1444,7 @@ module Net
     def list(refname, mailbox)
       synchronize do
         send_command("LIST", refname, mailbox)
-        return @responses.delete("LIST")
+        clear_responses("LIST")
       end
     end
 
@@ -1501,7 +1501,7 @@ module Net
     def namespace
       synchronize do
         send_command("NAMESPACE")
-        return @responses.delete("NAMESPACE")[-1]
+        clear_responses("NAMESPACE").last
       end
     end
 
@@ -1545,7 +1545,7 @@ module Net
     def xlist(refname, mailbox)
       synchronize do
         send_command("XLIST", refname, mailbox)
-        return @responses.delete("XLIST")
+        clear_responses("XLIST")
       end
     end
 
@@ -1564,8 +1564,8 @@ module Net
       synchronize do
         send_command("GETQUOTAROOT", mailbox)
         result = []
-        result.concat(@responses.delete("QUOTAROOT"))
-        result.concat(@responses.delete("QUOTA"))
+        result.concat(clear_responses("QUOTAROOT"))
+        result.concat(clear_responses("QUOTA"))
         return result
       end
     end
@@ -1584,7 +1584,7 @@ module Net
     def getquota(mailbox)
       synchronize do
         send_command("GETQUOTA", mailbox)
-        return @responses.delete("QUOTA")
+        clear_responses("QUOTA")
       end
     end
 
@@ -1640,7 +1640,7 @@ module Net
     def getacl(mailbox)
       synchronize do
         send_command("GETACL", mailbox)
-        return @responses.delete("ACL")[-1]
+        clear_responses("ACL").last
       end
     end
 
@@ -1655,7 +1655,7 @@ module Net
     def lsub(refname, mailbox)
       synchronize do
         send_command("LSUB", refname, mailbox)
-        return @responses.delete("LSUB")
+        clear_responses("LSUB")
       end
     end
 
@@ -1679,7 +1679,7 @@ module Net
     def status(mailbox, attr)
       synchronize do
         send_command("STATUS", mailbox, attr)
-        return @responses.delete("STATUS")[-1].attr
+        clear_responses("STATUS").last&.attr
       end
     end
 
@@ -1768,7 +1768,7 @@ module Net
     def expunge
       synchronize do
         send_command("EXPUNGE")
-        return @responses.delete("EXPUNGE")
+        clear_responses("EXPUNGE")
       end
     end
 
@@ -1800,7 +1800,7 @@ module Net
     def uid_expunge(uid_set)
       synchronize do
         send_command("UID EXPUNGE", MessageSet.new(uid_set))
-        return @responses.delete("EXPUNGE")
+        clear_responses("EXPUNGE")
       end
     end
 
@@ -2188,7 +2188,7 @@ module Net
         .join(' ')
       synchronize do
         send_command("ENABLE #{capabilities}")
-        result = @responses.delete("ENABLED")[-1]
+        result = clear_responses("ENABLED").last
         @utf8_strings ||= result.include? "UTF8=ACCEPT"
         @utf8_strings ||= result.include? "IMAP4REV2"
         result
@@ -2641,7 +2641,7 @@ module Net
         else
           send_command(cmd, *keys)
         end
-        return @responses.delete("SEARCH")[-1]
+        clear_responses("SEARCH").last
       end
     end
 
@@ -2656,13 +2656,13 @@ module Net
       end
 
       synchronize do
-        @responses.delete("FETCH")
+        clear_responses("FETCH")
         if mod
           send_command(cmd, MessageSet.new(set), attr, mod)
         else
           send_command(cmd, MessageSet.new(set), attr)
         end
-        return @responses.delete("FETCH")
+        clear_responses("FETCH")
       end
     end
 
@@ -2671,9 +2671,9 @@ module Net
         attr = RawData.new(attr)
       end
       synchronize do
-        @responses.delete("FETCH")
+        clear_responses("FETCH")
         send_command(cmd, MessageSet.new(set), attr, flags)
-        return @responses.delete("FETCH")
+        clear_responses("FETCH")
       end
     end
 
@@ -2690,7 +2690,7 @@ module Net
       normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, sort_keys, charset, *search_keys)
-        return @responses.delete("SORT")[-1]
+        clear_responses("SORT").last
       end
     end
 
@@ -2703,7 +2703,7 @@ module Net
       normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
-        @responses.delete("THREAD")[-1]
+        clear_responses("THREAD").last
       end
     end
 
