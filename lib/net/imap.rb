@@ -127,7 +127,7 @@ module Net
   #   end
   #
   #   # Support for "UTF8=ACCEPT" implies support for "ENABLE"
-  #   imap.enable :utf8 if imap.auth_capable?("UTF8=ACCEPT")
+  #   imap.enable :utf8 if imap.capable?("UTF8=ACCEPT")
   #
   #   namespaces  = imap.namespace if imap.capable?(:namespace)
   #   mbox_prefix = namespaces&.personal&.first&.prefix || ""
@@ -1886,8 +1886,7 @@ module Net
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
     #
-    # The return value is an array of FetchData or nil
-    # (instead of an empty array) if there is no matching message.
+    # The return value is an array of FetchData.
     #
     # Related: #uid_search, FetchData
     #
