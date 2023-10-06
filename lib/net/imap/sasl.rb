@@ -135,6 +135,9 @@ module Net
       autoload :BidiStringError,     sasl_stringprep_rb
 
       sasl_dir = File.expand_path("sasl", __dir__)
+      autoload :ClientAdapter,            "#{sasl_dir}/client_adapter"
+      autoload :IMAPAdapter,              "#{sasl_dir}/imap_adapter"
+
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
       autoload :ScramAlgorithm,           "#{sasl_dir}/scram_algorithm"

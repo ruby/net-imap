@@ -27,13 +27,19 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # authorization identity.
   attr_reader :username
 
+  # Note that, unlike most other authenticators, #username is an alias for the
+  # authorization identity and not the authentication identity.  The
+  # authenticated identity is established for the client by the #oauth2_token.
+  alias authzid username
+
   # An OAuth2 access token which has been authorized with the appropriate OAuth2
   # scopes to use the service for #username.
   attr_reader :oauth2_token
 
   # :call-seq:
-  #   new(username,  oauth2_token,  **) -> authenticator
+  #   new(authzid:,  oauth2_token:, **) -> authenticator
   #   new(username:, oauth2_token:, **) -> authenticator
+  #   new(username,  oauth2_token,  **) -> authenticator
   #
   # Creates an Authenticator for the "+XOAUTH2+" SASL mechanism, as specified by
   # Google[https://developers.google.com/gmail/imap/xoauth2-protocol],
@@ -43,19 +49,25 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # === Properties
   #
   # * #username --- the username for the account being accessed.
+  # * #authzid  --- an alias for #username.
   # * #oauth2_token --- An OAuth2.0 access token which is authorized to access
   #   the service for #username.
   #
+  # Note that, unlike most other authenticators, the +username+ keyword
+  # parameter sets the authorization identity and not the authentication
+  # identity.  The authenticated identity is established for the client with the
+  # OAuth credential.
+  #
   # See the documentation for each attribute for more details.
-  def initialize(user = nil, token = nil, username: nil, oauth2_token: nil, **)
-    @username = username || user or
-      raise ArgumentError, "missing username"
-    @oauth2_token = oauth2_token || token or
-      raise ArgumentError, "missing oauth2_token"
-    [username, user].compact.count == 1 or
-      raise ArgumentError, "conflicting values for username"
-    [oauth2_token, token].compact.count == 1 or
-      raise ArgumentError, "conflicting values for oauth2_token"
+  def initialize(user = nil, token = nil,
+                 authzid: nil, username: nil,
+                 oauth2_token: nil,
+                 **)
+    @username     = username     || authzid || user
+    @oauth2_token = oauth2_token || token
+    @username     or raise ArgumentError, "missing username (authcid)"
+    @oauth2_token or raise ArgumentError, "missing oauth2_token"
+
     @done = false
   end
 

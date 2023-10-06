@@ -45,13 +45,34 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_plain_response
     assert_equal("\0authc\0passwd", plain("authc", "passwd").process(nil))
+  end
+
+  def test_plain_authzid
     assert_equal("authz\0user\0pass",
                  plain("user", "pass", authzid: "authz").process(nil))
+  end
+
+  def test_plain_kw_params
+    assert_equal(
+      "zid\0cid\0p",
+      plain(authcid: "cid", password: "p", authzid: "zid").process(nil)
+    )
+  end
+
+  def test_plain_username_kw_sets_both_authcid_and_authzid
+    assert_equal(
+      "\0uname\0passwd",
+      plain(username: "uname", password: "passwd").process(nil)
+    )
   end
 
   def test_plain_no_null_chars
     assert_raise(ArgumentError) { plain("bad\0user", "pass") }
     assert_raise(ArgumentError) { plain("user", "bad\0pass") }
+    assert_raise(ArgumentError) { plain(authcid: "bad\0user", password: "p") }
+    assert_raise(ArgumentError) { plain(username: "bad\0user", password: "p") }
+    assert_raise(ArgumentError) { plain(username: "u", password: "bad\0pass") }
+    assert_raise(ArgumentError) { plain("u", "p", authzid: "bad\0authz") }
     assert_raise(ArgumentError) { plain("u", "p", authzid: "bad\0authz") }
   end
 
@@ -244,7 +265,11 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_external_response
     assert_equal("", external.process(nil))
+    assert_equal("", external.process(""))
     assert_equal("kwarg", external(authzid: "kwarg").process(nil))
+    assert_equal("username", external(username: "username").process(nil))
+    assert_equal("z", external("p", authzid: "z", username: "u").process(nil))
+    assert_equal("positional", external("positional").process(nil))
   end
 
   def test_external_utf8
@@ -256,7 +281,6 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   def test_external_invalid
     assert_raise(ArgumentError) { external(authzid: "bad\0contains NULL") }
     assert_raise(ArgumentError) { external(authzid: "invalid utf8\x80") }
-    assert_raise(ArgumentError) { external("invalid positional argument") }
   end
 
   # ----------------------
@@ -335,8 +359,8 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_digest_md5_authenticator_deprecated
-    assert_warn(/DIGEST-MD5.+deprecated.+RFC6331/) do
-      Net::IMAP::SASL.authenticator("DIGEST-MD5", "user", "pass")
+    assert_warn(/DIGEST-MD5.+deprecated.+RFC-?6331/) do
+      Net::IMAP.authenticator("DIGEST-MD5", "user", "pass")
     end
   end
 
@@ -372,6 +396,68 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     )
   end
 
+  def test_digest_md5_authenticator_realm_and_digest_uri
+    auth = digest_md5(authcid: "authc",
+                      authzid: "authz",
+                      password: "pass",
+                      realm: "myrealm",
+                      service: "smtp",
+                      host: "mail.example.com",
+                      service_name: "example.com")
+    assert_match(
+      %r{\A
+        nonce="OA6MG9tEQGm2hh",
+        username="authc",
+        realm="myrealm",
+        cnonce="[a-zA-Z0-9+/]{12,}={0,3}",
+        digest-uri="smtp/mail\.example\.com/example\.com",
+        qop="auth",
+        maxbuf=65535,
+        nc=00000001,
+        charset=utf-8,
+        authzid="authz",
+        response=[a-f0-9]+
+      \Z}x,
+      auth.process(
+        %w[
+          realm="somerealm"
+          nonce="OA6MG9tEQGm2hh"
+          qop="auth"
+          charset=utf-8
+          algorithm=md5-sess
+        ].join(",")
+      )
+    )
+  end
+
+  def test_digest_md5_authenticator_empty_challenge
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process("   ")
+    end
+  end
+
+  def test_digest_md5_authenticator_empty_challenge_commas
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process(" ,  ,  ")
+    end
+  end
+
+  def test_digest_md5_authenticator_garbage_no_equal_sign
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process('nonce=required,algorithm=md5-sess,foo')
+    end
+  end
+
+  def test_digest_md5_authenticator_qdstr_with_comma
+    auth = digest_md5("user", "pass")
+    assert_raise(Net::IMAP::DataFormatError) do
+      auth.process('nonce=required,algorithm=md5-sess,.')
+    end
+  end
+
   def test_digest_md5_authenticator_garbage
     auth = digest_md5("user", "pass")
     assert_raise(Net::IMAP::DataFormatError) do
@@ -379,7 +465,7 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     end
   end
 
-  def test_digest_md5_authenticator_no_qop
+  def test_digest_md5_authenticator_empty_qop
     auth = digest_md5("user", "pass")
     assert_raise(Net::IMAP::DataFormatError) do
       auth.process('Qop=""')

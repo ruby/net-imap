@@ -22,6 +22,7 @@ class Net::IMAP::SASL::PlainAuthenticator
   # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
   # this to +authcid+.
   attr_reader :username
+  alias authcid username
 
   # A password or passphrase that matches the #username.
   attr_reader :password
@@ -40,34 +41,41 @@ class Net::IMAP::SASL::PlainAuthenticator
   attr_reader :authzid
 
   # :call-seq:
-  #   new(username,  password,  authzid: nil, **) -> authenticator
+  #   new(authcid:,  password:, authzid: nil, **) -> authenticator
   #   new(username:, password:, authzid: nil, **) -> authenticator
+  #   new(username,  password,  authzid: nil, **) -> authenticator
   #
   # Creates an Authenticator for the "+PLAIN+" SASL mechanism.
   #
   # Called by Net::IMAP#authenticate and similar methods on other clients.
   #
-  # === Parameters
+  # ==== Parameters
   #
-  # * #username ― Identity whose +password+ is used.
-  # * #password ― Password or passphrase associated with this username+.
-  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
+  # * #username ― Authentication identity that is associated with #password.
+  # * #authcid  ― An alias for #username.
+  # * #password ― A password or passphrase associated with #username.
+  # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+  #
+  # Any other keyword parameters are quietly ignored.
+  #
+  # When +authzid+ is not set, the server should derive the authorization
+  # identity from the authentication identity.
   #
   # See attribute documentation for more details.
   def initialize(user = nil, pass = nil,
-                 username: nil, password: nil, authzid: nil, **)
-    [username, user].compact.count == 1 or
-      raise ArgumentError, "conflicting values for username"
-    [password, pass].compact.count == 1 or
-      raise ArgumentError, "conflicting values for password"
-    username ||= user or raise ArgumentError, "missing username"
-    password ||= pass or raise ArgumentError, "missing password"
-    raise ArgumentError, "username contains NULL" if username.include?(NULL)
-    raise ArgumentError, "password contains NULL" if password.include?(NULL)
-    raise ArgumentError, "authzid contains NULL"  if authzid&.include?(NULL)
-    @username = username
-    @password = password
+                 authcid: nil, username: nil,
+                 authzid: nil,
+                 password: nil,
+                 **)
+    @username = authcid  || username || user
+    @password = password || pass
     @authzid  = authzid
+    @username or raise ArgumentError, "missing username (authcid)"
+    @password or raise ArgumentError, "missing password"
+    raise ArgumentError, "username contains NULL" if @username.include?(NULL)
+    raise ArgumentError, "password contains NULL" if @password.include?(NULL)
+    raise ArgumentError, "authzid contains NULL"  if @authzid&.include?(NULL)
+
     @done = false
   end
 
