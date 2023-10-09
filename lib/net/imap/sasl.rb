@@ -135,6 +135,10 @@ module Net
       autoload :BidiStringError,     sasl_stringprep_rb
 
       sasl_dir = File.expand_path("sasl", __dir__)
+      autoload :AuthenticationExchange,   "#{sasl_dir}/authentication_exchange"
+      autoload :ClientAdapter,            "#{sasl_dir}/client_adapter"
+      autoload :ProtocolAdapters,         "#{sasl_dir}/protocol_adapters"
+
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
       autoload :ScramAlgorithm,           "#{sasl_dir}/scram_algorithm"
@@ -155,8 +159,10 @@ module Net
       # Returns the default global SASL::Authenticators instance.
       def self.authenticators; @authenticators ||= Authenticators.new end
 
-      # Delegates to ::authenticators.  See Authenticators#authenticator.
-      def self.authenticator(...)     authenticators.authenticator(...) end
+      # Delegates to <tt>registry.new</tt>  See Authenticators#new.
+      def self.authenticator(*args, registry: authenticators, **kwargs, &block)
+        registry.new(*args, **kwargs, &block)
+      end
 
       # Delegates to ::authenticators.  See Authenticators#add_authenticator.
       def self.add_authenticator(...) authenticators.add_authenticator(...) end

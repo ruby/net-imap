@@ -65,7 +65,7 @@ module Net::IMAP::SASL
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
     # preserved and non-alphanumeric characters are removed..
     def add_authenticator(name, authenticator = nil)
-      key = name.upcase.to_sym
+      key = -name.to_s.upcase.tr(?_, ?-)
       authenticator ||= begin
         class_name = "#{name.gsub(/[^a-zA-Z0-9]/, "")}Authenticator".to_sym
         auth_class = nil
@@ -79,8 +79,13 @@ module Net::IMAP::SASL
 
     # Removes the authenticator registered for +name+
     def remove_authenticator(name)
-      key = name.upcase.to_sym
+      key = -name.to_s.upcase.tr(?_, ?-)
       @authenticators.delete(key)
+    end
+
+    def mechanism?(name)
+      key = -name.to_s.upcase.tr(?_, ?-)
+      @authenticators.key?(key)
     end
 
     # :call-seq:
@@ -100,8 +105,9 @@ module Net::IMAP::SASL
     #   only.  Protocol client users should see refer to their client's
     #   documentation, e.g. Net::IMAP#authenticate.
     def authenticator(mechanism, ...)
-      auth = @authenticators.fetch(mechanism.upcase.to_sym) do
-        raise ArgumentError, 'unknown auth type - "%s"' % mechanism
+      key = -mechanism.to_s.upcase.tr(?_, ?-)
+      auth = @authenticators.fetch(key) do
+        raise ArgumentError, 'unknown auth type - "%s"' % key
       end
       auth.respond_to?(:new) ? auth.new(...) : auth.call(...)
     end
