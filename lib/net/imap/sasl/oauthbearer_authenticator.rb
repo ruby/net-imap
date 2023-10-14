@@ -139,6 +139,7 @@ module Net
 
         # An OAuth 2.0 bearer token.  See {RFC-6750}[https://www.rfc-editor.org/rfc/rfc6750]
         attr_reader :oauth2_token
+        alias secret oauth2_token
 
         # :call-seq:
         #   new(oauth2_token,          **options) -> authenticator
@@ -173,10 +174,12 @@ module Net
         # noting that <b><em>application protocols are allowed to
         # require</em></b> #authzid (<em>or other parameters, such as</em> #host
         # _or_ #port) <b><em>as are specific server implementations</em></b>.
-        def initialize(arg1 = nil, arg2 = nil, oauth2_token: nil, **args, &blk)
+        def initialize(arg1 = nil, arg2 = nil,
+                       oauth2_token: nil, secret: nil,
+                       **args, &blk)
           username, oauth2_token_arg = arg2.nil? ? [nil, arg1] : [arg1, arg2]
           super(username: username, **args, &blk)
-          @oauth2_token = oauth2_token || oauth2_token_arg or
+          @oauth2_token = oauth2_token || secret || oauth2_token_arg or
             raise ArgumentError, "missing oauth2_token"
         end
 

@@ -26,6 +26,7 @@ class Net::IMAP::SASL::PlainAuthenticator
 
   # A password or passphrase that matches the #username.
   attr_reader :password
+  alias secret password
 
   # Authorization identity: an identity to act as or on behalf of.  The identity
   # form is application protocol specific.  If not provided or left blank, the
@@ -64,11 +65,11 @@ class Net::IMAP::SASL::PlainAuthenticator
   #
   # Any other keyword parameters are quietly ignored.
   def initialize(user = nil, pass = nil,
-                 authcid: nil,
+                 authcid: nil, secret: nil,
                  username: nil, password: nil, authzid: nil, **)
     username ||= authcid || user or
       raise ArgumentError, "missing username (authcid)"
-    password ||= pass or raise ArgumentError, "missing password"
+    password ||= secret || pass or raise ArgumentError, "missing password"
     raise ArgumentError, "username contains NULL" if username.include?(NULL)
     raise ArgumentError, "password contains NULL" if password.include?(NULL)
     raise ArgumentError, "authzid contains NULL"  if authzid&.include?(NULL)

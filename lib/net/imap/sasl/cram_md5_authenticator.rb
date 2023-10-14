@@ -16,7 +16,7 @@
 class Net::IMAP::SASL::CramMD5Authenticator
   def initialize(user = nil, pass = nil,
                  authcid: nil, username: nil,
-                 password: nil,
+                 password: nil, secret: nil,
                  warn_deprecation: true,
                  **)
     if warn_deprecation
@@ -24,7 +24,7 @@ class Net::IMAP::SASL::CramMD5Authenticator
     end
     require "digest/md5"
     @user = authcid || username || user
-    @password = password || pass
+    @password = password || secret || pass
     @done = false
   end
 
