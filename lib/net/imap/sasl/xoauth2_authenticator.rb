@@ -73,10 +73,6 @@ class Net::IMAP::SASL::XOAuth2Authenticator
       raise ArgumentError, "missing username (authzid)"
     @oauth2_token = oauth2_token || token or
       raise ArgumentError, "missing oauth2_token"
-    [username, user].compact.count == 1 or
-      raise ArgumentError, "conflicting values for username"
-    [oauth2_token, token].compact.count == 1 or
-      raise ArgumentError, "conflicting values for oauth2_token"
     @done = false
   end
 

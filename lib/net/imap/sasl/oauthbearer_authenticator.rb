@@ -176,8 +176,6 @@ module Net
         def initialize(arg1 = nil, arg2 = nil, oauth2_token: nil, **args, &blk)
           username, oauth2_token_arg = arg2.nil? ? [nil, arg1] : [arg1, arg2]
           super(username: username, **args, &blk)
-          oauth2_token && oauth2_token_arg and
-            raise ArgumentError, "conflicting values for oauth2_token"
           @oauth2_token = oauth2_token || oauth2_token_arg or
             raise ArgumentError, "missing oauth2_token"
         end

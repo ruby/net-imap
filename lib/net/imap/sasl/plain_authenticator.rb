@@ -66,10 +66,6 @@ class Net::IMAP::SASL::PlainAuthenticator
   def initialize(user = nil, pass = nil,
                  authcid: nil,
                  username: nil, password: nil, authzid: nil, **)
-    [authcid, username, user].compact.count <= 1 or
-      raise ArgumentError, "conflicting values for username (authcid)"
-    [password, pass].compact.count <= 1 or
-      raise ArgumentError, "conflicting values for password"
     username ||= authcid || user or
       raise ArgumentError, "missing username (authcid)"
     password ||= pass or raise ArgumentError, "missing password"

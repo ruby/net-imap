@@ -86,12 +86,8 @@ module Net
                        **options)
           @username = username || username_arg || authcid or
             raise ArgumentError, "missing username (authcid)"
-          [username, username_arg, authcid].compact.count == 1 or
-            raise ArgumentError, "conflicting values for username (authcid)"
           @password = password || password_arg or
             raise ArgumentError, "missing password"
-          [password, password_arg].compact.count == 1 or
-            raise ArgumentError, "conflicting values for password"
           @authzid = authzid
 
           @min_iterations = Integer min_iterations
