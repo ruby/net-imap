@@ -29,8 +29,9 @@ module Net
         # this, see Net::IMAP#authenticate or your client's authentication
         # method.
         #
-        # #anonymous_message is an optional message which is sent to the server.
-        # It may be sent as a positional argument or as a keyword argument.
+        # ==== Parameters
+        #
+        # * _optional_ #anonymous_message — a message to send to the server.
         #
         # Any other keyword arguments are silently ignored.
         def initialize(anon_msg = nil, anonymous_message: nil, **)

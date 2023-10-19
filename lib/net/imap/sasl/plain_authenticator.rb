@@ -47,13 +47,17 @@ class Net::IMAP::SASL::PlainAuthenticator
   #
   # Called by Net::IMAP#authenticate and similar methods on other clients.
   #
-  # === Parameters
+  # ==== Parameters
   #
   # * #username ― Identity whose +password+ is used.
   # * #password ― Password or passphrase associated with this username+.
-  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
   #
-  # See attribute documentation for more details.
+  # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+  #
+  #   When +authzid+ is not set, the server should derive the authorization
+  #   identity from the authentication identity.
+  #
+  # Any other keyword parameters are quietly ignored.
   def initialize(user = nil, pass = nil,
                  username: nil, password: nil, authzid: nil, **)
     [username, user].compact.count == 1 or

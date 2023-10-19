@@ -53,10 +53,16 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   #
   # * #username — Identity whose #password is used.
   # * #password — A password or passphrase associated with this #username.
-  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
-  # * +warn_deprecation+ — Set to +false+ to silence the warning.
   #
-  # See the documentation for each attribute for more details.
+  #
+  # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+  #
+  #   When +authzid+ is not set, the server should derive the authorization
+  #   identity from the authentication identity.
+  #
+  # * _optional_ +warn_deprecation+ — Set to +false+ to silence the warning.
+  #
+  # Any other keyword arguments are silently ignored.
   def initialize(user = nil, pass = nil, authz = nil,
                  username: nil, password: nil, authzid: nil,
                  warn_deprecation: true, **)

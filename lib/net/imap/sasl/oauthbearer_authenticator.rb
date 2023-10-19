@@ -14,18 +14,24 @@ module Net
       class OAuthAuthenticator
         include GS2Header
 
-        # Authorization identity: an identity to act as or on behalf of.
+        # Authorization identity: an identity to act as or on behalf of.  The
+        # identity form is application protocol specific.  If not provided or
+        # left blank, the server derives an authorization identity from the
+        # authentication identity.  The server is responsible for verifying the
+        # client's credentials and verifying that the identity it associates
+        # with the client's authentication identity is allowed to act as (or on
+        # behalf of) the authorization identity.
         #
-        # If no explicit authorization identity is provided, it is usually
-        # derived from the authentication identity.  For the OAuth-based
-        # mechanisms, the authentication identity is the identity established by
-        # the OAuth credential.
+        # For example, an administrator or superuser might take on another role:
+        #
+        #     imap.authenticate "PLAIN", "root", passwd, authzid: "user"
+        #
         attr_reader :authzid
 
-        # Hostname to which the client connected.
+        # Hostname to which the client connected.  (optional)
         attr_reader :host
 
-        # Service port to which the client connected.
+        # Service port to which the client connected.  (optional)
         attr_reader :port
 
         # HTTP method.  (optional)
@@ -47,20 +53,22 @@ module Net
         # Creates an RFC7628[https://tools.ietf.org/html/rfc7628] OAuth
         # authenticator.
         #
-        # === Options
+        # ==== Parameters
         #
-        # See child classes for required configuration parameter(s).  The
-        # following parameters are all optional, but protocols or servers may
-        # add requirements for #authzid, #host, #port, or any other parameter.
+        # See child classes for required parameter(s).  The following parameters
+        # are all optional, but it is worth noting that <b>application protocols
+        # are allowed to require</b> #authzid (or other parameters, such as
+        # #host or #port) <b>as are specific server implementations</b>.
         #
-        # * #authzid ― Identity to act as or on behalf of.
-        # * #host — Hostname to which the client connected.
-        # * #port — Service port to which the client connected.
-        # * #mthd — HTTP method
-        # * #path — HTTP path data
-        # * #post — HTTP post data
-        # * #qs   — HTTP query string
+        # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+        # * _optional_ #host — Hostname to which the client connected.
+        # * _optional_ #port — Service port to which the client connected.
+        # * _optional_ #mthd — HTTP method
+        # * _optional_ #path — HTTP path data
+        # * _optional_ #post — HTTP post data
+        # * _optional_ #qs   — HTTP query string
         #
+        # Any other keyword parameters are quietly ignored.
         def initialize(authzid: nil, host: nil, port: nil,
                        mthd: nil, path: nil, post: nil, qs: nil, **)
           @authzid = authzid
@@ -116,7 +124,7 @@ module Net
       # the bearer token.
       class OAuthBearerAuthenticator < OAuthAuthenticator
 
-        # An OAuth2 bearer token, generally the access token.
+        # An OAuth 2.0 bearer token.  See {RFC-6750}[https://www.rfc-editor.org/rfc/rfc6750]
         attr_reader :oauth2_token
 
         # :call-seq:
@@ -127,19 +135,22 @@ module Net
         #
         # Called by Net::IMAP#authenticate and similar methods on other clients.
         #
-        # === Options
+        # ==== Parameters
         #
-        # Only +oauth2_token+ is required by the mechanism, however protocols
-        # and servers may add requirements for #authzid, #host, #port, or any
-        # other parameter.
+        # * #oauth2_token — An OAuth2 bearer token
         #
-        # * #oauth2_token — An OAuth2 bearer token or access token. *Required.*
-        #   May be provided as either regular or keyword argument.
-        # * #authzid ― Identity to act as or on behalf of.
-        # * #host — Hostname to which the client connected.
-        # * #port — Service port to which the client connected.
-        # * See OAuthAuthenticator documentation for less common parameters.
+        # All other keyword parameters are passed to
+        # {super}[rdoc-ref:OAuthAuthenticator::new] (see OAuthAuthenticator).
+        # The most common ones are:
         #
+        # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+        # * _optional_ #host — Hostname to which the client connected.
+        # * _optional_ #port — Service port to which the client connected.
+        #
+        # Although only oauth2_token is required by this mechanism, it is worth
+        # noting that <b><em>application protocols are allowed to
+        # require</em></b> #authzid (<em>or other parameters, such as</em> #host
+        # _or_ #port) <b><em>as are specific server implementations</em></b>.
         def initialize(oauth2_token_arg = nil, oauth2_token: nil, **args, &blk)
           super(**args, &blk) # handles authzid, host, port, etc
           oauth2_token && oauth2_token_arg and

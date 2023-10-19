@@ -12,10 +12,18 @@ module Net
       # established external to SASL, for example by TLS certificate or IPsec.
       class ExternalAuthenticator
 
-        # Authorization identity: an identity to act as or on behalf of.
+        # Authorization identity: an identity to act as or on behalf of.  The
+        # identity form is application protocol specific.  If not provided or
+        # left blank, the server derives an authorization identity from the
+        # authentication identity.  The server is responsible for verifying the
+        # client's credentials and verifying that the identity it associates
+        # with the client's authentication identity is allowed to act as (or on
+        # behalf of) the authorization identity.
         #
-        # If not explicitly provided, the server defaults to using the identity
-        # that was authenticated by the external credentials.
+        # For example, an administrator or superuser might take on another role:
+        #
+        #     imap.authenticate "PLAIN", "root", passwd, authzid: "user"
+        #
         attr_reader :authzid
 
         # :call-seq:
@@ -26,7 +34,9 @@ module Net
         # this, see Net::IMAP#authenticate or your client's authentication
         # method.
         #
-        # #authzid is an optional identity to act as or on behalf of.
+        # ==== Parameters
+        #
+        # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
         #
         # Any other keyword parameters are quietly ignored.
         def initialize(authzid: nil, **)

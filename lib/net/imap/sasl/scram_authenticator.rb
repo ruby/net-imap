@@ -70,10 +70,10 @@ module Net
         #
         # * #username ― Identity whose #password is used.  Aliased as #authcid.
         # * #password ― Password or passphrase associated with this #username.
-        # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
-        # * #min_iterations - Overrides the default value (4096).  Optional.
+        # * _optional_ #authzid ― Alternate identity to act as or on behalf of.
+        # * _optional_ #min_iterations - Overrides the default value (4096).
         #
-        # See the documentation on the corresponding attributes for more.
+        # Any other keyword parameters are quietly ignored.
         def initialize(username_arg = nil, password_arg = nil,
                        username: nil, password: nil, authcid: nil, authzid: nil,
                        min_iterations: 4096, # see both RFC5802 and RFC7677
@@ -96,6 +96,12 @@ module Net
         end
 
         # Authentication identity: the identity that matches the #password.
+        #
+        # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+        # "Authentication identity" is the generic term used by
+        # RFC-4422[https://tools.ietf.org/html/rfc4422].
+        # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
+        # this to +authcid+.
         attr_reader :username
         alias authcid username
 
