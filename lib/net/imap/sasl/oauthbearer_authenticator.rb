@@ -141,8 +141,9 @@ module Net
         attr_reader :oauth2_token
 
         # :call-seq:
-        #   new(oauth2_token,  **options) -> authenticator
-        #   new(oauth2_token:, **options) -> authenticator
+        #   new(oauth2_token,          **options) -> authenticator
+        #   new(authzid, oauth2_token, **options) -> authenticator
+        #   new(oauth2_token:,         **options) -> authenticator
         #
         # Creates an Authenticator for the "+OAUTHBEARER+" SASL mechanism.
         #
@@ -172,8 +173,9 @@ module Net
         # noting that <b><em>application protocols are allowed to
         # require</em></b> #authzid (<em>or other parameters, such as</em> #host
         # _or_ #port) <b><em>as are specific server implementations</em></b>.
-        def initialize(oauth2_token_arg = nil, oauth2_token: nil, **args, &blk)
-          super(**args, &blk) # handles authzid, host, port, etc
+        def initialize(arg1 = nil, arg2 = nil, oauth2_token: nil, **args, &blk)
+          username, oauth2_token_arg = arg2.nil? ? [nil, arg1] : [arg1, arg2]
+          super(username: username, **args, &blk)
           oauth2_token && oauth2_token_arg and
             raise ArgumentError, "conflicting values for oauth2_token"
           @oauth2_token = oauth2_token || oauth2_token_arg or
