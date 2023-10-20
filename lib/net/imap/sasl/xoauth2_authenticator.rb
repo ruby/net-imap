@@ -14,7 +14,7 @@
 # Although this mechanism was never standardized and has been obsoleted by
 # "+OAUTHBEARER+", it is still very widely supported.
 #
-# See Net::IMAP::SASL:: OAuthBearerAuthenticator.
+# See Net::IMAP::SASL::OAuthBearerAuthenticator.
 class Net::IMAP::SASL::XOAuth2Authenticator
 
   # It is unclear from {Google's original XOAUTH2
