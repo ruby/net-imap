@@ -20,8 +20,9 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   # "Authentication identity" is the generic term used by
   # RFC-4422[https://tools.ietf.org/html/rfc4422].
   # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
-  # that to +authcid+.  So +authcid+ is available as an alias for #username.
+  # this to +authcid+.
   attr_reader :username
+  alias authcid username
 
   # A password or passphrase that matches the #username.
   #
@@ -44,6 +45,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   # :call-seq:
   #   new(username,  password,  authzid = nil, **options) -> authenticator
   #   new(username:, password:, authzid:  nil, **options) -> authenticator
+  #   new(authcid:,  password:, authzid:  nil, **options) -> authenticator
   #
   # Creates an Authenticator for the "+DIGEST-MD5+" SASL mechanism.
   #
@@ -51,16 +53,26 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   #
   # ==== Parameters
   #
-  # * #username — Identity whose #password is used.
-  # * #password — A password or passphrase associated with this #username.
-  # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
-  # * +warn_deprecation+ — Set to +false+ to silence the warning.
+  # * #authcid  ― Authentication identity that is associated with #password.
   #
-  # See the documentation for each attribute for more details.
+  #   #username ― An alias for +authcid+.
+  #
+  # * #password ― A password or passphrase associated with this #authcid.
+  #
+  # * _optional_ #authzid  ― Authorization identity to act as or on behalf of.
+  #
+  #   When +authzid+ is not set, the server should derive the authorization
+  #   identity from the authentication identity.
+  #
+  # * _optional_ +warn_deprecation+ — Set to +false+ to silence the warning.
+  #
+  # Any other keyword arguments are silently ignored.
   def initialize(user = nil, pass = nil, authz = nil,
                  username: nil, password: nil, authzid: nil,
+                 authcid: nil,
                  warn_deprecation: true, **)
-    username ||= user or raise ArgumentError, "missing username"
+    username = authcid || username || user or
+      raise ArgumentError, "missing username (authcid)"
     password ||= pass or raise ArgumentError, "missing password"
     authzid  ||= authz
     if warn_deprecation

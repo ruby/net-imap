@@ -23,12 +23,16 @@ class Net::IMAP::SASL::LoginAuthenticator
   STATE_DONE = :DONE
   private_constant :STATE_USER, :STATE_PASSWORD, :STATE_DONE
 
-  def initialize(user, password, warn_deprecation: true, **_ignored)
+  def initialize(user = nil, pass = nil,
+                 authcid: nil, username: nil,
+                 password: nil,
+                 warn_deprecation: true,
+                 **)
     if warn_deprecation
       warn "WARNING: LOGIN SASL mechanism is deprecated. Use PLAIN instead."
     end
-    @user = user
-    @password = password
+    @user = authcid || username || user
+    @password = password || pass
     @state = STATE_USER
   end
 

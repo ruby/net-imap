@@ -60,6 +60,7 @@ module Net
         # :call-seq:
         #   new(username,  password,  **options) -> auth_ctx
         #   new(username:, password:, **options) -> auth_ctx
+        #   new(authcid:,  password:, **options) -> auth_ctx
         #
         # Creates an authenticator for one of the "+SCRAM-*+" SASL mechanisms.
         # Each subclass defines #digest to match a specific mechanism.
@@ -68,34 +69,41 @@ module Net
         #
         # === Parameters
         #
-        # * #username ― Identity whose #password is used.  Aliased as #authcid.
-        # * #password ― Password or passphrase associated with this #username.
-        # * #authzid ― Alternate identity to act as or on behalf of.  Optional.
-        # * #min_iterations - Overrides the default value (4096).  Optional.
+        # * #authcid  ― Identity whose #password is used.
         #
-        # See the documentation on the corresponding attributes for more.
+        #   #username - An alias for #authcid.
+        # * #password ― Password or passphrase associated with this #username.
+        # * _optional_ #authzid ― Alternate identity to act as or on behalf of.
+        # * _optional_ #min_iterations - Overrides the default value (4096).
+        #
+        # Any other keyword parameters are quietly ignored.
         def initialize(username_arg = nil, password_arg = nil,
-                       username: nil, password: nil, authcid: nil, authzid: nil,
+                       authcid: nil, username: nil,
+                       authzid: nil,
+                       password: nil,
                        min_iterations: 4096, # see both RFC5802 and RFC7677
                        cnonce: nil, # must only be set in tests
                        **options)
           @username = username || username_arg || authcid or
             raise ArgumentError, "missing username (authcid)"
-          [username, username_arg, authcid].compact.count == 1 or
-            raise ArgumentError, "conflicting values for username (authcid)"
           @password = password || password_arg or
             raise ArgumentError, "missing password"
-          [password, password_arg].compact.count == 1 or
-            raise ArgumentError, "conflicting values for password"
           @authzid = authzid
 
           @min_iterations = Integer min_iterations
           @min_iterations.positive? or
             raise ArgumentError, "min_iterations must be positive"
+
           @cnonce = cnonce || SecureRandom.base64(32)
         end
 
         # Authentication identity: the identity that matches the #password.
+        #
+        # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+        # "Authentication identity" is the generic term used by
+        # RFC-4422[https://tools.ietf.org/html/rfc4422].
+        # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
+        # this to +authcid+.
         attr_reader :username
         alias authcid username
 

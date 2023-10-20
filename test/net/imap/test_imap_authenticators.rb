@@ -45,13 +45,34 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_plain_response
     assert_equal("\0authc\0passwd", plain("authc", "passwd").process(nil))
+  end
+
+  def test_plain_authzid
     assert_equal("authz\0user\0pass",
                  plain("user", "pass", authzid: "authz").process(nil))
+  end
+
+  def test_plain_kw_params
+    assert_equal(
+      "zid\0cid\0p",
+      plain(authcid: "cid", password: "p", authzid: "zid").process(nil)
+    )
+  end
+
+  def test_plain_username_kw_sets_both_authcid_and_authzid
+    assert_equal(
+      "\0uname\0passwd",
+      plain(username: "uname", password: "passwd").process(nil)
+    )
   end
 
   def test_plain_no_null_chars
     assert_raise(ArgumentError) { plain("bad\0user", "pass") }
     assert_raise(ArgumentError) { plain("user", "bad\0pass") }
+    assert_raise(ArgumentError) { plain(authcid: "bad\0user", password: "p") }
+    assert_raise(ArgumentError) { plain(username: "bad\0user", password: "p") }
+    assert_raise(ArgumentError) { plain(username: "u", password: "bad\0pass") }
+    assert_raise(ArgumentError) { plain("u", "p", authzid: "bad\0authz") }
     assert_raise(ArgumentError) { plain("u", "p", authzid: "bad\0authz") }
   end
 
@@ -244,7 +265,11 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
   def test_external_response
     assert_equal("", external.process(nil))
+    assert_equal("", external.process(""))
     assert_equal("kwarg", external(authzid: "kwarg").process(nil))
+    assert_equal("username", external(username: "username").process(nil))
+    assert_equal("z", external("p", authzid: "z", username: "u").process(nil))
+    assert_equal("positional", external("positional").process(nil))
   end
 
   def test_external_utf8
@@ -256,7 +281,6 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   def test_external_invalid
     assert_raise(ArgumentError) { external(authzid: "bad\0contains NULL") }
     assert_raise(ArgumentError) { external(authzid: "invalid utf8\x80") }
-    assert_raise(ArgumentError) { external("invalid positional argument") }
   end
 
   # ----------------------

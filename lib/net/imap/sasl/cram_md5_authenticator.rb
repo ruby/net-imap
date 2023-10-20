@@ -14,13 +14,17 @@
 # of cleartext and recommends TLS version 1.2 or greater be used for all
 # traffic.  With TLS +CRAM-MD5+ is okay, but so is +PLAIN+
 class Net::IMAP::SASL::CramMD5Authenticator
-  def initialize(user, password, warn_deprecation: true, **_ignored)
+  def initialize(user = nil, pass = nil,
+                 authcid: nil, username: nil,
+                 password: nil,
+                 warn_deprecation: true,
+                 **)
     if warn_deprecation
       warn "WARNING: CRAM-MD5 mechanism is deprecated." # TODO: recommend SCRAM
     end
     require "digest/md5"
-    @user = user
-    @password = password
+    @user = authcid || username || user
+    @password = password || pass
     @done = false
   end
 
