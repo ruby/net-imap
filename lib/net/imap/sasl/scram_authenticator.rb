@@ -80,13 +80,13 @@ module Net
         def initialize(username_arg = nil, password_arg = nil,
                        authcid: nil, username: nil,
                        authzid: nil,
-                       password: nil,
+                       password: nil, secret: nil,
                        min_iterations: 4096, # see both RFC5802 and RFC7677
                        cnonce: nil, # must only be set in tests
                        **options)
           @username = username || username_arg || authcid or
             raise ArgumentError, "missing username (authcid)"
-          @password = password || password_arg or
+          @password = password || secret || password_arg or
             raise ArgumentError, "missing password"
           @authzid = authzid
 
@@ -109,6 +109,7 @@ module Net
 
         # A password or passphrase that matches the #username.
         attr_reader :password
+        alias secret password
 
         # Authorization identity: an identity to act as or on behalf of.  The
         # identity form is application protocol specific.  If not provided or

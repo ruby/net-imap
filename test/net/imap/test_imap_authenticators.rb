@@ -57,6 +57,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
       "zid\0cid\0p",
       plain(authcid: "cid", password: "p", authzid: "zid").process(nil)
     )
+    assert_equal(
+      "zid\0cid\0p",
+      plain(username: "cid", secret: "p", authzid: "zid").process(nil)
+    )
   end
 
   def test_plain_username_kw_sets_both_authcid_and_authzid
@@ -95,6 +99,15 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
       "auth=Bearer mF_9.B5f-4.1JqM\1\1",
       oauthbearer("mF_9.B5f-4.1JqM", authzid: "user@example.com",
                   host: "server.example.com", port: 587).process(nil)
+    )
+    assert_equal(
+      "n,a=user@example.com,\1host=server.example.com\1port=587\1" \
+      "auth=Bearer sssssssss\1\1",
+      oauthbearer(secret: "sssssssss", username: "user@example.com",
+                  host: "server.example.com", port: 587).process(nil)
+    )
+    assert_equal(
+      "n,a=user,\1auth=Bearer tok\1\1", oauthbearer("user", "tok").process(nil)
     )
   end
 
@@ -153,6 +166,15 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     assert authenticator.done?
   end
 
+  def test_scram_kwargs
+    authenticator = scram_sha1(authcid: "user", password: "pass")
+    assert_equal "user", authenticator.authcid
+    assert_equal "pass", authenticator.password
+    authenticator = scram_sha1(username: "user", secret: "pass")
+    assert_equal "user", authenticator.authcid
+    assert_equal "pass", authenticator.password
+  end
+
   def test_scram_sha256_authenticator
     authenticator = scram_sha256("user", "pencil",
                                  cnonce: "rOprNGfwEbeRWgbNEkqO")
@@ -209,6 +231,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
     assert_equal(
       "user=user\1auth=Bearer kwarg\1\1",
       xoauth2(username: "user", oauth2_token: "kwarg").process(nil)
+    )
+    assert_equal(
+      "user=user\1auth=Bearer kwarg\1\1",
+      xoauth2(authzid: "user", secret: "kwarg").process(nil)
     )
   end
 

@@ -69,11 +69,11 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   # Any other keyword arguments are silently ignored.
   def initialize(user = nil, pass = nil, authz = nil,
                  username: nil, password: nil, authzid: nil,
-                 authcid: nil,
+                 authcid: nil, secret: nil,
                  warn_deprecation: true, **)
     username = authcid || username || user or
       raise ArgumentError, "missing username (authcid)"
-    password ||= pass or raise ArgumentError, "missing password"
+    password ||= secret || pass or raise ArgumentError, "missing password"
     authzid  ||= authz
     if warn_deprecation
       warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."

@@ -42,6 +42,7 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   # An OAuth2 access token which has been authorized with the appropriate OAuth2
   # scopes to use the service for #username.
   attr_reader :oauth2_token
+  alias secret oauth2_token
 
   # :call-seq:
   #   new(username,  oauth2_token,  **) -> authenticator
@@ -68,10 +69,10 @@ class Net::IMAP::SASL::XOAuth2Authenticator
   #
   # Any other keyword parameters are quietly ignored.
   def initialize(user = nil, token = nil, username: nil, oauth2_token: nil,
-                 authzid: nil, **)
+                 authzid: nil, secret: nil, **)
     @username = authzid || username || user or
       raise ArgumentError, "missing username (authzid)"
-    @oauth2_token = oauth2_token || token or
+    @oauth2_token = oauth2_token || secret || token or
       raise ArgumentError, "missing oauth2_token"
     @done = false
   end
