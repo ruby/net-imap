@@ -488,29 +488,29 @@ module Net
         m = peek_re(RE_RESPONSE_TYPE) or parse_error("unparsable response")
         case m["type"].upcase
         when "OK"         then response_cond             # RFC3501, RFC9051
+        when "FETCH"      then message_data__fetch       # RFC3501, RFC9051
+        when "EXPUNGE"    then message_data__expunge     # RFC3501, RFC9051
+        when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
+        when "SEARCH"     then search_response           # RFC3501 (obsolete)
+        when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
+        when "FLAGS"      then flags_response            # RFC3501, RFC9051
+        when "LIST"       then list_response             # RFC3501, RFC9051
+        when "STATUS"     then status_response           # RFC3501, RFC9051
+        when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
+        when "ENABLED"    then enable_data               # RFC5161, RFC9051
         when "BAD"        then response_cond             # RFC3501, RFC9051
         when "NO"         then response_cond             # RFC3501, RFC9051
         when "PREAUTH"    then response_cond             # RFC3501, RFC9051
         when "BYE"        then response_cond             # RFC3501, RFC9051
-        when "FLAGS"      then flags_response            # RFC3501, RFC9051
-        when "ID"         then id_response               # RFC2971
-        when "LIST"       then list_response             # RFC3501, RFC9051
-        when "LSUB"       then list_response             # RFC3501 (obsolete)
-        when "XLIST"      then list_response             # deprecated
-        when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
+        when "RECENT"     then mailbox_data__recent      # RFC3501 (obsolete)
+        when "SORT"       then sort_data                 # RFC5256, RFC7162
+        when "THREAD"     then thread_response           # RFC5256
         when "QUOTA"      then getquota_response         # RFC2087, RFC9208
         when "QUOTAROOT"  then getquotaroot_response     # RFC2087, RFC9208
+        when "ID"         then id_response               # RFC2971
         when "ACL"        then getacl_response           # RFC4314
-        when "SEARCH"     then search_response           # RFC3501 (obsolete)
-        when "SORT"       then search_response           # RFC5256, RFC7162
-        when "THREAD"     then thread_response           # RFC5256
-        when "STATUS"     then status_response           # RFC3501, RFC9051
-        when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
-        when "ENABLED"    then enable_data               # RFC5161, RFC9051
-        when "FETCH"      then message_data__fetch       # RFC3501, RFC9051
-        when "EXPUNGE"    then message_data__expunge     # RFC3501, RFC9051
-        when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
-        when "RECENT"     then mailbox_data__recent      # RFC3501 (obsolete)
+        when "LSUB"       then list_response             # RFC3501 (obsolete)
+        when "XLIST"      then list_response             # deprecated
         when "NOOP"       then ignored_response
         else                   unparsed_response
         end
