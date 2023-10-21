@@ -494,11 +494,11 @@ module Net
         when "ESEARCH"    then esearch_response          # RFC4731, RFC9051, etc
         when "VANISHED"   then expunged_resp             # RFC7162
         when "UIDFETCH"   then uidfetch_resp             # (draft) UIDONLY
-        when "SEARCH"     then search_response           # RFC3501 (obsolete)
+        when "SEARCH"     then mailbox_data__search      # RFC3501 (obsolete)
         when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
-        when "FLAGS"      then flags_response            # RFC3501, RFC9051
-        when "LIST"       then list_response             # RFC3501, RFC9051
-        when "STATUS"     then status_response           # RFC3501, RFC9051
+        when "FLAGS"      then mailbox_data__flags       # RFC3501, RFC9051
+        when "LIST"       then mailbox_data__list        # RFC3501, RFC9051
+        when "STATUS"     then mailbox_data__status      # RFC3501, RFC9051
         when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
         when "ENABLED"    then enable_data               # RFC5161, RFC9051
         when "BAD"        then response_cond             # RFC3501, RFC9051
@@ -507,25 +507,25 @@ module Net
         when "BYE"        then response_cond             # RFC3501, RFC9051
         when "RECENT"     then mailbox_data__recent      # RFC3501 (obsolete)
         when "SORT"       then sort_data                 # RFC5256, RFC7162
-        when "THREAD"     then thread_response           # RFC5256
-        when "QUOTA"      then getquota_response         # RFC2087, RFC9208
-        when "QUOTAROOT"  then getquotaroot_response     # RFC2087, RFC9208
+        when "THREAD"     then thread_data               # RFC5256
+        when "QUOTA"      then quota_response            # RFC2087, RFC9208
+        when "QUOTAROOT"  then quotaroot_response        # RFC2087, RFC9208
         when "ID"         then id_response               # RFC2971
-        when "ACL"        then getacl_response           # RFC4314
+        when "ACL"        then acl_data                  # RFC4314
         when "LISTRIGHTS" then listrights_data           # RFC4314
         when "MYRIGHTS"   then myrights_data             # RFC4314
         when "METADATA"   then metadata_resp             # RFC5464
         when "LANGUAGE"   then language_data             # RFC5255
         when "COMPARATOR" then comparator_data           # RFC5255
         when "CONVERTED"  then message_data__converted   # RFC5259
-        when "LSUB"       then list_response             # RFC3501 (obsolete)
-        when "XLIST"      then list_response             # deprecated
-        when "NOOP"       then ignored_response
-        else                   unparsed_response
+        when "LSUB"       then mailbox_data__lsub        # RFC3501 (obsolete)
+        when "XLIST"      then mailbox_data__xlist       # deprecated
+        when "NOOP"       then response_data__noop
+        else                   response_data__unhandled
         end
       end
 
-      def unparsed_response(klass = UntaggedResponse)
+      def response_data__unhandled(klass = UntaggedResponse)
         num  = number?;          SP?
         type = tagged_ext_label; SP?
         text = remaining_unparsed
@@ -539,17 +539,18 @@ module Net
         str&.empty? ? nil : str
       end
 
-      def ignored_response; unparsed_response(IgnoredResponse) end
+      def response_data__ignored; response_data__unhandled(IgnoredResponse) end
+      alias response_data__noop     response_data__ignored
 
-      alias esearch_response        unparsed_response
-      alias expunged_resp           unparsed_response
-      alias uidfetch_resp           unparsed_response
-      alias listrights_data         unparsed_response
-      alias myrights_data           unparsed_response
-      alias metadata_resp           unparsed_response
-      alias language_data           unparsed_response
-      alias comparator_data         unparsed_response
-      alias message_data__converted unparsed_response
+      alias esearch_response        response_data__unhandled
+      alias expunged_resp           response_data__unhandled
+      alias uidfetch_resp           response_data__unhandled
+      alias listrights_data         response_data__unhandled
+      alias myrights_data           response_data__unhandled
+      alias metadata_resp           response_data__unhandled
+      alias language_data           response_data__unhandled
+      alias comparator_data         response_data__unhandled
+      alias message_data__converted response_data__unhandled
 
       # RFC3501 & RFC9051:
       #   response-tagged = tag SP resp-cond-state CRLF
@@ -1046,19 +1047,21 @@ module Net
         return name, modseq
       end
 
-      def flags_response
+      def mailbox_data__flags
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
         return UntaggedResponse.new(name, flag_list, @str)
       end
 
-      def list_response
+      def mailbox_data__list
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
         return UntaggedResponse.new(name, mailbox_list, @str)
       end
+      alias mailbox_data__lsub  mailbox_data__list
+      alias mailbox_data__xlist mailbox_data__list
 
       def mailbox_list
         attr = flag_list
@@ -1124,7 +1127,8 @@ module Net
         return UntaggedResponse.new(name, data, @str)
       end
 
-      def getacl_response
+      # acl-data        = "ACL" SP mailbox *(SP identifier SP rights)
+      def acl_data
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
@@ -1150,7 +1154,21 @@ module Net
         return UntaggedResponse.new(name, data, @str)
       end
 
-      def search_response
+      # RFC3501:
+      #   mailbox-data        = "SEARCH" *(SP nz-number) / ...
+      # RFC5256: SORT
+      #   sort-data           = "SORT" *(SP nz-number)
+      # RFC7162: CONDSTORE, QRESYNC
+      #   mailbox-data        =/ "SEARCH" [1*(SP nz-number) SP
+      #                          search-sort-mod-seq]
+      #   sort-data           = "SORT" [1*(SP nz-number) SP
+      #                           search-sort-mod-seq]
+      #                           ; Updates the SORT response from RFC 5256.
+      #   search-sort-mod-seq = "(" "MODSEQ" SP mod-sequence-value ")"
+      # RFC9051:
+      #   mailbox-data        = obsolete-search-response / ...
+      #   obsolete-search-response = "SEARCH" *(SP nz-number)
+      def mailbox_data__search
         token = match(T_ATOM)
         name = token.value.upcase
         token = lookahead
@@ -1180,8 +1198,9 @@ module Net
         end
         return UntaggedResponse.new(name, data, @str)
       end
+      alias sort_data mailbox_data__search
 
-      def thread_response
+      def thread_data
         token = match(T_ATOM)
         name = token.value.upcase
         token = lookahead
@@ -1243,7 +1262,7 @@ module Net
         return rootmember
       end
 
-      def status_response
+      def mailbox_data__status
         token = match(T_ATOM)
         name = token.value.upcase
         match(T_SPACE)
