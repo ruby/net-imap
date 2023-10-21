@@ -108,6 +108,9 @@ module Net
     # UntaggedResponse#data when the response type is a "condition" ("OK", "NO",
     # "BAD", "PREAUTH", or "BYE").
     class ResponseText < Struct.new(:code, :text)
+      # Used to avoid an allocation when ResponseText is empty
+      EMPTY = new(nil, "").freeze
+
       ##
       # method: code
       # :call-seq: code -> ResponseCode or nil
