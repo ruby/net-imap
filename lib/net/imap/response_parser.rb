@@ -491,6 +491,9 @@ module Net
         when "FETCH"      then message_data__fetch       # RFC3501, RFC9051
         when "EXPUNGE"    then message_data__expunge     # RFC3501, RFC9051
         when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
+        when "ESEARCH"    then esearch_response          # RFC4731, RFC9051, etc
+        when "VANISHED"   then expunged_resp             # RFC7162
+        when "UIDFETCH"   then uidfetch_resp             # (draft) UIDONLY
         when "SEARCH"     then search_response           # RFC3501 (obsolete)
         when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
         when "FLAGS"      then flags_response            # RFC3501, RFC9051
@@ -509,6 +512,12 @@ module Net
         when "QUOTAROOT"  then getquotaroot_response     # RFC2087, RFC9208
         when "ID"         then id_response               # RFC2971
         when "ACL"        then getacl_response           # RFC4314
+        when "LISTRIGHTS" then listrights_data           # RFC4314
+        when "MYRIGHTS"   then myrights_data             # RFC4314
+        when "METADATA"   then metadata_resp             # RFC5464
+        when "LANGUAGE"   then language_data             # RFC5255
+        when "COMPARATOR" then comparator_data           # RFC5255
+        when "CONVERTED"  then message_data__converted   # RFC5259
         when "LSUB"       then list_response             # RFC3501 (obsolete)
         when "XLIST"      then list_response             # deprecated
         when "NOOP"       then ignored_response
@@ -531,6 +540,16 @@ module Net
       end
 
       def ignored_response; unparsed_response(IgnoredResponse) end
+
+      alias esearch_response        unparsed_response
+      alias expunged_resp           unparsed_response
+      alias uidfetch_resp           unparsed_response
+      alias listrights_data         unparsed_response
+      alias myrights_data           unparsed_response
+      alias metadata_resp           unparsed_response
+      alias language_data           unparsed_response
+      alias comparator_data         unparsed_response
+      alias message_data__converted unparsed_response
 
       # RFC3501 & RFC9051:
       #   response-tagged = tag SP resp-cond-state CRLF
