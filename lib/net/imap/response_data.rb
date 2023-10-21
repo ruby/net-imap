@@ -55,17 +55,32 @@ module Net
 
     # Net::IMAP::IgnoredResponse represents intentionally ignored responses.
     #
-    # This includes untagged response "NOOP" sent by eg. Zimbra to avoid some
-    # clients to close the connection.
+    # This includes untagged response "NOOP" sent by eg. Zimbra to avoid
+    # some clients to close the connection.
     #
     # It matches no IMAP standard.
-    #
-    class IgnoredResponse < Struct.new(:raw_data)
+    class IgnoredResponse < UntaggedResponse
+    end
+
+    # Net::IMAP::UnparsedData represents data for unknown or unhandled
+    # response types.  UnparsedData is an intentionally unstable API: where
+    # it is returned, future releases may return a different (incompatible)
+    # object without deprecation or warning.
+    class UnparsedData < Struct.new(:number, :unparsed_data)
       ##
-      # method: raw_data
-      # :call-seq: raw_data -> string
+      # method: number
+      # :call-seq: number -> integer
       #
-      # The raw response data.
+      # Returns a numeric response data prefix, when available.
+      #
+      # Many response types are prefixed with seqno or uid (for message
+      # data) or a message count (for mailbox data).
+
+      ##
+      # method: unparsed_data
+      # :call-seq: string -> string
+      #
+      # The unparsed data, not including #number or UntaggedResponse#name.
     end
 
     # Net::IMAP::TaggedResponse represents tagged responses.

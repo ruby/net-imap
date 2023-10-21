@@ -476,12 +476,28 @@ module Net
           when /\A(?:ENABLED)\z/ni
             return enable_data
           else
-            return text_response
+            return unparsed_response
           end
         else
           parse_error("unexpected token %s", token.symbol)
         end
       end
+
+      def unparsed_response(klass = UntaggedResponse)
+        num  = number?;          SP?
+        type = tagged_ext_label; SP?
+        text = remaining_unparsed
+        data = UnparsedData.new(num, text) if num || text
+        klass.new(type, data, @str)
+      end
+
+      # reads all the way up until CRLF
+      def remaining_unparsed
+        str = @str[@pos...-2] and @pos += str.bytesize
+        str&.empty? ? nil : str
+      end
+
+      def ignored_response; unparsed_response(IgnoredResponse) end
 
       # RFC3501 & RFC9051:
       #   response-tagged = tag SP resp-cond-state CRLF
@@ -517,6 +533,10 @@ module Net
           match(T_SPACE)
           data = FetchData.new(n, msg_att(n))
           return UntaggedResponse.new(name, data, @str)
+        else
+          klass = name == "NOOP" ? IgnoredResponse : UntaggedResponse
+          SP?; txt = remaining_unparsed
+          klass.new(name, UnparsedData.new(n, txt), @str)
         end
       end
 
@@ -974,20 +994,6 @@ module Net
         modseq = number
         match(T_RPAR)
         return name, modseq
-      end
-
-      def ignored_response
-        while lookahead.symbol != T_CRLF
-          shift_token
-        end
-        return IgnoredResponse.new(@str)
-      end
-
-      def text_response
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return UntaggedResponse.new(name, text)
       end
 
       def flags_response

@@ -1,9 +1,23 @@
 ---
 :tests:
   test_invalid_noop_response_is_ignored:
-    :comment: |
-      This should probably use UntaggedResponse, perhaps with an
-      UnparsedResponseData object for its #data.
     :response: "* NOOP\r\n"
     :expected: !ruby/struct:Net::IMAP::IgnoredResponse
+      name: "NOOP"
       raw_data: "* NOOP\r\n"
+
+  test_invalid_noop_response_with_unparseable_data:
+    :response: "* NOOP froopy snood\r\n"
+    :expected: !ruby/struct:Net::IMAP::IgnoredResponse
+      name: "NOOP"
+      data: !ruby/struct:Net::IMAP::UnparsedData
+        unparsed_data: "froopy snood"
+      raw_data: "* NOOP froopy snood\r\n"
+
+  test_invalid_noop_response_with_numeric_prefix:
+    :response: "* 99 NOOP\r\n"
+    :expected: !ruby/struct:Net::IMAP::IgnoredResponse
+      name: "NOOP"
+      data: !ruby/struct:Net::IMAP::UnparsedData
+        number: 99
+      raw_data: "* 99 NOOP\r\n"
