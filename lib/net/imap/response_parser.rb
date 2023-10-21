@@ -210,6 +210,14 @@ module Net
         TEXT_rev1         = /#{TEXT_CHAR}+/
         TEXT_rev2         = /#{Regexp.union TEXT_CHAR, UTF8_2, UTF8_3, UTF8_4}+/
 
+        # tagged-label-fchar = ALPHA / "-" / "_" / "."
+        TAGGED_LABEL_FCHAR   = /[a-zA-Z\-_.]/n
+        # tagged-label-char  = tagged-label-fchar / DIGIT / ":"
+        TAGGED_LABEL_CHAR    = /[a-zA-Z\-_.0-9:]*/n
+        # tagged-ext-label   = tagged-label-fchar *tagged-label-char
+        #                      ; Is a valid RFC 3501 "atom".
+        TAGGED_EXT_LABEL     = /#{TAGGED_LABEL_FCHAR}#{TAGGED_LABEL_CHAR}*/n
+
         # RFC3501:
         #   literal          = "{" number "}" CRLF *CHAR8
         #                        ; Number represents the number of CHAR8s
@@ -284,6 +292,7 @@ module Net
 
       def_char_matchers :SP,   " ", :T_SPACE
       def_char_matchers :PLUS, "+", :T_PLUS
+      def_char_matchers :STAR, "*", :T_STAR
 
       def_char_matchers :lpar, "(", :T_LPAR
       def_char_matchers :rpar, ")", :T_RPAR
@@ -406,6 +415,13 @@ module Net
       alias number64    number
       alias number64?   number?
 
+      # valid number ranges are not enforced by parser
+      #   nz-number       = digit-nz *DIGIT
+      #                       ; Non-zero unsigned 32-bit integer
+      #                       ; (0 < n < 4,294,967,296)
+      alias nz_number   number
+      alias nz_number?  number?
+
       # [RFC3501 & RFC9051:]
       #   response        = *(continue-req / response-data) response-done
       #
@@ -439,47 +455,64 @@ module Net
         ContinuationRequest.new(SP? ? resp_text : ResponseText::EMPTY, @str)
       end
 
+      RE_RESPONSE_TYPE = /\G(?:\d+ )?(?<type>#{Patterns::TAGGED_EXT_LABEL})/n
+
+      # [RFC3501:]
+      #   response-data    = "*" SP (resp-cond-state / resp-cond-bye /
+      #                      mailbox-data / message-data / capability-data) CRLF
+      # [RFC4466:]
+      #   response-data    = "*" SP response-payload CRLF
+      #   response-payload = resp-cond-state / resp-cond-bye /
+      #                       mailbox-data / message-data / capability-data
+      # RFC5161 (ENABLE capability):
+      #   response-data    =/ "*" SP enable-data CRLF
+      # RFC5255 (LANGUAGE capability)
+      #   response-payload =/ language-data
+      # RFC5255 (I18NLEVEL=1 and I18NLEVEL=2 capabilities)
+      #   response-payload =/ comparator-data
+      # [RFC9051:]
+      #   response-data    = "*" SP (resp-cond-state / resp-cond-bye /
+      #                      mailbox-data / message-data / capability-data /
+      #                      enable-data) CRLF
+      #
+      # [merging in greeting and response-fatal:]
+      #   greeting         =  "*" SP (resp-cond-auth / resp-cond-bye) CRLF
+      #   response-fatal   =  "*" SP resp-cond-bye CRLF
+      #   response-data    =/ "*" SP (resp-cond-auth / resp-cond-bye) CRLF
+      # [removing duplicates, this is simply]
+      #   response-payload =/ resp-cond-auth
+      #
+      # TODO: remove resp-cond-auth and handle greeting separately
       def response_data
-        match(T_STAR)
-        match(T_SPACE)
-        token = lookahead
-        if token.symbol == T_NUMBER
-          return numeric_response
-        elsif token.symbol == T_ATOM
-          case token.value
-          when /\A(?:OK|NO|BAD|BYE|PREAUTH)\z/ni
-            return response_cond
-          when /\A(?:FLAGS)\z/ni
-            return flags_response
-          when /\A(?:ID)\z/ni
-            return id_response
-          when /\A(?:LIST|LSUB|XLIST)\z/ni
-            return list_response
-          when /\A(?:NAMESPACE)\z/ni
-            return namespace_response
-          when /\A(?:QUOTA)\z/ni
-            return getquota_response
-          when /\A(?:QUOTAROOT)\z/ni
-            return getquotaroot_response
-          when /\A(?:ACL)\z/ni
-            return getacl_response
-          when /\A(?:SEARCH|SORT)\z/ni
-            return search_response
-          when /\A(?:THREAD)\z/ni
-            return thread_response
-          when /\A(?:STATUS)\z/ni
-            return status_response
-          when /\A(?:CAPABILITY)\z/ni
-            return capability_data__untagged
-          when /\A(?:NOOP)\z/ni
-            return ignored_response
-          when /\A(?:ENABLED)\z/ni
-            return enable_data
-          else
-            return unparsed_response
-          end
-        else
-          parse_error("unexpected token %s", token.symbol)
+        STAR!; SP!
+        m = peek_re(RE_RESPONSE_TYPE) or parse_error("unparsable response")
+        case m["type"].upcase
+        when "OK"         then response_cond             # RFC3501, RFC9051
+        when "FETCH"      then message_data__fetch       # RFC3501, RFC9051
+        when "EXPUNGE"    then message_data__expunge     # RFC3501, RFC9051
+        when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
+        when "SEARCH"     then search_response           # RFC3501 (obsolete)
+        when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
+        when "FLAGS"      then flags_response            # RFC3501, RFC9051
+        when "LIST"       then list_response             # RFC3501, RFC9051
+        when "STATUS"     then status_response           # RFC3501, RFC9051
+        when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
+        when "ENABLED"    then enable_data               # RFC5161, RFC9051
+        when "BAD"        then response_cond             # RFC3501, RFC9051
+        when "NO"         then response_cond             # RFC3501, RFC9051
+        when "PREAUTH"    then response_cond             # RFC3501, RFC9051
+        when "BYE"        then response_cond             # RFC3501, RFC9051
+        when "RECENT"     then mailbox_data__recent      # RFC3501 (obsolete)
+        when "SORT"       then sort_data                 # RFC5256, RFC7162
+        when "THREAD"     then thread_response           # RFC5256
+        when "QUOTA"      then getquota_response         # RFC2087, RFC9208
+        when "QUOTAROOT"  then getquotaroot_response     # RFC2087, RFC9208
+        when "ID"         then id_response               # RFC2971
+        when "ACL"        then getacl_response           # RFC4314
+        when "LSUB"       then list_response             # RFC3501 (obsolete)
+        when "XLIST"      then list_response             # deprecated
+        when "NOOP"       then ignored_response
+        else                   unparsed_response
         end
       end
 
@@ -520,25 +553,23 @@ module Net
         return UntaggedResponse.new(name, resp_text, @str)
       end
 
-      def numeric_response
-        n = number
-        match(T_SPACE)
-        token = match(T_ATOM)
-        name = token.value.upcase
-        case name
-        when "EXISTS", "RECENT", "EXPUNGE"
-          return UntaggedResponse.new(name, n, @str)
-        when "FETCH"
-          shift_token
-          match(T_SPACE)
-          data = FetchData.new(n, msg_att(n))
-          return UntaggedResponse.new(name, data, @str)
-        else
-          klass = name == "NOOP" ? IgnoredResponse : UntaggedResponse
-          SP?; txt = remaining_unparsed
-          klass.new(name, UnparsedData.new(n, txt), @str)
-        end
+      #   message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
+      def message_data__fetch
+        seq  = nz_number;     SP!
+        name = label "FETCH"; SP!
+        data = FetchData.new(seq, msg_att(seq))
+        UntaggedResponse.new(name, data, @str)
       end
+
+      def response_data__simple_numeric
+        data = nz_number; SP!
+        name = tagged_ext_label
+        UntaggedResponse.new(name, data, @str)
+      end
+
+      alias message_data__expunge response_data__simple_numeric
+      alias mailbox_data__exists  response_data__simple_numeric
+      alias mailbox_data__recent  response_data__simple_numeric
 
       def msg_att(n)
         match(T_LPAR)
