@@ -147,9 +147,10 @@ class IMAPTest < Test::Unit::TestCase
       imap = nil
       starttls_stripping_test do |port|
         imap = Net::IMAP.new("localhost", :port => port)
-        assert_raise(Net::IMAP::UnknownResponseError) do
+        assert_raise(Net::IMAP::InvalidResponseError) do
           imap.starttls(:ca_file => CA_FILE)
         end
+        assert imap.disconnected?
         imap
       end
       assert_equal false, imap.tls_verified?

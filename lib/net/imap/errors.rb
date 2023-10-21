@@ -47,7 +47,27 @@ module Net
     class ByeResponseError < ResponseError
     end
 
+    # Error raised when the server sends an invalid response.
+    #
+    # This is different from UnknownResponseError: the response has been
+    # rejected.  Although it may be parsable, the server is forbidden from
+    # sending it in the current context.  The client should automatically
+    # disconnect, abruptly (without logout).
+    #
+    # Note that InvalidResponseError does not inherit from ResponseError: it
+    # can be raised before the response is fully parsed.  A related
+    # ResponseParseError or ResponseError may be the #cause.
+    class InvalidResponseError < Error
+    end
+
     # Error raised upon an unknown response from the server.
+    #
+    # This is different from InvalidResponseError: the response may be a
+    # valid extension response and the server may be allowed to send it in
+    # this context, but Net::IMAP either does not know how to parse it or
+    # how to handle it.  This could result from enabling unknown or
+    # unhandled extensions.  The connection may still be usable,
+    # but—depending on context—it may be prudent to disconnect.
     class UnknownResponseError < ResponseError
     end
 

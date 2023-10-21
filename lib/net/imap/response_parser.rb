@@ -58,6 +58,21 @@ module Net
       T_TEXT     = :TEXT         # any char except CRLF
       T_EOF      = :EOF          # end of response string
 
+      module ResponseConditions
+        OK      = "OK"
+        NO      = "NO"
+        BAD     = "BAD"
+        BYE     = "BYE"
+        PREAUTH = "PREAUTH"
+
+        RESP_COND_STATES      = [OK, NO, BAD              ].freeze
+        RESP_DATA_CONDS       = [OK, NO, BAD, BYE,        ].freeze
+        AUTH_CONDS            = [OK,               PREAUTH].freeze
+        GREETING_CONDS        = [OK,          BYE, PREAUTH].freeze
+        RESP_CONDS            = [OK, NO, BAD, BYE, PREAUTH].freeze
+      end
+      include ResponseConditions
+
       module Patterns
 
         module CharClassSubtraction
@@ -320,10 +335,13 @@ module Net
 
       ASTRING_TOKENS = [T_QUOTED, *ASTRING_CHARS_TOKENS, T_LITERAL].freeze
 
-      # atom            = 1*ATOM-CHAR
-      #
-      # TODO: match atom entirely by regexp (in the "lexer")
-      def atom; -combine_adjacent(*ATOM_TOKENS) end
+      # tag             = 1*<any ASTRING-CHAR except "+">
+      TAG_TOKENS = (ASTRING_CHARS_TOKENS - [T_PLUS]).freeze
+
+      # TODO: handle atom, astring_chars, and tag entirely inside the lexer
+      def atom;          combine_adjacent(*ATOM_TOKENS)          end
+      def astring_chars; combine_adjacent(*ASTRING_CHARS_TOKENS) end
+      def tag;           combine_adjacent(*TAG_TOKENS)           end
 
       # the #accept version of #atom
       def atom?; -combine_adjacent(*ATOM_TOKENS) if lookahead?(*ATOM_TOKENS) end
@@ -334,11 +352,6 @@ module Net
       # Returns <tt>atom?&.upcase</tt>
       def case_insensitive__atom?
         -combine_adjacent(*ATOM_TOKENS).upcase if lookahead?(*ATOM_TOKENS)
-      end
-
-      # TODO: handle astring_chars entirely inside the lexer
-      def astring_chars
-        combine_adjacent(*ASTRING_CHARS_TOKENS)
       end
 
       #   astring         = 1*ASTRING-CHAR / string
@@ -355,6 +368,17 @@ module Net
       def label(word)
         (val = tagged_ext_label) == word and return val
         parse_error("unexpected atom %p, expected %p instead", val, word)
+      end
+
+      # expects "OK" or "NO" or "BAD" and raises InvalidResponseError on failure
+      def resp_cond_state__name
+        if RESP_COND_STATES.include?(actual = tagged_ext_label)
+          actual
+        else
+          raise InvalidResponseError, "bad response type %p, expected %s" % [
+            actual, RESP_COND_STATES.join(" or ")
+          ]
+        end
       end
 
       #   nstring         = string / nil
@@ -452,13 +476,18 @@ module Net
         end
       end
 
+      # RFC3501 & RFC9051:
+      #   response-tagged = tag SP resp-cond-state CRLF
+      #
+      #   resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
+      #                       ; Status condition
+      #
+      #   tag             = 1*<any ASTRING-CHAR except "+">
       def response_tagged
-        tag = astring_chars
-        match(T_SPACE)
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return TaggedResponse.new(tag, name, resp_text, @str)
+        tag  = tag();                 SP!
+        name = resp_cond_state__name; SP!
+        data = resp_text
+        TaggedResponse.new(tag, name, data, @str)
       end
 
       def response_cond

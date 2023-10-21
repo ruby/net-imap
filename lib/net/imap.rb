@@ -2519,7 +2519,8 @@ module Net
       when /\A(?:BAD)\z/ni
         raise BadResponseError, resp
       else
-        raise UnknownResponseError, resp
+        disconnect
+        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw.chomp]
       end
     end
 
