@@ -383,15 +383,20 @@ module Net
         parse_error("unexpected atom %p, expected %p instead", val, word)
       end
 
+      # expects "OK" or "PREAUTH" and raises InvalidResponseError on failure
+      def resp_cond_auth__name
+        lbl = tagged_ext_label and AUTH_CONDS.include? lbl and return lbl
+        raise InvalidResponseError, "bad response type %p, expected %s" % [
+          lbl, AUTH_CONDS.join(" or ")
+        ]
+      end
+
       # expects "OK" or "NO" or "BAD" and raises InvalidResponseError on failure
       def resp_cond_state__name
-        if RESP_COND_STATES.include?(actual = tagged_ext_label)
-          actual
-        else
-          raise InvalidResponseError, "bad response type %p, expected %s" % [
-            actual, RESP_COND_STATES.join(" or ")
-          ]
-        end
+        lbl = tagged_ext_label and RESP_COND_STATES.include? lbl and return lbl
+        raise InvalidResponseError, "bad response type %p, expected %s" % [
+          lbl, RESP_COND_STATES.join(" or ")
+        ]
       end
 
       #   nstring         = string / nil
@@ -487,7 +492,7 @@ module Net
         STAR!; SP!
         m = peek_re(RE_RESPONSE_TYPE) or parse_error("unparsable response")
         case m["type"].upcase
-        when "OK"         then response_cond             # RFC3501, RFC9051
+        when "OK"         then resp_cond_state__untagged # RFC3501, RFC9051
         when "FETCH"      then message_data__fetch       # RFC3501, RFC9051
         when "EXPUNGE"    then message_data__expunge     # RFC3501, RFC9051
         when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
@@ -501,10 +506,10 @@ module Net
         when "STATUS"     then mailbox_data__status      # RFC3501, RFC9051
         when "NAMESPACE"  then namespace_response        # RFC2342, RFC9051
         when "ENABLED"    then enable_data               # RFC5161, RFC9051
-        when "BAD"        then response_cond             # RFC3501, RFC9051
-        when "NO"         then response_cond             # RFC3501, RFC9051
-        when "PREAUTH"    then response_cond             # RFC3501, RFC9051
-        when "BYE"        then response_cond             # RFC3501, RFC9051
+        when "BAD"        then resp_cond_state__untagged # RFC3501, RFC9051
+        when "NO"         then resp_cond_state__untagged # RFC3501, RFC9051
+        when "PREAUTH"    then resp_cond_auth            # RFC3501, RFC9051
+        when "BYE"        then resp_cond_bye             # RFC3501, RFC9051
         when "RECENT"     then mailbox_data__recent      # RFC3501 (obsolete)
         when "SORT"       then sort_data                 # RFC5256, RFC7162
         when "THREAD"     then thread_data               # RFC5256
@@ -562,15 +567,26 @@ module Net
       def response_tagged
         tag  = tag();                 SP!
         name = resp_cond_state__name; SP!
-        data = resp_text
-        TaggedResponse.new(tag, name, data, @str)
+        TaggedResponse.new(tag, name, resp_text, @str)
       end
 
-      def response_cond
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return UntaggedResponse.new(name, resp_text, @str)
+      # RFC3501 & RFC9051:
+      #   resp-cond-state  = ("OK" / "NO" / "BAD") SP resp-text
+      def resp_cond_state__untagged
+        name = resp_cond_state__name; SP!
+        UntaggedResponse.new(name, resp_text, @str)
+      end
+
+      #   resp-cond-auth   = ("OK" / "PREAUTH") SP resp-text
+      def resp_cond_auth
+        name = resp_cond_auth__name; SP!
+        UntaggedResponse.new(name, resp_text, @str)
+      end
+
+      #   resp-cond-bye    = "BYE" SP resp-text
+      def resp_cond_bye
+        name = label(BYE); SP!
+        UntaggedResponse.new(name, resp_text, @str)
       end
 
       #   message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
