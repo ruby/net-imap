@@ -1045,7 +1045,7 @@ module Net
     # ===== Capabilities
     #
     # The server's capabilities must include +ID+
-    # [RFC2971[https://tools.ietf.org/html/rfc2971]]
+    # [RFC2971[https://tools.ietf.org/html/rfc2971]].
     def id(client_id=nil)
       synchronize do
         send_command("ID", ClientID.new(client_id))
@@ -1058,7 +1058,7 @@ module Net
     #
     # This allows the server to send unsolicited untagged EXPUNGE #responses,
     # but does not execute any client request.  \IMAP servers are permitted to
-    # send unsolicited untagged responses at any time, except for `EXPUNGE`.
+    # send unsolicited untagged responses at any time, except for +EXPUNGE+:
     #
     # * +EXPUNGE+ can only be sent while a command is in progress.
     # * +EXPUNGE+ must _not_ be sent during #fetch, #store, or #search.
@@ -1143,10 +1143,7 @@ module Net
     end
 
     # :call-seq:
-    #   authenticate(mechanism, *,
-    #                sasl_ir: true,
-    #                registry: Net::IMAP::SASL.authenticators,
-    #                **, &) -> ok_resp
+    #   authenticate(mechanism, *, sasl_ir: true, registry: Net::IMAP::SASL.authenticators, **, &) -> ok_resp
     #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.  If successful, the connection enters the
@@ -1330,7 +1327,7 @@ module Net
     # the server may return an untagged "NO" response with a "UIDNOTSTICKY"
     # response code indicating that the mailstore does not support persistent
     # UIDs:
-    #   @responses["NO"].last.code.name == "UIDNOTSTICKY"
+    #   imap.responses("NO", &:last)&.code&.name == "UIDNOTSTICKY"
     def select(mailbox)
       synchronize do
         @responses.clear
@@ -1420,10 +1417,10 @@ module Net
     # to the client.  +refname+ provides a context (for instance, a base
     # directory in a directory-based mailbox hierarchy).  +mailbox+ specifies a
     # mailbox or (via wildcards) mailboxes under that context.  Two wildcards
-    # may be used in +mailbox+: '*', which matches all characters *including*
-    # the hierarchy delimiter (for instance, '/' on a UNIX-hosted
-    # directory-based mailbox hierarchy); and '%', which matches all characters
-    # *except* the hierarchy delimiter.
+    # may be used in +mailbox+: <tt>"*"</tt>, which matches all characters
+    # *including* the hierarchy delimiter (for instance, "/" on a UNIX-hosted
+    # directory-based mailbox hierarchy); and <tt>"%"</tt>, which matches all
+    # characters *except* the hierarchy delimiter.
     #
     # If +refname+ is empty, +mailbox+ is used directly to determine
     # which mailboxes to match.  If +mailbox+ is empty, the root
@@ -1471,16 +1468,16 @@ module Net
     # servers, then folder creation (and listing, moving, etc) can lead to
     # errors.
     #
-    # From RFC2342:
-    #
-    #    Although typically a server will support only a single Personal
+    # From RFC2342[https://tools.ietf.org/html/rfc2342]:
+    # >>>
+    #    <em>Although typically a server will support only a single Personal
     #    Namespace, and a single Other User's Namespace, circumstances exist
     #    where there MAY be multiples of these, and a client MUST be prepared
     #    for them.  If a client is configured such that it is required to create
     #    a certain mailbox, there can be circumstances where it is unclear which
     #    Personal Namespaces it should create the mailbox in.  In these
     #    situations a client SHOULD let the user select which namespaces to
-    #    create the mailbox in.
+    #    create the mailbox in.</em>
     #
     # Related: #list, Namespaces, Namespace
     #
@@ -1668,9 +1665,9 @@ module Net
     # or more attributes whose statuses are to be requested.  Supported
     # attributes include:
     #
-    #   MESSAGES:: the number of messages in the mailbox.
-    #   RECENT:: the number of recent messages in the mailbox.
-    #   UNSEEN:: the number of unseen messages in the mailbox.
+    # MESSAGES:: the number of messages in the mailbox.
+    # RECENT:: the number of recent messages in the mailbox.
+    # UNSEEN:: the number of unseen messages in the mailbox.
     #
     # The return value is a hash of attributes. For example:
     #
@@ -1935,11 +1932,11 @@ module Net
     # to alter data associated with messages in the mailbox, in particular their
     # flags. The +set+ parameter is a number, an array of numbers, or a Range
     # object. Each number is a message sequence number.  +attr+ is the name of a
-    # data item to store: 'FLAGS' will replace the message's flag list with the
-    # provided one, '+FLAGS' will add the provided flags, and '-FLAGS' will
-    # remove them.  +flags+ is a list of flags.
+    # data item to store: <tt>"FLAGS"</tt> will replace the message's flag list
+    # with the provided one, <tt>"+FLAGS"</tt> will add the provided flags, and
+    # <tt>"-FLAGS"</tt> will remove them.  +flags+ is a list of flags.
     #
-    # The return value is an array of FetchData
+    # The return value is an array of FetchData.
     #
     # Related: #uid_store
     #

@@ -58,8 +58,8 @@ module Net::IMAP::SASL
     # {SASL mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
     # implemented by +authenticator_class+ (for instance, <tt>"PLAIN"</tt>).
     #
-    # If +mechanism+ refers to an existing authenticator, a warning will be
-    # printed and the old authenticator will be replaced.
+    # If +mechanism+ refers to an existing authenticator,
+    # the old authenticator will be replaced.
     #
     # When only a single argument is given, the authenticator class will be
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
