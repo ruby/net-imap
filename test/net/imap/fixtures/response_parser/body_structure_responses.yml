@@ -36,6 +36,87 @@
             extension:
       raw_data: "* 4902 FETCH (BODY ((\"MESSAGE\" \"DELIVERY-STATUS\" NIL NIL NIL \"7BIT\" 324) \"REPORT\"))\r\n"
 
+  test_bodystructure_extension_fields:
+    :response: &test_bodystructure_extension_fields "* 161 FETCH (UID 25627 BODYSTRUCTURE ((\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\") NIL NIL \"7BIT\" 1152 23 \"123456789abcdef\" (\"dsp-type\" (\"dsp-fld-param\" \"val1\" \"key2\" \"val2\")) (\"lang1\" \"lang2\") \"loc\" \"ext0\" 1 (2) \"ext3\" ((((((4)))))) (\"ext number\" 5))(\"TEXT\" \"PLAIN\" (\"CHARSET\" \"US-ASCII\" \"NAME\" \"trip.txt\") \"<960723163407.20117h@washington.example.com>\" \"Your trip details\" \"BASE64\" 4554 73 NiL NIL \"lang3\" \"loc...\" \"ext\" \"part deux\" \"electric boogaloo\") \"MIXED\" (\"ext\" \"mpart\" \"fld\" \"param\") (\"multi-dsp\" (\"multi dsp body-fld-param\" \"param value\")) (\"lang\" \"lang\" \"langy\" \"LANG\" \"lang\") \"location mclocation face\" \"extended release\" ((((((1) (2) (3)))) \"done\"))))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 161
+        attr:
+          UID: 25627
+          BODYSTRUCTURE: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: MIXED
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeText
+              media_type: TEXT
+              subtype: PLAIN
+              param:
+                CHARSET: US-ASCII
+              content_id:
+              description:
+              encoding: 7BIT
+              size: 1152
+              lines: 23
+              md5: 123456789abcdef
+              disposition: !ruby/struct:Net::IMAP::ContentDisposition
+                dsp_type: DSP-TYPE
+                param:
+                  DSP-FLD-PARAM: val1
+                  KEY2: val2
+              language:
+              - LANG1
+              - LANG2
+              location: loc
+              extension:
+              - ext0
+              - 1
+              - - 2
+              - ext3
+              - - - - - - - 4
+              - - ext number
+                - 5
+            - !ruby/struct:Net::IMAP::BodyTypeText
+              media_type: TEXT
+              subtype: PLAIN
+              param:
+                CHARSET: US-ASCII
+                NAME: trip.txt
+              content_id: "<960723163407.20117h@washington.example.com>"
+              description: Your trip details
+              encoding: BASE64
+              size: 4554
+              lines: 73
+              md5:
+              disposition:
+              language: LANG3
+              location: loc...
+              extension:
+              - ext
+              - part deux
+              - electric boogaloo
+            param:
+              EXT: mpart
+              FLD: param
+            disposition: !ruby/struct:Net::IMAP::ContentDisposition
+              dsp_type: MULTI-DSP
+              param:
+                MULTI DSP BODY-FLD-PARAM: param value
+            language:
+            - LANG
+            - LANG
+            - LANGY
+            - LANG
+            - LANG
+            location: location mclocation face
+            extension:
+            - extended release
+            - - - - - - - 1
+                      - - 2
+                      - - 3
+                - done
+      raw_data: *test_bodystructure_extension_fields
+
   test_bodystructure_bug7147_message_rfc822_attachment:
     :comments: |
       [Bug #7147]
