@@ -53,6 +53,12 @@ module Net
     # * <b><tt>"RFC822.TEXT"</tt></b> --- See #rfc822_text or replace with
     #   <tt>"BODY[TEXT]"</tt> and #text.
     #
+    # Net::IMAP supports dynamic attributes defined by the following extensions:
+    # * +X-GM-EXT-1+ {[non-standard Gmail
+    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
+    #   * <b><tt>"X-GM-MSGID"</tt></b> --- unique message ID.  Access via #attr.
+    #   * <b><tt>"X-GM-THRID"</tt></b> --- Thread ID.  Access via #attr.
+    #
     # [Note:]
     #   >>>
     #     Additional static fields are defined in other \IMAP extensions, but
@@ -73,6 +79,9 @@ module Net
     #
     # * +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]:
     #   * <b><tt>"MODSEQ"</tt></b> --- See #modseq.
+    # * +X-GM-EXT-1+ {[non-standard Gmail
+    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
+    #   * <b><tt>"X-GM-LABELS"</tt></b> --- Gmail labels.  Access via #attr.
     #
     # [Note:]
     #   >>>

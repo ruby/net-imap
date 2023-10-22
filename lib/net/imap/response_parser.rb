@@ -513,6 +513,12 @@ module Net
       #                          ; Strictly ascending
       alias uniqueid    nz_number
 
+      # valid number ranges are not enforced by parser
+      #
+      # a 64-bit unsigned integer and is the decimal equivalent for the ID hex
+      # string used in the web interface and the Gmail API.
+      alias x_gm_id     number
+
       # [RFC3501 & RFC9051:]
       #   response        = *(continue-req / response-data) response-done
       #
@@ -765,6 +771,9 @@ module Net
             when "RFC822.HEADER"        then nstring            # not in rev2
             when "RFC822.TEXT"          then nstring            # not in rev2
             when "MODSEQ"               then parens__modseq     # CONDSTORE
+            when "X-GM-MSGID"           then x_gm_id            # GMail
+            when "X-GM-THRID"           then x_gm_id            # GMail
+            when "X-GM-LABELS"          then x_gm_labels        # GMail
             else parse_error("unknown attribute `%s' for {%d}", name, n)
             end
           attr[name] = val
@@ -1763,6 +1772,19 @@ module Net
       def parens__mbx_list_flags
         match_re(Patterns::MBX_LIST_FLAGS, "mbx-list-flags")[1]
           .split(nil).map! { _1.capitalize.to_sym }
+      end
+
+      # See https://developers.google.com/gmail/imap/imap-extensions
+      def x_gm_label; accept(T_BSLASH) ? atom.capitalize.to_sym : astring end
+
+      # See https://developers.google.com/gmail/imap/imap-extensions
+      def x_gm_labels
+        lpar; return [] if rpar?
+        labels = []
+        labels << x_gm_label
+        labels << x_gm_label while SP?
+        rpar
+        labels
       end
 
       # See https://www.rfc-editor.org/errata/rfc3501

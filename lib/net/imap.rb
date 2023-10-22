@@ -483,8 +483,16 @@ module Net
   #   which arranges the results into ordered groups or threads according to a
   #   chosen algorithm.
   #
-  # ==== +XLIST+ (non-standard, deprecated)
+  # ==== +X-GM-EXT-1+
+  # +X-GM-EXT-1+ is a non-standard Gmail extension.  See {Google's
+  # documentation}[https://developers.google.com/gmail/imap/imap-extensions].
+  # - Updates #fetch and #uid_fetch with support for +X-GM-MSGID+ (unique
+  #   message ID), +X-GM-THRID+ (thread ID), and +X-GM-LABELS+ (Gmail labels).
+  # - Updates #search with the +X-GM-RAW+ search attribute.
   # - #xlist: replaced by +SPECIAL-USE+ attributes in #list responses.
+  #
+  # *NOTE:* The +OBJECTID+ extension should replace +X-GM-MSGID+ and
+  # +X-GM-THRID+, although neither Gmail nor Net::IMAP support it yet.
   #
   # ==== RFC6851: +MOVE+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051] and also included
