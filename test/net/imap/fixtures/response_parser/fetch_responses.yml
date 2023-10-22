@@ -123,6 +123,71 @@
           RFC822: "foo\r\n"
       raw_data: "* 123 FETCH (RFC822 {5}\r\nfoo\r\n)\r\n"
 
+  test_fetch_msg_att_X-GM-MSGID:
+    :comments: |
+      Example copied from https://developers.google.com/gmail/imap/imap-extensions
+    :response: "* 1 FETCH (X-GM-MSGID 1278455344230334865)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          X-GM-MSGID: 1278455344230334865
+      raw_data: "* 1 FETCH (X-GM-MSGID 1278455344230334865)\r\n"
+
+  test_fetch_msg_att_X-GM-THRID:
+    :comments: |
+      Example copied from https://developers.google.com/gmail/imap/imap-extensions
+    :response: "* 4 FETCH (X-GM-THRID 1266894439832287888)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 4
+        attr:
+          X-GM-THRID: 1266894439832287888
+      raw_data: "* 4 FETCH (X-GM-THRID 1266894439832287888)\r\n"
+
+  test_fetch_msg_att_X-GM-LABELS_1:
+    :comments: |
+      Example copied from https://developers.google.com/gmail/imap/imap-extensions
+    :response: "* 1 FETCH (X-GM-LABELS (\\Inbox \\Sent Important \"Muy Importante\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          X-GM-LABELS:
+          - :Inbox
+          - :Sent
+          - Important
+          - Muy Importante
+      raw_data: "* 1 FETCH (X-GM-LABELS (\\Inbox \\Sent Important \"Muy Importante\"))\r\n"
+
+  test_fetch_msg_att_X-GM-LABELS_2:
+    :comments: |
+      Example copied from https://developers.google.com/gmail/imap/imap-extensions
+    :response: "* 2 FETCH (X-GM-LABELS (foo))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 2
+        attr:
+          X-GM-LABELS:
+          - foo
+      raw_data: "* 2 FETCH (X-GM-LABELS (foo))\r\n"
+
+  test_fetch_msg_att_X-GM-LABELS_3:
+    :comments: |
+      Example copied from https://developers.google.com/gmail/imap/imap-extensions
+    :response: "* 3 FETCH (X-GM-LABELS ())\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 3
+        attr:
+          X-GM-LABELS: []
+      raw_data: "* 3 FETCH (X-GM-LABELS ())\r\n"
+
   test_invalid_fetch_msg_att_rfc822_with_brackets:
     :response: "* 123 FETCH (RFC822[] {5}\r\nfoo\r\n)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
