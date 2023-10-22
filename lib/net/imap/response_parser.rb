@@ -967,6 +967,7 @@ module Net
         if lpar?
           result = [case_insensitive__string]
           result << case_insensitive__string while SP?
+          rpar
           result
         else
           case_insensitive__nstring
