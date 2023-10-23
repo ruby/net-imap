@@ -427,6 +427,17 @@ module Net
       alias nz_number   number
       alias nz_number?  number?
 
+      # valid number ranges are not enforced by parser
+      #   nz-number64     = digit-nz *DIGIT
+      #                       ; Unsigned 63-bit integer
+      #                       ; (0 < n <= 9,223,372,036,854,775,807)
+      alias nz_number64 nz_number
+
+      # valid number ranges are not enforced by parser
+      #      uniqueid        = nz-number
+      #                          ; Strictly ascending
+      alias uniqueid    nz_number
+
       # [RFC3501 & RFC9051:]
       #   response        = *(continue-req / response-data) response-done
       #
@@ -658,20 +669,21 @@ module Net
         lpar
         attr = {}
         while true
-          name = lookahead!(T_ATOM).value.upcase
-          name, val =
+          name = msg_att__label; SP!
+          val =
             case name
-            when "UID"                  then uid_data
-            when "FLAGS"                then flags_data
-            when "BODY"                 then body_data
-            when "BODYSTRUCTURE"        then body_data
-            when "ENVELOPE"             then envelope_data
-            when "INTERNALDATE"         then internaldate_data
-            when "RFC822.SIZE"          then rfc822_size
-            when "RFC822"               then rfc822_text
-            when "RFC822.HEADER"        then rfc822_text        # not in rev2
-            when "RFC822.TEXT"          then rfc822_text        # not in rev2
-            when "MODSEQ"               then modseq_data        # CONDSTORE
+            when "UID"                  then uniqueid
+            when "FLAGS"                then flag_list
+            when "BODY"                 then body
+            when /\ABODY\[/ni           then nstring
+            when "BODYSTRUCTURE"        then body
+            when "ENVELOPE"             then envelope
+            when "INTERNALDATE"         then date_time
+            when "RFC822.SIZE"          then number64
+            when "RFC822"               then nstring            # not in rev2
+            when "RFC822.HEADER"        then nstring            # not in rev2
+            when "RFC822.TEXT"          then nstring            # not in rev2
+            when "MODSEQ"               then parens__modseq     # CONDSTORE
             else parse_error("unknown attribute `%s' for {%d}", name, n)
             end
           attr[name] = val
@@ -682,11 +694,17 @@ module Net
         attr
       end
 
-      def envelope_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, envelope
+      # appends "[section]" and "<partial>" to the base label
+      def msg_att__label
+        case (name = tagged_ext_label)
+        when /\A(?:RFC822(?:\.HEADER|\.TEXT)?)\z/ni
+          # ignoring "[]" fixes https://bugs.ruby-lang.org/issues/5620
+          lbra? and rbra
+        when "BODY"
+          peek_lbra? and name << section and
+            peek_str?("<") and name << atom # partial
+        end
+        name
       end
 
       def envelope
@@ -724,58 +742,10 @@ module Net
         return result
       end
 
-      def flags_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, flag_list
-      end
-
-      def internaldate_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        token = match(T_QUOTED)
-        return name, token.value
-      end
-
-      def rfc822_text
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-        if token.symbol == T_LBRA
-          shift_token
-          match(T_RBRA)
-        end
-        match(T_SPACE)
-        return name, nstring
-      end
-
-      def rfc822_size
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, number
-      end
-
-      def body_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          return name, body
-        end
-        name.concat(section)
-        token = lookahead
-        if token.symbol == T_ATOM
-          name.concat(token.value)
-          shift_token
-        end
-        match(T_SPACE)
-        data = nstring
-        return name, data
-      end
+      #   date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
+      #                     SP time SP zone DQUOTE
+      alias date_time quoted
+      alias ndatetime nquoted
 
       # RFC-3501 & RFC-9051:
       #   body            = "(" (body-type-1part / body-type-mpart) ")"
@@ -1112,23 +1082,6 @@ module Net
           # atom
           return str
         end
-      end
-
-      def uid_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, number
-      end
-
-      def modseq_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        match(T_LPAR)
-        modseq = number
-        match(T_RPAR)
-        return name, modseq
       end
 
       def mailbox_data__flags
@@ -1697,6 +1650,20 @@ module Net
           atom
         end
       end
+
+      # RFC7162:
+      # mod-sequence-value  = 1*DIGIT
+      #                        ;; Positive unsigned 63-bit integer
+      #                        ;; (mod-sequence)
+      #                        ;; (1 <= n <= 9,223,372,036,854,775,807).
+      alias mod_sequence_value nz_number64
+
+      # RFC7162:
+      # permsg-modsequence  = mod-sequence-value
+      #                        ;; Per-message mod-sequence.
+      alias permsg_modsequence mod_sequence_value
+
+      def parens__modseq; lpar; _ = permsg_modsequence; rpar; _ end
 
       # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
       #      uid-set         = (uniqueid / uid-range) *("," uid-set)
