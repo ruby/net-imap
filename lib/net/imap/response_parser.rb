@@ -893,6 +893,8 @@ module Net
             when "RFC822.HEADER"        then nstring            # not in rev2
             when "RFC822.TEXT"          then nstring            # not in rev2
             when "MODSEQ"               then parens__modseq     # CONDSTORE
+            when "EMAILID"              then parens__objectid   # OBJECTID  TODO:tests
+            when "THREADID"             then nparens__objectid  # OBJECTID  TODO:tests
             when "X-GM-MSGID"           then x_gm_id            # GMail
             when "X-GM-THRID"           then x_gm_id            # GMail
             when "X-GM-LABELS"          then x_gm_labels        # GMail
@@ -1975,6 +1977,15 @@ module Net
       alias permsg_modsequence mod_sequence_value
 
       def parens__modseq; lpar; _ = permsg_modsequence; rpar; _ end
+
+      # RFC8474:
+      # objectid = 1*255(ALPHA / DIGIT / "_" / "-")
+      #         ; characters in object identifiers are case
+      #         ; significant
+      alias objectid atom
+
+      def parens__objectid; lpar; _ = objectid; rpar; _ end
+      def nparens__objectid; NIL? ? nil : parens__objectid end
 
       # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
       #      uid-set         = (uniqueid / uid-range) *("," uid-set)
