@@ -492,7 +492,7 @@ module Net
   # - #xlist: replaced by +SPECIAL-USE+ attributes in #list responses.
   #
   # *NOTE:* The +OBJECTID+ extension should replace +X-GM-MSGID+ and
-  # +X-GM-THRID+, although neither Gmail nor Net::IMAP support it yet.
+  # +X-GM-THRID+, but Gmail does not support it (as of 2023-11-10).
   #
   # ==== RFC6851: +MOVE+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051] and also included
@@ -503,6 +503,12 @@ module Net
   # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
   #
   # - See #enable for information about support for UTF-8 string encoding.
+  #
+  # ==== RFC8474: +OBJECTID+
+  # - Updates #fetch and #uid_fetch with the +EMAILID+ and +THREADID+ items.
+  #   See FetchData#emailid and FetchData#emailid.
+  # >>>
+  #   *NOTE: The +MAILBOXID+ attribute for #status is not supported yet.
   #
   # == References
   #

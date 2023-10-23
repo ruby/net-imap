@@ -90,6 +90,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC 5256: THREAD response
   generate_tests_from fixture_file: "thread_responses.yml"
 
+  # RFC 8474: OBJECTID responses
+  generate_tests_from fixture_file: "rfc8474_objectid_responses.yml"
+
   ############################################################################
   # Workarounds or unspecified extensions:
   generate_tests_from fixture_file: "quirky_behaviors.yml"
