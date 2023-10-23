@@ -1034,7 +1034,12 @@ module Net
       end
 
       # section         = "[" [section-spec] "]"
-      #
+      def section
+        str = +lbra
+        str << section_spec unless peek_rbra?
+        str << rbra
+      end
+
       # section-spec    = section-msgtext / (section-part ["." section-text])
       # section-msgtext = "HEADER" /
       #                   "HEADER.FIELDS" [".NOT"] SP header-list /
@@ -1048,44 +1053,30 @@ module Net
       #                     ; text other than actual body part (headers,
       #                     ; etc.)
       #
-      # header-list     = "(" header-fld-name *(SP header-fld-name) ")"
-      #
-      def section
-        str = String.new
-        token = match(T_LBRA)
-        str.concat(token.value)
-        token = match(T_ATOM, T_NUMBER, T_RBRA)
-        if token.symbol == T_RBRA
-          str.concat(token.value)
-          return str
-        end
-        str.concat(token.value)
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          str.concat(token.value)
-          token = match(T_LPAR)
-          str.concat(token.value)
-          while true
-            token = lookahead
-            case token.symbol
-            when T_RPAR
-              str.concat(token.value)
-              shift_token
-              break
-            when T_SPACE
-              shift_token
-              str.concat(token.value)
-            end
-            str.concat(format_string(astring))
-          end
-        end
-        token = match(T_RBRA)
-        str.concat(token.value)
-        return str
+      # n.b: we could "cheat" here and just grab all text inside the brackets,
+      # but literals would need special treatment.
+      def section_spec
+        str = "".b
+        str << atom # grabs everything up to "SP header-list" or "]"
+        str << " " << header_list if SP?
+        str
       end
 
+      # header-list     = "(" header-fld-name *(SP header-fld-name) ")"
+      def header_list
+        str = +""
+        str << lpar << header_fld_name
+        str << " "  << header_fld_name while SP?
+        str << rpar
+      end
+
+      # RFC3501 & RFC9051:
       # header-fld-name = astring
+      #
+      # Although RFC3501 allows any astring, RFC5322-valid header names are one
+      # or more of the printable US-ASCII characters, except SP and colon.  So
+      # empty string isn't valid, and literals aren't needed and should not be
+      # used.  This syntax is unchanged by [I18N-HDRS] (RFC6532).
       #
       # RFC5233:
       # optional-field  =   field-name ":" unstructured CRLF
@@ -1093,13 +1084,27 @@ module Net
       # ftext           =   %d33-57 /          ; Printable US-ASCII
       #                     %d59-126           ;  characters not including
       #                                        ;  ":".
-      def format_string(str)
-        case str
+      #
+      # Atom and quoted should be sufficient.
+      #
+      # TODO: Use original source string, rather than decode and re-encode.
+      # TODO: or at least, DRY up this code with the send_command formatting.
+      def header_fld_name
+        case (str = astring)
         when ""
+          warn '%s header-fld-name is an invalid RFC5322 field-name: ""' %
+            [self.class]
           return '""'
         when /[\x80-\xff\r\n]/n
+          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
+            [self.class, str, $&]
           # literal
           return "{" + str.bytesize.to_s + "}" + CRLF + str
+        when /[^\x21-\x39\x3b-\xfe]/n
+          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
+            [self.class, str, $&]
+          # invalid quoted string
+          return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
         when /[(){ \x00-\x1f\x7f%*"\\]/n
           # quoted string
           return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
