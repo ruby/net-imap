@@ -81,6 +81,11 @@ benchmark:
       response = load_response("../test/net/imap/fixtures/response_parser/body_structure_responses.yml",
                                "test_bodystructure_bug8167_delivery_status_with_extra_data")
   script: parser.parse(response)
+- name: bodystructure_extension_fields
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/body_structure_responses.yml",
+                               "test_bodystructure_extension_fields")
+  script: parser.parse(response)
 - name: bodystructure_mixed_boundary
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/body_structure_responses.yml",
@@ -155,6 +160,16 @@ benchmark:
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/quirky_behaviors.yml",
                                "test_invalid_noop_response_is_ignored")
+  script: parser.parse(response)
+- name: invalid_noop_response_with_numeric_prefix
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/quirky_behaviors.yml",
+                               "test_invalid_noop_response_with_numeric_prefix")
+  script: parser.parse(response)
+- name: invalid_noop_response_with_unparseable_data
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/quirky_behaviors.yml",
+                               "test_invalid_noop_response_with_unparseable_data")
   script: parser.parse(response)
 - name: invalid_search_response_multiple_result_with_trailing_space
   prelude: |2
