@@ -427,6 +427,17 @@ module Net
       alias nz_number   number
       alias nz_number?  number?
 
+      # valid number ranges are not enforced by parser
+      #   nz-number64     = digit-nz *DIGIT
+      #                       ; Unsigned 63-bit integer
+      #                       ; (0 < n <= 9,223,372,036,854,775,807)
+      alias nz_number64 nz_number
+
+      # valid number ranges are not enforced by parser
+      #      uniqueid        = nz-number
+      #                          ; Strictly ascending
+      alias uniqueid    nz_number
+
       # [RFC3501 & RFC9051:]
       #   response        = *(continue-req / response-data) response-done
       #
@@ -607,49 +618,93 @@ module Net
       alias mailbox_data__exists  response_data__simple_numeric
       alias mailbox_data__recent  response_data__simple_numeric
 
+      # RFC3501 & RFC9051:
+      #   msg-att         = "(" (msg-att-dynamic / msg-att-static)
+      #                      *(SP (msg-att-dynamic / msg-att-static)) ")"
+      #
+      #   msg-att-dynamic = "FLAGS" SP "(" [flag-fetch *(SP flag-fetch)] ")"
+      # RFC5257 (ANNOTATE extension):
+      #   msg-att-dynamic =/ "ANNOTATION" SP
+      #                        ( "(" entry-att *(SP entry-att) ")" /
+      #                          "(" entry *(SP entry) ")" )
+      # RFC7162 (CONDSTORE extension):
+      #   msg-att-dynamic =/ fetch-mod-resp
+      #   fetch-mod-resp  = "MODSEQ" SP "(" permsg-modsequence ")"
+      # RFC8970 (PREVIEW extension):
+      #   msg-att-dynamic =/ "PREVIEW" SP nstring
+      #
+      # RFC3501:
+      #   msg-att-static  = "ENVELOPE" SP envelope /
+      #                     "INTERNALDATE" SP date-time /
+      #                     "RFC822" [".HEADER" / ".TEXT"] SP nstring /
+      #                     "RFC822.SIZE" SP number /
+      #                     "BODY" ["STRUCTURE"] SP body /
+      #                     "BODY" section ["<" number ">"] SP nstring /
+      #                     "UID" SP uniqueid
+      # RFC3516 (BINARY extension):
+      #   msg-att-static  =/ "BINARY" section-binary SP (nstring / literal8)
+      #                    / "BINARY.SIZE" section-binary SP number
+      # RFC8514 (SAVEDATE extension):
+      #   msg-att-static  =/ "SAVEDATE" SP (date-time / nil)
+      # RFC8474 (OBJECTID extension):
+      #   msg-att-static =/ fetch-emailid-resp / fetch-threadid-resp
+      #   fetch-emailid-resp  = "EMAILID" SP "(" objectid ")"
+      #   fetch-threadid-resp = "THREADID" SP ( "(" objectid ")" / nil )
+      # RFC9051:
+      #   msg-att-static  = "ENVELOPE" SP envelope /
+      #                     "INTERNALDATE" SP date-time /
+      #                     "RFC822.SIZE" SP number64 /
+      #                     "BODY" ["STRUCTURE"] SP body /
+      #                     "BODY" section ["<" number ">"] SP nstring /
+      #                     "BINARY" section-binary SP (nstring / literal8) /
+      #                     "BINARY.SIZE" section-binary SP number /
+      #                     "UID" SP uniqueid
+      #
+      # Re https://www.rfc-editor.org/errata/eid7246, I'm adding "offset" to the
+      # official "BINARY" ABNF, like so:
+      #
+      #   msg-att-static   =/ "BINARY" section-binary ["<" number ">"] SP
+      #                       (nstring / literal8)
       def msg_att(n)
-        match(T_LPAR)
+        lpar
         attr = {}
         while true
-          token = lookahead
-          case token.symbol
-          when T_RPAR
-            shift_token
-            break
-          when T_SPACE
-            shift_token
-            next
-          end
-          case token.value
-          when /\A(?:ENVELOPE)\z/ni
-            name, val = envelope_data
-          when /\A(?:FLAGS)\z/ni
-            name, val = flags_data
-          when /\A(?:INTERNALDATE)\z/ni
-            name, val = internaldate_data
-          when /\A(?:RFC822(?:\.HEADER|\.TEXT)?)\z/ni
-            name, val = rfc822_text
-          when /\A(?:RFC822\.SIZE)\z/ni
-            name, val = rfc822_size
-          when /\A(?:BODY(?:STRUCTURE)?)\z/ni
-            name, val = body_data
-          when /\A(?:UID)\z/ni
-            name, val = uid_data
-          when /\A(?:MODSEQ)\z/ni
-            name, val = modseq_data
-          else
-            parse_error("unknown attribute `%s' for {%d}", token.value, n)
-          end
+          name = msg_att__label; SP!
+          val =
+            case name
+            when "UID"                  then uniqueid
+            when "FLAGS"                then flag_list
+            when "BODY"                 then body
+            when /\ABODY\[/ni           then nstring
+            when "BODYSTRUCTURE"        then body
+            when "ENVELOPE"             then envelope
+            when "INTERNALDATE"         then date_time
+            when "RFC822.SIZE"          then number64
+            when "RFC822"               then nstring            # not in rev2
+            when "RFC822.HEADER"        then nstring            # not in rev2
+            when "RFC822.TEXT"          then nstring            # not in rev2
+            when "MODSEQ"               then parens__modseq     # CONDSTORE
+            else parse_error("unknown attribute `%s' for {%d}", name, n)
+            end
           attr[name] = val
+          break unless SP?
+          break if lookahead_rpar?
         end
-        return attr
+        rpar
+        attr
       end
 
-      def envelope_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, envelope
+      # appends "[section]" and "<partial>" to the base label
+      def msg_att__label
+        case (name = tagged_ext_label)
+        when /\A(?:RFC822(?:\.HEADER|\.TEXT)?)\z/ni
+          # ignoring "[]" fixes https://bugs.ruby-lang.org/issues/5620
+          lbra? and rbra
+        when "BODY"
+          peek_lbra? and name << section and
+            peek_str?("<") and name << atom # partial
+        end
+        name
       end
 
       def envelope
@@ -687,58 +742,10 @@ module Net
         return result
       end
 
-      def flags_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, flag_list
-      end
-
-      def internaldate_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        token = match(T_QUOTED)
-        return name, token.value
-      end
-
-      def rfc822_text
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-        if token.symbol == T_LBRA
-          shift_token
-          match(T_RBRA)
-        end
-        match(T_SPACE)
-        return name, nstring
-      end
-
-      def rfc822_size
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, number
-      end
-
-      def body_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          return name, body
-        end
-        name.concat(section)
-        token = lookahead
-        if token.symbol == T_ATOM
-          name.concat(token.value)
-          shift_token
-        end
-        match(T_SPACE)
-        data = nstring
-        return name, data
-      end
+      #   date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
+      #                     SP time SP zone DQUOTE
+      alias date_time quoted
+      alias ndatetime nquoted
 
       # RFC-3501 & RFC-9051:
       #   body            = "(" (body-type-1part / body-type-mpart) ")"
@@ -996,48 +1003,78 @@ module Net
         end
       end
 
+      # section         = "[" [section-spec] "]"
       def section
-        str = String.new
-        token = match(T_LBRA)
-        str.concat(token.value)
-        token = match(T_ATOM, T_NUMBER, T_RBRA)
-        if token.symbol == T_RBRA
-          str.concat(token.value)
-          return str
-        end
-        str.concat(token.value)
-        token = lookahead
-        if token.symbol == T_SPACE
-          shift_token
-          str.concat(token.value)
-          token = match(T_LPAR)
-          str.concat(token.value)
-          while true
-            token = lookahead
-            case token.symbol
-            when T_RPAR
-              str.concat(token.value)
-              shift_token
-              break
-            when T_SPACE
-              shift_token
-              str.concat(token.value)
-            end
-            str.concat(format_string(astring))
-          end
-        end
-        token = match(T_RBRA)
-        str.concat(token.value)
-        return str
+        str = +lbra
+        str << section_spec unless peek_rbra?
+        str << rbra
       end
 
-      def format_string(str)
-        case str
+      # section-spec    = section-msgtext / (section-part ["." section-text])
+      # section-msgtext = "HEADER" /
+      #                   "HEADER.FIELDS" [".NOT"] SP header-list /
+      #                   "TEXT"
+      #                     ; top-level or MESSAGE/RFC822 or
+      #                     ; MESSAGE/GLOBAL part
+      # section-part    = nz-number *("." nz-number)
+      #                     ; body part reference.
+      #                     ; Allows for accessing nested body parts.
+      # section-text    = section-msgtext / "MIME"
+      #                     ; text other than actual body part (headers,
+      #                     ; etc.)
+      #
+      # n.b: we could "cheat" here and just grab all text inside the brackets,
+      # but literals would need special treatment.
+      def section_spec
+        str = "".b
+        str << atom # grabs everything up to "SP header-list" or "]"
+        str << " " << header_list if SP?
+        str
+      end
+
+      # header-list     = "(" header-fld-name *(SP header-fld-name) ")"
+      def header_list
+        str = +""
+        str << lpar << header_fld_name
+        str << " "  << header_fld_name while SP?
+        str << rpar
+      end
+
+      # RFC3501 & RFC9051:
+      # header-fld-name = astring
+      #
+      # Although RFC3501 allows any astring, RFC5322-valid header names are one
+      # or more of the printable US-ASCII characters, except SP and colon.  So
+      # empty string isn't valid, and literals aren't needed and should not be
+      # used.  This syntax is unchanged by [I18N-HDRS] (RFC6532).
+      #
+      # RFC5233:
+      # optional-field  =   field-name ":" unstructured CRLF
+      # field-name      =   1*ftext
+      # ftext           =   %d33-57 /          ; Printable US-ASCII
+      #                     %d59-126           ;  characters not including
+      #                                        ;  ":".
+      #
+      # Atom and quoted should be sufficient.
+      #
+      # TODO: Use original source string, rather than decode and re-encode.
+      # TODO: or at least, DRY up this code with the send_command formatting.
+      def header_fld_name
+        case (str = astring)
         when ""
+          warn '%s header-fld-name is an invalid RFC5322 field-name: ""' %
+            [self.class]
           return '""'
         when /[\x80-\xff\r\n]/n
+          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
+            [self.class, str, $&]
           # literal
           return "{" + str.bytesize.to_s + "}" + CRLF + str
+        when /[^\x21-\x39\x3b-\xfe]/n
+          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
+            [self.class, str, $&]
+          # invalid quoted string
+          return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
         when /[(){ \x00-\x1f\x7f%*"\\]/n
           # quoted string
           return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
@@ -1045,23 +1082,6 @@ module Net
           # atom
           return str
         end
-      end
-
-      def uid_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        return name, number
-      end
-
-      def modseq_data
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        match(T_LPAR)
-        modseq = number
-        match(T_RPAR)
-        return name, modseq
       end
 
       def mailbox_data__flags
@@ -1630,6 +1650,20 @@ module Net
           atom
         end
       end
+
+      # RFC7162:
+      # mod-sequence-value  = 1*DIGIT
+      #                        ;; Positive unsigned 63-bit integer
+      #                        ;; (mod-sequence)
+      #                        ;; (1 <= n <= 9,223,372,036,854,775,807).
+      alias mod_sequence_value nz_number64
+
+      # RFC7162:
+      # permsg-modsequence  = mod-sequence-value
+      #                        ;; Per-message mod-sequence.
+      alias permsg_modsequence mod_sequence_value
+
+      def parens__modseq; lpar; _ = permsg_modsequence; rpar; _ end
 
       # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
       #      uid-set         = (uniqueid / uid-range) *("," uid-set)
