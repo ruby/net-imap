@@ -11,7 +11,7 @@ Gem::Specification.new do |spec|
   spec.name          = name
   spec.version       = version
   spec.authors       = ["Shugo Maeda", "nicholas a. evans"]
-  spec.email         = ["shugo@ruby-lang.org", "nick@ekenosen.net"]
+  spec.email         = ["shugo@ruby-lang.org", "nick@rubinick.dev"]
 
   spec.summary       = %q{Ruby client api for Internet Message Access Protocol}
   spec.description   = %q{Ruby client api for Internet Message Access Protocol}
