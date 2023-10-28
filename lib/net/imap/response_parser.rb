@@ -1346,10 +1346,12 @@ module Net
       end
 
       # As a workaround for buggy servers, allow a trailing SP:
-      #     *(SP capapility) [SP]
+      #     *(SP capability) [SP]
       def capability__list
-        data = []; while _ = SP? && capability? do data << _ end; data
+        list = []; while SP? && (capa = capability?) do list << capa end; list
       end
+
+      alias resp_code__capability capability__list
 
       # capability      = ("AUTH=" auth-type) / atom
       #                     ; New capabilities MUST begin with "X" or be
@@ -1473,68 +1475,91 @@ module Net
         end
       end
 
-      # See https://www.rfc-editor.org/errata/rfc3501
+      # RFC3501 (See https://www.rfc-editor.org/errata/rfc3501):
+      #   resp-text-code   = "ALERT" /
+      #                      "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
+      #                      capability-data / "PARSE" /
+      #                      "PERMANENTFLAGS" SP "(" [flag-perm *(SP flag-perm)] ")" /
+      #                      "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
+      #                      "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
+      #                      "UNSEEN" SP nz-number /
+      #                      atom [SP 1*<any TEXT-CHAR except "]">]
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev1"
+      #                      *(SP capability)
       #
-      # resp-text-code  = "ALERT" /
-      #                   "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
-      #                   capability-data / "PARSE" /
-      #                   "PERMANENTFLAGS" SP "("
-      #                   [flag-perm *(SP flag-perm)] ")" /
-      #                   "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
-      #                   "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
-      #                   "UNSEEN" SP nz-number /
-      #                   atom [SP 1*<any TEXT-CHAR except "]">]
+      # RFC5530:
+      #   resp-text-code  =/ "UNAVAILABLE" / "AUTHENTICATIONFAILED" /
+      #                     "AUTHORIZATIONFAILED" / "EXPIRED" /
+      #                     "PRIVACYREQUIRED" / "CONTACTADMIN" / "NOPERM" /
+      #                     "INUSE" / "EXPUNGEISSUED" / "CORRUPTION" /
+      #                     "SERVERBUG" / "CLIENTBUG" / "CANNOT" /
+      #                     "LIMIT" / "OVERQUOTA" / "ALREADYEXISTS" /
+      #                     "NONEXISTENT"
+      # RFC9051:
+      #   resp-text-code   = "ALERT" /
+      #                      "BADCHARSET" [SP "(" charset *(SP charset) ")" ] /
+      #                      capability-data / "PARSE" /
+      #                      "PERMANENTFLAGS" SP "(" [flag-perm *(SP flag-perm)] ")" /
+      #                      "READ-ONLY" / "READ-WRITE" / "TRYCREATE" /
+      #                      "UIDNEXT" SP nz-number / "UIDVALIDITY" SP nz-number /
+      #                      resp-code-apnd / resp-code-copy / "UIDNOTSTICKY" /
+      #                      "UNAVAILABLE" / "AUTHENTICATIONFAILED" /
+      #                      "AUTHORIZATIONFAILED" / "EXPIRED" /
+      #                      "PRIVACYREQUIRED" / "CONTACTADMIN" / "NOPERM" /
+      #                      "INUSE" / "EXPUNGEISSUED" / "CORRUPTION" /
+      #                      "SERVERBUG" / "CLIENTBUG" / "CANNOT" /
+      #                      "LIMIT" / "OVERQUOTA" / "ALREADYEXISTS" /
+      #                      "NONEXISTENT" / "NOTSAVED" / "HASCHILDREN" /
+      #                      "CLOSED" /
+      #                      "UNKNOWN-CTE" /
+      #                      atom [SP 1*<any TEXT-CHAR except "]">]
+      #   capability-data  = "CAPABILITY" *(SP capability) SP "IMAP4rev2"
+      #                      *(SP capability)
       #
-      # +UIDPLUS+ ABNF:: https://www.rfc-editor.org/rfc/rfc4315.html#section-4
-      #   resp-text-code  =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
+      # RFC4315 (UIDPLUS), RFC9051 (IMAP4rev2):
+      #   resp-code-apnd   = "APPENDUID" SP nz-number SP append-uid
+      #   resp-code-copy   = "COPYUID" SP nz-number SP uid-set SP uid-set
+      #   resp-text-code   =/ resp-code-apnd / resp-code-copy / "UIDNOTSTICKY"
+      #
+      # RFC7162 (CONDSTORE):
+      #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
+      #                       "NOMODSEQ" /
+      #                       "MODIFIED" SP sequence-set
       def resp_text_code
-        token = match(T_ATOM)
-        name = token.value.upcase
-        case name
-        when /\A(?:ALERT|PARSE|READ-ONLY|READ-WRITE|TRYCREATE|NOMODSEQ)\z/n
-          result = ResponseCode.new(name, nil)
-        when /\A(?:BADCHARSET)\z/n
-          result = ResponseCode.new(name, charset_list)
-        when /\A(?:CAPABILITY)\z/ni
-          result = ResponseCode.new(name, capability__list)
-        when /\A(?:PERMANENTFLAGS)\z/n
-          match(T_SPACE)
-          result = ResponseCode.new(name, flag_list)
-        when /\A(?:UIDVALIDITY|UIDNEXT|UNSEEN)\z/n
-          match(T_SPACE)
-          result = ResponseCode.new(name, number)
-        when /\A(?:APPENDUID)\z/n
-          result = ResponseCode.new(name, resp_code_apnd__data)
-        when /\A(?:COPYUID)\z/n
-          result = ResponseCode.new(name, resp_code_copy__data)
-        else
-          token = lookahead
-          if token.symbol == T_SPACE
-            shift_token
-            result = ResponseCode.new(name, text_chars_except_rbra)
+        name = resp_text_code__name
+        data =
+          case name
+          when "CAPABILITY"         then resp_code__capability
+          when "PERMANENTFLAGS"     then SP? ? flag_perm__list : []
+          when "UIDNEXT"            then SP!; nz_number
+          when "UIDVALIDITY"        then SP!; nz_number
+          when "UNSEEN"             then SP!; nz_number            # rev1 only
+          when "APPENDUID"          then SP!; resp_code_apnd__data # rev2, UIDPLUS
+          when "COPYUID"            then SP!; resp_code_copy__data # rev2, UIDPLUS
+          when "BADCHARSET"         then SP? ? charset__list : []
+          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE",
+            "UNAVAILABLE", "AUTHENTICATIONFAILED", "AUTHORIZATIONFAILED",
+            "EXPIRED", "PRIVACYREQUIRED", "CONTACTADMIN", "NOPERM", "INUSE",
+            "EXPUNGEISSUED", "CORRUPTION", "SERVERBUG", "CLIENTBUG", "CANNOT",
+            "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
+            "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
+          when "NOMODSEQ"           # CONDSTORE
           else
-            result = ResponseCode.new(name, nil)
+            SP? and text_chars_except_rbra
           end
-        end
-        return result
+        ResponseCode.new(name, data)
       end
+
+      alias resp_text_code__name case_insensitive__atom
 
       # 1*<any TEXT-CHAR except "]">
       def text_chars_except_rbra
         match_re(CTEXT_REGEXP, '1*<any TEXT-CHAR except "]">')[0]
       end
 
-      def charset_list
-        result = []
-        if accept(T_SPACE)
-          match(T_LPAR)
-          result << charset
-          while accept(T_SPACE)
-            result << charset
-          end
-          match(T_RPAR)
-        end
-        result
+      # "(" charset *(SP charset) ")"
+      def charset__list
+        lpar; list = [charset]; while SP? do list << charset end; rpar; list
       end
 
       # already matched:  "APPENDUID"
@@ -1550,8 +1575,8 @@ module Net
       # match uid_set even if that returns a single-member array.
       #
       def resp_code_apnd__data
-        match(T_SPACE); validity = number
-        match(T_SPACE); dst_uids = uid_set # uniqueid ⊂ uid-set
+        validity = number; SP!
+        dst_uids = uid_set # uniqueid ⊂ uid-set
         UIDPlusData.new(validity, nil, dst_uids)
       end
 
@@ -1559,9 +1584,9 @@ module Net
       #
       # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
       def resp_code_copy__data
-        match(T_SPACE); validity = number
-        match(T_SPACE); src_uids = uid_set
-        match(T_SPACE); dst_uids = uid_set
+        validity = number;  SP!
+        src_uids = uid_set; SP!
+        dst_uids = uid_set
         UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
@@ -1639,17 +1664,13 @@ module Net
         end
       end
 
+      # TODO: not quite correct.  flag-perm != flag
+      alias flag_perm__list flag_list
 
       # See https://www.rfc-editor.org/errata/rfc3501
       #
       # charset = atom / quoted
-      def charset
-        if token = accept(T_QUOTED)
-          token.value
-        else
-          atom
-        end
-      end
+      def charset; quoted? || atom end
 
       # RFC7162:
       # mod-sequence-value  = 1*DIGIT
