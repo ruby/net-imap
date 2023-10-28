@@ -1505,8 +1505,8 @@ module Net
           when "UIDNEXT"            then SP!; nz_number
           when "UIDVALIDITY"        then SP!; nz_number
           when "UNSEEN"             then SP!; nz_number            # rev1 only
-          when "APPENDUID"          then resp_code_apnd__data
-          when "COPYUID"            then resp_code_copy__data
+          when "APPENDUID"          then SP!; resp_code_apnd__data # rev2, UIDPLUS
+          when "COPYUID"            then SP!; resp_code_copy__data # rev2, UIDPLUS
           when "BADCHARSET"         then charset_list
           when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
           when "NOMODSEQ"           # CONDSTORE
@@ -1549,8 +1549,8 @@ module Net
       # match uid_set even if that returns a single-member array.
       #
       def resp_code_apnd__data
-        match(T_SPACE); validity = number
-        match(T_SPACE); dst_uids = uid_set # uniqueid ⊂ uid-set
+        validity = number; SP!
+        dst_uids = uid_set # uniqueid ⊂ uid-set
         UIDPlusData.new(validity, nil, dst_uids)
       end
 
@@ -1558,9 +1558,9 @@ module Net
       #
       # resp-code-copy  = "COPYUID" SP nz-number SP uid-set SP uid-set
       def resp_code_copy__data
-        match(T_SPACE); validity = number
-        match(T_SPACE); src_uids = uid_set
-        match(T_SPACE); dst_uids = uid_set
+        validity = number;  SP!
+        src_uids = uid_set; SP!
+        dst_uids = uid_set
         UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
