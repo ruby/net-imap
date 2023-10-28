@@ -1496,26 +1496,21 @@ module Net
       #                       "MODIFIED" SP sequence-set
       def resp_text_code
         name = resp_text_code__name
-        case name
-        when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE", "NOMODSEQ"
-          data = nil
-        when "BADCHARSET"
-          data = charset_list
-        when "CAPABILITY"
-          data = capability__list
-        when "PERMANENTFLAGS"
-          SP!
-          data = flag_list
-        when "UIDVALIDITY", "UIDNEXT", "UNSEEN"
-          SP!
-          data = number
-        when "APPENDUID"
-          data = resp_code_apnd__data
-        when "COPYUID"
-          data = resp_code_copy__data
-        else
-          data = SP? && text_chars_except_rbra
-        end
+        data =
+          case name
+          when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE"
+          when "NOMODSEQ"           # CONDSTORE
+          when "BADCHARSET"         then charset_list
+          when "CAPABILITY"         then capability__list
+          when "PERMANENTFLAGS"     then SP!; flag_list
+          when "UIDVALIDITY"        then SP!; number
+          when "UIDNEXT"            then SP!; number
+          when "UNSEEN"             then SP!; number
+          when "APPENDUID"          then resp_code_apnd__data
+          when "COPYUID"            then resp_code_copy__data
+          else
+            SP? and text_chars_except_rbra
+          end
         ResponseCode.new(name, data)
       end
 
