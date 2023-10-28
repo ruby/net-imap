@@ -1498,29 +1498,28 @@ module Net
         name = resp_text_code__name
         case name
         when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE", "NOMODSEQ"
-          result = ResponseCode.new(name, nil)
+          ResponseCode.new(name, nil)
         when "BADCHARSET"
-          result = ResponseCode.new(name, charset_list)
+          ResponseCode.new(name, charset_list)
         when "CAPABILITY"
-          result = ResponseCode.new(name, capability__list)
+          ResponseCode.new(name, capability__list)
         when "PERMANENTFLAGS"
           SP!
-          result = ResponseCode.new(name, flag_list)
+          ResponseCode.new(name, flag_list)
         when "UIDVALIDITY", "UIDNEXT", "UNSEEN"
           SP!
-          result = ResponseCode.new(name, number)
+          ResponseCode.new(name, number)
         when "APPENDUID"
-          result = ResponseCode.new(name, resp_code_apnd__data)
+          ResponseCode.new(name, resp_code_apnd__data)
         when "COPYUID"
-          result = ResponseCode.new(name, resp_code_copy__data)
+          ResponseCode.new(name, resp_code_copy__data)
         else
           if SP?
-            result = ResponseCode.new(name, text_chars_except_rbra)
+            ResponseCode.new(name, text_chars_except_rbra)
           else
-            result = ResponseCode.new(name, nil)
+            ResponseCode.new(name, nil)
           end
         end
-        return result
       end
 
       alias resp_text_code__name case_insensitive__atom
