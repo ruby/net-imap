@@ -1138,6 +1138,47 @@ EOF
     end
   end
 
+  test("missing server ENABLED response") do
+    with_fake_server do |server, imap|
+      server.on "ENABLE", &:done_ok
+      enabled = imap.enable "foo", "bar", "baz"
+      assert_equal [], enabled
+    end
+  end
+
+  test("missing server SEARCH response") do
+    with_fake_server do |server, imap|
+      server.on "SEARCH",     &:done_ok
+      server.on "UID SEARCH", &:done_ok
+      found = imap.search ["subject", "hello"]
+      assert_equal [], found
+      found = imap.uid_search ["subject", "hello"]
+      assert_equal [], found
+    end
+  end
+
+  test("missing server SORT response") do
+    with_fake_server do |server, imap|
+      server.on "SORT",       &:done_ok
+      server.on "UID SORT",   &:done_ok
+      found = imap.sort ["INTERNALDATE"], ["subject", "hello"], "UTF-8"
+      assert_equal [], found
+      found = imap.uid_sort ["INTERNALDATE"], ["subject", "hello"], "UTF-8"
+      assert_equal [], found
+    end
+  end
+
+  test("missing server THREAD response") do
+    with_fake_server do |server, imap|
+      server.on "THREAD",     &:done_ok
+      server.on "UID THREAD", &:done_ok
+      found = imap.thread "REFERENCES", ["subject", "hello"], "UTF-8"
+      assert_equal [], found
+      found = imap.uid_thread "REFERENCES", ["subject", "hello"], "UTF-8"
+      assert_equal [], found
+    end
+  end
+
   private
 
   def imaps_test(timeout: 10)

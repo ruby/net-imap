@@ -2188,7 +2188,7 @@ module Net
         .join(' ')
       synchronize do
         send_command("ENABLE #{capabilities}")
-        result = clear_responses("ENABLED").last
+        result = clear_responses("ENABLED").last || []
         @utf8_strings ||= result.include? "UTF8=ACCEPT"
         @utf8_strings ||= result.include? "IMAP4REV2"
         result
@@ -2642,7 +2642,7 @@ module Net
         else
           send_command(cmd, *keys)
         end
-        clear_responses("SEARCH").last
+        clear_responses("SEARCH").last || []
       end
     end
 
@@ -2691,7 +2691,7 @@ module Net
       normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, sort_keys, charset, *search_keys)
-        clear_responses("SORT").last
+        clear_responses("SORT").last || []
       end
     end
 
@@ -2704,7 +2704,7 @@ module Net
       normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
-        clear_responses("THREAD").last
+        clear_responses("THREAD").last || []
       end
     end
 
