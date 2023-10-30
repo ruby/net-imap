@@ -4,6 +4,7 @@
     :response: "* NOOP\r\n"
     :expected: !ruby/struct:Net::IMAP::IgnoredResponse
       name: "NOOP"
+      data:
       raw_data: "* NOOP\r\n"
 
   test_invalid_noop_response_with_unparseable_data:
@@ -18,6 +19,15 @@
     :response: "* 99 NOOP\r\n"
     :expected: !ruby/struct:Net::IMAP::IgnoredResponse
       name: "NOOP"
-      data: !ruby/struct:Net::IMAP::UnparsedData
-        number: 99
+      data: 99
       raw_data: "* 99 NOOP\r\n"
+
+  test_invalid_noop_response_with_numeric_prefix_and_unparseable_data:
+    :response: "* 86 NOOP froopy snood\r\n"
+    :expected: !ruby/struct:Net::IMAP::IgnoredResponse
+      name: "NOOP"
+      data: !ruby/struct:Net::IMAP::UnparsedNumericResponseData
+        number: 86
+        unparsed_data: "froopy snood"
+      raw_data: "* 86 NOOP froopy snood\r\n"
+

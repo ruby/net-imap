@@ -62,23 +62,45 @@ module Net
     class IgnoredResponse < UntaggedResponse
     end
 
-    # Net::IMAP::UnparsedData represents data for unknown or unhandled
-    # response types.  UnparsedData is an intentionally unstable API: where
-    # it is returned, future releases may return a different (incompatible)
-    # object without deprecation or warning.
-    class UnparsedData < Struct.new(:number, :unparsed_data)
+    # **Note:** This represents an intentionally _unstable_ API.  Where
+    # instances of this class are returned, future releases may return a
+    # different (incompatible) object <em>without deprecation or warning</em>.
+    #
+    # Net::IMAP::UnparsedData represents data for unknown response types or
+    # unknown extensions to response types without a well-defined extension
+    # grammar.
+    #
+    # See also: UnparsedNumericResponseData
+    class UnparsedData < Struct.new(:unparsed_data)
+      ##
+      # method: unparsed_data
+      # :call-seq: unparsed_data -> string
+      #
+      # The unparsed data
+    end
+
+    # **Note:** This represents an intentionally _unstable_ API.  Where
+    # instances of this class are returned, future releases may return a
+    # different (incompatible) object <em>without deprecation or warning</em>.
+    #
+    # Net::IMAP::UnparsedNumericResponseData represents data for unhandled
+    # response types with a numeric prefix.  See the documentation for #number.
+    #
+    # See also: UnparsedData
+    class UnparsedNumericResponseData < Struct.new(:number, :unparsed_data)
       ##
       # method: number
       # :call-seq: number -> integer
       #
       # Returns a numeric response data prefix, when available.
       #
-      # Many response types are prefixed with seqno or uid (for message
-      # data) or a message count (for mailbox data).
+      # Many response types are prefixed with a non-negative #number.  For
+      # message data, #number may represent a sequence number or a UID.  For
+      # mailbox data, #number may represent a message count.
 
       ##
       # method: unparsed_data
-      # :call-seq: string -> string
+      # :call-seq: unparsed_data -> string
       #
       # The unparsed data, not including #number or UntaggedResponse#name.
     end

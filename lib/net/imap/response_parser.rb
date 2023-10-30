@@ -601,7 +601,11 @@ module Net
         num  = number?;          SP?
         type = tagged_ext_label; SP?
         text = remaining_unparsed
-        data = UnparsedData.new(num, text) if num || text
+        data =
+          if num && text then UnparsedNumericResponseData.new(num, text)
+          elsif     text then UnparsedData.new(text)
+          else                num
+          end
         klass.new(type, data, @str)
       end
 
