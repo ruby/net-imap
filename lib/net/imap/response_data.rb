@@ -504,11 +504,12 @@ module Net
       # The access rights the indicated #user has to the #mailbox.
     end
 
-    # Net::IMAP::Namespace represents a single namespace contained inside a
-    # NAMESPACE response.
+    # Namespace represents a _single_ namespace, contained inside a Namespaces
+    # object.
     #
-    # Returned by Net::IMAP#namespace, contained inside a Namespaces object.
-    #
+    # == Required capability
+    # Requires either +NAMESPACE+ [RFC2342[https://www.rfc-editor.org/rfc/rfc2342]]
+    # or +IMAP4rev2+ capability.
     class Namespace < Struct.new(:prefix, :delim, :extensions)
       ##
       # method: prefix
@@ -530,11 +531,14 @@ module Net
       # Extension parameter semantics would be defined by the extension.
     end
 
-    # Net::IMAP::Namespaces represents a +NAMESPACE+ server response, which
-    # contains lists of #personal, #shared, and #other namespaces.
+    # Namespaces represents the data of an untagged +NAMESPACE+ response,
+    # returned by IMAP#namespace.
     #
-    # Net::IMAP#namespace returns a Namespaces object.
+    # Contains lists of #personal, #shared, and #other namespaces.
     #
+    # == Required capability
+    # Requires either +NAMESPACE+ [RFC2342[https://www.rfc-editor.org/rfc/rfc2342]]
+    # or +IMAP4rev2+ capability.
     class Namespaces < Struct.new(:personal, :other, :shared)
       ##
       # method: personal
