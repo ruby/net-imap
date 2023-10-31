@@ -393,10 +393,8 @@ module Net
       end
     end
 
-    # Net::IMAP::MailboxList represents contents of the LIST response,
-    # representing a single mailbox path.
-    #
-    # Net::IMAP#list returns an array of MailboxList objects.
+    # MailboxList represents the data of an untagged +LIST+ response, for a
+    # _single_ mailbox path.  IMAP#list returns an array of MailboxList objects.
     #
     class MailboxList < Struct.new(:attr, :delim, :name)
       ##
@@ -406,11 +404,11 @@ module Net
       # Returns the name attributes. Each name attribute is a symbol capitalized
       # by String#capitalize, such as :Noselect (not :NoSelect).  For the
       # semantics of each attribute, see:
-      # * rdoc-ref:Net::IMAP@Basic+Mailbox+Attributes
-      # * rdoc-ref:Net::IMAP@Mailbox+role+Attributes
-      # * Net::IMAP@SPECIAL-USE
+      # * Net::IMAP@Basic+Mailbox+Attributes
+      # * Net::IMAP@Mailbox+role+Attributes
       # * The IANA {IMAP Mailbox Name Attributes
       #   registry}[https://www.iana.org/assignments/imap-mailbox-name-attributes/imap-mailbox-name-attributes.xhtml]
+      #   has links to specifications for all standard mailbox attributes.
 
       ##
       # method: delim
