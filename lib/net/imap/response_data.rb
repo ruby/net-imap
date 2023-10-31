@@ -344,14 +344,9 @@ module Net
       # code data can take.
     end
 
-    # Net::IMAP::UIDPlusData represents the ResponseCode#data that accompanies
-    # the +APPENDUID+ and +COPYUID+ response codes.
+    # UIDPlusData represents the ResponseCode#data that accompanies the
+    # +APPENDUID+ and +COPYUID+ {response codes}[rdoc-ref:ResponseCode].
     #
-    # See [[UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]].
-    #
-    # ==== Capability requirement
-    #
-    # The +UIDPLUS+ capability[rdoc-ref:Net::IMAP#capability] must be supported.
     # A server that supports +UIDPLUS+ should send a UIDPlusData object inside
     # every TaggedResponse returned by the append[rdoc-ref:Net::IMAP#append],
     # copy[rdoc-ref:Net::IMAP#copy], move[rdoc-ref:Net::IMAP#move], {uid
@@ -359,9 +354,9 @@ module Net
     # move}[rdoc-ref:Net::IMAP#uid_move] commands---unless the destination
     # mailbox reports +UIDNOTSTICKY+.
     #
-    #--
-    # TODO: support MULTIAPPEND
-    #++
+    # == Required capability
+    # Requires either +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315]]
+    # or +IMAP4rev2+ capability.
     #
     class UIDPlusData < Struct.new(:uidvalidity, :source_uids, :assigned_uids)
       ##
