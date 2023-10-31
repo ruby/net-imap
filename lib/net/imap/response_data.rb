@@ -160,13 +160,20 @@ module Net
       # The raw response data.
     end
 
-    # Net::IMAP::ResponseText represents texts of responses.
+    # ResponseText represents texts of responses.
     #
     # The text may be prefixed by a ResponseCode.
     #
-    # ResponseText is returned from TaggedResponse#data, or from
-    # UntaggedResponse#data when the response type is a "condition" ("OK", "NO",
-    # "BAD", "PREAUTH", or "BYE").
+    # ResponseText is returned from TaggedResponse#data or
+    # UntaggedResponse#data for
+    # {"status responses"}[https://www.rfc-editor.org/rfc/rfc3501#section-7.1]:
+    # * every TaggedResponse, name[rdoc-ref:TaggedResponse#name] is always
+    #   "+OK+", "+NO+", or "+BAD+".
+    # * any UntaggedResponse when name[rdoc-ref:UntaggedResponse#name] is
+    #   "+OK+", "+NO+", "+BAD+", "+PREAUTH+", or "+BYE+".
+    #
+    # Note that these "status responses" are confusingly _not_ the same as the
+    # +STATUS+ UntaggedResponse (see IMAP#status and StatusData).
     class ResponseText < Struct.new(:code, :text)
       # Used to avoid an allocation when ResponseText is empty
       EMPTY = new(nil, "").freeze
@@ -184,32 +191,35 @@ module Net
       # Returns the response text, not including any response code
     end
 
-    # Net::IMAP::ResponseCode represents response codes.  Response codes can be
-    # retrieved from ResponseText#code and can be included in any "condition"
-    # response: any TaggedResponse and UntaggedResponse when the response type
-    # is a "condition" ("OK", "NO", "BAD", "PREAUTH", or "BYE").
+    # ResponseCode represents an \IMAP response code, which can be retrieved
+    # from ResponseText#code for
+    # {"status responses"}[https://www.rfc-editor.org/rfc/rfc3501#section-7.1]:
+    # * every TaggedResponse, name[rdoc-ref:TaggedResponse#name] is always
+    #   "+OK+", "+NO+", or "+BAD+".
+    # * any UntaggedResponse when name[rdoc-ref:UntaggedResponse#name] is
+    #   "+OK+", "+NO+", "+BAD+", "+PREAUTH+", or "+BYE+".
+    #
+    # Note that these "status responses" are confusingly _not_ the same as the
+    # +STATUS+ UntaggedResponse (see IMAP#status and StatusData).
     #
     # Some response codes come with additional data which will be parsed by
     # Net::IMAP.  Others return +nil+ for #data, but are used as a
     # machine-readable annotation for the human-readable ResponseText#text in
-    # the same response.  When Net::IMAP does not know how to parse response
-    # code text, #data returns the unparsed string.
+    # the same response.
     #
     # Untagged response code #data is pushed directly onto Net::IMAP#responses,
     # keyed by #name, unless it is removed by the command that generated it.
     # Use Net::IMAP#add_response_handler to view tagged response codes for
     # command methods that do not return their TaggedResponse.
     #
+    # == Standard response codes
+    #
     # \IMAP extensions may define new codes and the data that comes with them.
     # The IANA {IMAP Response
     # Codes}[https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml]
     # registry has links to specifications for all standard response codes.
-    # Response codes are backwards compatible:  Servers are allowed to send new
-    # response codes even if the client has not enabled the extension that
-    # defines them.  When unknown response code data is encountered, #data
-    # will return an unparsed string.
     #
-    # ==== +IMAP4rev1+ Response Codes
+    # === +IMAP4rev1+ response codes
     # See [IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501]] {§7.1, "Server
     # Responses - Status
     # Responses"}[https://www.rfc-editor.org/rfc/rfc3501#section-7.1] for full
@@ -240,24 +250,24 @@ module Net
     #   the <tt>\Seen</tt> flag set.
     #   <em>DEPRECATED by IMAP4rev2.</em>
     #
-    # ==== +BINARY+ extension
+    # === +BINARY+ extension
     # See {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516].
     # * +UNKNOWN-CTE+, with a tagged +NO+ response, when the server does not
     #   known how to decode a CTE (content-transfer-encoding).  #data is +nil+.
     #   See IMAP#fetch.
     #
-    # ==== +UIDPLUS+ extension
+    # === +UIDPLUS+ extension
     # See {[RFC4315 §3]}[https://www.rfc-editor.org/rfc/rfc4315#section-3].
     # * +APPENDUID+, #data is UIDPlusData.  See IMAP#append.
     # * +COPYUID+, #data is UIDPlusData.  See IMAP#copy.
     # * +UIDNOTSTICKY+, #data is +nil+.  See IMAP#select.
     #
-    # ==== +SEARCHRES+ extension
+    # === +SEARCHRES+ extension
     # See {[RFC5182]}[https://www.rfc-editor.org/rfc/rfc5182].
     # * +NOTSAVED+, with a tagged +NO+ response, when the search result variable
     #   is not saved.  #data is +nil+.
     #
-    # ==== +RFC5530+ Response Codes
+    # === +RFC5530+ response codes
     # See {[RFC5530]}[https://www.rfc-editor.org/rfc/rfc5530], "IMAP Response
     # Codes" for the definition of the following response codes, which are all
     # machine-readable annotations for the human-readable ResponseText#text, and
@@ -280,22 +290,22 @@ module Net
     # * +ALREADYEXISTS+
     # * +NONEXISTENT+
     #
-    # ==== +QRESYNC+ extension
+    # === +QRESYNC+ extension
     # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     # * +CLOSED+, returned when the currently selected mailbox is closed
     #   implicitly by selecting or examining another mailbox.  #data is +nil+.
     #
-    # ==== +IMAP4rev2+ Response Codes
+    # === +IMAP4rev2+ response codes
     # See {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051] {§7.1, "Server
     # Responses - Status
     # Responses"}[https://www.rfc-editor.org/rfc/rfc9051#section-7.1] for full
     # descriptions of IMAP4rev2 response codes.  IMAP4rev2 includes all of the
-    # response codes listed above (except "UNSEEN") and adds the following:
+    # response codes listed above (except "+UNSEEN+") and adds the following:
     # * +HASCHILDREN+, with a tagged +NO+ response, when a mailbox delete failed
     #   because the server doesn't allow deletion of mailboxes with children.
     #   #data is +nil+.
     #
-    # ==== +CONDSTORE+ extension
+    # === +CONDSTORE+ extension
     # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     # * +NOMODSEQ+, when selecting a mailbox that does not support
     #   mod-sequences.  #data is +nil+.  See IMAP#select.
@@ -305,9 +315,16 @@ module Net
     #   since the +UNCHANGEDSINCE+ mod-sequence given to +STORE+ or <tt>UID
     #   STORE</tt>.
     #
-    # ==== +OBJECTID+ extension
+    # === +OBJECTID+ extension
     # See {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
     # * +MAILBOXID+, #data is a string
+    #
+    # == Extension compatibility
+    #
+    # Response codes are backwards compatible:  Servers are allowed to send new
+    # response codes even if the client has not enabled the extension that
+    # defines them.  When Net::IMAP does not know how to parse response
+    # code text, #data returns the unparsed string.
     #
     class ResponseCode < Struct.new(:name, :data)
       ##
