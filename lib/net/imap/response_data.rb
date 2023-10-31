@@ -423,16 +423,16 @@ module Net
       # Returns the mailbox name.
     end
 
-    # Net::IMAP::MailboxQuota represents contents of GETQUOTA response.
-    # This object can also be a response to GETQUOTAROOT.  In the syntax
-    # specification below, the delimiter used with the "#" construct is a
-    # single space (SPACE).
+    # MailboxQuota represents the data of an untagged +QUOTA+ response.
     #
-    # Net:IMAP#getquota returns an array of MailboxQuota objects.
+    # IMAP#getquota returns an array of MailboxQuota objects.
     #
     # Net::IMAP#getquotaroot returns an array containing both MailboxQuotaRoot
     # and MailboxQuota objects.
     #
+    # == Required capability
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # capability.
     class MailboxQuota < Struct.new(:mailbox, :usage, :quota)
       ##
       # method: mailbox
@@ -454,12 +454,14 @@ module Net
       #
     end
 
-    # Net::IMAP::MailboxQuotaRoot represents part of the GETQUOTAROOT
-    # response. (GETQUOTAROOT can also return Net::IMAP::MailboxQuota.)
+    # MailboxQuotaRoot represents the data of an untagged +QUOTAROOT+ response.
     #
-    # Net::IMAP#getquotaroot returns an array containing both MailboxQuotaRoot
-    # and MailboxQuota objects.
+    # IMAP#getquotaroot returns an array containing both MailboxQuotaRoot and
+    # MailboxQuota objects.
     #
+    # == Required capability
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # capability.
     class MailboxQuotaRoot < Struct.new(:mailbox, :quotaroots)
       ##
       # method: mailbox
