@@ -476,12 +476,13 @@ module Net
       # Zero or more quotaroots that affect the quota on the specified mailbox.
     end
 
-    # Net::IMAP::MailboxACLItem represents the response from GETACL.
+    # MailboxACLItem represents the data of an untagged +ACL+ response.
     #
-    # Net::IMAP#getacl returns an array of MailboxACLItem objects.
+    # IMAP#getacl returns an array of MailboxACLItem objects.
     #
-    # ==== Required capability
-    # +ACL+ - described in [ACL[https://www.rfc-editor.org/rfc/rfc4314]]
+    # == Required capability
+    # Requires +ACL+ [RFC4314[https://www.rfc-editor.org/rfc/rfc4314]]
+    # capability.
     class MailboxACLItem < Struct.new(:user, :rights, :mailbox)
       ##
       # method: mailbox
