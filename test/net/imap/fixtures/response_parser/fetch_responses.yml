@@ -40,6 +40,54 @@
           UID: 5
       raw_data: "* 1 FETCH (FLAGS (\\Seen $MDNSent \\Flagged Custom) UID 5)\r\n"
 
+  test_fetch_msg_att_HEADER.FIELDS:
+    :response: &test_fetch_msg_att_HEADER_FIELDS
+      "* 20367 FETCH (BODY[HEADER.FIELDS (List-ID List-Unsubscribe
+      List-Unsubscribe-Post List-Owner List-Archive)] {291}\r\nList-Unsubscribe:
+        manage-example-lists
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n
+        xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 20367
+        attr:
+          BODY[HEADER.FIELDS (List-ID List-Unsubscribe List-Unsubscribe-Post List-Owner List-Archive)]: "List-Unsubscribe:
+            manage-example-lists xxxxxxxxxxxxxxxxxxxxxxxxxxxxx xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n
+            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n
+            xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n\r\n"
+      raw_data: *test_fetch_msg_att_HEADER_FIELDS
+
+  test_fetch_msg_att_HEADER.FIELDS.NOT:
+    :response: &test_fetch_msg_att_HEADER_FIELDS_NOT
+      "* 20368 FETCH (BODY[HEADER.FIELDS.NOT (Received DKIM-Signature List-Unsubscribe
+      ARC-Seal ARC-Authentication-Results Authentication-Results ARC-Message-Signature
+      Received-SPF X-Received Mime-Version Content-Type Content-Transfer-Encoding
+      X-AUTO-Response-Suppress X-Google-Smtp-Source)]
+      {307}\r\nDelivered-To: testy.mctester@mail.test\r\nReturn-Path:
+        <noreply@example.test>\r\nDate: Thu, 02 Nov 2023 10:10:17 -0700\r\nFrom:
+        Example <support@example.test>\r\nMessage-ID:
+        <xxxxxxxxxxxxxxxxxxxx@yyyyyyyyy-zzzzzzzz-example.mail>\r\nSubject:
+        [Example] You've hit 75% of your spending limit for the Tester\r\n
+        account\r\n\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 20368
+        attr:
+          ? BODY[HEADER.FIELDS.NOT (Received DKIM-Signature List-Unsubscribe ARC-Seal
+            ARC-Authentication-Results Authentication-Results ARC-Message-Signature
+            Received-SPF X-Received Mime-Version Content-Type Content-Transfer-Encoding
+            X-AUTO-Response-Suppress X-Google-Smtp-Source)]
+          : "Delivered-To: testy.mctester@mail.test\r\nReturn-Path: <noreply@example.test>\r\nDate:
+            Thu, 02 Nov 2023 10:10:17 -0700\r\nFrom: Example <support@example.test>\r\nMessage-ID:
+            <xxxxxxxxxxxxxxxxxxxx@yyyyyyyyy-zzzzzzzz-example.mail>\r\nSubject: [Example]
+            You've hit 75% of your spending limit for the Tester\r\n account\r\n\r\n"
+      raw_data: *test_fetch_msg_att_HEADER_FIELDS_NOT
+
   test_invalid_fetch_msg_att_extra_space:
     :response: "* 1 FETCH (UID 92285 )\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse

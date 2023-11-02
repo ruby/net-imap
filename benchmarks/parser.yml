@@ -96,6 +96,16 @@ benchmark:
       response = load_response("../test/net/imap/fixtures/response_parser/continuation_requests.yml",
                                "test_continuation_request_without_response_text")
   script: parser.parse(response)
+- name: fetch_msg_att_HEADER.FIELDS
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/fetch_responses.yml",
+                               "test_fetch_msg_att_HEADER.FIELDS")
+  script: parser.parse(response)
+- name: fetch_msg_att_HEADER.FIELDS.NOT
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/fetch_responses.yml",
+                               "test_fetch_msg_att_HEADER.FIELDS.NOT")
+  script: parser.parse(response)
 - name: fetch_msg_att_flags_and_uid
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/fetch_responses.yml",
@@ -170,6 +180,11 @@ benchmark:
   prelude: |2
       response = load_response("../test/net/imap/fixtures/response_parser/quirky_behaviors.yml",
                                "test_invalid_noop_response_with_numeric_prefix")
+  script: parser.parse(response)
+- name: invalid_noop_response_with_numeric_prefix_and_unparseable_data
+  prelude: |2
+      response = load_response("../test/net/imap/fixtures/response_parser/quirky_behaviors.yml",
+                               "test_invalid_noop_response_with_numeric_prefix_and_unparseable_data")
   script: parser.parse(response)
 - name: invalid_noop_response_with_unparseable_data
   prelude: |2

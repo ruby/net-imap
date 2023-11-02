@@ -1101,47 +1101,32 @@ module Net
       end
 
       # RFC3501 & RFC9051:
-      # header-fld-name = astring
+      #   header-fld-name = astring
+      #
+      # NOTE: Previously, Net::IMAP recreated the raw original source string.
+      # Now, it grabs the raw encoded value using @str and @pos.  A future
+      # version may simply return the decoded astring value.  Although that is
+      # technically incompatible, it should almost never make a difference: all
+      # standard header field names are valid atoms:
+      #
+      # https://www.iana.org/assignments/message-headers/message-headers.xhtml
       #
       # Although RFC3501 allows any astring, RFC5322-valid header names are one
       # or more of the printable US-ASCII characters, except SP and colon.  So
       # empty string isn't valid, and literals aren't needed and should not be
-      # used.  This syntax is unchanged by [I18N-HDRS] (RFC6532).
+      # used.  This is explicitly unchanged by [I18N-HDRS] (RFC6532).
       #
       # RFC5233:
-      # optional-field  =   field-name ":" unstructured CRLF
-      # field-name      =   1*ftext
-      # ftext           =   %d33-57 /          ; Printable US-ASCII
-      #                     %d59-126           ;  characters not including
-      #                                        ;  ":".
-      #
-      # Atom and quoted should be sufficient.
-      #
-      # TODO: Use original source string, rather than decode and re-encode.
-      # TODO: or at least, DRY up this code with the send_command formatting.
+      #     optional-field  =   field-name ":" unstructured CRLF
+      #     field-name      =   1*ftext
+      #     ftext           =   %d33-57 /          ; Printable US-ASCII
+      #                         %d59-126           ;  characters not including
+      #                                            ;  ":".
       def header_fld_name
-        case (str = astring)
-        when ""
-          warn '%s header-fld-name is an invalid RFC5322 field-name: ""' %
-            [self.class]
-          return '""'
-        when /[\x80-\xff\r\n]/n
-          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
-            [self.class, str, $&]
-          # literal
-          return "{" + str.bytesize.to_s + "}" + CRLF + str
-        when /[^\x21-\x39\x3b-\xfe]/n
-          warn "%s header-fld-name %p has invalid RFC5322 field-name char: %p" %
-            [self.class, str, $&]
-          # invalid quoted string
-          return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
-        when /[(){ \x00-\x1f\x7f%*"\\]/n
-          # quoted string
-          return '"' + str.gsub(/["\\]/n, "\\\\\\&") + '"'
-        else
-          # atom
-          return str
-        end
+        assert_no_lookahead
+        start = @pos
+        astring
+        @str[start...@pos - 1]
       end
 
       # mailbox-data    =  "FLAGS" SP flag-list / "LIST" SP mailbox-list /
