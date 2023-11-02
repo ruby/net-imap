@@ -1317,31 +1317,19 @@ module Net
       #   header-fld-name = astring
       #
       # NOTE: Previously, Net::IMAP recreated the raw original source string.
-      # Now, it grabs the raw encoded value using @str and @pos.  A future
-      # version may simply return the decoded astring value.  Although that is
-      # technically incompatible, it should almost never make a difference: all
-      # standard header field names are valid atoms:
+      # Now, it returns the decoded astring value.  Although this is technically
+      # incompatible, it should almost never make a difference: all standard
+      # header field names are valid atoms:
       #
       # https://www.iana.org/assignments/message-headers/message-headers.xhtml
       #
-      # Although RFC3501 allows any astring, RFC5322-valid header names are one
-      # or more of the printable US-ASCII characters, except SP and colon.  So
-      # empty string isn't valid, and literals aren't needed and should not be
-      # used.  This is explicitly unchanged by [I18N-HDRS] (RFC6532).
-      #
-      # RFC5233:
+      # See also RFC5233:
       #     optional-field  =   field-name ":" unstructured CRLF
       #     field-name      =   1*ftext
       #     ftext           =   %d33-57 /          ; Printable US-ASCII
       #                         %d59-126           ;  characters not including
       #                                            ;  ":".
-      def header_fld_name
-        assert_no_lookahead
-        start = @pos
-        astring
-        end_pos = @token ? @pos - 1 : @pos
-        @str[start...end_pos]
-      end
+      alias header_fld_name astring
 
       # mailbox-data    =  "FLAGS" SP flag-list / "LIST" SP mailbox-list /
       #                    "LSUB" SP mailbox-list / "SEARCH" *(SP nz-number) /

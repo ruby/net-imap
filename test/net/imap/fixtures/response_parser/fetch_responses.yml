@@ -70,7 +70,7 @@
       data: !ruby/struct:Net::IMAP::FetchData
         seqno: 10
         attr:
-          "BODY[HEADER.FIELDS (\"Content-Type\")]": "Content-Type: multipart/alternative;\r\n
+          "BODY[HEADER.FIELDS (Content-Type)]": "Content-Type: multipart/alternative;\r\n
             boundary=\"--==_mimepart_66cfb08b4f249_34306b61811e5\"\r\n\r\n"
       raw_data: *test_fetch_msg_att_HEADER_FIELDS_quoted
 
