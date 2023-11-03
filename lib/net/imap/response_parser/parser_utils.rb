@@ -15,6 +15,7 @@ module Net
 
           # we can skip lexer for single character matches, as a shortcut
           def def_char_matchers(name, char, token)
+            byte = char.ord
             match_name = name.match(/\A[A-Z]/) ? "#{name}!" : name
             char = char.dump
             class_eval <<~RUBY, __FILE__, __LINE__ + 1
@@ -27,7 +28,7 @@ module Net
 
               # use token or string peek
               def peek_#{name}?
-                @token ? @token.symbol == #{token} : @str[@pos] == #{char}
+                @token ? @token.symbol == #{token} : @str.getbyte(@pos) == #{byte}
               end
 
               # like accept(token_symbols); returns token or nil
@@ -35,7 +36,7 @@ module Net
                 if @token&.symbol == #{token}
                   #{SHIFT_TOKEN}
                   #{char}
-                elsif !@token && @str[@pos] == #{char}
+                elsif !@token && @str.getbyte(@pos) == #{byte}
                   @pos += 1
                   #{char}
                 end
@@ -46,7 +47,7 @@ module Net
                 if @token&.symbol == #{token}
                   #{SHIFT_TOKEN}
                   #{char}
-                elsif !@token && @str[@pos] == #{char}
+                elsif !@token && @str.getbyte(@pos) == #{byte}
                   @pos += 1
                   #{char}
                 else
@@ -109,7 +110,6 @@ module Net
                 end
               end
             RUBY
-
           end
 
         end
