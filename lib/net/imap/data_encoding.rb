@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "date"
+require "time"
 
 require_relative "errors"
 
@@ -102,8 +103,16 @@ module Net
     #
     # Decodes +string+ as an IMAP4 formatted "date-time".
     #
-    # Note that double quotes are not optional.  See STRFTIME.
+    # NOTE: Although double-quotes are not optional in the IMAP grammar,
+    # Net::IMAP currently parses "date-time" values as "quoted" strings and this
+    # removes the quotation marks.  To be useful for strings which have already
+    # been parsed as a quoted string, this method makes double-quotes optional.
+    #
+    # See STRFTIME.
     def self.decode_datetime(string)
+      unless string.start_with?(?") && string.end_with?(?")
+        string = '"%s"' % [string]
+      end
       DateTime.strptime(string, STRFTIME)
     end
 
@@ -113,7 +122,10 @@ module Net
     #
     # Same as +decode_datetime+, but returning a Time instead.
     def self.decode_time(string)
-      decode_datetime(string).to_time
+      unless string.start_with?(?") && string.end_with?(?")
+        string = '"%s"' % [string]
+      end
+      Time.strptime(string, STRFTIME)
     end
 
     class << self
