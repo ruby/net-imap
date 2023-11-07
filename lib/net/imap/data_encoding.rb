@@ -1,6 +1,7 @@
 # frozen_string_literal: true
 
 require "date"
+require "time"
 
 require_relative "errors"
 
@@ -121,7 +122,10 @@ module Net
     #
     # Same as +decode_datetime+, but returning a Time instead.
     def self.decode_time(string)
-      decode_datetime(string).to_time
+      unless string.start_with?(?") && string.end_with?(?")
+        string = '"%s"' % [string]
+      end
+      Time.strptime(string, STRFTIME)
     end
 
     class << self
