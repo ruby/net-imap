@@ -8,7 +8,7 @@ module Net
       # (internal API, subject to change)
       module ParserUtils # :nodoc:
 
-        module Generator
+        module Generator # :nodoc:
 
           LOOKAHEAD = "(@token ||= next_token)"
           SHIFT_TOKEN = "(@token = nil)"
