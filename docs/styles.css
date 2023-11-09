@@ -22,15 +22,3 @@ body {
    */
   font-weight: 400;
 }
-
-@media only screen and (min-width: 600px) {
-  nav {
-    height: 100%;
-    position: fixed;
-    overflow-y: scroll;
-  }
-
-  nav #class-metadata {
-    margin-bottom: 5em;
-  }
-}
