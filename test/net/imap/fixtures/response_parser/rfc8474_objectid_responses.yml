@@ -1,5 +1,28 @@
 ---
 :tests:
+  rfc8474_example_4.1_MAILBOXID_response_to_CREATE:
+    :response: "3 OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: '3'
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: MAILBOXID
+          data: F2212ea87-6097-4256-9d51-71338625
+        text: Completed
+      raw_data: "3 OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Completed\r\n"
+
+  rfc8474_example_4.2_MAILBOXID_untagged_response_to_SELECT:
+    :response: "* OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Ok\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: MAILBOXID
+          data: F2212ea87-6097-4256-9d51-71338625
+        text: Ok
+      raw_data: "* OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Ok\r\n"
+
   rfc8474_example_5.3_EMAILID_and_THREADID:
     :response: "* 3 FETCH (EMAILID (M5fdc09b49ea703) THREADID (T11863d02dd95b5))\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse

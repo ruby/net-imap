@@ -505,6 +505,8 @@ module Net
   # - See #enable for information about support for UTF-8 string encoding.
   #
   # ==== RFC8474: +OBJECTID+
+  # - Adds +MAILBOXID+ ResponseCode to #create tagged response.
+  # - Adds +MAILBOXID+ ResponseCode to #select and #examine untagged response.
   # - Updates #fetch and #uid_fetch with the +EMAILID+ and +THREADID+ items.
   #   See FetchData#emailid and FetchData#emailid.
   # >>>

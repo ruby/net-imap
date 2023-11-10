@@ -1794,6 +1794,9 @@ module Net
       #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
       #                       "NOMODSEQ" /
       #                       "MODIFIED" SP sequence-set
+      #
+      # RFC8474: OBJECTID
+      #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
       def resp_text_code
         name = resp_text_code__name
         data =
@@ -1813,6 +1816,7 @@ module Net
             "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
             "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
           when "NOMODSEQ"           # CONDSTORE
+          when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
           else
             SP? and text_chars_except_rbra
           end

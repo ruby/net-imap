@@ -256,6 +256,10 @@ module Net
     # * +ALREADYEXISTS+
     # * +NONEXISTENT+
     #
+    # Other supported \IMAP extension response codes:
+    # * +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-7]
+    #   * +MAILBOXID+, #data will be a string
+    #
     class ResponseCode < Struct.new(:name, :data)
       ##
       # method: name
