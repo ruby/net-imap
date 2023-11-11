@@ -2,7 +2,8 @@
 
 module Net
   class IMAP < Protocol
-    autoload :FetchData, File.expand_path("fetch_data", __dir__)
+    autoload :FetchData,        "#{__dir__}/fetch_data"
+    autoload :SequenceSet,      "#{__dir__}/sequence_set"
 
     # Net::IMAP::ContinuationRequest represents command continuation requests.
     #
