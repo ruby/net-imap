@@ -502,6 +502,10 @@ module Net
   #
   # - See #enable for information about support for UTF-8 string encoding.
   #
+  # ==== RFC7162: +CONDSTORE+
+  #
+  # - Updates #status with the +HIGHESTMODSEQ+ status attribute.
+  #
   # ==== RFC8438: <tt>STATUS=SIZE</tt>
   # - Updates #status with the +SIZE+ status attribute.
   #
@@ -1689,7 +1693,7 @@ module Net
       end
     end
 
-    # Sends a {STATUS commands [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
+    # Sends a {STATUS command [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
     # and returns the status of the indicated +mailbox+. +attr+ is a list of one
     # or more attributes whose statuses are to be requested.
     #
@@ -1716,10 +1720,13 @@ module Net
     #     The approximate size of the mailbox---must be greater than or equal to
     #     the sum of all messages' +RFC822.SIZE+ fetch item values.
     #
+    # +HIGHESTMODSEQ+::
+    #    The highest mod-sequence value of all messages in the mailbox.  See
+    #    +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
+    #
     # +MAILBOXID+::
-    #     A server-allocated unique _string_ identifier for the mailbox.
-    #     See +OBJECTID+
-    #     {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-4].
+    #     A server-allocated unique _string_ identifier for the mailbox.  See
+    #     +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
     #
     # +RECENT+::
     #     The number of messages with the <tt>\Recent</tt> flag.
@@ -1740,6 +1747,9 @@ module Net
     # {[RFC8483]}[https://www.rfc-editor.org/rfc/rfc8483.html].
     #
     # +DELETED+ requires the server's capabilities to include +IMAP4rev2+.
+    #
+    # +HIGHESTMODSEQ+ requires the server's capabilities to include +CONDSTORE+
+    # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     #
     # +MAILBOXID+ requires the server's capabilities to include +OBJECTID+
     # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
