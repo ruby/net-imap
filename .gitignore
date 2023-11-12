@@ -8,4 +8,5 @@
 /spec/reports/
 /tmp/
 /Gemfile.lock
-benchmarks/Gemfile*
+/benchmarks/Gemfile*
+/benchmarks/parser.yml
