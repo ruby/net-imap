@@ -42,11 +42,13 @@ module NetIMAPTestHelpers
         when :parser_assert_equal
           response = test.fetch(:response).force_encoding "ASCII-8BIT"
           expected = test.fetch(:expected)
+          debug    = test.fetch(:debug, false)
 
           define_method name do
             with_debug do
               parser = Net::IMAP::ResponseParser.new
               actual = parser.parse response
+              binding.irb if debug
               assert_equal expected, actual
             end
           end
@@ -58,7 +60,9 @@ module NetIMAPTestHelpers
             with_debug do
               parser = Net::IMAP::ResponseParser.new
               actual = parser.parse response
-              puts YAML.dump name => {response: response, expected: actual}
+              puts YAML.dump "tests" => {
+                name => {response: response, expected: actual}
+              }
               pend "update tests with expected data..."
             end
           end
