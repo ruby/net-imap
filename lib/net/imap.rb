@@ -509,8 +509,7 @@ module Net
   # - Adds +MAILBOXID+ ResponseCode to #select and #examine untagged response.
   # - Updates #fetch and #uid_fetch with the +EMAILID+ and +THREADID+ items.
   #   See FetchData#emailid and FetchData#emailid.
-  # >>>
-  #   *NOTE: The +MAILBOXID+ attribute for #status is not supported yet.
+  # - Updates #status with support for the +MAILBOXID+ status attribute.
   #
   # == References
   #
@@ -1691,21 +1690,52 @@ module Net
 
     # Sends a {STATUS commands [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
     # and returns the status of the indicated +mailbox+. +attr+ is a list of one
-    # or more attributes whose statuses are to be requested.  Supported
-    # attributes include:
+    # or more attributes whose statuses are to be requested.
     #
-    # MESSAGES:: the number of messages in the mailbox.
-    # RECENT:: the number of recent messages in the mailbox.
-    # UNSEEN:: the number of unseen messages in the mailbox.
-    #
-    # The return value is a hash of attributes. For example:
-    #
-    #   p imap.status("inbox", ["MESSAGES", "RECENT"])
-    #   #=> {"RECENT"=>0, "MESSAGES"=>44}
+    # The return value is a hash of attributes.
     #
     # A Net::IMAP::NoResponseError is raised if status values
     # for +mailbox+ cannot be returned; for instance, because it
     # does not exist.
+    #
+    # ===== Supported attributes:
+    #
+    # +MESSAGES+::    The number of messages in the mailbox.
+    #
+    # +UIDNEXT+::     The next unique identifier value of the mailbox.
+    #
+    # +UIDVALIDITY+:: The unique identifier validity value of the mailbox.
+    #
+    # +UNSEEN+::      The number of messages without the <tt>\Seen</tt> flag.
+    #
+    # +DELETED+::     The number of messages with the <tt>\Deleted</tt> flag.
+    #
+    # +SIZE+::
+    #     The approximate size of the mailbox---must be greater than or equal to
+    #     the sum of all messages' +RFC822.SIZE+ fetch item values.
+    #
+    # +MAILBOXID+::
+    #     A server-allocated unique identifier for the mailbox.
+    #     See +OBJECTID+
+    #     {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-4].
+    #
+    # +RECENT+::
+    #     The number of messages with the <tt>\Recent</tt> flag.
+    #     _NOTE:_ +RECENT+ was removed from IMAP4rev2.
+    #
+    # ===== For example:
+    #
+    #   p imap.status("inbox", ["MESSAGES", "RECENT"])
+    #   #=> {"RECENT"=>0, "MESSAGES"=>44}
+    #
+    # ===== Capabilities
+    #
+    # +SIZE+ requires the server's capabilities to include either +IMAP4rev2+ or
+    # <tt>STATUS=SIZE</tt>
+    # {[RFC8483]}[https://www.rfc-editor.org/rfc/rfc8483.html].
+    #
+    # +MAILBOXID+ requires the server's capabilities to include +OBJECTID+
+    # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
     def status(mailbox, attr)
       synchronize do
         send_command("STATUS", mailbox, attr)

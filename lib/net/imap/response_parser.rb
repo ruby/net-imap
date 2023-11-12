@@ -1589,6 +1589,7 @@ module Net
           when "UIDVALIDITY"   then nz_number           # RFC3501, RFC9051
           when "RECENT"        then number              # RFC3501 (obsolete)
           when "SIZE"          then number64            # RFC8483, RFC9051
+          when "MAILBOXID"     then parens__objectid    # RFC8474
           else
             number? || ExtensionData.new(tagged_ext_val)
           end

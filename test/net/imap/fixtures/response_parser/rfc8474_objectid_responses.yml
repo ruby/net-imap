@@ -23,6 +23,16 @@
         text: Ok
       raw_data: "* OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Ok\r\n"
 
+  rfc8474_example_4.3_MAILBOXID_attribute_for_STATUS:
+    :response: "* STATUS foo (MAILBOXID (F2212ea87-6097-4256-9d51-71338625))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: foo
+        attr:
+          MAILBOXID: F2212ea87-6097-4256-9d51-71338625
+      raw_data: "* STATUS foo (MAILBOXID (F2212ea87-6097-4256-9d51-71338625))\r\n"
+
   rfc8474_example_5.3_EMAILID_and_THREADID:
     :response: "* 3 FETCH (EMAILID (M5fdc09b49ea703) THREADID (T11863d02dd95b5))\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
