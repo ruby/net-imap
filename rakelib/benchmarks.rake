@@ -17,11 +17,6 @@ BENCHMARK_INIT = <<RUBY
   parser   = Net::IMAP::ResponseParser.new
 RUBY
 
-PER_BENCHMARK_PRELUDE = <<RUBY
-  response = load_response(%p,
-                           %p)
-RUBY
-
 file "benchmarks/parser.yml" => PARSER_TEST_FIXTURES do |t|
   require "yaml"
   require "pathname"
@@ -31,7 +26,7 @@ file "benchmarks/parser.yml" => PARSER_TEST_FIXTURES do |t|
   files = path.glob("*.yml")
   tests = files.flat_map {|file|
     file.read
-      .gsub(%r{([-:]) !ruby/struct:\S+}) { $1 }
+      .gsub(%r{([-:]) !ruby/(object|struct):\S+}) { $1 }
       .then {
         YAML.safe_load(_1, filename: file,
                        permitted_classes: [Symbol, Regexp], aliases: true)
@@ -42,14 +37,12 @@ file "benchmarks/parser.yml" => PARSER_TEST_FIXTURES do |t|
           test.key?(:expected) ? :parser_assert_equal : :parser_pending
         }
       }
-      .map {|test_name, _|
-        [file.relative_path_from(__dir__).to_s, test_name.to_s]
-      }
+      .map {|test_name, test| [test_name.to_s, test.fetch(:response)] }
   }
 
-  benchmarks = tests.map {|file, fixture_name|
+  benchmarks = tests.map {|fixture_name, response|
     {"name"    => fixture_name.delete_prefix("test_"),
-     "prelude" => PER_BENCHMARK_PRELUDE % [file, fixture_name],
+     "prelude" => "response = %s" % [response.dump],
      "script"  => "parser.parse(response)"}
   }
     .sort_by { _1["name"] }
