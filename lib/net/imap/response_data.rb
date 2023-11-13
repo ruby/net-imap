@@ -2,7 +2,8 @@
 
 module Net
   class IMAP < Protocol
-    autoload :FetchData, File.expand_path("fetch_data", __dir__)
+    autoload :FetchData,        "#{__dir__}/fetch_data"
+    autoload :SequenceSet,      "#{__dir__}/sequence_set"
 
     # Net::IMAP::ContinuationRequest represents command continuation requests.
     #
@@ -71,7 +72,7 @@ module Net
     # unknown extensions to response types without a well-defined extension
     # grammar.
     #
-    # See also: UnparsedNumericResponseData
+    # See also: UnparsedNumericResponseData, ExtensionData, IgnoredResponse
     class UnparsedData < Struct.new(:unparsed_data)
       ##
       # method: unparsed_data
@@ -87,7 +88,7 @@ module Net
     # Net::IMAP::UnparsedNumericResponseData represents data for unhandled
     # response types with a numeric prefix.  See the documentation for #number.
     #
-    # See also: UnparsedData
+    # See also: UnparsedData, ExtensionData, IgnoredResponse
     class UnparsedNumericResponseData < Struct.new(:number, :unparsed_data)
       ##
       # method: number
@@ -104,6 +105,23 @@ module Net
       # :call-seq: unparsed_data -> string
       #
       # The unparsed data, not including #number or UntaggedResponse#name.
+    end
+
+    # **Note:** This represents an intentionally _unstable_ API.  Where
+    # instances of this class are returned, future releases may return a
+    # different (incompatible) object <em>without deprecation or warning</em>.
+    #
+    # Net::IMAP::ExtensionData represents data that is parsable according to the
+    # forward-compatible extension syntax in RFC3501, RFC4466, or RFC9051, but
+    # isn't directly known or understood by Net::IMAP yet.
+    #
+    # See also: UnparsedData, UnparsedNumericResponseData, IgnoredResponse
+    class ExtensionData < Struct.new(:data)
+      ##
+      # method: data
+      # :call-seq: data -> string
+      #
+      # The parsed extension data.
     end
 
     # Net::IMAP::TaggedResponse represents tagged responses.

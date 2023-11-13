@@ -267,6 +267,56 @@ module Net
         #                      ; Is a valid RFC 3501 "atom".
         TAGGED_EXT_LABEL     = /#{TAGGED_LABEL_FCHAR}#{TAGGED_LABEL_CHAR}*/n
 
+        # nz-number       = digit-nz *DIGIT
+        #                     ; Non-zero unsigned 32-bit integer
+        #                     ; (0 < n < 4,294,967,296)
+        NZ_NUMBER         = /[1-9]\d*/n
+
+        # seq-number      = nz-number / "*"
+        #                     ; message sequence number (COPY, FETCH, STORE
+        #                     ; commands) or unique identifier (UID COPY,
+        #                     ; UID FETCH, UID STORE commands).
+        #                     ; * represents the largest number in use.  In
+        #                     ; the case of message sequence numbers, it is
+        #                     ; the number of messages in a non-empty mailbox.
+        #                     ; In the case of unique identifiers, it is the
+        #                     ; unique identifier of the last message in the
+        #                     ; mailbox or, if the mailbox is empty, the
+        #                     ; mailbox's current UIDNEXT value.
+        #                     ; The server should respond with a tagged BAD
+        #                     ; response to a command that uses a message
+        #                     ; sequence number greater than the number of
+        #                     ; messages in the selected mailbox.  This
+        #                     ; includes "*" if the selected mailbox is empty.
+        SEQ_NUMBER        = /#{NZ_NUMBER}|\*/n
+
+        # seq-range       = seq-number ":" seq-number
+        #                     ; two seq-number values and all values between
+        #                     ; these two regardless of order.
+        #                     ; Example: 2:4 and 4:2 are equivalent and
+        #                     ; indicate values 2, 3, and 4.
+        #                     ; Example: a unique identifier sequence range of
+        #                     ; 3291:* includes the UID of the last message in
+        #                     ; the mailbox, even if that value is less than
+        #                     ; 3291.
+        SEQ_RANGE         = /#{SEQ_NUMBER}:#{SEQ_NUMBER}/n
+
+        # sequence-set    = (seq-number / seq-range) ["," sequence-set]
+        #                     ; set of seq-number values, regardless of order.
+        #                     ; Servers MAY coalesce overlaps and/or execute
+        #                     ; the sequence in any order.
+        #                     ; Example: a message sequence number set of
+        #                     ; 2,4:7,9,12:* for a mailbox with 15 messages is
+        #                     ; equivalent to 2,4,5,6,7,9,12,13,14,15
+        #                     ; Example: a message sequence number set of
+        #                     ; *:4,5:7 for a mailbox with 10 messages is
+        #                     ; equivalent to 10,9,8,7,6,5,4,5,6,7 and MAY
+        #                     ; be reordered and overlap coalesced to be
+        #                     ; 4,5,6,7,8,9,10.
+        SEQUENCE_SET_ITEM = /#{SEQ_NUMBER}|#{SEQ_RANGE}/n
+        SEQUENCE_SET      = /#{SEQUENCE_SET_ITEM}(?:,#{SEQUENCE_SET_ITEM})*/n
+        SEQUENCE_SET_STR  = /\A#{SEQUENCE_SET}\z/n
+
         # RFC3501:
         #   literal          = "{" number "}" CRLF *CHAR8
         #                        ; Number represents the number of CHAR8s
@@ -405,6 +455,24 @@ module Net
       # ATOM-CHAR       = <any CHAR except atom-specials>
       ATOM_TOKENS = [T_ATOM, T_NUMBER, T_NIL, T_LBRA, T_PLUS]
 
+      SEQUENCE_SET_TOKENS = [T_ATOM, T_NUMBER, T_STAR]
+
+      #   sequence-set    = (seq-number / seq-range) ["," sequence-set]
+      #   sequence-set    =/ seq-last-command
+      #                       ; Allow for "result of the last command"
+      #                       ; indicator.
+      #   seq-last-command   = "$"
+      #
+      # *note*: doesn't match seq-last-command
+      def sequence_set
+        str = combine_adjacent(*SEQUENCE_SET_TOKENS)
+        if Patterns::SEQUENCE_SET_STR.match?(str)
+          SequenceSet.new(str)
+        else
+          parse_error("unexpected atom %p, expected sequence-set", str)
+        end
+      end
+
       # ASTRING-CHAR    = ATOM-CHAR / resp-specials
       # resp-specials   = "]"
       ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA].freeze
@@ -487,6 +555,60 @@ module Net
       def case_insensitive__nstring
         NIL? ? nil : case_insensitive__string
       end
+
+      # tagged-ext-comp     = astring /
+      #                       tagged-ext-comp *(SP tagged-ext-comp) /
+      #                       "(" tagged-ext-comp ")"
+      #                       ; Extensions that follow this general
+      #                       ; syntax should use nstring instead of
+      #                       ; astring when appropriate in the context
+      #                       ; of the extension.
+      #                       ; Note that a message set or a "number"
+      #                       ; can always be represented as an "atom".
+      #                       ; A URL should be represented as
+      #                       ; a "quoted" string.
+      def tagged_ext_comp
+        vals = []
+        while true
+          vals << case lookahead!(*ASTRING_TOKENS, T_LPAR).symbol
+                  when T_LPAR   then lpar; ary = tagged_ext_comp; rpar; ary
+                  when T_NUMBER then number
+                  else               astring
+                  end
+          SP? or break
+        end
+        vals
+      end
+
+      # tagged-ext-simple is a subset of atom
+      # TODO: recognize sequence-set in the lexer
+      #
+      # tagged-ext-simple   = sequence-set / number / number64
+      def tagged_ext_simple
+        number? || sequence_set
+      end
+
+      # tagged-ext-val      = tagged-ext-simple /
+      #                       "(" [tagged-ext-comp] ")"
+      def tagged_ext_val
+        if lpar?
+          _ = peek_rpar? ? [] : tagged_ext_comp
+          rpar
+          _
+        else
+          tagged_ext_simple
+        end
+      end
+
+      # mailbox         = "INBOX" / astring
+      #                     ; INBOX is case-insensitive.  All case variants of
+      #                     ; INBOX (e.g., "iNbOx") MUST be interpreted as INBOX
+      #                     ; not as an astring.  An astring which consists of
+      #                     ; the case-insensitive sequence "I" "N" "B" "O" "X"
+      #                     ; is considered to be INBOX and not an astring.
+      #                     ;  Refer to section 5.1 for further
+      #                     ; semantic details of mailbox names.
+      alias mailbox astring
 
       # valid number ranges are not enforced by parser
       #   number64        = 1*DIGIT
@@ -1396,31 +1518,79 @@ module Net
         return rootmember
       end
 
+      #   mailbox-data    =/ "STATUS" SP mailbox SP "(" [status-att-list] ")"
       def mailbox_data__status
-        token = match(T_ATOM)
-        name = token.value.upcase
-        match(T_SPACE)
-        mailbox = astring
-        match(T_SPACE)
-        match(T_LPAR)
-        attr = {}
-        while true
-          token = lookahead
-          case token.symbol
-          when T_RPAR
-            shift_token
-            break
-          when T_SPACE
-            shift_token
+        resp_name  = label("STATUS"); SP!
+        mbox_name  = mailbox;         SP!
+        lpar; attr = status_att_list; rpar
+        UntaggedResponse.new(resp_name, StatusData.new(mbox_name, attr), @str)
+      end
+
+      # RFC3501
+      #   status-att-list = status-att SP number *(SP status-att SP number)
+      # RFC4466, RFC9051, and RFC3501 Errata
+      #   status-att-list = status-att-val *(SP status-att-val)
+      def status_att_list
+        attrs = [status_att_val]
+        while SP? do attrs << status_att_val end
+        attrs.to_h
+      end
+
+      # RFC3501 Errata:
+      # status-att-val  = ("MESSAGES" SP number) / ("RECENT" SP number) /
+      #                   ("UIDNEXT" SP nz-number) / ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number)
+      # RFC4466:
+      # status-att-val  = ("MESSAGES" SP number) /
+      #                   ("RECENT" SP number) /
+      #                   ("UIDNEXT" SP nz-number) /
+      #                   ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number)
+      #                   ;; Extensions to the STATUS responses
+      #                   ;; should extend this production.
+      #                   ;; Extensions should use the generic
+      #                   ;; syntax defined by tagged-ext.
+      # RFC9051:
+      # status-att-val  = ("MESSAGES" SP number) /
+      #                   ("UIDNEXT" SP nz-number) /
+      #                   ("UIDVALIDITY" SP nz-number) /
+      #                   ("UNSEEN" SP number) /
+      #                   ("DELETED" SP number) /
+      #                   ("SIZE" SP number64)
+      #                     ; Extensions to the STATUS responses
+      #                     ; should extend this production.
+      #                     ; Extensions should use the generic
+      #                     ; syntax defined by tagged-ext.
+      # RFC7162:
+      # status-att-val      =/ "HIGHESTMODSEQ" SP mod-sequence-valzer
+      #                        ;; Extends non-terminal defined in [RFC4466].
+      #                        ;; Value 0 denotes that the mailbox doesn't
+      #                        ;; support persistent mod-sequences
+      #                        ;; as described in Section 3.1.2.2.
+      # RFC7889:
+      # status-att-val =/ "APPENDLIMIT" SP (number / nil)
+      #                 ;; status-att-val is defined in RFC 4466
+      # RFC8438:
+      # status-att-val =/ "SIZE" SP number64
+      # RFC8474:
+      # status-att-val =/ "MAILBOXID" SP "(" objectid ")"
+      #         ; follows tagged-ext production from [RFC4466]
+      def status_att_val
+        key = tagged_ext_label
+        SP!
+        val =
+          case key
+          when "MESSAGES"      then number              # RFC3501, RFC9051
+          when "UNSEEN"        then number              # RFC3501, RFC9051
+          when "DELETED"       then number              # RFC3501, RFC9051
+          when "UIDNEXT"       then nz_number           # RFC3501, RFC9051
+          when "UIDVALIDITY"   then nz_number           # RFC3501, RFC9051
+          when "RECENT"        then number              # RFC3501 (obsolete)
+          when "SIZE"          then number64            # RFC8483, RFC9051
+          else
+            number? || ExtensionData.new(tagged_ext_val)
           end
-          token = match(T_ATOM)
-          key = token.value.upcase
-          match(T_SPACE)
-          val = number
-          attr[key] = val
-        end
-        data = StatusData.new(mailbox, attr)
-        return UntaggedResponse.new(name, data, @str)
+        [key, val]
       end
 
       # The presence of "IMAP4rev1" or "IMAP4rev2" is unenforced here.
