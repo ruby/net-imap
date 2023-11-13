@@ -1734,6 +1734,8 @@ module Net
     # <tt>STATUS=SIZE</tt>
     # {[RFC8483]}[https://www.rfc-editor.org/rfc/rfc8483.html].
     #
+    # +DELETED+ requires the server's capabilities to include +IMAP4rev2+.
+    #
     # +MAILBOXID+ requires the server's capabilities to include +OBJECTID+
     # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
     def status(mailbox, attr)
