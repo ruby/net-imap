@@ -1692,13 +1692,14 @@ module Net
     # and returns the status of the indicated +mailbox+. +attr+ is a list of one
     # or more attributes whose statuses are to be requested.
     #
-    # The return value is a hash of attributes.
+    # The return value is a hash of attributes.  Most status attributes return
+    # integer values, but some return other value types (documented below).
     #
     # A Net::IMAP::NoResponseError is raised if status values
     # for +mailbox+ cannot be returned; for instance, because it
     # does not exist.
     #
-    # ===== Supported attributes:
+    # ===== Supported attributes
     #
     # +MESSAGES+::    The number of messages in the mailbox.
     #
@@ -1715,13 +1716,16 @@ module Net
     #     the sum of all messages' +RFC822.SIZE+ fetch item values.
     #
     # +MAILBOXID+::
-    #     A server-allocated unique identifier for the mailbox.
+    #     A server-allocated unique _string_ identifier for the mailbox.
     #     See +OBJECTID+
     #     {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-4].
     #
     # +RECENT+::
     #     The number of messages with the <tt>\Recent</tt> flag.
     #     _NOTE:_ +RECENT+ was removed from IMAP4rev2.
+    #
+    # Unsupported attributes may be requested.  The attribute value will be
+    # either an Integer or an ExtensionData object.
     #
     # ===== For example:
     #
