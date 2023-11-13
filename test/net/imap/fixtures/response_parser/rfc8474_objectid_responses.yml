@@ -1,0 +1,56 @@
+---
+:tests:
+  rfc8474_example_4.1_MAILBOXID_response_to_CREATE:
+    :response: "3 OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Completed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: '3'
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: MAILBOXID
+          data: F2212ea87-6097-4256-9d51-71338625
+        text: Completed
+      raw_data: "3 OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Completed\r\n"
+
+  rfc8474_example_4.2_MAILBOXID_untagged_response_to_SELECT:
+    :response: "* OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Ok\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: MAILBOXID
+          data: F2212ea87-6097-4256-9d51-71338625
+        text: Ok
+      raw_data: "* OK [MAILBOXID (F2212ea87-6097-4256-9d51-71338625)] Ok\r\n"
+
+  rfc8474_example_4.3_MAILBOXID_attribute_for_STATUS:
+    :response: "* STATUS foo (MAILBOXID (F2212ea87-6097-4256-9d51-71338625))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: foo
+        attr:
+          MAILBOXID: F2212ea87-6097-4256-9d51-71338625
+      raw_data: "* STATUS foo (MAILBOXID (F2212ea87-6097-4256-9d51-71338625))\r\n"
+
+  rfc8474_example_5.3_EMAILID_and_THREADID:
+    :response: "* 3 FETCH (EMAILID (M5fdc09b49ea703) THREADID (T11863d02dd95b5))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 3
+        attr:
+          EMAILID: M5fdc09b49ea703
+          THREADID: T11863d02dd95b5
+      raw_data: "* 3 FETCH (EMAILID (M5fdc09b49ea703) THREADID (T11863d02dd95b5))\r\n"
+
+  rfc8474_example_5.3_no_THREADID_support:
+    :response: "* 2 FETCH (EMAILID (M00000002) THREADID NIL)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 2
+        attr:
+          EMAILID: M00000002
+          THREADID:
+      raw_data: "* 2 FETCH (EMAILID (M00000002) THREADID NIL)\r\n"

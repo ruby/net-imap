@@ -53,7 +53,11 @@ module Net
     # * <b><tt>"RFC822.TEXT"</tt></b> --- See #rfc822_text or replace with
     #   <tt>"BODY[TEXT]"</tt> and #text.
     #
-    # Net::IMAP supports dynamic attributes defined by the following extensions:
+    # Net::IMAP supports static attributes defined by the following extensions:
+    # * +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html]
+    #   * <b><tt>"EMAILID"</tt></b> --- See #emailid.
+    #   * <b><tt>"THREADID"</tt></b> --- See #threadid.
+    #
     # * +X-GM-EXT-1+ {[non-standard Gmail
     #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
     #   * <b><tt>"X-GM-MSGID"</tt></b> --- unique message ID.  Access via #attr.
@@ -461,6 +465,40 @@ module Net
       #   The +MODSEQ+ field is dynamic, and can change for a uniquely
       #   identified message.
       def modseq; attr["MODSEQ"] end
+
+      # :call-seq: emailid -> string or nil
+      #
+      # An ObjectID that uniquely identifies the immutable content of a single
+      # message.
+      #
+      # The server must return the same +EMAILID+ for both the source and
+      # destination messages after a COPY or MOVE command.  However, it is
+      # possible for different messages with the same EMAILID to have different
+      # mutable attributes, such as flags.
+      #
+      # This is the same as getting the value for <tt>"EMAILID"</tt> from
+      # #attr.
+      #
+      # The server must support the +OBJECTID+ extension
+      # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
+      def emailid; attr["EMAILID"] end
+
+      # :call-seq: threadid -> string or nil
+      #
+      # An ObjectID that uniquely identifies a set of messages that the server
+      # believes should be grouped together.
+      #
+      # It is generally based on some combination of References, In-Reply-To,
+      # and Subject, but the exact implementation is left up to the server
+      # implementation.  The server should return the same thread identifier for
+      # related messages, even if they are in different mailboxes.
+      #
+      # This is the same as getting the value for <tt>"THREADID"</tt> from
+      # #attr.
+      #
+      # The server must support the +OBJECTID+ extension
+      # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
+      def threadid; attr["THREADID"] end
 
       private
 

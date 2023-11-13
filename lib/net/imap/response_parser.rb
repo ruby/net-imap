@@ -893,6 +893,8 @@ module Net
             when "RFC822.HEADER"        then nstring            # not in rev2
             when "RFC822.TEXT"          then nstring            # not in rev2
             when "MODSEQ"               then parens__modseq     # CONDSTORE
+            when "EMAILID"              then parens__objectid   # OBJECTID
+            when "THREADID"             then nparens__objectid  # OBJECTID
             when "X-GM-MSGID"           then x_gm_id            # GMail
             when "X-GM-THRID"           then x_gm_id            # GMail
             when "X-GM-LABELS"          then x_gm_labels        # GMail
@@ -1587,6 +1589,7 @@ module Net
           when "UIDVALIDITY"   then nz_number           # RFC3501, RFC9051
           when "RECENT"        then number              # RFC3501 (obsolete)
           when "SIZE"          then number64            # RFC8483, RFC9051
+          when "MAILBOXID"     then parens__objectid    # RFC8474
           else
             number? || ExtensionData.new(tagged_ext_val)
           end
@@ -1792,6 +1795,9 @@ module Net
       #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
       #                       "NOMODSEQ" /
       #                       "MODIFIED" SP sequence-set
+      #
+      # RFC8474: OBJECTID
+      #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
       def resp_text_code
         name = resp_text_code__name
         data =
@@ -1811,6 +1817,7 @@ module Net
             "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
             "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
           when "NOMODSEQ"           # CONDSTORE
+          when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
           else
             SP? and text_chars_except_rbra
           end
@@ -1975,6 +1982,15 @@ module Net
       alias permsg_modsequence mod_sequence_value
 
       def parens__modseq; lpar; _ = permsg_modsequence; rpar; _ end
+
+      # RFC8474:
+      # objectid = 1*255(ALPHA / DIGIT / "_" / "-")
+      #         ; characters in object identifiers are case
+      #         ; significant
+      alias objectid atom
+
+      def parens__objectid; lpar; _ = objectid; rpar; _ end
+      def nparens__objectid; NIL? ? nil : parens__objectid end
 
       # RFC-4315 (UIDPLUS) or RFC9051 (IMAP4rev2):
       #      uid-set         = (uniqueid / uid-range) *("," uid-set)

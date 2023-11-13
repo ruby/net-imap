@@ -37,8 +37,18 @@ class FetchDataTest < Test::Unit::TestCase
   end
 
   test "#modseq returns MODSEQ value (RFC7162: CONDSTORE)" do
-    data = FetchData.new( 22222, {"MODSEQ" => 123_456_789})
+    data = FetchData.new(22222, {"MODSEQ" => 123_456_789})
     assert_equal(123_456_789, data.modseq)
+  end
+
+  test "#emailid returns EMAILID value (RFC8474: OBJECTID)" do
+    data = FetchData.new(22222, {"EMAILID" => "THIS-IS-IT-01234"})
+    assert_equal "THIS-IS-IT-01234", data.emailid
+  end
+
+  test "#threadid returns THREADID value (RFC8474: OBJECTID)" do
+    data = FetchData.new(22222, {"THREADID" => "THAT-IS-THAT-98765"})
+    assert_equal "THAT-IS-THAT-98765", data.threadid
   end
 
   test "simple RFC822 attrs accessors (deprecated by RFC9051)" do
