@@ -138,3 +138,27 @@
         $Junk $MailFlagBit0 $MailFlagBit2 $NotJunk $NotPhishing $Phishing Forwarded
         JunkRecorded NotJunk OIB-Seen-INBOX OIB-Seen-Unsubscribe OIB-Seen-[Google
         Mail]/Alle Nachrichten)\r\n"
+
+  "greenmail sent \"\\*\" in a FLAGS response":
+    comment: |
+      net-imap issue: https://github.com/ruby/net-imap/issues/228
+
+      Greenmail did fix their bug very quickly after it was reported. :)
+      Upstream issue: https://github.com/greenmail-mail-test/greenmail/issues/633
+
+      Also, greenmail is a testing fake server and I haven't seen any evidence
+      of any "real" servers with this exact error yet. So I don't feel that it's
+      critical to be compatible with it.  But, since we needed the workaround
+      anyway, for #241, it's reasonable to document that it handles this too.
+    :response: "* FLAGS (\\Answered \\Deleted \\Draft \\Flagged \\Seen \\*)\r\n"
+    expect_rescued_error: true
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FLAGS
+      data:
+      - :Answered
+      - :Deleted
+      - :Draft
+      - :Flagged
+      - :Seen
+      - :*
+      raw_data: "* FLAGS (\\Answered \\Deleted \\Draft \\Flagged \\Seen \\*)\r\n"
