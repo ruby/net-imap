@@ -198,6 +198,7 @@ module Net
         #                     ; revisions of this specification.
         # flag-keyword    = "$MDNSent" / "$Forwarded" / "$Junk" /
         #                   "$NotJunk" / "$Phishing" / atom
+        #
         # flag-perm       = flag / "\*"
         #
         # Not checking for max one mbx-list-sflag in the parser.
@@ -220,19 +221,15 @@ module Net
         MBX_FLAG          = FLAG_EXTENSION
 
         # flag-list       = "(" [flag *(SP flag)] ")"
-        #
-        # part of resp-text-code:
-        # >>>
-        #   "PERMANENTFLAGS" SP "(" [flag-perm *(SP flag-perm)] ")"
-        #
-        # parens from mailbox-list are included in the regexp:
-        # >>>
-        #   mbx-list-flags  = *(mbx-list-oflag SP) mbx-list-sflag
-        #                     *(SP mbx-list-oflag) /
-        #                     mbx-list-oflag *(SP mbx-list-oflag)
-        FLAG_LIST      = /\G\((#{FLAG     }(?:#{SP}#{FLAG     })*|)\)/ni
-        FLAG_PERM_LIST = /\G\((#{FLAG_PERM}(?:#{SP}#{FLAG_PERM})*|)\)/ni
-        MBX_LIST_FLAGS = /\G\((#{MBX_FLAG }(?:#{SP}#{MBX_FLAG })*|)\)/ni
+        # resp-text-code =/ "PERMANENTFLAGS" SP
+        #                   "(" [flag-perm *(SP flag-perm)] ")"
+        # mbx-list-flags  = *(mbx-list-oflag SP) mbx-list-sflag
+        #                   *(SP mbx-list-oflag) /
+        #                   mbx-list-oflag *(SP mbx-list-oflag)
+        # (Not checking for max one mbx-list-sflag in the parser.)
+        FLAG_LIST         = /\G\((#{FLAG     }(?:#{SP}#{FLAG     })*|)\)/ni
+        FLAG_PERM_LIST    = /\G\((#{FLAG_PERM}(?:#{SP}#{FLAG_PERM})*|)\)/ni
+        MBX_LIST_FLAGS    = /\G  (#{MBX_FLAG }(?:#{SP}#{MBX_FLAG })*)   /nix
 
         # RFC3501:
         #   QUOTED-CHAR   = <any TEXT-CHAR except quoted-specials> /
@@ -1350,18 +1347,17 @@ module Net
       alias mailbox_data__lsub  mailbox_data__list
       alias mailbox_data__xlist mailbox_data__list
 
+      # mailbox-list    = "(" [mbx-list-flags] ")" SP
+      #                    (DQUOTE QUOTED-CHAR DQUOTE / nil) SP mailbox
+      #                    [SP mbox-list-extended]
+      #             ; This is the list information pointed to by the ABNF
+      #             ; item "mailbox-data", which is defined above
       def mailbox_list
-        attr = flag_list
-        match(T_SPACE)
-        token = match(T_QUOTED, T_NIL)
-        if token.symbol == T_NIL
-          delim = nil
-        else
-          delim = token.value
-        end
-        match(T_SPACE)
-        name = astring
-        return MailboxList.new(attr, delim, name)
+        lpar; attr  = peek_rpar? ? [] : mbx_list_flags; rpar
+        SP!;  delim = nquoted
+        SP!;  name  = mailbox
+        # TODO: mbox-list-extended
+        MailboxList.new(attr, delim, name)
       end
 
       def getquota_response
@@ -1941,22 +1937,10 @@ module Net
           .map! { _1.start_with?("\\") ? _1[1..].capitalize.to_sym : _1 }
       end
 
-      # Not checking for max one mbx-list-sflag in the parser.
-      # >>>
-      #   mbx-list-flags  = *(mbx-list-oflag SP) mbx-list-sflag
-      #                     *(SP mbx-list-oflag) /
-      #                     mbx-list-oflag *(SP mbx-list-oflag)
-      #   mbx-list-oflag  = "\Noinferiors" / child-mbox-flag /
-      #                     "\Subscribed" / "\Remote" / flag-extension
-      #                  ; Other flags; multiple from this list are
-      #                  ; possible per LIST response, but each flag
-      #                  ; can only appear once per LIST response
-      #   mbx-list-sflag  = "\NonExistent" / "\Noselect" / "\Marked" /
-      #                     "\Unmarked"
-      #                  ; Selectability flags; only one per LIST response
-      def parens__mbx_list_flags
+      # See Patterns::MBX_LIST_FLAGS
+      def mbx_list_flags
         match_re(Patterns::MBX_LIST_FLAGS, "mbx-list-flags")[1]
-          .split(nil).map! { _1.capitalize.to_sym }
+          .split(nil).map! { _1[1..].capitalize.to_sym }
       end
 
       # See https://developers.google.com/gmail/imap/imap-extensions
