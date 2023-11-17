@@ -1929,6 +1929,8 @@ module Net
         end
       end
 
+      # This allows illegal "]" in flag names (Gmail),
+      # or "\*" in a FLAGS response (greenmail).
       def quirky__flag_list(name)
         match_re(Patterns::QUIRKY_FLAGS_LIST, "quirks mode #{name}")[1]
           .scan(Patterns::QUIRKY_FLAG)
