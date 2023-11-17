@@ -42,7 +42,7 @@ file "benchmarks/parser.yml" => PARSER_TEST_FIXTURES do |t|
 
   benchmarks = tests.map {|fixture_name, response|
     {"name"    => fixture_name.delete_prefix("test_"),
-     "prelude" => "response = %s" % [response.dump],
+     "prelude" => "response = -%s.b" % [response.dump],
      "script"  => "parser.parse(response)"}
   }
     .sort_by { _1["name"] }
