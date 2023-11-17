@@ -777,34 +777,47 @@ module Net
 
       # RFC3501 & RFC9051:
       #   response-tagged = tag SP resp-cond-state CRLF
-      #
-      #   resp-cond-state = ("OK" / "NO" / "BAD") SP resp-text
-      #                       ; Status condition
-      #
-      #   tag             = 1*<any ASTRING-CHAR except "+">
       def response_tagged
-        tag  = tag();                 SP!
-        name = resp_cond_state__name; SP!
-        TaggedResponse.new(tag, name, resp_text, @str)
+        TaggedResponse.new(tag, *(SP!; resp_cond_state), @str)
       end
 
       # RFC3501 & RFC9051:
       #   resp-cond-state  = ("OK" / "NO" / "BAD") SP resp-text
+      #
+      # NOTE: In the spirit of RFC9051 Appx E 23 (and to workaround existing
+      # servers), we don't require a final SP and instead parse this as:
+      #
+      #   resp-cond-state = ("OK" / "NO" / "BAD") [SP resp-text]
+      def resp_cond_state
+        [resp_cond_state__name, SP? ? resp_text : ResponseText::EMPTY]
+      end
+
       def resp_cond_state__untagged
-        name = resp_cond_state__name; SP!
-        UntaggedResponse.new(name, resp_text, @str)
+        UntaggedResponse.new(*resp_cond_state, @str)
       end
 
       #   resp-cond-auth   = ("OK" / "PREAUTH") SP resp-text
+      #
+      # NOTE: In the spirit of RFC9051 Appx E 23 (and to workaround existing
+      # servers), we don't require a final SP and instead parse this as:
+      #
+      #   resp-cond-auth   = ("OK" / "PREAUTH") [SP resp-text]
       def resp_cond_auth
-        name = resp_cond_auth__name; SP!
-        UntaggedResponse.new(name, resp_text, @str)
+        UntaggedResponse.new(resp_cond_auth__name,
+                             SP? ? resp_text : ResponseText::EMPTY,
+                             @str)
       end
 
       #   resp-cond-bye    = "BYE" SP resp-text
+      #
+      # NOTE: In the spirit of RFC9051 Appx E 23 (and to workaround existing
+      # servers), we don't require a final SP and instead parse this as:
+      #
+      #   resp-cond-bye    = "BYE" [SP resp-text]
       def resp_cond_bye
-        name = label(BYE); SP!
-        UntaggedResponse.new(name, resp_text, @str)
+        UntaggedResponse.new(label(BYE),
+                             SP? ? resp_text : ResponseText::EMPTY,
+                             @str)
       end
 
       #   message-data    = nz-number SP ("EXPUNGE" / ("FETCH" SP msg-att))
