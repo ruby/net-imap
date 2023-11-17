@@ -117,3 +117,36 @@
         code:
         text: "Autologout; idle for too long"
       raw_data: "* BYE Autologout; idle for too long\r\n"
+
+  response-tagged_without_SP_resp-text:
+    :response: "tag0001 OK\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: tag0001
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: ''
+      raw_data: "tag0001 OK\r\n"
+
+  resp-cond-state_without_SP_resp-text:
+    :response: "* BAD\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: BAD
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: ''
+      raw_data: "* BAD\r\n"
+
+  resp-cond-auth_without_SP_resp-text:
+    :response: "* PREAUTH\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: PREAUTH
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: ''
+      raw_data: "* PREAUTH\r\n"
+
+  resp-cond-bye_without_SP_resp-text:
+    :response: "* BYE\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: BYE
+      data: !ruby/struct:Net::IMAP::ResponseText
+        text: ''
+      raw_data: "* BYE\r\n"
