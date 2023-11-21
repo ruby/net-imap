@@ -62,6 +62,10 @@ module Net
       T_TEXT     = :TEXT         # any char except CRLF
       T_EOF      = :EOF          # end of response string
 
+      # Use to avoid allocation when we know the result is empty
+      EMPTY_ARRAY = [].freeze
+      private_constant :EMPTY_ARRAY
+
       module ResponseConditions
         OK      = "OK"
         NO      = "NO"
@@ -614,7 +618,7 @@ module Net
       #                       "(" [tagged-ext-comp] ")"
       def tagged_ext_val
         if lpar?
-          _ = peek_rpar? ? [] : tagged_ext_comp
+          _ = peek_rpar? ? EMPTY_ARRAY : tagged_ext_comp
           rpar
           _
         else
@@ -1386,7 +1390,7 @@ module Net
       #             ; This is the list information pointed to by the ABNF
       #             ; item "mailbox-data", which is defined above
       def mailbox_list
-        lpar; attr  = peek_rpar? ? [] : mbx_list_flags; rpar
+        lpar; attr  = peek_rpar? ? EMPTY_ARRAY : mbx_list_flags; rpar
         SP!;  delim = nquoted
         SP!;  name  = mailbox
         # TODO: mbox-list-extended
@@ -1486,8 +1490,12 @@ module Net
       #   obsolete-search-response = "SEARCH" *(SP nz-number)
       def mailbox_data__search
         name = label_in("SEARCH", "SORT")
-        data = []
-        while _ = SP? && nz_number? do data << _ end
+        if (_ = SP? && nz_number?)
+          data = [_]
+          while _ = SP? && nz_number? do data << _ end
+        else
+          data = EMPTY_ARRAY
+        end
         if lpar?
           label("MODSEQ"); SP!
           modseq = mod_sequence_value
@@ -1641,7 +1649,7 @@ module Net
           else               nested = thread_nested; break
           end
         end
-        members.reverse.inject(nested || []) {|subthreads, number|
+        members.reverse.inject(nested || EMPTY_ARRAY) {|subthreads, number|
           [ThreadMember.new(number, subthreads)]
         }.first
       end
@@ -1813,7 +1821,7 @@ module Net
 
       # namespace         = nil / "(" 1*namespace-descr ")"
       def namespace
-        NIL? and return []
+        NIL? and return EMPTY_ARRAY
         lpar
         list = [namespace_descr]
         list << namespace_descr until rpar?
@@ -1940,13 +1948,13 @@ module Net
         data =
           case name
           when "CAPABILITY"         then resp_code__capability
-          when "PERMANENTFLAGS"     then SP? ? flag_perm__list : []
+          when "PERMANENTFLAGS"     then SP? ? flag_perm__list : EMPTY_ARRAY
           when "UIDNEXT"            then SP!; nz_number
           when "UIDVALIDITY"        then SP!; nz_number
           when "UNSEEN"             then SP!; nz_number            # rev1 only
           when "APPENDUID"          then SP!; resp_code_apnd__data # rev2, UIDPLUS
           when "COPYUID"            then SP!; resp_code_copy__data # rev2, UIDPLUS
-          when "BADCHARSET"         then SP? ? charset__list : []
+          when "BADCHARSET"         then SP? ? charset__list : EMPTY_ARRAY
           when "ALERT", "PARSE", "READ-ONLY", "READ-WRITE", "TRYCREATE",
             "UNAVAILABLE", "AUTHENTICATIONFAILED", "AUTHORIZATIONFAILED",
             "EXPIRED", "PRIVACYREQUIRED", "CONTACTADMIN", "NOPERM", "INUSE",
@@ -2077,7 +2085,7 @@ module Net
 
       # See https://developers.google.com/gmail/imap/imap-extensions
       def x_gm_labels
-        lpar; return [] if rpar?
+        lpar; return EMPTY_ARRAY if rpar?
         labels = []
         labels << x_gm_label
         labels << x_gm_label while SP?
