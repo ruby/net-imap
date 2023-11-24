@@ -504,6 +504,8 @@ module Net
   #
   # ==== RFC7162: +CONDSTORE+
   #
+  # - Updates #enable with +CONDSTORE+ parameter.  +CONDSTORE+ will also be
+  #   enabled by using any of the extension's command parameters, listed below.
   # - Updates #status with the +HIGHESTMODSEQ+ status attribute.
   # - Updates #select and #examine with the +condstore+ modifier, and adds
   #   either a +HIGHESTMODSEQ+ or +NOMODSEQ+ ResponseCode to the responses.
@@ -683,6 +685,16 @@ module Net
   #   Resnick, P., Ed., Newman, C., Ed., and S. Shen, Ed.,
   #   "IMAP Support for UTF-8", RFC 6855, DOI 10.17487/RFC6855, March 2013,
   #   <https://www.rfc-editor.org/info/rfc6855>.
+  # [CONDSTORE[https://tools.ietf.org/html/rfc7162]]::
+  # [QRESYNC[https://tools.ietf.org/html/rfc7162]]::
+  #   Melnikov, A. and D. Cridland, "IMAP Extensions: Quick Flag Changes
+  #   Resynchronization (CONDSTORE) and Quick Mailbox Resynchronization
+  #   (QRESYNC)", RFC 7162, DOI 10.17487/RFC7162, May 2014,
+  #   <https://www.rfc-editor.org/info/rfc7162>.
+  # [OBJECTID[https://tools.ietf.org/html/rfc8474]]::
+  #   Gondwana, B., Ed., "IMAP Extension for Object Identifiers",
+  #   RFC 8474, DOI 10.17487/RFC8474, September 2018,
+  #   <https://www.rfc-editor.org/info/rfc8474>.
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
@@ -2305,6 +2317,13 @@ module Net
     # Additionally, the server capabilities must include a capability matching
     # each enabled extension (usually the same name as the enabled extension).
     # The following capabilities may be enabled:
+    #
+    # [+CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
+    #
+    #   Updates various commands to return +CONDSTORE+ extension responses.  It
+    #   is not necessary to explicitly enable +CONDSTORE+—using any of the
+    #   command parameters defined by the extension will implicitly enable it.
+    #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+:utf8+ --- an alias for <tt>"UTF8=ACCEPT"</tt>]
     #
