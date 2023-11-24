@@ -511,6 +511,8 @@ module Net
   #   search criterion, and adds SearchResult#modseq to the search response.
   # - Updates #thread and #uid_thread with the +MODSEQ+ search criterion
   #   <em>(but thread responses are unchanged)</em>.
+  # - Updates #fetch and #uid_fetch with the +changedsince+ modifier and
+  #   +MODSEQ+ FetchData attribute.
   #
   # ==== RFC8438: <tt>STATUS=SIZE</tt>
   # - Updates #status with the +SIZE+ status attribute.
@@ -1986,6 +1988,9 @@ module Net
       return search_internal("UID SEARCH", keys, charset)
     end
 
+    # :call-seq:
+    #   fetch(set, attr, changedsince: nil) -> array of FetchData
+    #
     # Sends a {FETCH command [IMAP4rev1 §6.4.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.5]
     # to retrieve data associated with a message in the mailbox.
     #
@@ -2000,6 +2005,9 @@ module Net
     #
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
+    #
+    # +changedsince+ is an optional integer mod-sequence.  It limits results to
+    # messages with a mod-sequence greater than +changedsince+.
     #
     # The return value is an array of FetchData.
     #
@@ -2022,10 +2030,23 @@ module Net
     #   #=> "12-Oct-2000 22:40:59 +0900"
     #   p data.attr["UID"]
     #   #=> 98
-    def fetch(set, attr, mod = nil)
-      return fetch_internal("FETCH", set, attr, mod)
+    #
+    # ===== Capabilities
+    #
+    # Many extensions define new message +attr+ names.  See FetchData for a list
+    # of supported extension fields.
+    #
+    # The server's capabilities must include +CONDSTORE+
+    # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
+    # +changedsince+ argument.  Using +changedsince+ implicitly enables the
+    # +CONDSTORE+ extension.
+    def fetch(set, attr, mod = nil, changedsince: nil)
+      fetch_internal("FETCH", set, attr, mod, changedsince: changedsince)
     end
 
+    # :call-seq:
+    #   uid_fetch(set, attr, changedsince: nil) -> array of FetchData
+    #
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
     #
@@ -2038,8 +2059,11 @@ module Net
     #   whether a +UID+ was specified as a message data item to the +FETCH+.
     #
     # Related: #fetch, FetchData
-    def uid_fetch(set, attr, mod = nil)
-      return fetch_internal("UID FETCH", set, attr, mod)
+    #
+    # ===== Capabilities
+    # Same as #fetch.
+    def uid_fetch(set, attr, mod = nil, changedsince: nil)
+      fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
     end
 
     # Sends a {STORE command [IMAP4rev1 §6.4.6]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.6]
@@ -2760,7 +2784,11 @@ module Net
       end
     end
 
-    def fetch_internal(cmd, set, attr, mod = nil)
+    def fetch_internal(cmd, set, attr, mod = nil, changedsince: nil)
+      if changedsince
+        mod ||= []
+        mod << "CHANGEDSINCE" << Integer(changedsince)
+      end
       case attr
       when String then
         attr = RawData.new(attr)

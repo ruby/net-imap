@@ -1151,6 +1151,24 @@ EOF
     end
   end
 
+  test "#fetch with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("FETCH", &:done_ok)
+      imap.fetch 1..-1, %w[FLAGS], changedsince: 12345
+      assert_equal("RUBY0002 FETCH 1:* (FLAGS) (CHANGEDSINCE 12345)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#uid_fetch with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID FETCH", &:done_ok)
+      imap.uid_fetch 1..-1, %w[FLAGS], changedsince: 12345
+      assert_equal("RUBY0002 UID FETCH 1:* (FLAGS) (CHANGEDSINCE 12345)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
   def test_close
     with_fake_server(select: "inbox") do |server, imap|
       resp = imap.close
