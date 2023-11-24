@@ -513,6 +513,8 @@ module Net
   #   <em>(but thread responses are unchanged)</em>.
   # - Updates #fetch and #uid_fetch with the +changedsince+ modifier and
   #   +MODSEQ+ FetchData attribute.
+  # - Updates #store and #uid_store with the +unchangedsince+ modifier and adds
+  #   the +MODIFIED+ ResponseCode to the tagged response.
   #
   # ==== RFC8438: <tt>STATUS=SIZE</tt>
   # - Updates #status with the +SIZE+ status attribute.
@@ -2066,13 +2068,29 @@ module Net
       fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
     end
 
+    # :call-seq:
+    #   store(set, attr, value, unchangedsince: nil) -> array of FetchData
+    #
     # Sends a {STORE command [IMAP4rev1 §6.4.6]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.6]
     # to alter data associated with messages in the mailbox, in particular their
-    # flags. The +set+ parameter is a number, an array of numbers, or a Range
-    # object. Each number is a message sequence number.  +attr+ is the name of a
-    # data item to store: <tt>"FLAGS"</tt> will replace the message's flag list
-    # with the provided one, <tt>"+FLAGS"</tt> will add the provided flags, and
-    # <tt>"-FLAGS"</tt> will remove them.  +flags+ is a list of flags.
+    # flags.
+    #
+    # +set+ is a number, an array of numbers, or a Range object.  Each number is
+    # a message sequence number.
+    #
+    # +attr+ is the name of a data item to store.  The semantics of +value+
+    # varies based on +attr+:
+    # * When +attr+ is <tt>"FLAGS"</tt>, the flags in +value+ replace the
+    #   message's flag list.
+    # * When +attr+ is <tt>"+FLAGS"</tt>, the flags in +value+ are added to
+    #   the flags for the message.
+    # * When +attr+ is <tt>"-FLAGS"</tt>, the flags in +value+ are removed
+    #   from the message.
+    #
+    # +unchangedsince+ is an optional integer mod-sequence.  It prohibits any
+    # changes to messages with +mod-sequence+ greater than the specified
+    # +unchangedsince+ value.  A SequenceSet of any messages that fail this
+    # check will be returned in a +MODIFIED+ ResponseCode.
     #
     # The return value is an array of FetchData.
     #
@@ -2081,13 +2099,25 @@ module Net
     # ===== For example:
     #
     #   p imap.store(6..8, "+FLAGS", [:Deleted])
-    #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
-    #        #<Net::IMAP::FetchData seqno=7, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
+    #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>,
+    #        #<Net::IMAP::FetchData seqno=7, attr={"FLAGS"=>[:Seen, :Deleted]}>,
     #        #<Net::IMAP::FetchData seqno=8, attr={"FLAGS"=>[:Seen, :Deleted]}>]
-    def store(set, attr, flags)
-      return store_internal("STORE", set, attr, flags)
+    #
+    # ===== Capabilities
+    #
+    # Extensions may define new data items to be used with #store.
+    #
+    # The server's capabilities must include +CONDSTORE+
+    # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
+    # +unchangedsince+ argument.  Using +unchangedsince+ implicitly enables the
+    # +CONDSTORE+ extension.
+    def store(set, attr, flags, unchangedsince: nil)
+      store_internal("STORE", set, attr, flags, unchangedsince: unchangedsince)
     end
 
+    # :call-seq:
+    #   uid_store(set, attr, value, unchangedsince: nil) -> array of FetchData
+    #
     # Sends a {UID STORE command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to alter data associated with messages in the mailbox, in particular their
     # flags.
@@ -2096,8 +2126,11 @@ module Net
     # message sequence numbers.
     #
     # Related: #store
-    def uid_store(set, attr, flags)
-      return store_internal("UID STORE", set, attr, flags)
+    #
+    # ===== Capabilities
+    # Same as #store.
+    def uid_store(set, attr, flags, unchangedsince: nil)
+      store_internal("UID STORE", set, attr, flags, unchangedsince: unchangedsince)
     end
 
     # Sends a {COPY command [IMAP4rev1 §6.4.7]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.7]
@@ -2809,13 +2842,14 @@ module Net
       end
     end
 
-    def store_internal(cmd, set, attr, flags)
-      if attr.instance_of?(String)
-        attr = RawData.new(attr)
-      end
+    def store_internal(cmd, set, attr, flags, unchangedsince: nil)
+      attr = RawData.new(attr) if attr.instance_of?(String)
+      args = [MessageSet.new(set)]
+      args << ["UNCHANGEDSINCE", Integer(unchangedsince)] if unchangedsince
+      args << attr << flags
       synchronize do
         clear_responses("FETCH")
-        send_command(cmd, MessageSet.new(set), attr, flags)
+        send_command(cmd, *args)
         clear_responses("FETCH")
       end
     end

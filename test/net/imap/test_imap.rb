@@ -1169,6 +1169,28 @@ EOF
     end
   end
 
+  test "#store with unchangedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("STORE", &:done_ok)
+      imap.store 1..-1, "FLAGS", %i[Deleted], unchangedsince: 12345
+      assert_equal(
+        "RUBY0002 STORE 1:* (UNCHANGEDSINCE 12345) FLAGS (\\Deleted)",
+        server.commands.pop.raw.strip
+      )
+    end
+  end
+
+  test "#uid_store with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID STORE", &:done_ok)
+      imap.uid_store 1..-1, "FLAGS", %i[Deleted], unchangedsince: 987
+      assert_equal(
+        "RUBY0002 UID STORE 1:* (UNCHANGEDSINCE 987) FLAGS (\\Deleted)",
+        server.commands.pop.raw.strip
+      )
+    end
+  end
+
   def test_close
     with_fake_server(select: "inbox") do |server, imap|
       resp = imap.close
