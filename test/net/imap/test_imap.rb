@@ -1135,6 +1135,22 @@ EOF
     end
   end
 
+  test "#select with condstore" do
+    with_fake_server do |server, imap|
+      imap.select "inbox", condstore: true
+      assert_equal("RUBY0001 SELECT inbox (CONDSTORE)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#examine with condstore" do
+    with_fake_server do |server, imap|
+      imap.examine "inbox", condstore: true
+      assert_equal("RUBY0001 EXAMINE inbox (CONDSTORE)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
   def test_close
     with_fake_server(select: "inbox") do |server, imap|
       resp = imap.close

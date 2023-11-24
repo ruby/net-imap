@@ -33,7 +33,7 @@ class Net::IMAP::FakeServer
       /\A([^ ]+) ((?:UID )?\w+)(?: (.+))?\r\n\z/min =~ buf or
         raise "bad request: %p" [buf]
       case $2.upcase
-      when "LOGIN", "SELECT", "ENABLE", "AUTHENTICATE"
+      when "LOGIN", "SELECT", "EXAMINE", "ENABLE", "AUTHENTICATE"
         Command.new $1, $2, scan_astrings($3), buf
       else
         Command.new $1, $2, $3, buf # TODO...

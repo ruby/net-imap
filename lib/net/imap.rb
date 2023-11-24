@@ -505,6 +505,8 @@ module Net
   # ==== RFC7162: +CONDSTORE+
   #
   # - Updates #status with the +HIGHESTMODSEQ+ status attribute.
+  # - Updates #select and #examine with the +condstore+ modifier, and adds
+  #   either a +HIGHESTMODSEQ+ or +NOMODSEQ+ ResponseCode to the responses.
   # - Updates #search, #uid_search, #sort, and #uid_sort with the +MODSEQ+
   #   search criterion, and adds SearchResult#modseq to the search response.
   # - Updates #thread and #uid_thread with the +MODSEQ+ search criterion
@@ -1353,6 +1355,12 @@ module Net
     # or when existing messages are expunged; see #add_response_handler for a
     # way to detect these events.
     #
+    # When the +condstore+ keyword argument is true, the server is told to
+    # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
+    # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
+    # #select and all `FETCH` responses will include FetchData#modseq.
+    # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
+    #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
@@ -1365,10 +1373,17 @@ module Net
     # response code indicating that the mailstore does not support persistent
     # UIDs:
     #   imap.responses("NO", &:last)&.code&.name == "UIDNOTSTICKY"
-    def select(mailbox)
+    #
+    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported,
+    # the +condstore+ keyword parameter may be used.
+    #   imap.select("mbox", condstore: true)
+    #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
+    def select(mailbox, condstore: false)
+      args = ["SELECT", mailbox]
+      args << ["CONDSTORE"] if condstore
       synchronize do
         @responses.clear
-        send_command("SELECT", mailbox)
+        send_command(*args)
       end
     end
 
@@ -1381,10 +1396,12 @@ module Net
     # exist or is for some reason non-examinable.
     #
     # Related: #select
-    def examine(mailbox)
+    def examine(mailbox, condstore: false)
+      args = ["EXAMINE", mailbox]
+      args << ["CONDSTORE"] if condstore
       synchronize do
         @responses.clear
-        send_command("EXAMINE", mailbox)
+        send_command(*args)
       end
     end
 
