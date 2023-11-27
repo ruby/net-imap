@@ -186,69 +186,15 @@ module Net
 
     # *DEPRECATED*.  Replaced by SequenceSet.
     class MessageSet < CommandData # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:put_string, format_internal(data))
-      end
-
-      def validate
-        validate_internal(data)
-      end
-
-      private
-
       def initialize(data:)
+        data = SequenceSet[data]
         super
         warn("DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}.",
              uplevel: 1, category: :deprecated)
-        begin
-          # to ensure the input works with SequenceSet, too
-          SequenceSet.new(data)
-        rescue
-          warn "MessageSet input is incompatible with SequenceSet: [%s] %s" % [
-            $!.class, $!.message
-          ]
-        end
       end
 
-      def format_internal(data)
-        case data
-        when "*"
-          return data
-        when Integer
-          if data == -1
-            return "*"
-          else
-            return data.to_s
-          end
-        when Range
-          return format_internal(data.first) +
-            ":" + format_internal(data.last)
-        when Array
-          return data.collect {|i| format_internal(i)}.join(",")
-        when ThreadMember
-          return data.seqno.to_s +
-            ":" + data.children.collect {|i| format_internal(i).join(",")}
-        end
-      end
-
-      def validate_internal(data)
-        case data
-        when "*"
-        when Integer
-          NumValidator.ensure_nz_number(data)
-        when Range
-        when Array
-          data.each do |i|
-            validate_internal(i)
-          end
-        when ThreadMember
-          data.children.each do |i|
-            validate_internal(i)
-          end
-        else
-          raise DataFormatError, data.inspect
-        end
-      end
+      def send_data(imap, tag) data.send_data imap, tag end
+      def validate;            data.validate            end
     end
 
     class ClientID < CommandData # :nodoc:
