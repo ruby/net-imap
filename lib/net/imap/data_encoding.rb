@@ -186,7 +186,7 @@ module Net
 
       # Ensure argument is 'number' or raise DataFormatError
       def ensure_number(num)
-        return if valid_number?(num)
+        return num if valid_number?(num)
 
         msg = "number must be unsigned 32-bit integer: #{num}"
         raise DataFormatError, msg
@@ -194,7 +194,7 @@ module Net
 
       # Ensure argument is 'nz_number' or raise DataFormatError
       def ensure_nz_number(num)
-        return if valid_nz_number?(num)
+        return num if valid_nz_number?(num)
 
         msg = "nz_number must be non-zero unsigned 32-bit integer: #{num}"
         raise DataFormatError, msg
@@ -202,7 +202,7 @@ module Net
 
       # Ensure argument is 'mod_sequence_value' or raise DataFormatError
       def ensure_mod_sequence_value(num)
-        return if valid_mod_sequence_value?(num)
+        return num if valid_mod_sequence_value?(num)
 
         msg = "mod_sequence_value must be unsigned 64-bit integer: #{num}"
         raise DataFormatError, msg

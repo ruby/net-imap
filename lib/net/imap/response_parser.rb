@@ -477,6 +477,18 @@ module Net
         end
       end
 
+      # *note*: seq-last-command will just return the string "$".
+      #
+      #   sequence-set    = (seq-number / seq-range) ["," sequence-set]
+      #   sequence-set    =/ seq-last-command
+      #                       ; Allow for "result of the last command"
+      #                       ; indicator.
+      #   seq-last-command   = "$"
+      def sequence_set_or_atom
+        str = atom
+        Patterns::SEQUENCE_SET_STR.match?(str) ? SequenceSet.new(str) : str
+      end
+
       # ASTRING-CHAR    = ATOM-CHAR / resp-specials
       # resp-specials   = "]"
       ASTRING_CHARS_TOKENS = [*ATOM_TOKENS, T_RBRA].freeze

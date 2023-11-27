@@ -179,60 +179,11 @@ module Net
       end
     end
 
+    # Replaced by SequenceSet
     class MessageSet # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:put_string, format_internal(@data))
-      end
-
-      def validate
-        validate_internal(@data)
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
-      end
-
-      def format_internal(data)
-        case data
-        when "*"
-          return data
-        when Integer
-          if data == -1
-            return "*"
-          else
-            return data.to_s
-          end
-        when Range
-          return format_internal(data.first) +
-            ":" + format_internal(data.last)
-        when Array
-          return data.collect {|i| format_internal(i)}.join(",")
-        when ThreadMember
-          return data.seqno.to_s +
-            ":" + data.children.collect {|i| format_internal(i).join(",")}
-        end
-      end
-
-      def validate_internal(data)
-        case data
-        when "*"
-        when Integer
-          NumValidator.ensure_nz_number(data)
-        when Range
-        when Array
-          data.each do |i|
-            validate_internal(i)
-          end
-        when ThreadMember
-          data.children.each do |i|
-            validate_internal(i)
-          end
-        else
-          raise DataFormatError, data.inspect
-        end
-      end
+      def initialize(data)     @seqset = SequenceSet[data] end
+      def send_data(imap, tag) @seqset.send_data imap, tag end
+      def validate;            @seqset.validate            end
     end
 
     class ClientID # :nodoc:

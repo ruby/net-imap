@@ -1265,6 +1265,18 @@ module Net
         end
       end
 
+      # For YAML serialization
+      def encode_with(coder) # :nodoc:
+        # we can reconstruct from the string
+        coder['atom'] = to_s
+      end
+
+      # For YAML deserialization
+      def init_with(coder) # :nodoc:
+        @tuples = []
+        self.atom = coder['atom']
+      end
+
       def input_to_tuples(obj)
         obj = input_try_convert obj
         case obj
@@ -1407,12 +1419,9 @@ module Net
       end
 
       def nz_number(num)
-        case num
-        when Integer, /\A[1-9]\d*\z/ then num = Integer(num)
-        else raise DataFormatError, "%p is not a valid nz-number" % [num]
-        end
-        NumValidator.ensure_nz_number(num)
-        num
+        String === num && !/\A[1-9]\d*\z/.match?(num) and
+          raise DataFormatError, "%p is not a valid nz-number" % [num]
+        NumValidator.ensure_nz_number Integer num
       end
 
       # intentionally defined after the class implementation
