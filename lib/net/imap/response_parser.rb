@@ -978,7 +978,7 @@ module Net
       #   env-bcc         = "(" 1*address ")" / nil
       def nlist__address
         return if NIL?
-        lpar; list = [address]; list << address until rpar?
+        lpar; list = [address]; list << address until (quirky_SP?; rpar?)
         list
       end
 
@@ -988,6 +988,12 @@ module Net
       alias env_to       nlist__address
       alias env_cc       nlist__address
       alias env_bcc      nlist__address
+
+      # Used when servers erroneously send an extra SP.
+      #
+      # As of 2023-11-28, Outlook.com (still) sends SP
+      #   between +address+ in <tt>env-*</tt> lists.
+      alias quirky_SP? SP?
 
       #   date-time       = DQUOTE date-day-fixed "-" date-month "-" date-year
       #                     SP time SP zone DQUOTE
