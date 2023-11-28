@@ -31,3 +31,74 @@
         unparsed_data: "froopy snood"
       raw_data: "* 86 NOOP froopy snood\r\n"
 
+  outlook.com puts an extra SP in ENVELOPE address lists:
+    comment: |
+      An annoying bug from outlook.com.  They've had the bug for years, and
+      still have the bug as of 2023-11-28.
+
+      The example comes from a real response, but all addresses have been
+      replaced by the `faker` gem. :)
+    :response: "* 24 FETCH (UID 60 INTERNALDATE \"24-May-2021 11:47:51 +0200\" RFC822.SIZE 49051 ENVELOPE (\"Mon, 24 May 20 21 09:47:50 +0000\" \"Zoooom Zoom\" ((\"Augustina Gleason\" NIL \"augustina\" \"oberbrunner.test\")) NIL NIL ((\"risa@harvey-lemke.test\" NIL \"risa\" \"harvey-lemke.test\") (\"shella@kilback-renner.test\" NIL \"shella\" \"kilback-renner.test\") (\"jana.kiehn@bradtke-considine.example\" NIL \"jana.kiehn\" \"bradtke-considine.example\") (\"frank@hartmann.test\" NIL \"frank\" \"hartmann.test\") (\"numbers.ryan@satterfield.test\" NIL \"numbers.ryan\" \"satterfield.test\") (\"keneth_feeney@will-walter.test\" NIL \"keneth_feeney\" \"will-walter.test\")) NIL NIL NIL \"<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbb.ccccccc.PROD.OUTLOOK.COM>\"))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 24
+        attr:
+          UID: 60
+          INTERNALDATE: 24-May-2021 11:47:51 +0200
+          RFC822.SIZE: 49051
+          ENVELOPE: !ruby/struct:Net::IMAP::Envelope
+            date: Mon, 24 May 20 21 09:47:50 +0000
+            subject: Zoooom Zoom
+            from:
+            - !ruby/struct:Net::IMAP::Address
+              name: Augustina Gleason
+              route:
+              mailbox: augustina
+              host: oberbrunner.test
+            sender:
+            reply_to:
+            to:
+            - !ruby/struct:Net::IMAP::Address
+              name: risa@harvey-lemke.test
+              route:
+              mailbox: risa
+              host: harvey-lemke.test
+            - !ruby/struct:Net::IMAP::Address
+              name: shella@kilback-renner.test
+              route:
+              mailbox: shella
+              host: kilback-renner.test
+            - !ruby/struct:Net::IMAP::Address
+              name: jana.kiehn@bradtke-considine.example
+              route:
+              mailbox: jana.kiehn
+              host: bradtke-considine.example
+            - !ruby/struct:Net::IMAP::Address
+              name: frank@hartmann.test
+              route:
+              mailbox: frank
+              host: hartmann.test
+            - !ruby/struct:Net::IMAP::Address
+              name: numbers.ryan@satterfield.test
+              route:
+              mailbox: numbers.ryan
+              host: satterfield.test
+            - !ruby/struct:Net::IMAP::Address
+              name: keneth_feeney@will-walter.test
+              route:
+              mailbox: keneth_feeney
+              host: will-walter.test
+            cc:
+            bcc:
+            in_reply_to:
+            message_id: "<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbb.ccccccc.PROD.OUTLOOK.COM>"
+      raw_data: "* 24 FETCH (UID 60 INTERNALDATE \"24-May-2021 11:47:51 +0200\" RFC822.SIZE
+        49051 ENVELOPE (\"Mon, 24 May 20 21 09:47:50 +0000\" \"Zoooom Zoom\" ((\"Augustina
+        Gleason\" NIL \"augustina\" \"oberbrunner.test\")) NIL NIL ((\"risa@harvey-lemke.test\"
+        NIL \"risa\" \"harvey-lemke.test\") (\"shella@kilback-renner.test\" NIL \"shella\"
+        \"kilback-renner.test\") (\"jana.kiehn@bradtke-considine.example\" NIL \"jana.kiehn\"
+        \"bradtke-considine.example\") (\"frank@hartmann.test\" NIL \"frank\" \"hartmann.test\")
+        (\"numbers.ryan@satterfield.test\" NIL \"numbers.ryan\" \"satterfield.test\")
+        (\"keneth_feeney@will-walter.test\" NIL \"keneth_feeney\" \"will-walter.test\"))
+        NIL NIL NIL \"<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbb.ccccccc.PROD.OUTLOOK.COM>\"))\r\n"
