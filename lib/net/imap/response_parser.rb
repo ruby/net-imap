@@ -231,6 +231,10 @@ module Net
         FLAG_PERM_LIST    = /\G\((#{FLAG_PERM}(?:#{SP}#{FLAG_PERM})*|)\)/ni
         MBX_LIST_FLAGS    = /\G  (#{MBX_FLAG }(?:#{SP}#{MBX_FLAG })*)   /nix
 
+        # Gmail allows SP and "]" in flags.......
+        QUIRKY_FLAG       = Regexp.union(/\\?#{ASTRING_CHARS}/n, "\\*")
+        QUIRKY_FLAGS_LIST = /\G\((   [^)]*   )\)/nx
+
         # RFC3501:
         #   QUOTED-CHAR   = <any TEXT-CHAR except quoted-specials> /
         #                   "\" quoted-specials
@@ -1901,22 +1905,35 @@ module Net
 
       # flag-list       = "(" [flag *(SP flag)] ")"
       def flag_list
-        match_re(Patterns::FLAG_LIST, "flag-list")[1]
-          .split(nil)
-          .map! { _1.start_with?("\\") ? _1[1..].capitalize.to_sym : _1 }
+        if (match = accept_re(Patterns::FLAG_LIST))
+          match[1].split(nil)
+            .map! { _1.delete_prefix!("\\") ? _1.capitalize.to_sym : _1 }
+        else
+          quirky__flag_list "flags-list"
+        end
       end
 
       #   "(" [flag-perm *(SP flag-perm)] ")"
       def flag_perm__list
-        match_re(Patterns::FLAG_PERM_LIST, "PERMANENTFLAGS flag-perm list")[1]
-          .split(nil)
-          .map! { _1.start_with?("\\") ? _1[1..].capitalize.to_sym : _1 }
+        if (match = accept_re(Patterns::FLAG_PERM_LIST))
+          match[1].split(nil)
+            .map! { _1.delete_prefix!("\\") ? _1.capitalize.to_sym : _1 }
+        else
+          quirky__flag_list "PERMANENTFLAGS flag-perm list"
+        end
+      end
+
+      def quirky__flag_list(name)
+        match_re(Patterns::QUIRKY_FLAGS_LIST, "quirks mode #{name}")[1]
+          .scan(Patterns::QUIRKY_FLAG)
+          .map! { _1.delete_prefix!("\\") ? _1.capitalize.to_sym : _1 }
       end
 
       # See Patterns::MBX_LIST_FLAGS
       def mbx_list_flags
         match_re(Patterns::MBX_LIST_FLAGS, "mbx-list-flags")[1]
-          .split(nil).map! { _1[1..].capitalize.to_sym }
+          .split(nil)
+          .map! { _1.delete_prefix!("\\"); _1.capitalize.to_sym }
       end
 
       # See https://developers.google.com/gmail/imap/imap-extensions

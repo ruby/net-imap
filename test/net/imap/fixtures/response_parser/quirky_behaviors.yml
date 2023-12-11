@@ -102,3 +102,39 @@
         (\"numbers.ryan@satterfield.test\" NIL \"numbers.ryan\" \"satterfield.test\")
         (\"keneth_feeney@will-walter.test\" NIL \"keneth_feeney\" \"will-walter.test\"))
         NIL NIL NIL \"<aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@bbbbbbbbbbbbb.ccccccc.PROD.OUTLOOK.COM>\"))\r\n"
+
+  imap.gmail.com allows invalid atom-specials in flags:
+    comment: |
+      Upstream bug report: https://issuetracker.google.com/issues/315160951
+      net-imap issue: https://github.com/ruby/net-imap/issues/241
+    :response: "* FLAGS (\\Answered \\Flagged \\Draft \\Deleted \\Seen $Forwarded $Junk
+      $MailFlagBit0 $MailFlagBit2 $NotJunk $NotPhishing $Phishing Forwarded
+      JunkRecorded NotJunk OIB-Seen-INBOX OIB-Seen-Unsubscribe
+      OIB-Seen-[Google Mail]/Alle Nachrichten)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FLAGS
+      data:
+      - :Answered
+      - :Flagged
+      - :Draft
+      - :Deleted
+      - :Seen
+      - "$Forwarded"
+      - "$Junk"
+      - "$MailFlagBit0"
+      - "$MailFlagBit2"
+      - "$NotJunk"
+      - "$NotPhishing"
+      - "$Phishing"
+      - Forwarded
+      - JunkRecorded
+      - NotJunk
+      - OIB-Seen-INBOX
+      - OIB-Seen-Unsubscribe
+      - OIB-Seen-[Google
+      - Mail]/Alle
+      - Nachrichten
+      raw_data: "* FLAGS (\\Answered \\Flagged \\Draft \\Deleted \\Seen $Forwarded
+        $Junk $MailFlagBit0 $MailFlagBit2 $NotJunk $NotPhishing $Phishing Forwarded
+        JunkRecorded NotJunk OIB-Seen-INBOX OIB-Seen-Unsubscribe OIB-Seen-[Google
+        Mail]/Alle Nachrichten)\r\n"
