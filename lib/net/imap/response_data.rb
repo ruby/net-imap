@@ -205,6 +205,7 @@ module Net
     # defines them.  When unknown response code data is encountered, #data
     # will return an unparsed string.
     #
+    # ==== +IMAP4rev1+ Response Codes
     # See [IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501]] {§7.1, "Server
     # Responses - Status
     # Responses"}[https://www.rfc-editor.org/rfc/rfc3501#section-7.1] for full
@@ -228,13 +229,32 @@ module Net
     #   {§2.3.1.1, "Unique Identifier (UID) Message
     #   Attribute}[https://www.rfc-editor.org/rfc/rfc3501#section-2.3.1.1].
     # * +UIDVALIDITY+, #data is an Integer, the UID validity value of the
-    #   mailbox  See [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501]],
+    #   mailbox.  See [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501]],
     #   {§2.3.1.1, "Unique Identifier (UID) Message
     #   Attribute}[https://www.rfc-editor.org/rfc/rfc3501#section-2.3.1.1].
     # * +UNSEEN+, #data is an Integer, the number of messages which do not have
     #   the <tt>\Seen</tt> flag set.
+    #   <em>DEPRECATED by IMAP4rev2.</em>
     #
-    # See RFC5530[https://www.rfc-editor.org/rfc/rfc5530], "IMAP Response
+    # ==== +BINARY+ extension
+    # See {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516].
+    # * +UNKNOWN-CTE+, with a tagged +NO+ response, when the server does not
+    #   known how to decode a CTE (content-transfer-encoding).  #data is +nil+.
+    #   See IMAP#fetch.
+    #
+    # ==== +UIDPLUS+ extension
+    # See {[RFC4315 §3]}[https://www.rfc-editor.org/rfc/rfc4315#section-3].
+    # * +APPENDUID+, #data is UIDPlusData.  See IMAP#append.
+    # * +COPYUID+, #data is UIDPlusData.  See IMAP#copy.
+    # * +UIDNOTSTICKY+, #data is +nil+.  See IMAP#select.
+    #
+    # ==== +SEARCHRES+ extension
+    # See {[RFC5182]}[https://www.rfc-editor.org/rfc/rfc5182].
+    # * +NOTSAVED+, with a tagged +NO+ response, when the search result variable
+    #   is not saved.  #data is +nil+.
+    #
+    # ==== +RFC5530+ Response Codes
+    # See {[RFC5530]}[https://www.rfc-editor.org/rfc/rfc5530], "IMAP Response
     # Codes" for the definition of the following response codes, which are all
     # machine-readable annotations for the human-readable ResponseText#text, and
     # have +nil+ #data of their own:
@@ -256,9 +276,24 @@ module Net
     # * +ALREADYEXISTS+
     # * +NONEXISTENT+
     #
-    # Other supported \IMAP extension response codes:
-    # * +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-7]
-    #   * +MAILBOXID+, #data will be a string
+    # ==== +QRESYNC+ extension
+    # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
+    # * +CLOSED+, returned when the currently selected mailbox is closed
+    #   implicity by selecting or examining another mailbox.  #data is +nil+.
+    #
+    # ==== +IMAP4rev2+ Response Codes
+    # See {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051] {§7.1, "Server
+    # Responses - Status
+    # Responses"}[https://www.rfc-editor.org/rfc/rfc9051#section-7.1] for full
+    # descriptions of IMAP4rev2 response codes.  IMAP4rev2 includes all of the
+    # response codes listed above (except "UNSEEN") and adds the following:
+    # * +HASCHILDREN+, with a tagged +NO+ response, when a mailbox delete failed
+    #   because the server doesn't allow deletion of mailboxes with children.
+    #   #data is +nil+.
+    #
+    # ==== +OBJECTID+ extension
+    # See {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
+    # * +MAILBOXID+, #data is a string
     #
     class ResponseCode < Struct.new(:name, :data)
       ##
