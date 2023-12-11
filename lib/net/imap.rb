@@ -404,8 +404,8 @@ module Net
   #
   # Although IMAP4rev2[https://tools.ietf.org/html/rfc9051] is not supported
   # yet, Net::IMAP supports several extensions that have been folded into it:
-  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+, +UNSELECT+, and
-  # the fetch side of +BINARY+.
+  # +ENABLE+, +IDLE+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+, +UNSELECT+,
+  # <tt>STATUS=SIZE</tt>, and the fetch side of +BINARY+.
   # Commands for these extensions are listed with the {Core IMAP
   # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
   #
@@ -413,9 +413,7 @@ module Net
   #   <em>The following are folded into +IMAP4rev2+ but are currently
   #   unsupported or incompletely supported by</em> Net::IMAP<em>: RFC4466
   #   extensions, +ESEARCH+, +SEARCHRES+, +LIST-EXTENDED+, +LIST-STATUS+,
-  #   +LITERAL-+, and +SPECIAL-USE+.  The following extensions are implicitly
-  #   supported, but will be updated with more direct support: RFC5530 response
-  #   codes, <tt>STATUS=SIZE</tt>, and <tt>STATUS=DELETED</tt>.</em>
+  #   +LITERAL-+, and +SPECIAL-USE+.</em>
   #
   # ==== RFC2087: +QUOTA+
   # - #getquota: returns the resource usage and limits for a quota root
@@ -503,6 +501,9 @@ module Net
   # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
   #
   # - See #enable for information about support for UTF-8 string encoding.
+  #
+  # ==== RFC8438: <tt>STATUS=SIZE</tt>
+  # - Updates #status with the +SIZE+ status attribute.
   #
   # ==== RFC8474: +OBJECTID+
   # - Adds +MAILBOXID+ ResponseCode to #create tagged response.
