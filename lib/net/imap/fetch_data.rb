@@ -131,8 +131,8 @@ module Net
       #
       # A transformation of #attr, with all the keys converted to upper case.
       #
-      # Header field names are case-preserved but not not case-sensitive, so
-      # this is used by #header_fields and #header_fields_not.
+      # Header field names are case-preserved but not case-sensitive, so this is
+      # used by #header_fields and #header_fields_not.
       def attr_upcase; attr.transform_keys(&:upcase) end
 
       # :call-seq:
