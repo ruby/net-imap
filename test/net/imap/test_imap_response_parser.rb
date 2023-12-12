@@ -93,6 +93,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC 8474: OBJECTID responses
   generate_tests_from fixture_file: "rfc8474_objectid_responses.yml"
 
+  # RFC 9208: QUOTA extension
+  generate_tests_from fixture_file: "rfc9208_quota_responses.yml"
+
   ############################################################################
   # Workarounds or unspecified extensions:
   generate_tests_from fixture_file: "quirky_behaviors.yml"
