@@ -132,13 +132,13 @@ class Net::IMAP::FakeServer
       permanentflags: %i[Deleted Seen *].freeze,
     }.freeze
 
-    on "SELECT" do |resp|
+    def select_handler(command, resp)
       state.user or return resp.fail_bad_state(state)
       name, args = resp.args
       name or return resp.fail_bad_args
       name = name.upcase if name.to_s.casecmp? "inbox"
       mbox = config.mailboxes[name]
-      mbox or return resp.fail_no "invalid mailbox"
+      mbox or return resp.fail_no "invalid mailbox %p" % [name]
       state.select mbox: mbox, args: args
       attrs = RFC3501_6_3_1_SELECT_EXAMPLE_DATA.merge mbox.to_h
       resp.untagged "%{exists} EXISTS" % attrs
@@ -153,8 +153,12 @@ class Net::IMAP::FakeServer
       resp.untagged "OK [PERMANENTFLAGS (%s)] Limited" % [
         flags(attrs[:permanentflags])
       ]
-      resp.done_ok code: "READ-WRITE"
+      code = command == "SELECT" ? "READ-WRITE" : "READ-ONLY"
+      resp.done_ok code: code
     end
+
+    on "SELECT"  do |resp| select_handler "SELECT",  resp end
+    on "EXAMINE" do |resp| select_handler "EXAMINE", resp end
 
     on "CLOSE", "UNSELECT" do |resp|
       resp.args.nil? or return resp.fail_bad_args

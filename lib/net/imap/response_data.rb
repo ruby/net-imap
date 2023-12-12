@@ -3,6 +3,7 @@
 module Net
   class IMAP < Protocol
     autoload :FetchData,        "#{__dir__}/fetch_data"
+    autoload :SearchResult,     "#{__dir__}/search_result"
     autoload :SequenceSet,      "#{__dir__}/sequence_set"
 
     # Net::IMAP::ContinuationRequest represents command continuation requests.
@@ -290,6 +291,16 @@ module Net
     # * +HASCHILDREN+, with a tagged +NO+ response, when a mailbox delete failed
     #   because the server doesn't allow deletion of mailboxes with children.
     #   #data is +nil+.
+    #
+    # ==== +CONDSTORE+ extension
+    # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
+    # * +NOMODSEQ+, when selecting a mailbox that does not support
+    #   mod-sequences.  #data is +nil+.  See IMAP#select.
+    # * +HIGHESTMODSEQ+, #data is an Integer, the highest mod-sequence value of
+    #   all messages in the mailbox.  See IMAP#select.
+    # * +MODIFIED+, #data is a SequenceSet, the messages that have been modified
+    #   since the +UNCHANGEDSINCE+ mod-sequence given to +STORE+ or <tt>UID
+    #   STORE</tt>.
     #
     # ==== +OBJECTID+ extension
     # See {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].

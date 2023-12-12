@@ -502,6 +502,22 @@ module Net
   #
   # - See #enable for information about support for UTF-8 string encoding.
   #
+  # ==== RFC7162: +CONDSTORE+
+  #
+  # - Updates #enable with +CONDSTORE+ parameter.  +CONDSTORE+ will also be
+  #   enabled by using any of the extension's command parameters, listed below.
+  # - Updates #status with the +HIGHESTMODSEQ+ status attribute.
+  # - Updates #select and #examine with the +condstore+ modifier, and adds
+  #   either a +HIGHESTMODSEQ+ or +NOMODSEQ+ ResponseCode to the responses.
+  # - Updates #search, #uid_search, #sort, and #uid_sort with the +MODSEQ+
+  #   search criterion, and adds SearchResult#modseq to the search response.
+  # - Updates #thread and #uid_thread with the +MODSEQ+ search criterion
+  #   <em>(but thread responses are unchanged)</em>.
+  # - Updates #fetch and #uid_fetch with the +changedsince+ modifier and
+  #   +MODSEQ+ FetchData attribute.
+  # - Updates #store and #uid_store with the +unchangedsince+ modifier and adds
+  #   the +MODIFIED+ ResponseCode to the tagged response.
+  #
   # ==== RFC8438: <tt>STATUS=SIZE</tt>
   # - Updates #status with the +SIZE+ status attribute.
   #
@@ -669,6 +685,16 @@ module Net
   #   Resnick, P., Ed., Newman, C., Ed., and S. Shen, Ed.,
   #   "IMAP Support for UTF-8", RFC 6855, DOI 10.17487/RFC6855, March 2013,
   #   <https://www.rfc-editor.org/info/rfc6855>.
+  # [CONDSTORE[https://tools.ietf.org/html/rfc7162]]::
+  # [QRESYNC[https://tools.ietf.org/html/rfc7162]]::
+  #   Melnikov, A. and D. Cridland, "IMAP Extensions: Quick Flag Changes
+  #   Resynchronization (CONDSTORE) and Quick Mailbox Resynchronization
+  #   (QRESYNC)", RFC 7162, DOI 10.17487/RFC7162, May 2014,
+  #   <https://www.rfc-editor.org/info/rfc7162>.
+  # [OBJECTID[https://tools.ietf.org/html/rfc8474]]::
+  #   Gondwana, B., Ed., "IMAP Extension for Object Identifiers",
+  #   RFC 8474, DOI 10.17487/RFC8474, September 2018,
+  #   <https://www.rfc-editor.org/info/rfc8474>.
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
@@ -1345,6 +1371,12 @@ module Net
     # or when existing messages are expunged; see #add_response_handler for a
     # way to detect these events.
     #
+    # When the +condstore+ keyword argument is true, the server is told to
+    # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
+    # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
+    # #select and all `FETCH` responses will include FetchData#modseq.
+    # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
+    #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
@@ -1357,10 +1389,17 @@ module Net
     # response code indicating that the mailstore does not support persistent
     # UIDs:
     #   imap.responses("NO", &:last)&.code&.name == "UIDNOTSTICKY"
-    def select(mailbox)
+    #
+    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported,
+    # the +condstore+ keyword parameter may be used.
+    #   imap.select("mbox", condstore: true)
+    #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
+    def select(mailbox, condstore: false)
+      args = ["SELECT", mailbox]
+      args << ["CONDSTORE"] if condstore
       synchronize do
         @responses.clear
-        send_command("SELECT", mailbox)
+        send_command(*args)
       end
     end
 
@@ -1373,10 +1412,12 @@ module Net
     # exist or is for some reason non-examinable.
     #
     # Related: #select
-    def examine(mailbox)
+    def examine(mailbox, condstore: false)
+      args = ["EXAMINE", mailbox]
+      args << ["CONDSTORE"] if condstore
       synchronize do
         @responses.clear
-        send_command("EXAMINE", mailbox)
+        send_command(*args)
       end
     end
 
@@ -1689,7 +1730,7 @@ module Net
       end
     end
 
-    # Sends a {STATUS commands [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
+    # Sends a {STATUS command [IMAP4rev1 §6.3.10]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.10]
     # and returns the status of the indicated +mailbox+. +attr+ is a list of one
     # or more attributes whose statuses are to be requested.
     #
@@ -1716,10 +1757,13 @@ module Net
     #     The approximate size of the mailbox---must be greater than or equal to
     #     the sum of all messages' +RFC822.SIZE+ fetch item values.
     #
+    # +HIGHESTMODSEQ+::
+    #    The highest mod-sequence value of all messages in the mailbox.  See
+    #    +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
+    #
     # +MAILBOXID+::
-    #     A server-allocated unique _string_ identifier for the mailbox.
-    #     See +OBJECTID+
-    #     {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-4].
+    #     A server-allocated unique _string_ identifier for the mailbox.  See
+    #     +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
     #
     # +RECENT+::
     #     The number of messages with the <tt>\Recent</tt> flag.
@@ -1740,6 +1784,9 @@ module Net
     # {[RFC8483]}[https://www.rfc-editor.org/rfc/rfc8483.html].
     #
     # +DELETED+ requires the server's capabilities to include +IMAP4rev2+.
+    #
+    # +HIGHESTMODSEQ+ requires the server's capabilities to include +CONDSTORE+
+    # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     #
     # +MAILBOXID+ requires the server's capabilities to include +OBJECTID+
     # {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html].
@@ -1877,6 +1924,10 @@ module Net
     # string holding the entire search string, or a single-dimension array of
     # search keywords and arguments.
     #
+    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
+    # capability has been enabled.
+    #
     # Related: #uid_search
     #
     # ===== Search criteria
@@ -1925,6 +1976,15 @@ module Net
     #   p imap.search(["SUBJECT", "hello", "NOT", "NEW"])
     #   #=> [1, 6, 7, 8]
     #
+    # ===== Capabilities
+    #
+    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # and enabled for the selected mailbox, a non-empty SearchResult will
+    # include a +MODSEQ+ value.
+    #   imap.select("mbox", condstore: true)
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
+    #   result.modseq # => 5594
     def search(keys, charset = nil)
       return search_internal("SEARCH", keys, charset)
     end
@@ -1933,11 +1993,18 @@ module Net
     # to search the mailbox for messages that match the given searching
     # criteria, and returns unique identifiers (<tt>UID</tt>s).
     #
+    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
+    # capability has been enabled.
+    #
     # See #search for documentation of search criteria.
     def uid_search(keys, charset = nil)
       return search_internal("UID SEARCH", keys, charset)
     end
 
+    # :call-seq:
+    #   fetch(set, attr, changedsince: nil) -> array of FetchData
+    #
     # Sends a {FETCH command [IMAP4rev1 §6.4.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.5]
     # to retrieve data associated with a message in the mailbox.
     #
@@ -1952,6 +2019,9 @@ module Net
     #
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
+    #
+    # +changedsince+ is an optional integer mod-sequence.  It limits results to
+    # messages with a mod-sequence greater than +changedsince+.
     #
     # The return value is an array of FetchData.
     #
@@ -1974,10 +2044,23 @@ module Net
     #   #=> "12-Oct-2000 22:40:59 +0900"
     #   p data.attr["UID"]
     #   #=> 98
-    def fetch(set, attr, mod = nil)
-      return fetch_internal("FETCH", set, attr, mod)
+    #
+    # ===== Capabilities
+    #
+    # Many extensions define new message +attr+ names.  See FetchData for a list
+    # of supported extension fields.
+    #
+    # The server's capabilities must include +CONDSTORE+
+    # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
+    # +changedsince+ argument.  Using +changedsince+ implicitly enables the
+    # +CONDSTORE+ extension.
+    def fetch(set, attr, mod = nil, changedsince: nil)
+      fetch_internal("FETCH", set, attr, mod, changedsince: changedsince)
     end
 
+    # :call-seq:
+    #   uid_fetch(set, attr, changedsince: nil) -> array of FetchData
+    #
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
     #
@@ -1990,17 +2073,36 @@ module Net
     #   whether a +UID+ was specified as a message data item to the +FETCH+.
     #
     # Related: #fetch, FetchData
-    def uid_fetch(set, attr, mod = nil)
-      return fetch_internal("UID FETCH", set, attr, mod)
+    #
+    # ===== Capabilities
+    # Same as #fetch.
+    def uid_fetch(set, attr, mod = nil, changedsince: nil)
+      fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
     end
 
+    # :call-seq:
+    #   store(set, attr, value, unchangedsince: nil) -> array of FetchData
+    #
     # Sends a {STORE command [IMAP4rev1 §6.4.6]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.6]
     # to alter data associated with messages in the mailbox, in particular their
-    # flags. The +set+ parameter is a number, an array of numbers, or a Range
-    # object. Each number is a message sequence number.  +attr+ is the name of a
-    # data item to store: <tt>"FLAGS"</tt> will replace the message's flag list
-    # with the provided one, <tt>"+FLAGS"</tt> will add the provided flags, and
-    # <tt>"-FLAGS"</tt> will remove them.  +flags+ is a list of flags.
+    # flags.
+    #
+    # +set+ is a number, an array of numbers, or a Range object.  Each number is
+    # a message sequence number.
+    #
+    # +attr+ is the name of a data item to store.  The semantics of +value+
+    # varies based on +attr+:
+    # * When +attr+ is <tt>"FLAGS"</tt>, the flags in +value+ replace the
+    #   message's flag list.
+    # * When +attr+ is <tt>"+FLAGS"</tt>, the flags in +value+ are added to
+    #   the flags for the message.
+    # * When +attr+ is <tt>"-FLAGS"</tt>, the flags in +value+ are removed
+    #   from the message.
+    #
+    # +unchangedsince+ is an optional integer mod-sequence.  It prohibits any
+    # changes to messages with +mod-sequence+ greater than the specified
+    # +unchangedsince+ value.  A SequenceSet of any messages that fail this
+    # check will be returned in a +MODIFIED+ ResponseCode.
     #
     # The return value is an array of FetchData.
     #
@@ -2009,13 +2111,25 @@ module Net
     # ===== For example:
     #
     #   p imap.store(6..8, "+FLAGS", [:Deleted])
-    #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
-    #        #<Net::IMAP::FetchData seqno=7, attr={"FLAGS"=>[:Seen, :Deleted]}>, \\
+    #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>,
+    #        #<Net::IMAP::FetchData seqno=7, attr={"FLAGS"=>[:Seen, :Deleted]}>,
     #        #<Net::IMAP::FetchData seqno=8, attr={"FLAGS"=>[:Seen, :Deleted]}>]
-    def store(set, attr, flags)
-      return store_internal("STORE", set, attr, flags)
+    #
+    # ===== Capabilities
+    #
+    # Extensions may define new data items to be used with #store.
+    #
+    # The server's capabilities must include +CONDSTORE+
+    # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
+    # +unchangedsince+ argument.  Using +unchangedsince+ implicitly enables the
+    # +CONDSTORE+ extension.
+    def store(set, attr, flags, unchangedsince: nil)
+      store_internal("STORE", set, attr, flags, unchangedsince: unchangedsince)
     end
 
+    # :call-seq:
+    #   uid_store(set, attr, value, unchangedsince: nil) -> array of FetchData
+    #
     # Sends a {UID STORE command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to alter data associated with messages in the mailbox, in particular their
     # flags.
@@ -2024,8 +2138,11 @@ module Net
     # message sequence numbers.
     #
     # Related: #store
-    def uid_store(set, attr, flags)
-      return store_internal("UID STORE", set, attr, flags)
+    #
+    # ===== Capabilities
+    # Same as #store.
+    def uid_store(set, attr, flags, unchangedsince: nil)
+      store_internal("UID STORE", set, attr, flags, unchangedsince: unchangedsince)
     end
 
     # Sends a {COPY command [IMAP4rev1 §6.4.7]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.7]
@@ -2200,6 +2317,13 @@ module Net
     # Additionally, the server capabilities must include a capability matching
     # each enabled extension (usually the same name as the enabled extension).
     # The following capabilities may be enabled:
+    #
+    # [+CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
+    #
+    #   Updates various commands to return +CONDSTORE+ extension responses.  It
+    #   is not necessary to explicitly enable +CONDSTORE+—using any of the
+    #   command parameters defined by the extension will implicitly enable it.
+    #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+:utf8+ --- an alias for <tt>"UTF8=ACCEPT"</tt>]
     #
@@ -2712,7 +2836,11 @@ module Net
       end
     end
 
-    def fetch_internal(cmd, set, attr, mod = nil)
+    def fetch_internal(cmd, set, attr, mod = nil, changedsince: nil)
+      if changedsince
+        mod ||= []
+        mod << "CHANGEDSINCE" << Integer(changedsince)
+      end
       case attr
       when String then
         attr = RawData.new(attr)
@@ -2733,13 +2861,14 @@ module Net
       end
     end
 
-    def store_internal(cmd, set, attr, flags)
-      if attr.instance_of?(String)
-        attr = RawData.new(attr)
-      end
+    def store_internal(cmd, set, attr, flags, unchangedsince: nil)
+      attr = RawData.new(attr) if attr.instance_of?(String)
+      args = [MessageSet.new(set)]
+      args << ["UNCHANGEDSINCE", Integer(unchangedsince)] if unchangedsince
+      args << attr << flags
       synchronize do
         clear_responses("FETCH")
-        send_command(cmd, MessageSet.new(set), attr, flags)
+        send_command(cmd, *args)
         clear_responses("FETCH")
       end
     end

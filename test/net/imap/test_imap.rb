@@ -1135,6 +1135,62 @@ EOF
     end
   end
 
+  test "#select with condstore" do
+    with_fake_server do |server, imap|
+      imap.select "inbox", condstore: true
+      assert_equal("RUBY0001 SELECT inbox (CONDSTORE)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#examine with condstore" do
+    with_fake_server do |server, imap|
+      imap.examine "inbox", condstore: true
+      assert_equal("RUBY0001 EXAMINE inbox (CONDSTORE)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#fetch with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("FETCH", &:done_ok)
+      imap.fetch 1..-1, %w[FLAGS], changedsince: 12345
+      assert_equal("RUBY0002 FETCH 1:* (FLAGS) (CHANGEDSINCE 12345)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#uid_fetch with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID FETCH", &:done_ok)
+      imap.uid_fetch 1..-1, %w[FLAGS], changedsince: 12345
+      assert_equal("RUBY0002 UID FETCH 1:* (FLAGS) (CHANGEDSINCE 12345)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#store with unchangedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("STORE", &:done_ok)
+      imap.store 1..-1, "FLAGS", %i[Deleted], unchangedsince: 12345
+      assert_equal(
+        "RUBY0002 STORE 1:* (UNCHANGEDSINCE 12345) FLAGS (\\Deleted)",
+        server.commands.pop.raw.strip
+      )
+    end
+  end
+
+  test "#uid_store with changedsince" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID STORE", &:done_ok)
+      imap.uid_store 1..-1, "FLAGS", %i[Deleted], unchangedsince: 987
+      assert_equal(
+        "RUBY0002 UID STORE 1:* (UNCHANGEDSINCE 987) FLAGS (\\Deleted)",
+        server.commands.pop.raw.strip
+      )
+    end
+  end
+
   def test_close
     with_fake_server(select: "inbox") do |server, imap|
       resp = imap.close

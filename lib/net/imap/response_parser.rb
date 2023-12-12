@@ -1467,9 +1467,10 @@ module Net
         while _ = SP? && nz_number? do data << _ end
         if lpar?
           label("MODSEQ"); SP!
-          mod_sequence_value
+          modseq = mod_sequence_value
           rpar
         end
+        data = SearchResult.new(data, modseq: modseq)
         UntaggedResponse.new(name, data, @str)
       end
       alias sort_data mailbox_data__search
@@ -1594,6 +1595,7 @@ module Net
           when "UIDVALIDITY"   then nz_number           # RFC3501, RFC9051
           when "RECENT"        then number              # RFC3501 (obsolete)
           when "SIZE"          then number64            # RFC8483, RFC9051
+          when "HIGHESTMODSEQ" then mod_sequence_valzer # RFC7162
           when "MAILBOXID"     then parens__objectid    # RFC8474
           else
             number? || ExtensionData.new(tagged_ext_val)
@@ -1800,6 +1802,8 @@ module Net
       #   resp-text-code   =/ "HIGHESTMODSEQ" SP mod-sequence-value /
       #                       "NOMODSEQ" /
       #                       "MODIFIED" SP sequence-set
+      # RFC7162 (QRESYNC):
+      #   resp-text-code   =/ "CLOSED"
       #
       # RFC8474: OBJECTID
       #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
@@ -1821,7 +1825,9 @@ module Net
             "EXPUNGEISSUED", "CORRUPTION", "SERVERBUG", "CLIENTBUG", "CANNOT",
             "LIMIT", "OVERQUOTA", "ALREADYEXISTS", "NONEXISTENT", "CLOSED",
             "NOTSAVED", "UIDNOTSTICKY", "UNKNOWN-CTE", "HASCHILDREN"
-          when "NOMODSEQ"           # CONDSTORE
+          when "NOMODSEQ"           then nil                       # CONDSTORE
+          when "HIGHESTMODSEQ"      then SP!; mod_sequence_value   # CONDSTORE
+          when "MODIFIED"           then SP!; sequence_set         # CONDSTORE
           when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
           else
             SP? and text_chars_except_rbra
@@ -1965,6 +1971,10 @@ module Net
       # permsg-modsequence  = mod-sequence-value
       #                        ;; Per-message mod-sequence.
       alias permsg_modsequence mod_sequence_value
+
+      # RFC7162:
+      # mod-sequence-valzer = "0" / mod-sequence-value
+      alias mod_sequence_valzer number64
 
       def parens__modseq; lpar; _ = permsg_modsequence; rpar; _ end
 
