@@ -1370,7 +1370,7 @@ module Net
         MailboxList.new(attr, delim, name)
       end
 
-      def getquota_response
+      def quota_response
         # If quota never established, get back
         # `NO Quota root does not exist'.
         # If quota removed, get `()' after the
@@ -1403,7 +1403,7 @@ module Net
         end
       end
 
-      def getquotaroot_response
+      def quotaroot_response
         # Similar to getquota, but only admin can use getquota.
         token = match(T_ATOM)
         name = token.value.upcase

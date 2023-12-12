@@ -1,0 +1,100 @@
+---
+:tests:
+
+  rfc9208_4.1.1_example:
+    :response: "* QUOTA \"!partition/sda4\" (STORAGE 104 10923847)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTA
+      data: !ruby/struct:Net::IMAP::MailboxQuota
+        mailbox: "!partition/sda4"
+        usage: '104'
+        quota: '10923847'
+      raw_data: "* QUOTA \"!partition/sda4\" (STORAGE 104 10923847)\r\n"
+
+  rfc9208_4.1.2_example_1:
+    :response: "* QUOTAROOT INBOX \"#user/alice\" \"!partition/sda4\"\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTAROOT
+      data: !ruby/struct:Net::IMAP::MailboxQuotaRoot
+        mailbox: INBOX
+        quotaroots:
+        - "#user/alice"
+        - "!partition/sda4"
+      raw_data: "* QUOTAROOT INBOX \"#user/alice\" \"!partition/sda4\"\r\n"
+
+  rfc9208_4.1.2_example_2:
+    :response: "* QUOTA \"#user/alice\" (MESSAGE 42 1000)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTA
+      data: !ruby/struct:Net::IMAP::MailboxQuota
+        mailbox: "#user/alice"
+        usage: '42'
+        quota: '1000'
+      raw_data: "* QUOTA \"#user/alice\" (MESSAGE 42 1000)\r\n"
+
+  # rfc9208_4.1.3_example_1:
+  #   :response: "* QUOTA \"#user/alice\" (STORAGE 54 111 MESSAGE 42 1000)\r\n"
+
+  rfc9208_4.1.4_example:
+    :response: "* STATUS INBOX (MESSAGES 12 DELETED 4 DELETED-STORAGE 8)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: INBOX
+        attr:
+          MESSAGES: 12
+          DELETED: 4
+          DELETED-STORAGE: 8
+      raw_data: "* STATUS INBOX (MESSAGES 12 DELETED 4 DELETED-STORAGE 8)\r\n"
+
+  rfc9208_4.2.1_example:
+    :response: "* QUOTA \"\" (STORAGE 10 512)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTA
+      data: !ruby/struct:Net::IMAP::MailboxQuota
+        mailbox: ''
+        usage: '10'
+        quota: '512'
+      raw_data: "* QUOTA \"\" (STORAGE 10 512)\r\n"
+
+  rfc9208_4.2.2_example_1:
+    :response: "* QUOTAROOT INBOX \"\"\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTAROOT
+      data: !ruby/struct:Net::IMAP::MailboxQuotaRoot
+        mailbox: INBOX
+        quotaroots:
+        - ''
+      raw_data: "* QUOTAROOT INBOX \"\"\r\n"
+
+  rfc9208_4.2.2_example_2:
+    :response: "* QUOTAROOT comp.mail.mime\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: QUOTAROOT
+      data: !ruby/struct:Net::IMAP::MailboxQuotaRoot
+        mailbox: comp.mail.mime
+        quotaroots: []
+      raw_data: "* QUOTAROOT comp.mail.mime\r\n"
+
+  rfc9208_4.3.1_example_1:
+    :response: "A003 NO [OVERQUOTA] APPEND Failed\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: A003
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: OVERQUOTA
+          data:
+        text: APPEND Failed
+      raw_data: "A003 NO [OVERQUOTA] APPEND Failed\r\n"
+
+  rfc9208_4.3.1_example_2:
+    :response: "* NO [OVERQUOTA] Soft quota has been exceeded\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: 'NO'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: OVERQUOTA
+          data:
+        text: Soft quota has been exceeded
+      raw_data: "* NO [OVERQUOTA] Soft quota has been exceeded\r\n"
