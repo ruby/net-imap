@@ -29,6 +29,15 @@ class IMAPRegexpsTest < Test::Unit::TestCase
           PlainAuthenticator
           XOauth2Authenticator
         ], # deprecated
+        Net::IMAP::StringPrep::SASLprep => %i[
+          UNASSIGNED
+        ],
+        Net::IMAP::SASL => %i[
+          StringPrepError
+          ProhibitedCodepoint
+          BidiStringError
+          StringPrep
+        ], # deprecated
       },
     ).to_h
   )
