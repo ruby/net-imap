@@ -262,10 +262,10 @@ class IMAPAuthenticatorsTest < Test::Unit::TestCase
   end
 
   def test_anonymous_stringprep
-    assert_raise(Net::IMAP::SASL::ProhibitedCodepoint) {
+    assert_raise(Net::IMAP::StringPrep::ProhibitedCodepoint) {
       anonymous("no\ncontrol\rchars").process(nil)
     }
-    assert_raise(Net::IMAP::SASL::ProhibitedCodepoint) {
+    assert_raise(Net::IMAP::StringPrep::ProhibitedCodepoint) {
       anonymous("regional flags use tagging chars: e.g." \
                 "🏴󠁧󠁢󠁥󠁮󠁧󠁿 England, " \
                 "🏴󠁧󠁢󠁳󠁣󠁴󠁿 Scotland, " \
