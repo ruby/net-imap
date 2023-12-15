@@ -12,10 +12,10 @@ class StringPrepTablesTest < Net::IMAP::TestCase
   # Surrogates are excluded.  They are handled by enforcing valid UTF8 encoding.
   VALID_CODEPOINTS = (0..0x10_ffff).map{|cp| cp.chr("UTF-8") rescue nil}.compact
 
-  rfc3454_generator = StringPrepTablesGenerator.new
+  rfc3454_transformer = StringPrepTablesGenerator.new.transformer
 
   # testing with set inclusion, just in case the regexp generation is buggy
-  RFC3454_TABLE_SETS = rfc3454_generator.sets
+  RFC3454_TABLE_SETS = rfc3454_transformer.sets
 
   # The library regexps are a mixture of generated vs handcrafted, in order to
   # reduce load-time and memory footprint of the largest tables.
@@ -23,7 +23,7 @@ class StringPrepTablesTest < Net::IMAP::TestCase
   # These are the simple generated regexps, which directly translate each table
   # into a character class with every codepoint.  These can be used to verify
   # the hand-crafted regexps are correct, for every supported version of ruby.
-  RFC3454_TABLE_REGEXPS = rfc3454_generator.regexps
+  RFC3454_TABLE_REGEXPS = rfc3454_transformer.regexps
 
   # C.5 (surrogates) aren't really tested here.
   # D.2 includes surrogates... which also aren't tested here.

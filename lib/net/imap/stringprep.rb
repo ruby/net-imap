@@ -73,34 +73,35 @@ module Net
       #   The above steps MUST be performed in the order given to comply with
       #   this specification.
       #
-      def stringprep(string,
-                     maps:,
-                     normalization:,
-                     prohibited:,
-                     **opts)
+      def stringprep(string, maps:, normalization:, prohibited:, **opts)
         string = string.encode("UTF-8") # also dups (and raises invalid encoding)
-        map_tables!(string, *maps)                     if maps
+        map!(string, maps)                             if maps&.any?
         string.unicode_normalize!(normalization)       if normalization
         check_prohibited!(string, *prohibited, **opts) if prohibited
         string
       end
 
-      def map_tables!(string, *tables)
-        tables.each do |table|
-          regexp, replacements = Tables::MAPPINGS.fetch(table)
-          string.gsub!(regexp, replacements)
+      def map!(string, mappings)
+        mappings.each do |mapping|
+          mapping = Tables::MAPPINGS.fetch(mapping) if mapping.is_a?(String)
+          string.gsub!(*mapping)
         end
         string
+      end
+
+      def map_tables!(string, *tables)
+        warn "map_tables! is deprecated.  Use map! instead."
+        map!(string, tables.map { Tables::MAPPINGS.fetch(table) })
       end
 
       # Checks +string+ for any codepoint in +tables+. Raises a
       # ProhibitedCodepoint describing the first matching table.
       #
-      # Also checks bidirectional characters, when <tt>bidi: true</tt>, which may
-      # raise a BidiStringError.
+      # Also checks bidirectional characters, when <tt>bidi: true</tt>, which
+      # may raise a BidiStringError.
       #
-      # +profile+ is an optional string which will be added to any exception that
-      # is raised (it does not affect behavior).
+      # +profile+ is an optional string which will be added to any exception
+      # that is raised (it does not affect behavior).
       def check_prohibited!(string,
                             *tables,
                             bidi: false,

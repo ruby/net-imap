@@ -31,6 +31,7 @@ class SASLprepTest < Net::IMAP::TestCase
         "\u{1f468}\u{1f469}\u{1f467}" # map ZWJ to nothing
     }.each do |input, output|
       assert_equal output, Net::IMAP.saslprep(input)
+      assert_equal output, Net::IMAP.saslprep(input, exception: true)
     end
   end
 

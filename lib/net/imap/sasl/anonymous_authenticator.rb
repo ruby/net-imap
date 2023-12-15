@@ -36,7 +36,7 @@ module Net
         # Any other keyword arguments are silently ignored.
         def initialize(anon_msg = nil, anonymous_message: nil, **)
           message = (anonymous_message || anon_msg || "").to_str
-          @anonymous_message = StringPrep::Trace.stringprep_trace message
+          @anonymous_message = IMAP::StringPrep::Trace.stringprep_trace message
           if (size = @anonymous_message&.length)&.> 255
             raise ArgumentError,
                   "anonymous_message is too long.  (%d codepoints)" % [size]
