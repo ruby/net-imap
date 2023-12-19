@@ -98,6 +98,29 @@ module Net
       # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
       def modseq;     data.assoc("MODSEQ")&.last     end
 
+      # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      class PartialResult < Struct.new(:range, :results)
+        ##
+        # method: range
+        # :call-seq: range -> range
+
+        ##
+        # method: results
+        # :call-seq: results -> sequence set or nil
+      end
+
+      # :call-seq: partial -> PartialResult or nil
+      #
+      # Return a subset of the message numbers/UIDs that satisfy the SEARCH
+      # criteria.
+      #
+      # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      def partial;    data.assoc("PARTIAL")&.last    end
+
     end
   end
 end
