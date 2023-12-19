@@ -1518,6 +1518,10 @@ module Net
       # From RFC4731 (ESEARCH):
       #   search-return-data    =/ "MODSEQ" SP mod-sequence-value
       #
+      # From RFC5267 (CONTEXT=SEARCH, CONTEXT=SORT):
+      #   search-return-data    =/ ret-data-partial / ret-data-addto /
+      #                            ret-data-removefrom
+      #
       # From RFC6203 (SEARCH=FUZZY):
       #   search-return-data    =/ "RELEVANCY" SP score-list
       #
@@ -1535,6 +1539,8 @@ module Net
           when "MODSEQ"     then mod_sequence_value         # RFC7162: CONDSTORE
           when "RELEVANCY"  then score_list                 # RFC6203: SEARCH=FUZZY
           when "PARTIAL"    then ret_data_partial__value    # RFC9394: PARTIAL
+          when "ADDTO"      then ret_data_addto__value      # RFC5267: CONTEXT=*
+          when "REMOVEFROM" then ret_data_removefrom__value # RFC5267: CONTEXT=*
           else search_return_value
           end
         [label, value]
@@ -1568,6 +1574,40 @@ module Net
       #     ;; NIL indicates that no results correspond to
       #     ;; the requested range.
       def partial_results; NIL? ? nil : sequence_set end
+
+      #   ret-data-addto        = "ADDTO"
+      #                            SP "(" context-position SP sequence-set
+      #                            *(SP context-position SP sequence-set)
+      #                            ")"
+      def ret_data_addto__value
+        lpar; list = [ret_data_addto__item]
+        (SP!; list << ret_data_addto__item) until rpar?
+        list
+      end
+
+      def ret_data_addto__item
+        ESearchResult::AddToContext.new(context_position, (SP!; sequence_set))
+      end
+
+      #   ret-data-removefrom   = "REMOVEFROM"
+      #                            SP "(" context-position SP sequence-set
+      #                            *(SP context-position SP sequence-set)
+      #                            ")"
+      def ret_data_removefrom__value
+        lpar; list = [ret_data_removefrom__item]
+        (SP!; list << ret_data_removefrom__item) until rpar?
+        list
+      end
+
+      def ret_data_removefrom__item
+        ESearchResult::RemoveFromContext.new(context_position,
+                                             (SP!; sequence_set))
+      end
+
+      #   context-position      = number
+      #       ;; Context position may be 0 for SEARCH result additions.
+      #       ;; <number> from [IMAP]
+      alias context_position number
 
       # search-modifier-name = tagged-ext-label
       alias search_modifier_name tagged_ext_label

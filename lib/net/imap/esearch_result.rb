@@ -98,6 +98,48 @@ module Net
       # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
       def modseq;     data.assoc("MODSEQ")&.last     end
 
+      class ContextUpdate < Struct.new(:position, :set)
+      end
+
+      class AddToContext < ContextUpdate
+      end
+
+      class RemoveFromContext < ContextUpdate
+      end
+
+      # :call-seq: addto -> array of insertion updates, or nil
+      #
+      # Notification of updates, inserting messages into the result list for the
+      # command issued with #tag.
+      #
+      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      def addto
+        data.flat_map { _1 == "ADDTO" ? _2 : [] }
+      end
+
+      # :call-seq: removefrom -> array of removal updates, or nil
+      #
+      # Notification of updates, removing messages into the result list for the
+      # command issued with #tag.
+      #
+      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      def removefrom
+        data.flat_map { _1 == "REMOVEFROM" ? _2 : [] }
+      end
+
+      # :call-seq: updates -> array of context updates, or nil
+      #
+      # Notification of updates, inserting or removing messages to or from the
+      # result list for the command issued with #tag.
+      #
+      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      def updates
+        data.flat_map { %w[ADDTO REMOVEFROM].include?(_1) ? _2 : [] }
+      end
+
       # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
       # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
