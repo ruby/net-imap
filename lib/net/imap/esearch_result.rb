@@ -121,6 +121,15 @@ module Net
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       def partial;    data.assoc("PARTIAL")&.last    end
 
+      # :call-seq: relevancy -> integer or nil
+      #
+      # Return a relevancy score for each message that satisfies the SEARCH
+      # criteria.
+      #
+      # See <tt>SEARCH=FUZZY</tt>
+      # {[RFC6203]}[https://www.rfc-editor.org/rfc/rfc6203.html]
+      def relevancy;  data.assoc("RELEVANCY")&.last  end
+
     end
   end
 end
