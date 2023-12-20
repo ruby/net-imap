@@ -2880,8 +2880,9 @@ module Net
     def sort_internal(cmd, sort_keys, search_keys, charset)
       if search_keys.instance_of?(String)
         search_keys = [RawData.new(search_keys)]
+      else
+        normalize_searching_criteria(search_keys)
       end
-      normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, sort_keys, charset, *search_keys)
         clear_responses("SORT").last || []
@@ -2891,8 +2892,9 @@ module Net
     def thread_internal(cmd, algorithm, search_keys, charset)
       if search_keys.instance_of?(String)
         search_keys = [RawData.new(search_keys)]
+      else
+        normalize_searching_criteria(search_keys)
       end
-      normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
         clear_responses("THREAD").last || []
