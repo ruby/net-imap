@@ -60,6 +60,21 @@ module Net
     #     set = Net::IMAP::SequenceSet[1, 2, [3..7, 5], 6..10, 2048, 1024]
     #     set.valid_string  #=> "1:10,55,1024:2048"
     #
+    # == Normalized form
+    #
+    # When a sequence set is created with a single String value, that #string
+    # representation is preserved.  SequenceSet's internal representation
+    # implicitly sorts all entries, de-duplicates numbers, and coalesces
+    # adjacent or overlapping ranges.  Most enumeration methods and offset-based
+    # methods use this normalized representation.  Most modification methods
+    # will convert #string to its normalized form.
+    #
+    # In some cases the order of the string representation is significant, such
+    # as the +ESORT+, <tt>CONTEXT=SORT</tt>, and +UIDPLUS+ extensions.  Use
+    # #entries or #each_entry to enumerate the set in its original order.  To
+    # preserve #string order while modifying a set, use #append, #string=, or
+    # #replace.
+    #
     # == Using <tt>*</tt>
     #
     # \IMAP sequence sets may contain a special value <tt>"*"</tt>, which
