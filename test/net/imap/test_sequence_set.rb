@@ -525,6 +525,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "single number", {
     input:      "123456",
     elements:   [123_456],
+    entries:    [123_456],
     ranges:     [123_456..123_456],
     numbers:    [123_456],
     to_s:       "123456",
@@ -536,6 +537,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "single range", {
     input:      "1:3",
     elements:   [1..3],
+    entries:    [1..3],
     ranges:     [1..3],
     numbers:    [1, 2, 3],
     to_s:       "1:3",
@@ -547,6 +549,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "simple numbers list", {
     input:      "1,3,5",
     elements:   [   1,    3,    5],
+    entries:    [   1,    3,    5],
     ranges:     [1..1, 3..3, 5..5],
     numbers:    [   1,    3,    5],
     to_s:       "1,3,5",
@@ -558,6 +561,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "numbers and ranges list", {
     input:      "1:3,5,7:9,46",
     elements:   [1..3,    5, 7..9,     46],
+    entries:    [1..3,    5, 7..9,     46],
     ranges:     [1..3, 5..5, 7..9, 46..46],
     numbers:    [1, 2, 3, 5, 7, 8, 9,  46],
     to_s:       "1:3,5,7:9,46",
@@ -569,6 +573,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "just *", {
     input:      "*",
     elements:   [:*],
+    entries:    [:*],
     ranges:     [:*..],
     numbers:    RangeError,
     to_s:       "*",
@@ -580,6 +585,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "range with *", {
     input:      "4294967000:*",
     elements:   [4_294_967_000..],
+    entries:    [4_294_967_000..],
     ranges:     [4_294_967_000..],
     numbers:    RangeError,
     to_s:       "4294967000:*",
@@ -591,6 +597,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "* sorts last", {
     input:      "5,*,7",
     elements:   [5, 7, :*],
+    entries:    [5, :*, 7],
     ranges:     [5..5, 7..7, :*..],
     numbers:    RangeError,
     to_s:       "5,*,7",
@@ -602,6 +609,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "out of order", {
     input:      "46,7:6,15,3:1",
     elements:   [1..3, 6..7, 15, 46],
+    entries:    [46, 6..7, 15, 1..3],
     ranges:     [1..3, 6..7, 15..15, 46..46],
     numbers:    [1, 2, 3, 6, 7, 15, 46],
     to_s:       "46,7:6,15,3:1",
@@ -613,6 +621,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "adjacent", {
     input:      "1,2,3,5,7:9,10:11",
     elements:   [1..3, 5,    7..11],
+    entries:    [1, 2, 3, 5, 7..9, 10..11],
     ranges:     [1..3, 5..5, 7..11],
     numbers:    [1, 2, 3, 5, 7, 8, 9, 10, 11],
     to_s:       "1,2,3,5,7:9,10:11",
@@ -624,6 +633,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "overlapping", {
     input:      "1:5,3:7,10:9,10:11",
     elements:   [1..7, 9..11],
+    entries:    [1..5, 3..7, 9..10, 10..11],
     ranges:     [1..7, 9..11],
     numbers:    [1, 2, 3, 4, 5, 6, 7,  9, 10, 11],
     to_s:       "1:5,3:7,10:9,10:11",
@@ -635,6 +645,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "contained", {
     input:      "1:5,3:4,9:11,10",
     elements:   [1..5, 9..11],
+    entries:    [1..5, 3..4, 9..11, 10],
     ranges:     [1..5, 9..11],
     numbers:    [1, 2, 3, 4, 5, 9, 10, 11],
     to_s:       "1:5,3:4,9:11,10",
@@ -646,6 +657,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "array", {
     input:      ["1:5,3:4", 9..11, "10", 99, :*],
     elements:   [1..5, 9..11, 99, :*],
+    entries:    [1..5, 9..11, 99, :*],
     ranges:     [1..5, 9..11, 99..99, :*..],
     numbers:    RangeError,
     to_s:       "1:5,9:11,99,*",
@@ -657,6 +669,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "nested array", {
     input:      [["1:5", [3..4], [[[9..11, "10"], 99], :*]]],
     elements:   [1..5, 9..11, 99, :*],
+    entries:    [1..5, 9..11, 99, :*],
     ranges:     [1..5, 9..11, 99..99, :*..],
     numbers:    RangeError,
     to_s:       "1:5,9:11,99,*",
@@ -668,6 +681,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "empty", {
     input:      nil,
     elements:   [],
+    entries:    [],
     ranges:     [],
     numbers:    [],
     to_s:       "",
@@ -678,6 +692,26 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
 
   test "#elements" do |data|
     assert_equal data[:elements], SequenceSet.new(data[:input]).elements
+  end
+
+  test "#each_element" do |data|
+    seqset = SequenceSet.new(data[:input])
+    array = []
+    assert_equal seqset, seqset.each_element { array << _1 }
+    assert_equal data[:elements], array
+    assert_equal data[:elements], seqset.each_element.to_a
+  end
+
+  test "#entries" do |data|
+    assert_equal data[:entries], SequenceSet.new(data[:input]).entries
+  end
+
+  test "#each_entry" do |data|
+    seqset = SequenceSet.new(data[:input])
+    array = []
+    assert_equal seqset, seqset.each_entry { array << _1 }
+    assert_equal data[:entries], array
+    assert_equal data[:entries], seqset.each_entry.to_a
   end
 
   test "#ranges" do |data|
