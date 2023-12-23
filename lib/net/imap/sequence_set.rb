@@ -226,6 +226,8 @@ module Net
     # - #add?: If the given object is not an element in the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
     # - #merge: Merges multiple elements into the set; returns +self+.
+    # - #append: Adds a given object to the set, appending it to the existing
+    #   string, and returns +self+.
     # - #string=: Assigns a new #string value and replaces #elements to match.
     # - #replace: Replaces the contents of the set with the contents
     #   of a given object.
@@ -659,6 +661,18 @@ module Net
         normalize!
       end
       alias << add
+
+      # Adds a range or number to the set and returns +self+.
+      #
+      # Unlike #add, #merge, or #union, the new value is appended to #string.
+      # This may result in a #string which has duplicates or is out-of-order.
+      def append(object)
+        tuple = input_to_tuple object
+        entry = tuple_to_str tuple
+        tuple_add tuple
+        @string = -(string ? "#{@string},#{entry}" : entry)
+        self
+      end
 
       # :call-seq: add?(object) -> self or nil
       #

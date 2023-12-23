@@ -288,6 +288,14 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal SequenceSet["1:*"], SequenceSet.new("5:*") << (1..4)
   end
 
+  test "#append" do
+    assert_equal "1,5",     SequenceSet.new("1").append("5").string
+    assert_equal "*,1",     SequenceSet.new("*").append(1).string
+    assert_equal "1:6,4:9", SequenceSet.new("1:6").append("4:9").string
+    assert_equal "1:4,5:*", SequenceSet.new("1:4").append(5..).string
+    assert_equal "5:*,1:4", SequenceSet.new("5:*").append(1..4).string
+  end
+
   test "#merge" do
     seqset = -> { SequenceSet.new _1 }
     assert_equal seqset["1,5"],       seqset["1"].merge("5")
