@@ -151,7 +151,7 @@ module Net
     #   +nil+ if the object cannot be converted to a compatible type.
     # - #cover? (aliased as #===):
     #   Returns whether a given object is fully contained within +self+.
-    # - #intersect?:
+    # - #intersect? (aliased as #overlap?):
     #   Returns whether +self+ and a given object have any common elements.
     # - #disjoint?:
     #   Returns whether +self+ and a given object have no common elements.
@@ -502,6 +502,7 @@ module Net
       def intersect?(other)
         valid? && input_to_tuples(other).any? { intersect_tuple? _1 }
       end
+      alias overlap? intersect?
 
       # Returns +true+ if the set and a given object have no common elements,
       # +false+ otherwise.
