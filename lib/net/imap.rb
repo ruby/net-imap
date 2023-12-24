@@ -2883,7 +2883,6 @@ module Net
       else
         normalize_searching_criteria(search_keys)
       end
-      normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, sort_keys, charset, *search_keys)
         clear_responses("SORT").last || []
@@ -2896,7 +2895,6 @@ module Net
       else
         normalize_searching_criteria(search_keys)
       end
-      normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
         clear_responses("THREAD").last || []
