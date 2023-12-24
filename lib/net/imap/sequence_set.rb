@@ -60,6 +60,21 @@ module Net
     #     set = Net::IMAP::SequenceSet[1, 2, [3..7, 5], 6..10, 2048, 1024]
     #     set.valid_string  #=> "1:10,55,1024:2048"
     #
+    # == Normalized form
+    #
+    # When a sequence set is created with a single String value, that #string
+    # representation is preserved.  SequenceSet's internal representation
+    # implicitly sorts all entries, de-duplicates numbers, and coalesces
+    # adjacent or overlapping ranges.  Most enumeration methods and offset-based
+    # methods use this normalized representation.  Most modification methods
+    # will convert #string to its normalized form.
+    #
+    # In some cases the order of the string representation is significant, such
+    # as the +ESORT+, <tt>CONTEXT=SORT</tt>, and +UIDPLUS+ extensions.  Use
+    # #entries or #each_entry to enumerate the set in its original order.  To
+    # preserve #string order while modifying a set, use #append, #string=, or
+    # #replace.
+    #
     # == Using <tt>*</tt>
     #
     # \IMAP sequence sets may contain a special value <tt>"*"</tt>, which
@@ -186,10 +201,14 @@ module Net
     #
     # === Methods for Iterating
     #
-    # - #each_element: Yields each number and range in the set and returns
-    #   +self+.
-    # - #elements (aliased as #to_a):
-    #   Returns an Array of every number and range in the set.
+    # - #each_element: Yields each number and range in the set, sorted and
+    #   coalesced, and returns +self+.
+    # - #elements (aliased as #to_a): Returns an Array of every number and range
+    #   in the set, sorted and coalesced.
+    # - #each_entry: Yields each number and range in the set, unsorted and
+    #   without deduplicating numbers or coalescing ranges, and returns +self+.
+    # - #entries: Returns an Array of every number and range in the set,
+    #   unsorted and without deduplicating numbers or coalescing ranges.
     # - #each_range:
     #   Yields each element in the set as a Range and returns +self+.
     # - #ranges: Returns an Array of every element in the set, converting
@@ -222,6 +241,8 @@ module Net
     # - #add?: If the given object is not an element in the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
     # - #merge: Merges multiple elements into the set; returns +self+.
+    # - #append: Adds a given object to the set, appending it to the existing
+    #   string, and returns +self+.
     # - #string=: Assigns a new #string value and replaces #elements to match.
     # - #replace: Replaces the contents of the set with the contents
     #   of a given object.
@@ -656,6 +677,18 @@ module Net
       end
       alias << add
 
+      # Adds a range or number to the set and returns +self+.
+      #
+      # Unlike #add, #merge, or #union, the new value is appended to #string.
+      # This may result in a #string which has duplicates or is out-of-order.
+      def append(object)
+        tuple = input_to_tuple object
+        entry = tuple_to_str tuple
+        tuple_add tuple
+        @string = -(string ? "#{@string},#{entry}" : entry)
+        self
+      end
+
       # :call-seq: add?(object) -> self or nil
       #
       # Adds a range or number to the set and returns +self+.  Returns +nil+
@@ -788,7 +821,18 @@ module Net
         normalize!
       end
 
-      # Returns an array of ranges and integers.
+      # Returns an array of ranges and integers and <tt>:*</tt>.
+      #
+      # The entries are in the same order they appear in #string, with no
+      # sorting, deduplication, or coalescing.  When #string is in its
+      # normalized form, this will return the same result as #elements.
+      # This is useful when the given order is significant, for example in a
+      # ESEARCH response to IMAP#sort.
+      #
+      # Related: #each_entry, #elements
+      def entries; each_entry.to_a end
+
+      # Returns an array of ranges and integers and <tt>:*</tt>.
       #
       # The returned elements are sorted and coalesced, even when the input
       # #string is not.  <tt>*</tt> will sort last.  See #normalize.
@@ -855,20 +899,40 @@ module Net
       # Related: #elements, #ranges, #to_set
       def numbers; each_number.to_a end
 
-      # Yields each number or range in #elements to the block and returns self.
+      # Yields each number or range in #string to the block and returns +self+.
       # Returns an enumerator when called without a block.
       #
-      # Related: #elements
+      # The entries are yielded in the same order they appear in #tring, with no
+      # sorting, deduplication, or coalescing.  When #string is in its
+      # normalized form, this will yield the same values as #each_element.
+      #
+      # Related: #entries, #each_element
+      def each_entry(&block)
+        return to_enum(__method__) unless block_given?
+        return each_element(&block) unless @string
+        @string.split(",").each do yield tuple_to_entry str_to_tuple _1 end
+        self
+      end
+
+      # Yields each number or range (or <tt>:*</tt>) in #elements to the block
+      # and returns self.  Returns an enumerator when called without a block.
+      #
+      # The returned numbers are sorted and de-duplicated, even when the input
+      # #string is not.  See #normalize.
+      #
+      # Related: #elements, #each_entry
       def each_element # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        @tuples.each do |min, max|
-          if    min == STAR_INT then yield :*
-          elsif max == STAR_INT then yield min..
-          elsif min == max      then yield min
-          else                       yield min..max
-          end
-        end
+        @tuples.each do yield tuple_to_entry _1 end
         self
+      end
+
+      private def tuple_to_entry((min, max))
+        if    min == STAR_INT then :*
+        elsif max == STAR_INT then min..
+        elsif min == max      then min
+        else                       min..max
+        end
       end
 
       # Yields each range in #ranges to the block and returns self.
