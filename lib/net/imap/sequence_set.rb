@@ -927,13 +927,17 @@ module Net
         self
       end
 
-      private def tuple_to_entry((min, max))
+      private
+
+      def tuple_to_entry((min, max))
         if    min == STAR_INT then :*
         elsif max == STAR_INT then min..
         elsif min == max      then min
         else                       min..max
         end
       end
+
+      public
 
       # Yields each range in #ranges to the block and returns self.
       # Returns an enumerator when called without a block.
@@ -1002,7 +1006,9 @@ module Net
         nil
       end
 
-      private def each_tuple_with_index
+      private
+
+      def each_tuple_with_index
         idx_min = 0
         @tuples.each do |min, max|
           yield min, max, idx_min, (idx_max = idx_min + (max - min))
@@ -1011,7 +1017,7 @@ module Net
         idx_min
       end
 
-      private def reverse_each_tuple_with_index
+      def reverse_each_tuple_with_index
         idx_max = -1
         @tuples.reverse_each do |min, max|
           yield min, max, (idx_min = idx_max - (max - min)), idx_max
@@ -1019,6 +1025,8 @@ module Net
         end
         idx_max
       end
+
+      public
 
       # :call-seq: at(index) -> integer or nil
       #
@@ -1086,7 +1094,9 @@ module Net
 
       alias slice :[]
 
-      private def slice_length(start, length)
+      private
+
+      def slice_length(start, length)
         start  = Integer(start.to_int)
         length = Integer(length.to_int)
         raise ArgumentError, "length must be positive" unless length.positive?
@@ -1094,7 +1104,7 @@ module Net
         slice_range(start..last)
       end
 
-      private def slice_range(range)
+      def slice_range(range)
         first = range.begin ||  0
         last  = range.end   || -1
         last -= 1 if range.exclude_end? && range.end && last != STAR_INT
@@ -1108,6 +1118,8 @@ module Net
           end
         end
       end
+
+      public
 
       # Returns a frozen SequenceSet with <tt>*</tt> converted to +max+, numbers
       # and ranges over +max+ removed, and ranges containing +max+ converted to
