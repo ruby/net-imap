@@ -907,7 +907,7 @@ module Net
       # normalized form, this will yield the same values as #each_element.
       #
       # Related: #entries, #each_element
-      def each_entry(&block)
+      def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
         return each_element(&block) unless @string
         @string.split(",").each do yield tuple_to_entry str_to_tuple _1 end
