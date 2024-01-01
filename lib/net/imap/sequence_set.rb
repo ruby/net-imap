@@ -274,16 +274,29 @@ module Net
       # The largest possible non-zero unsigned 32-bit integer
       UINT32_MAX = 2**32 - 1
 
+      REGEXP = ResponseParser::Patterns::SEQUENCE_SET_STR
+      private_constant :REGEXP
+
       # represents "*" internally, to simplify sorting (etc)
       STAR_INT  = UINT32_MAX + 1
       private_constant :STAR_INT
 
       # valid inputs for "*"
       STARS     = [:*, ?*, -1].freeze
-      private_constant :STAR_INT, :STARS
+      private_constant :STARS
 
-      COERCIBLE = ->{ _1.respond_to? :to_sequence_set }
-      private_constant :COERCIBLE
+      # Matches objects which should be implicitly converted into SequenceSet
+      # objects.  Note that the inputs are not validated, and some valid inputs
+      # (Enumerable other than Array or Set) will be rejected.
+      Coercible = ->(obj) do
+        case obj
+        when SequenceSet            then true
+        when Integer, Range, *STARS then true
+        when String                 then REGEXP.match?(obj.b)
+        when Array, Set             then obj.all?(Coercible) && !obj.empty?
+        else                             obj.respond_to?(:to_sequence_set)
+        end
+      end
 
       class << self
 
