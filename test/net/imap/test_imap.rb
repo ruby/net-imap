@@ -1220,6 +1220,30 @@ EOF
     end
   end
 
+  test("#search/#uid_search") do
+    with_fake_server do |server, imap|
+      search_result = Net::IMAP::SearchResult[
+        1, 2, 3, 5, 8, 13, 21, 34, 55, modseq: 1234
+      ]
+      search_resp = ->cmd do
+        cmd.puts search_result.to_s("SEARCH")
+        cmd.done_ok
+      end
+
+      server.on "SEARCH", &search_resp
+      assert_equal search_result, imap.search(["subject", "hello",
+                                               [1..5, 8, 10..-1]])
+      cmd = server.commands.pop
+      assert_equal ["SEARCH", "subject hello 1:5,8,10:*"], [cmd.name, cmd.args]
+
+      server.on "UID SEARCH", &search_resp
+      assert_equal search_result, imap.uid_search(["subject", "hello",
+                                                   [1..22, 30..-1]])
+      cmd = server.commands.pop
+      assert_equal ["UID SEARCH", "subject hello 1:22,30:*"], [cmd.name, cmd.args]
+    end
+  end
+
   test("missing server SEARCH response") do
     with_fake_server do |server, imap|
       server.on "SEARCH",     &:done_ok
