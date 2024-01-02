@@ -1949,9 +1949,13 @@ module Net
     #     * +Range+
     #     * <tt>-1</tt> and +:*+ -- both translate to <tt>*</tt>
     #     * responds to +#to_sequence_set+
-    #     * nested +Array+
+    #     * +Array+, when each element is one of the above types, a positive
+    #       +Integer+, a sequence-set formatted +String+, or a deeply nested
+    #       +Array+ of these same types.
     #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
     #     and encoded as an \IMAP quoted or literal string otherwise.
+    #   * Any other nested +Array+ is encoded as a parenthesized list, to group
+    #     multiple search keys (e.g., for use with +OR+ and +NOT+).
     #   * Any other +Integer+ (besides <tt>-1</tt>) will be sent as +#to_s+.
     #   * +Date+ objects will be encoded as an \IMAP date (see ::encode_date).
     #
@@ -1976,13 +1980,13 @@ module Net
     # The following searches send the exact same command to the server:
     #
     #    # criteria array, charset arg
-    #    imap.search(%w[OR UNSEEN FLAGGED SUBJECT foo], "UTF-8")
+    #    imap.search(["OR", "UNSEEN", %w(FLAGGED SUBJECT foo)], "UTF-8")
     #    # criteria string, charset arg
-    #    imap.search("OR UNSEEN FLAGGED SUBJECT foo", "UTF-8")
+    #    imap.search("OR UNSEEN (FLAGGED SUBJECT foo)", "UTF-8")
     #    # criteria array contains charset arg
-    #    imap.search(%w[CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo])
+    #    imap.search([*%w[CHARSET UTF-8], "OR", "UNSEEN", %w(FLAGGED SUBJECT foo)])
     #    # criteria string contains charset arg
-    #    imap.search("CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo")
+    #    imap.search("CHARSET UTF-8 OR UNSEEN (FLAGGED SUBJECT foo)")
     #
     # ===== Search keys
     #
@@ -3208,8 +3212,17 @@ module Net
       case obj
       when Set, -1, :* then true
       when Range       then true
-      when Array       then true
+      when Array       then obj.all? { coerce_search_array_arg_to_seqset? _1 }
       else                  obj.respond_to?(:to_sequence_set)
+      end
+    end
+
+    def coerce_search_array_arg_to_seqset?(obj)
+      case obj
+      when Integer then obj.positive? || obj == -1
+      when String  then ResponseParser::Patterns::SEQUENCE_SET_STR.match?(obj.b)
+      else
+        coerce_search_arg_to_seqset?(obj)
       end
     end
 

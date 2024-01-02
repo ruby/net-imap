@@ -1242,6 +1242,18 @@ EOF
                                                    [1..22, 30..-1]])
       cmd = server.commands.pop
       assert_equal ["UID SEARCH", "subject hello 1:22,30:*"], [cmd.name, cmd.args]
+
+      assert_equal search_result, imap.search(
+        "RETURN (COUNT) NOT (FLAGGED (OR SEEN ANSWERED))"
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+
+      assert_equal search_result, imap.search([
+        "RETURN", %w(MIN MAX COUNT), "NOT", ["FLAGGED", %w(OR SEEN ANSWERED)]
+      ])
+      cmd = server.commands.pop
+      assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
     end
   end
 
