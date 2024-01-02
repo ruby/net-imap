@@ -1929,6 +1929,9 @@ module Net
       end
     end
 
+    # :call-seq:
+    #   search(criteria, charset = nil) -> result
+    #
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
     # to search the mailbox for messages that match the given search +criteria+,
     # and returns a SearchResult.  SearchResult inherits from Array (for
@@ -2174,10 +2177,13 @@ module Net
     #   result = imap.search(["SUBJECT", "hi there", "not", "new"])
     #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
     #   result.modseq # => 5594
-    def search(keys, charset = nil)
-      return search_internal("SEARCH", keys, charset)
+    def search(...)
+      search_internal("SEARCH", ...)
     end
 
+    # :call-seq:
+    #   uid_search(criteria, charset = nil) -> result
+    #
     # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to search the mailbox for messages that match the given searching
     # criteria, and returns unique identifiers (<tt>UID</tt>s).
@@ -2187,8 +2193,8 @@ module Net
     # capability has been enabled.
     #
     # See #search for documentation of parameters.
-    def uid_search(keys, charset = nil)
-      return search_internal("UID SEARCH", keys, charset)
+    def uid_search(...)
+      search_internal("UID SEARCH", ...)
     end
 
     # :call-seq:
@@ -3117,7 +3123,7 @@ module Net
       end
     end
 
-    def search_internal(cmd, keys, charset)
+    def search_internal(cmd, keys, charset = nil)
       keys = normalize_searching_criteria(keys)
       args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
