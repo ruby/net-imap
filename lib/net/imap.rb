@@ -1949,15 +1949,34 @@ module Net
       end
     end
 
-    # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
-    # to search the mailbox for messages that match the given searching
-    # criteria, and returns message sequence numbers.  +keys+ can either be a
-    # string holding the entire search string, or a single-dimension array of
-    # search keywords and arguments.
+    # :call-seq:
+    #   search(criteria = nil, result: nil, charset: nil, **criteria) -> result
+    #   search(criteria, charset = nil) -> result
     #
-    # Returns a SearchResult object.  SearchResult inherits from Array (for
-    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
-    # capability has been enabled.
+    # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
+    # to search the mailbox for messages that match the given search +criteria+,
+    # and returns either a SearchResult or an ESearchResult.  SearchResult
+    # inherits from Array (for backward compatibility) but adds
+    # SearchResult#modseq when the +CONDSTORE+ capability has been enabled.
+    #
+    # +criteria+ is one or more search keys and their arguments.  Searching
+    # +criteria+ may be provided as an array, a hash, keyword arguments (besides
+    # +result+ and +charset+), or a string.  Keyword argument criteria may be
+    # combined with positional argument criteria.
+    #
+    # _WARNING:_ When +criteria+ is a string, it will be sent directly to the
+    # server _without any validation_.  This is vulnerable to an injection
+    # attack if external inputs are used.
+    #
+    # +result+ controls what kind of information is returned about messages
+    # matching the search +criteria+.  Specifying +result+ forces the server to
+    # return an ESearchResult instead of SearchResult.
+    #
+    # +charset+ is the name of the {registered character
+    # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
+    # used by strings in the search +criteria+.  When +charset+ isn't specified,
+    # either <tt>"US-ASCII"</tt> or <tt"UTF-8"</tt> is assumed, depending on the
+    # server's capabilities.
     #
     # Related: #uid_search
     #
@@ -2009,11 +2028,17 @@ module Net
     #
     # ===== Capabilities
     #
-    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # +result+ options can only be specified when the server supports +ESEARCH+
+    # or +IMAP4rev2+.
+    #
+    # When +IMAP4rev2+ is enabled, or when the server supports +IMAP4rev2+ but
+    # not +IMAP4rev1+, ESearchResult is always returned instead of SearchResult.
+    #
+    # If CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html] is supported
     # and enabled for the selected mailbox, a non-empty SearchResult will
     # include a +MODSEQ+ value.
     #   imap.select("mbox", condstore: true)
-    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new"])
     #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
     #   result.modseq # => 5594
     def search(...)
