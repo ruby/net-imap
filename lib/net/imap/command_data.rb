@@ -98,9 +98,15 @@ module Net
       put_string(num.to_s)
     end
 
+    # Sends a parenthesized list.  To omit parentheses, use send_args_data.
     def send_list_data(list, tag = nil)
       put_string("(")
-      first = true
+      send_args_data(list, tag)
+      put_string(")")
+    end
+
+    # Sends a list wxthout parentheses.  See also send_list_data.
+    def send_args_data(list, tag = nil, first: true)
       list.each do |i|
         if first
           first = false
@@ -109,7 +115,6 @@ module Net
         end
         send_data(i, tag)
       end
-      put_string(")")
     end
 
     def send_date_data(date) put_string Net::IMAP.encode_date(date) end
