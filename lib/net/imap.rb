@@ -3006,14 +3006,7 @@ module Net
 
     def normalize_searching_criteria(criteria)
       return RawData.new(criteria) if criteria.is_a?(String)
-      criteria.map {|i|
-        case i
-        when -1, Range, Array
-          SequenceSet.new(i)
-        else
-          i
-        end
-      }
+      criteria.map {|i| SequenceSet::Coercible[i] ? SequenceSet[i] : i }
     end
 
     def build_ssl_ctx(ssl)
