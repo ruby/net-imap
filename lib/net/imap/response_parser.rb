@@ -1313,10 +1313,9 @@ module Net
       #   header-fld-name = astring
       #
       # NOTE: Previously, Net::IMAP recreated the raw original source string.
-      # Now, it grabs the raw encoded value using @str and @pos.  A future
-      # version may simply return the decoded astring value.  Although that is
-      # technically incompatible, it should almost never make a difference: all
-      # standard header field names are valid atoms:
+      # Now, it returns the decoded astring value.  Although this is technically
+      # incompatible, it should almost never make a difference: all standard
+      # header field names are valid atoms:
       #
       # https://www.iana.org/assignments/message-headers/message-headers.xhtml
       #
@@ -1331,12 +1330,7 @@ module Net
       #     ftext           =   %d33-57 /          ; Printable US-ASCII
       #                         %d59-126           ;  characters not including
       #                                            ;  ":".
-      def header_fld_name
-        assert_no_lookahead
-        start = @pos
-        astring
-        @str[start...@pos - 1]
-      end
+      alias header_fld_name astring
 
       # mailbox-data    =  "FLAGS" SP flag-list / "LIST" SP mailbox-list /
       #                    "LSUB" SP mailbox-list / "SEARCH" *(SP nz-number) /
