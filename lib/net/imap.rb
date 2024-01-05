@@ -220,7 +220,7 @@ module Net
   #    Unicode", RFC-2152[https://tools.ietf.org/html/rfc2152], May 1997.
   #
   class IMAP < Protocol
-    VERSION = "0.2.3"
+    VERSION = "0.2.4"
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
