@@ -35,8 +35,4 @@ Gem::Specification.new do |spec|
 
   spec.add_dependency "net-protocol"
   spec.add_dependency "date"
-
-  spec.add_development_dependency "digest"
-  spec.add_development_dependency "strscan"
-  spec.add_development_dependency "base64"
 end
