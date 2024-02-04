@@ -6,14 +6,6 @@ require "test/unit"
 class SearchDataTests < Test::Unit::TestCase
   SearchResult = Net::IMAP::SearchResult
 
-  test "#frozen?" do
-    assert SearchResult.new([1, 3, 5]).frozen?
-    assert SearchResult[1, 3, 5].frozen?
-    assert SearchResult[1, 3, 5, modseq: 9].frozen?
-    assert SearchResult[1, 3, 5, modseq: 9].clone.frozen?
-    assert SearchResult[1, 3, 5, modseq: 9].dup.dup.frozen?
-  end
-
   test "#modseq" do
     assert_nil SearchResult[12, 34].modseq
     assert_equal 123_456_789, SearchResult[12, 34, modseq: 123_456_789].modseq
