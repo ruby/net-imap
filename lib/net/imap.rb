@@ -759,7 +759,17 @@ module Net
       alias default_imap_port default_port
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
+
+      # Set to true to silence deprecation warnings, e.g. from #responses.
+      # Defaults to false.
+      #
+      # These warnings are concerning thread-safety issues, so it is recommended
+      # to update other code and leave this value.  Deprecated usage will
+      # become errors regardless of this setting, so use this only temporarily.
+      attr_accessor :silence_thread_safety_deprecation_warnings
     end
+
+    self.silence_thread_safety_deprecation_warnings = false
 
     # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
@@ -2501,7 +2511,9 @@ module Net
       elsif type
         raise ArgumentError, "Pass a block or use #clear_responses"
       else
-        # warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+        unless IMAP.silence_thread_safety_deprecation_warnings
+          warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+        end
         @responses
       end
     end
