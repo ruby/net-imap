@@ -1,0 +1,38 @@
+name: Publish gem to rubygems.org
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  push:
+    if: github.repository == 'ruby/net-imap'
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write # mandatory for trusted publishing
+      contents: write # required for `rake release` to push the release tag
+
+    environment:
+      name: RubyGems
+      url: https://rubygems.org/gems/net-imap
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 3.2
+
+      - name: Publish to RubyGems
+        uses: rubygems/release-gem@v1
+
+      - name: Create GitHub release
+        run: |
+          tag_name="$(git describe --tags --abbrev=0)"
+          gh release create "${tag_name}" --verify-tag --draft --generate-notes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
