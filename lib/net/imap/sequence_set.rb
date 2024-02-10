@@ -384,6 +384,10 @@ module Net
       # Related: #valid_string, #normalized_string, #to_s
       def string; @string ||= normalized_string if valid? end
 
+      # Returns an array with #normalized_string when valid and an empty array
+      # otherwise.
+      def deconstruct; valid? ? [normalized_string] : [] end
+
       # Assigns a new string to #string and resets #elements to match.  It
       # cannot be set to an empty string—assign +nil+ or use #clear instead.
       # The string is validated but not normalized.
