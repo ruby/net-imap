@@ -779,6 +779,18 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal str, set.string
   end
 
+  test "#deconstruct" do |data|
+    set = SequenceSet.new(data[:input])
+    str = data[:normalize]
+    if str
+      assert_equal [str], set.deconstruct
+      set => SequenceSet[str]
+    else
+      assert_equal [], set.deconstruct
+      set => SequenceSet[]
+    end
+  end
+
   test "#normalized_string" do |data|
     set = SequenceSet.new(data[:input])
     assert_equal data[:normalize], set.normalized_string
