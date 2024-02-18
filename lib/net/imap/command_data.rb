@@ -124,12 +124,25 @@ module Net
       put_string("\\" + symbol.to_s)
     end
 
-    class RawData # :nodoc:
+    # RawData can be used with some Net::IMAP commands to bypass _all_ argument
+    # validation, normalization, and encoding.  RawData will be sent _directly_
+    # to the socket.
+    #
+    # *WARNING:* Using RawData directly should be avoided.  Use only with
+    # extreme caution.  Do _NOT_ use with unsanitized user input.  Using
+    # RawData can lead to {injection
+    # flaws}[https://owasp.org/www-community/Injection_Flaws].
+    class RawData
       def send_data(imap, tag)
         imap.__send__(:put_string, @data)
       end
 
       def validate
+      end
+
+      def ==(other)
+        other.class == self.class &&
+          other.instance_variable_get(:@data) == @data
       end
 
       private
