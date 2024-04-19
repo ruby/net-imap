@@ -1157,6 +1157,7 @@ module Net
       def body_fld_param
         return if NIL?
         param = {}
+        shift_token if @token.symbol == T_SPACE
         lpar
         name = case_insensitive__string; SP!; param[name] = string
         while SP?
