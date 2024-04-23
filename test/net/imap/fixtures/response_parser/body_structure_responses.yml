@@ -434,6 +434,10 @@
         (\"boundary\" \"001a1137a5047848e405157ddaa3\") NIL))\r\n"
 
   test_bodystructure_extra_space:
+    :comments: |
+      [GH-271] Responses from some IMAP servers contained extra space like this.
+      The fix has been used since Jan 2014, seems to be easy, and doesn't seem to
+      cause any harm.
     :response: "* 1 FETCH (UID 1 BODYSTRUCTURE (((\"text\" \"plain\"  (\"charset\" \"UTF-8\") NIL
       NIL \"7bit\" 409 7 NIL NIL NIL)(\"text\" \"html\"  (\"charset\" \"UTF-8\") NIL NIL \"7bit\"
       592 10 NIL NIL NIL) \"alternative\" (\"boundary\" \"--==_mimepart_5277b641dcc3_57d5887e8325d8\"
