@@ -1155,9 +1155,9 @@ module Net
       # RFC3501, RFC9051:
       # body-fld-param  = "(" string SP string *(SP string SP string) ")" / nil
       def body_fld_param
+        quirky_SP? # See comments on test_bodystructure_extra_space
         return if NIL?
         param = {}
-        shift_token if @token.symbol == T_SPACE
         lpar
         name = case_insensitive__string; SP!; param[name] = string
         while SP?
