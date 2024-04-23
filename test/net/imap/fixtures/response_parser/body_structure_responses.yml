@@ -433,6 +433,81 @@
         4383638 NIL (\"attachment\" (\"filename\" \"test.xml\")) NIL NIL) \"mixed\"
         (\"boundary\" \"001a1137a5047848e405157ddaa3\") NIL))\r\n"
 
+  test_bodystructure_extra_space:
+    :comments: |
+      [GH-271] Responses from some IMAP servers contained extra space like this.
+      The fix has been used since Jan 2014, seems to be easy, and doesn't seem to
+      cause any harm.
+    :response: "* 1 FETCH (UID 1 BODYSTRUCTURE (((\"text\" \"plain\"  (\"charset\" \"UTF-8\") NIL
+      NIL \"7bit\" 409 7 NIL NIL NIL)(\"text\" \"html\"  (\"charset\" \"UTF-8\") NIL NIL \"7bit\"
+      592 10 NIL NIL NIL) \"alternative\" (\"boundary\" \"--==_mimepart_5277b641dcc3_57d5887e8325d8\"
+      \"charset\" \"UTF-8\") NIL NIL) \"mixed\" (\"boundary\" \"--==_mimepart_5277b64110f79_57d5887e832634\"
+      \"charset\" \"UTF-8\") NIL NIL))\r\n"
+
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 1
+        attr:
+          UID: 1
+          BODYSTRUCTURE: !ruby/struct:Net::IMAP::BodyTypeMultipart
+            media_type: MULTIPART
+            subtype: MIXED
+            parts:
+            - !ruby/struct:Net::IMAP::BodyTypeMultipart
+              media_type: MULTIPART
+              subtype: ALTERNATIVE
+              parts:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: PLAIN
+                param:
+                  CHARSET: UTF-8
+                content_id:
+                description:
+                encoding: 7BIT
+                size: 409
+                lines: 7
+                md5:
+                disposition:
+                language:
+                location:
+                extension:
+              - !ruby/struct:Net::IMAP::BodyTypeText
+                media_type: TEXT
+                subtype: HTML
+                param:
+                  CHARSET: UTF-8
+                content_id:
+                description:
+                encoding: 7BIT
+                size: 592
+                lines: 10
+                md5:
+                disposition:
+                language:
+                location:
+                extension:
+              param:
+                BOUNDARY: --==_mimepart_5277b641dcc3_57d5887e8325d8
+                CHARSET: UTF-8
+              disposition:
+              language:
+              location:
+              extension:
+            param:
+              BOUNDARY: --==_mimepart_5277b64110f79_57d5887e832634
+              CHARSET: UTF-8
+            disposition:
+            language:
+            location:
+            extension:
+      raw_data: "* 1 FETCH (UID 1 BODYSTRUCTURE (((\"text\" \"plain\"  (\"charset\" \"UTF-8\") NIL NIL
+        \"7bit\" 409 7 NIL NIL NIL)(\"text\" \"html\"  (\"charset\" \"UTF-8\") NIL NIL \"7bit\"
+        592 10 NIL NIL NIL) \"alternative\" (\"boundary\" \"--==_mimepart_5277b641dcc3_57d5887e8325d8\"
+        \"charset\" \"UTF-8\") NIL NIL) \"mixed\" (\"boundary\" \"--==_mimepart_5277b64110f79_57d5887e832634\"
+        \"charset\" \"UTF-8\") NIL NIL))\r\n"
+
   test_bodystructure_mixed_boundary:
     :response: "* 2688 FETCH (UID 179161 BODYSTRUCTURE ((\"TEXT\" \"PLAIN\" (\"CHARSET\"
       \"iso-8859-1\") NIL NIL \"QUOTED-PRINTABLE\" 200 4 NIL NIL NIL)(\"MESSAGE\"
