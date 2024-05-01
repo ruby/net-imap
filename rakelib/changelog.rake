@@ -7,7 +7,8 @@ task "changelog:generate" do
   releases = JSON.parse(release_json)
   entries = releases.map {|release|
     release.transform_keys!(&:to_sym)
-    release => {name:, tag_name:, created_at:, body:}
+    # release => {name:, tag_name:, created_at:, body:}            # ruby 3.0
+    case release; in name:, tag_name:, created_at:, body:; nil end # ruby 2.7
     url = "https://github.com/ruby/net-imap/tree/#{tag_name}"
     date = created_at[0, 10]
     body = body.delete("\r").gsub(/^#/, "##")
