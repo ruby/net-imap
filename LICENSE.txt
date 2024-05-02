@@ -1,6 +1,6 @@
-All the files in this distribution are covered under either the Ruby's
-license (see the file COPYING) or BSD-2-Clause license (see the file BSDL)
-except some documentation mentioned below.
+All the files in this distribution are covered under either the Ruby license or
+the BSD-2-Clause license (see the file COPYING) except some documentation mentioned
+below.
 
 -------------------------------------------------------------------------
 
