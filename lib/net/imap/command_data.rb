@@ -3,6 +3,7 @@
 require "date"
 
 require_relative "errors"
+require_relative "data_lite"
 
 module Net
   class IMAP < Protocol
@@ -119,80 +120,53 @@ module Net
       put_string("\\" + symbol.to_s)
     end
 
-    class RawData # :nodoc:
+    CommandData = Data.define(:data) do # :nodoc:
       def send_data(imap, tag)
-        imap.__send__(:put_string, @data)
+        raise NoMethodError, "#{self.class} must implement #{__method__}"
       end
 
       def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
       end
     end
 
-    class Atom # :nodoc:
+    class RawData < CommandData # :nodoc:
       def send_data(imap, tag)
-        imap.__send__(:put_string, @data)
-      end
-
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
+        imap.__send__(:put_string, data)
       end
     end
 
-    class QuotedString # :nodoc:
+    class Atom < CommandData # :nodoc:
       def send_data(imap, tag)
-        imap.__send__(:send_quoted_string, @data)
-      end
-
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
+        imap.__send__(:put_string, data)
       end
     end
 
-    class Literal # :nodoc:
+    class QuotedString < CommandData # :nodoc:
       def send_data(imap, tag)
-        imap.__send__(:send_literal, @data, tag)
+        imap.__send__(:send_quoted_string, data)
       end
+    end
 
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
+    class Literal < CommandData # :nodoc:
+      def send_data(imap, tag)
+        imap.__send__(:send_literal, data, tag)
       end
     end
 
     # *DEPRECATED*.  Replaced by SequenceSet.
-    class MessageSet # :nodoc:
+    class MessageSet < CommandData # :nodoc:
       def send_data(imap, tag)
-        imap.__send__(:put_string, format_internal(@data))
+        imap.__send__(:put_string, format_internal(data))
       end
 
       def validate
-        validate_internal(@data)
+        validate_internal(data)
       end
 
       private
 
-      def initialize(data)
-        @data = data
+      def initialize(data:)
+        super
         warn("DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}.",
              uplevel: 1, category: :deprecated)
         begin
@@ -246,21 +220,17 @@ module Net
       end
     end
 
-    class ClientID # :nodoc:
+    class ClientID < CommandData # :nodoc:
 
       def send_data(imap, tag)
-        imap.__send__(:send_data, format_internal(@data), tag)
+        imap.__send__(:send_data, format_internal(data), tag)
       end
 
       def validate
-        validate_internal(@data)
+        validate_internal(data)
       end
 
       private
-
-      def initialize(data)
-        @data = data
-      end
 
       def validate_internal(client_id)
         client_id.to_h.each do |k,v|
