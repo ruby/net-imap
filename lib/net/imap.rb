@@ -2926,8 +2926,13 @@ module Net
       keys = normalize_searching_criteria(keys)
       args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
-        send_command(cmd, *args)
-        clear_responses("SEARCH").last || []
+        result = nil
+        send_command(cmd, *args) do |response, tag|
+          if response in data: ESearchResult(tag: ^tag) => result
+            responses("ESEARCH") { _1.delete(result) }
+          end
+        end
+        result || clear_responses("SEARCH").last || []
       end
     end
 
