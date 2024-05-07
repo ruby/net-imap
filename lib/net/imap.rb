@@ -2963,12 +2963,24 @@ module Net
       end
     end
 
-    def search_internal(cmd, keys, charset = nil)
+    def search_internal(cmd, keys, charset = nil, esearch: false)
       keys = normalize_searching_criteria(keys)
       args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
-        send_command(cmd, *args)
-        clear_responses("SEARCH").last || []
+        clear_responses("SEARCH")
+        result = nil
+        send_command(cmd, *args) do |response, tag|
+          if response in data: ESearchResult(tag: ^tag) => result
+            responses("ESEARCH") { _1.delete(result) }
+          end
+        end
+        if result
+          result
+        elsif esearch || keys in RawData[/\ARETURN /] | Array[/\ARETURN\z/i, *]
+          ESearchResult.new
+        else
+          clear_responses("SEARCH").last || []
+        end
       end
     end
 
