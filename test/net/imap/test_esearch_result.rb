@@ -67,40 +67,10 @@ class ESearchResultTest < Test::Unit::TestCase
   end
 
   test "#relevancy returns RELEVANCY value (RFC6203: SEARCH=FUZZY)" do
-    esearch = ESearchResult.new("A0007", true, [["RELEVANCY", 1]])
-    assert_equal  1, esearch.relevancy
-    esearch = ESearchResult.new("A0008", true, [["RELEVANCY", 99]])
-    assert_equal 99, esearch.relevancy
-  end
-
-  test "#addto returns ADDTO values (RFC5267: CONTEXT=SEARCH, CONTEXT=SORT)" do
-    parser = Net::IMAP::ResponseParser.new
-    expected = [
-      ESearchResult::AddToContext.new(1, SequenceSet[2733]),
-      ESearchResult::AddToContext.new(1, SequenceSet[2732]),
-      ESearchResult::AddToContext.new(1, SequenceSet[2731]),
-    ]
-    assert_equal expected, parser.parse(
-      "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733 1 2732 1 2731)\r\n"
-    ).data.addto
-    assert_equal expected, parser.parse(
-      "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733) ADDTO (1 2732) ADDTO (1 2731)\r\n"
-    ).data.addto
-  end
-
-  test "#removefrom returns REMOVEFROM values (RFC5267: CONTEXT=SEARCH...)" do
-    parser = Net::IMAP::ResponseParser.new
-    expected = [
-      ESearchResult::RemoveFromContext.new(1, SequenceSet[2733]),
-      ESearchResult::RemoveFromContext.new(1, SequenceSet[2732]),
-      ESearchResult::RemoveFromContext.new(1, SequenceSet[2731]),
-    ]
-    assert_equal expected, parser.parse(
-      "* ESEARCH (TAG \"C01\") UID REMOVEFROM (1 2733 1 2732 1 2731)\r\n"
-    ).data.removefrom
-    assert_equal expected, parser.parse(
-      "* ESEARCH (TAG \"C01\") UID REMOVEFROM (1 2733) REMOVEFROM (1 2732) REMOVEFROM (1 2731)\r\n"
-    ).data.removefrom
+    esearch = ESearchResult.new("A0007", true, [["RELEVANCY", [1, 99]]])
+    assert_equal [1, 99], esearch.relevancy
+    esearch = ESearchResult.new("A0008", true, [["RELEVANCY", [3, 12, 23]]])
+    assert_equal [3, 12, 23], esearch.relevancy
   end
 
   test "#updates returns both ADDTO and REMOVEFROM values (RFC5267: CONTEXT)" do
