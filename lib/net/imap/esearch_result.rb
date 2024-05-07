@@ -2,16 +2,27 @@
 
 module Net
   class IMAP
-    # An Extended search result which is returned by IMAP#search,
-    # IMAP#uid_search, IMAP#sort, and IMAP#uid_sort instead of SearchResult
-    # under the following conditions:
+    # An "extended search" response (+ESEARCH+).  ESearchResult should be
+    # returned (instead of SearchResult) by IMAP#search, IMAP#uid_search,
+    # IMAP#sort, and IMAP#uid_sort under any of the following conditions:
     #
-    # * The server supports +ESEARCH+ and a +return+ option was specified.
-    # * The server supports +ESORT+ and a +return+ options was specified (for
-    #   IMAP#sort and IMAP#uid_sort).
-    # * The server supports +IMAP4rev2+ but _not_ +IMAP4rev1+.
-    # * +IMAP4rev2+ has been enabled.
+    # * +return+ options were specified for IMAP#search or IMAP#uid_search.
+    #   The server must support a search extension which allows
+    #   RFC4466[https://www.rfc-editor.org/rfc/rfc4466.html] +return+ options,
+    #   such as +ESEARCH+, +PARTIAL+, or +IMAP4rev2+.
+    # * +return+ options were specified for IMAP#sort or IMAP#uid_sort.  The
+    #   server must support the +ESORT+ extension
+    #   {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html#section-3]
+    # * The server supports +IMAP4rev2+ but _not_ +IMAP4rev1+, or +IMAP4rev2+
+    #   has been enabled.  +IMAP4rev2+ requires +ESEARCH+ results.
     #
+    # Note that some servers may claim to support a search extension which
+    # requires an +ESEARCH+ result, such as +PARTIAL+, but still only return a
+    # +SEARCH+ result when +return+ options are specified.
+    #
+    # Some search extensions may result in the server sending ESearchResult
+    # responses after the initiating command has completed.  Use
+    # IMAP#add_response_handler to handle these responses.
     class ESearchResult < Data.define(:tag, :uid, :data)
       def initialize(tag: nil, uid: nil, data: nil)
         tag  => String       | nil; tag = -tag if tag
@@ -29,73 +40,69 @@ module Net
       # returned no results or because +ALL+ and +PARTIAL+ were not included in
       # the IMAP#search +RETURN+ options, #to_a returns an empty array.
       #
-      # Note that +to_a+ is also a valid method on SearchResult, so it can be
-      # used without checking if the server returned +SEARCH+ or +ESEARCH+ data.
+      # Note that SearchResult also implements +to_a+, so it can be used without
+      # checking if the server returned +SEARCH+ or +ESEARCH+ data.
       def to_a; all&.numbers || partial&.to_a || [] end
 
       ##
-      # method: tag
-      # :call-seq: tag -> string or nil
+      # attr_reader: tag
       #
-      # The tag of the command that caused the response to be returned.
+      # The tag string for the command that caused this response to be returned.
       #
-      # If it is missing, then the response was not caused by a particular IMAP
-      # command.
+      # When +nil+, this response was not caused by a particular command.
 
       ##
-      # method: uid
-      # :call-seq: uid -> boolean
+      # attr_reader: uid
       #
-      # When true, all #data in the +ESEARCH+ response refers to UIDs;
-      # otherwise, all returned #data refers to message sequence numbers.
+      # Indicates whether #data in this response refers to UIDs (when +true+) or
+      # to message sequence numbers (when +false+).
 
+      ##
       alias uid? uid
 
       ##
-      # method: data
-      # :call-seq: data -> array of [name, value] pairs
+      # attr_reader: data
       #
-      # Search return data, which can also be retrieved by #min, #max, #all,
-      # #count, #modseq, and other methods.  Most names correspond to an
-      # IMAP#search +return+ option of the same name.
+      # Search return data, as an array of <tt>[name, value]</tt> pairs.  Most
+      # return data corresponds to a search +return+ option with the same name.
       #
-      # Stored as an array of (name, value) pairs rather than as a hash, because
-      # extensions may allow the same name to be used more than once per result.
+      # Note that some return data names may be used more than once per result.
+      #
+      # This data can be more simply retrieved by #min, #max, #all, #count,
+      # #modseq, and other methods.
 
       # :call-seq: min -> integer or nil
       #
       # The lowest message number/UID that satisfies the SEARCH criteria.
-      # Returns nil when the associated search command has no results, or when
+      #
+      # Returns +nil+ when the associated search command has no results, or when
       # the +MIN+ return option wasn't specified.
       #
-      # See +ESEARCH+ ({RFC4731
-      # §3.1}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1]) or
-      # +IMAP4rev2+ ({RFC9051
-      # §7.3.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4])
+      # Requires +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1] or
+      # +IMAP4rev2+ {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4].
       def min;        data.assoc("MIN")&.last        end
 
       # :call-seq: max -> integer or nil
       #
       # The highest message number/UID that satisfies the SEARCH criteria.
-      # Returns nil when the associated search command has no results, or when
+      #
+      # Returns +nil+ when the associated search command has no results, or when
       # the +MAX+ return option wasn't specified.
       #
-      # See +ESEARCH+ ({RFC4731
-      # §3.1}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1]) or
-      # +IMAP4rev2+ ({RFC9051
-      # §7.3.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4])
+      # Requires +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1] or
+      # +IMAP4rev2+ {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4].
       def max;        data.assoc("MAX")&.last        end
 
       # :call-seq: all -> sequence set or nil
       #
-      # A SequenceSet containing all message numbers/UIDs that satisfy the
-      # SEARCH criteria.  Returns +nil+ when the associated search command has
-      # no results, or when the +ALL+ return option wasn't specified.
+      # A SequenceSet containing all message sequence numbers or UIDs that
+      # satisfy the SEARCH criteria.
       #
-      # See +ESEARCH+ ({RFC4731
-      # §3.1}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1]) or
-      # +IMAP4rev2+ ({RFC9051
-      # §7.3.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4])
+      # Returns +nil+ when the associated search command has no results, or when
+      # the +ALL+ return option was not specified but other return options were.
+      #
+      # Requires +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1] or
+      # +IMAP4rev2+ {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4].
       #
       # See also: #to_a
       def all;        data.assoc("ALL")&.last        end
@@ -103,79 +110,98 @@ module Net
       # :call-seq: count -> integer or nil
       #
       # Returns the number of messages that satisfy the SEARCH criteria.
-      # Returns +nil+ when the associated search command has no results.
       #
-      # See +ESEARCH+ ({RFC4731
-      # §3.1}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1]) or
-      # +IMAP4rev2+ ({RFC9051
-      # §7.3.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4])
+      # Returns +nil+ when the associated search command has no results, or when
+      # the +COUNT+ return option wasn't specified.
+      #
+      # Requires +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.1] or
+      # +IMAP4rev2+ {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.3.4].
       def count;      data.assoc("COUNT")&.last      end
 
       # :call-seq: modseq -> integer or nil
       #
-      # The highest +mod-sequence+ of all messages in the set that satisfy the
-      # SEARCH criteria and result options.  Returns +nil+ when the associated
-      # search command has no results.
+      # The highest +mod-sequence+ of all messages being returned.
       #
-      # See +CONDSTORE+
-      # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
+      # Returns +nil+ when the associated search command has no results, or when
+      # the +MODSEQ+ search criterion wasn't specified.
+      #
+      # Note that there is no search +return+ option for +MODSEQ+.  It will be
+      # returned whenever the +CONDSTORE+ extension has been enabled.  Using the
+      # +MODSEQ+ search criteria will implicitly enable +CONDSTORE+.
+      #
+      # Requires +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]
+      # and +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.2].
       def modseq;     data.assoc("MODSEQ")&.last     end
 
+      # Superclass for AddToContext and RemoveFromContext, returned by
+      # ESearchResult#addto, ESearchResult#removefrom, and
+      # ESearchResult#updates.
+      #
+      # Use the +UPDATE+ search +return+ option to request update notifications.
+      # Update notifications are sent after the searching command completes, as
+      # and when the search results change.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       class ContextUpdate < Data.define(:position, :set)
         def initialize(position:, set:)
           position = NumValidator.ensure_number(position)
-          set => SequenceSet
+          set = SequenceSet[set]
           super
         end
 
         ##
-        # method: position
+        # attr_reader: position
+        #
+        # The position in the updated search context where results will be
+        # inserted or removed, where the first position is one.
+        #
+        # When +position+ is zero, the results may be inserted or removed into
+        # the result list in mailbox order.
+
+        ##
+        # attr_reader: set
+        #
+        # A SequenceSet of updates to the search context.
 
         ##
         # method: set
 
       end
 
+      # Returned by ESearchResult#addto and ESearchResult#updates.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       class AddToContext < ContextUpdate
       end
 
+      # Returned by ESearchResult#removefrom and ESearchResult#updates.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       class RemoveFromContext < ContextUpdate
-      end
 
-      # :call-seq: addto -> array of insertion updates, or nil
-      #
-      # Notification of updates, inserting messages into the result list for the
-      # command issued with #tag.
-      #
-      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
-      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
-      def addto
-        data.flat_map { _1 == "ADDTO" ? _2 : [] }
-      end
-
-      # :call-seq: removefrom -> array of removal updates, or nil
-      #
-      # Notification of updates, removing messages into the result list for the
-      # command issued with #tag.
-      #
-      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
-      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
-      def removefrom
-        data.flat_map { _1 == "REMOVEFROM" ? _2 : [] }
       end
 
       # :call-seq: updates -> array of context updates, or nil
       #
-      # Notification of updates, inserting or removing messages to or from the
-      # result list for the command issued with #tag.
+      # Returns an array of ContextUpdate updates, which indicate additions to
+      # or removals from the result list for the command issued with #tag.
       #
-      # See <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # Use the +UPDATE+ search +return+ option to request update notifications.
+      # Update notifications are sent after the searching command completes, as
+      # and when the search results change.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt> or <tt>CONTEXT=SORT</tt>
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       def updates
         data.flat_map { %w[ADDTO REMOVEFROM].include?(_1) ? _2 : [] }
       end
 
-      # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # Returned by ESearchResult#partial.
+      #
+      # Requires +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
       # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
       #
@@ -197,26 +223,29 @@ module Net
 
         # Converts #results to an array of integers.
         #
-        # See ESearchResult#to_a.
+        # See also: ESearchResult#to_a.
         def to_a; results&.numbers || [] end
       end
 
       # :call-seq: partial -> PartialResult or nil
       #
-      # Return a PartialResult with a subset of the message numbers/UIDs that
-      # satisfy the SEARCH criteria.
+      # A PartialResult containing a subset of the message sequence numbers or
+      # UIDs that satisfy the SEARCH criteria.
       #
-      # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # Requires +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
       # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      #
+      # See also: #to_a
       def partial;    data.assoc("PARTIAL")&.last    end
 
-      # :call-seq: relevancy -> integer or nil
+      # :call-seq: relevancy -> array of integers
       #
-      # Return a relevancy score for each message that satisfies the SEARCH
-      # criteria.
+      # Return an array of relevancy scores for each message that satisfies the
+      # SEARCH criteria.  Scores are given in the range 1-100, where 100 is the
+      # highest relevancy.
       #
-      # See <tt>SEARCH=FUZZY</tt>
+      # Requires <tt>SEARCH=FUZZY</tt>
       # {[RFC6203]}[https://www.rfc-editor.org/rfc/rfc6203.html]
       def relevancy;  data.assoc("RELEVANCY")&.last  end
 
