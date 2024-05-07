@@ -133,23 +133,24 @@ module Net
     # RawData can lead to {injection
     # flaws}[https://owasp.org/www-community/Injection_Flaws].
     class RawData
+      attr_reader :data
+
+      def initialize(data)
+        @data = data
+      end
+
       def send_data(imap, tag)
-        imap.__send__(:put_string, @data)
+        imap.__send__(:put_string, data)
       end
 
       def validate
       end
 
       def ==(other)
-        other.class == self.class &&
-          other.instance_variable_get(:@data) == @data
+        other.class == self.class && other.data == data
       end
 
-      private
-
-      def initialize(data)
-        @data = data
-      end
+      def deconstruct = [data]
     end
 
     class Atom # :nodoc:
