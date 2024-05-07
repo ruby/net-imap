@@ -1346,6 +1346,19 @@ EOF
     end
   end
 
+  test("missing server ESEARCH response") do
+    with_fake_server do |server, imap|
+      # Example from RFC9051, 6.4.4:
+      #   C: A282 SEARCH RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"
+      #   S: A282 OK SEARCH completed, result saved
+      server.on "SEARCH" do |cmd| cmd.done_ok "result saved" end
+      result = imap.search(
+        'RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      assert_equal Net::IMAP::ESearchResult.new, result
+    end
+  end
+
   test("missing server SEARCH response") do
     with_fake_server do |server, imap|
       server.on "SEARCH",     &:done_ok
