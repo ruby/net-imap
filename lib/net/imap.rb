@@ -2899,14 +2899,13 @@ module Net
           @logout_command_tag = tag
         end
         if block
-          add_response_handler(&block)
+          handler = ->resp { block.call resp, tag }
+          add_response_handler(handler)
         end
         begin
           return get_tagged_response(tag, cmd)
         ensure
-          if block
-            remove_response_handler(block)
-          end
+          remove_response_handler(handler) if handler
         end
       end
     end
