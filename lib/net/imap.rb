@@ -820,7 +820,7 @@ module Net
     #
     # ==== Examples
     #
-    # Connect to cleartext port 143 at mail.example.com and recieve the server greeting:
+    # Connect to cleartext port 143 at mail.example.com and receive the server greeting:
     #   imap = Net::IMAP.new('mail.example.com', ssl: false) # => #<Net::IMAP:0x00007f79b0872bd0>
     #   imap.port          => 143
     #   imap.tls_verified? => false
@@ -888,7 +888,7 @@ module Net
       @greeting = nil
       @capabilities = nil
 
-      # Client Protocol Reciever
+      # Client Protocol Receiver
       @parser = ResponseParser.new
       @responses = Hash.new {|h, k| h[k] = [] }
       @response_handlers = []

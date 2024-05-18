@@ -902,8 +902,8 @@ module Net
       # Yields each number or range in #string to the block and returns +self+.
       # Returns an enumerator when called without a block.
       #
-      # The entries are yielded in the same order they appear in #tring, with no
-      # sorting, deduplication, or coalescing.  When #string is in its
+      # The entries are yielded in the same order they appear in #string, with
+      # no sorting, deduplication, or coalescing.  When #string is in its
       # normalized form, this will yield the same values as #each_element.
       #
       # Related: #entries, #each_element
