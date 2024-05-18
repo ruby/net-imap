@@ -58,7 +58,7 @@ module Net
 
     # Net::IMAP::IgnoredResponse represents intentionally ignored responses.
     #
-    # This includes untagged response "NOOP" sent by eg. Zimbra to avoid
+    # This includes untagged response "NOOP" sent by e.g. Zimbra to avoid
     # some clients to close the connection.
     #
     # It matches no IMAP standard.
@@ -280,7 +280,7 @@ module Net
     # ==== +QRESYNC+ extension
     # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     # * +CLOSED+, returned when the currently selected mailbox is closed
-    #   implicity by selecting or examining another mailbox.  #data is +nil+.
+    #   implicitly by selecting or examining another mailbox.  #data is +nil+.
     #
     # ==== +IMAP4rev2+ Response Codes
     # See {[RFC9051]}[https://www.rfc-editor.org/rfc/rfc9051] {§7.1, "Server
@@ -1045,7 +1045,7 @@ module Net
     # === Bug Analysis
     #
     # \IMAP body structures are parenthesized lists and assign their fields
-    # positionally, so missing fields change the intepretation of all
+    # positionally, so missing fields change the interpretation of all
     # following fields.  Additionally, different body types have a different
     # number of required fields, followed by optional "extension" fields.
     #
@@ -1060,7 +1060,7 @@ module Net
     # Normally, +envelope+ and +md5+ are incompatible, but Net::IMAP leniently
     # allowed buggy servers to send +NIL+ for +envelope+.  As a result, when a
     # server sent a <tt>message/rfc822</tt> part with +NIL+ for +md5+ and a
-    # non-<tt>NIL</tt> +dsp+, Net::IMAP mis-interpreted the
+    # non-<tt>NIL</tt> +dsp+, Net::IMAP misinterpreted the
     # <tt>Content-Disposition</tt> as if it were a strange body type.  In all
     # reported cases, the <tt>Content-Disposition</tt> was "attachment", so
     # BodyTypeAttachment was created as the workaround.
@@ -1068,7 +1068,7 @@ module Net
     # === Current behavior
     #
     # When interpreted strictly, +envelope+ and +md5+ are incompatible.  So the
-    # current parsing algorithm peeks ahead after it has recieved the seventh
+    # current parsing algorithm peeks ahead after it has received the seventh
     # body field.  If the next token is not the start of an +envelope+, we assume
     # the server has incorrectly sent us a <tt>body-type-basic</tt> and return
     # BodyTypeBasic.  As a result, what was previously BodyTypeMessage#body =>
