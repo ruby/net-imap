@@ -50,6 +50,9 @@ module NetIMAPTestHelpers
               actual = parser.parse response
               binding.irb if debug
               assert_equal expected, actual
+            rescue Test::Unit::AssertionFailedError
+              puts YAML.dump name => {response: response, expected: actual}
+              raise
             end
           end
 
