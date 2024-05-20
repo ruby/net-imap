@@ -778,7 +778,7 @@ module Net
     def open_timeout; config.open_timeout end
 
     # Seconds to wait until an IDLE response is received.
-    attr_reader :idle_response_timeout
+    def idle_response_timeout; config.idle_response_timeout end
 
     # The hostname this client connected to
     attr_reader :host
@@ -825,14 +825,13 @@ module Net
     #   config object for inheritance.  Every Net::IMAP client has its own
     #   unique #config for overrides.
     #
-    # [idle_response_timeout]
-    #   Seconds to wait until an IDLE response is received
-    #
     # Any other keyword arguments will be forwarded to Config.new, to create the
     # client's #config.  For example:
     #
     # [open_timeout]
     #   Seconds to wait until a connection is opened
+    # [idle_response_timeout]
+    #   Seconds to wait until an IDLE response is received
     #
     # See DeprecatedClientOptions.new for deprecated arguments.
     #
@@ -890,14 +889,12 @@ module Net
     #   Connected to the host successfully, but it immediately said goodbye.
     #
     def initialize(host, port: nil, ssl:  nil,
-                   idle_response_timeout: 5,
                    config: Config.global, **config_options)
       super()
       # Config options
       @host = host
       @config = Config.new(config, **config_options)
       @port = port || (ssl ? SSL_PORT : PORT)
-      @idle_response_timeout = Integer(idle_response_timeout)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
@@ -2453,7 +2450,7 @@ module Net
           unless @receiver_thread_terminating
             remove_response_handler(response_handler)
             put_string("DONE#{CRLF}")
-            response = get_tagged_response(tag, "IDLE", @idle_response_timeout)
+            response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
         end
       end
