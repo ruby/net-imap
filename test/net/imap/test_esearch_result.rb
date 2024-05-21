@@ -7,6 +7,15 @@ class ESearchResultTest < Test::Unit::TestCase
   ESearchResult = Net::IMAP::ESearchResult
   SequenceSet   = Net::IMAP::SequenceSet
 
+  test "#to_a" do
+    esearch = ESearchResult.new(nil, true, [])
+    assert_equal [], esearch.to_a
+    esearch = ESearchResult.new(nil, false, [])
+    assert_equal [], esearch.to_a
+    esearch = ESearchResult.new(nil, false, [["ALL", SequenceSet["1,5:8"]]])
+    assert_equal [1, 5, 6, 7, 8], esearch.to_a
+  end
+
   test "#tag" do
     esearch = ESearchResult.new("A0001", false, [["count", 0]])
     assert_equal "A0001", esearch.tag
