@@ -1212,7 +1212,7 @@ module Net
     end
 
     # :call-seq:
-    #   authenticate(mechanism, *, sasl_ir: true, registry: Net::IMAP::SASL.authenticators, **, &) -> ok_resp
+    #   authenticate(mechanism, *, sasl_ir: config.sasl_ir, registry: Net::IMAP::SASL.authenticators, **, &) -> ok_resp
     #
     # Sends an {AUTHENTICATE command [IMAP4rev1 §6.2.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.2]
     # to authenticate the client.  If successful, the connection enters the
@@ -1317,7 +1317,9 @@ module Net
     # Previously cached #capabilities will be cleared when this method
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
-    def authenticate(mechanism, *creds, sasl_ir: true, **props, &callback)
+    def authenticate(mechanism, *creds,
+                     sasl_ir: config.sasl_ir,
+                     **props, &callback)
       mechanism = mechanism.to_s.tr("_", "-").upcase
       authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
       cmdargs = ["AUTHENTICATE", mechanism]

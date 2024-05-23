@@ -104,6 +104,16 @@ module Net
       # The default value is +5+ seconds.
       attr_accessor :idle_response_timeout, type: Integer
 
+      # :markup: markdown
+      #
+      # Whether to use the +SASL-IR+ extension with IMAP#authenticate.
+      #
+      # | Starting with version | The default value is                     |
+      # |-----------------------|------------------------------------------|
+      # | _original_            | +false+ <em>(extension unsupported)</em> |
+      # | v0.4                  | +true+  <em>(support added)</em>         |
+      attr_accessor :sasl_ir, type: :boolean
+
       # Creates a new config object and initialize its attribute with +attrs+.
       #
       # If +parent+ is not given, the global config is used by default.
@@ -119,6 +129,7 @@ module Net
         debug: false,
         open_timeout: 30,
         idle_response_timeout: 5,
+        sasl_ir: true,
       ).freeze
 
       @global = default.new

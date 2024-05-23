@@ -931,6 +931,23 @@ EOF
   end
 
   test("#authenticate never sends an initial response " \
+       "when config.sasl_ir: false") do
+    [true, false].each do |server_support|
+      with_fake_server(
+        preauth: false, cleartext_auth: true, sasl_ir: server_support
+      ) do |server, imap|
+        imap.config.sasl_ir = false
+        imap.authenticate("PLAIN", "test_user", "test-password")
+        cmd, cont = 2.times.map { server.commands.pop }
+        assert_equal %w[AUTHENTICATE PLAIN], [cmd.name, *cmd.args]
+        assert_equal(["\x00test_user\x00test-password"].pack("m0"),
+                     cont[:continuation].strip)
+        assert_empty server.commands
+      end
+    end
+  end
+
+  test("#authenticate never sends an initial response " \
        "when the mechanism does not support client-first") do
     with_fake_server(
       preauth: false, cleartext_auth: true,
