@@ -2023,16 +2023,16 @@ module Net
       # This advances @pos directly so it's safe before changing @lex_state.
       def accept_spaces
         return false unless SP?
-        @str.index(SPACES_REGEXP, @pos) and
-          @pos = $~.end(0)
+        @str.byteindex(SPACES_REGEXP, @pos) and
+          @pos = $~.byteoffset(0)[1]
         true
       end
 
       def next_token
         case @lex_state
         when EXPR_BEG
-          if @str.index(BEG_REGEXP, @pos)
-            @pos = $~.end(0)
+          if @str.byteindex(BEG_REGEXP, @pos)
+            @pos = $~.byteoffset(0)[1]
             if $1
               return Token.new(T_SPACE, $+)
             elsif $2
@@ -2081,12 +2081,12 @@ module Net
               parse_error("[Net::IMAP BUG] BEG_REGEXP is invalid")
             end
           else
-            @str.index(/\S*/n, @pos)
+            @str.byteindex(/\S*/n, @pos)
             parse_error("unknown token - %s", $&.dump)
           end
         when EXPR_DATA
-          if @str.index(DATA_REGEXP, @pos)
-            @pos = $~.end(0)
+          if @str.byteindex(DATA_REGEXP, @pos)
+            @pos = $~.byteoffset(0)[1]
             if $1
               return Token.new(T_SPACE, $+)
             elsif $2
@@ -2108,7 +2108,7 @@ module Net
               parse_error("[Net::IMAP BUG] DATA_REGEXP is invalid")
             end
           else
-            @str.index(/\S*/n, @pos)
+            @str.byteindex(/\S*/n, @pos)
             parse_error("unknown token - %s", $&.dump)
           end
         else
