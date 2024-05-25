@@ -2609,8 +2609,6 @@ module Net
     PORT = 143         # :nodoc:
     SSL_PORT = 993   # :nodoc:
 
-    @@debug = false
-
     def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
@@ -2755,7 +2753,7 @@ module Net
         end
       end
       return nil if buff.length == 0
-      if @@debug
+      if config.debug?
         $stderr.print(buff.gsub(/^/n, "S: "))
       end
       return @parser.parse(buff)
@@ -2834,7 +2832,7 @@ module Net
 
     def put_string(str)
       @sock.print(str)
-      if @@debug
+      if config.debug?
         if @debug_output_bol
           $stderr.print("C: ")
         end
