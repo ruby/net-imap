@@ -740,14 +740,12 @@ module Net
     # Returns the global Config object
     def self.config; Config.global end
 
-    # Returns the debug mode.
-    def self.debug
-      return @@debug
-    end
+    # Returns the global debug mode.
+    def self.debug; config.debug end
 
-    # Sets the debug mode.
+    # Sets the global debug mode.
     def self.debug=(val)
-      return @@debug = val
+      config.debug = val
     end
 
     # The default port for IMAP connections, port 143
