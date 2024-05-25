@@ -775,7 +775,7 @@ module Net
     # Seconds to wait until a connection is opened.
     # If the IMAP object cannot open a connection within this time,
     # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    attr_reader :open_timeout
+    def open_timeout; config.open_timeout end
 
     # Seconds to wait until an IDLE response is received.
     attr_reader :idle_response_timeout
@@ -825,13 +825,14 @@ module Net
     #   config object for inheritance.  Every Net::IMAP client has its own
     #   unique #config for overrides.
     #
-    # [open_timeout]
-    #   Seconds to wait until a connection is opened
     # [idle_response_timeout]
     #   Seconds to wait until an IDLE response is received
     #
     # Any other keyword arguments will be forwarded to Config.new, to create the
-    # client's #config.
+    # client's #config.  For example:
+    #
+    # [open_timeout]
+    #   Seconds to wait until a connection is opened
     #
     # See DeprecatedClientOptions.new for deprecated arguments.
     #
@@ -889,14 +890,13 @@ module Net
     #   Connected to the host successfully, but it immediately said goodbye.
     #
     def initialize(host, port: nil, ssl:  nil,
-                   open_timeout: 30, idle_response_timeout: 5,
+                   idle_response_timeout: 5,
                    config: Config.global, **config_options)
       super()
       # Config options
       @host = host
       @config = Config.new(config, **config_options)
       @port = port || (ssl ? SSL_PORT : PORT)
-      @open_timeout = Integer(open_timeout)
       @idle_response_timeout = Integer(idle_response_timeout)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
@@ -2636,12 +2636,12 @@ module Net
     end
 
     def tcp_socket(host, port)
-      s = Socket.tcp(host, port, :connect_timeout => @open_timeout)
+      s = Socket.tcp(host, port, :connect_timeout => open_timeout)
       s.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, true)
       s
     rescue Errno::ETIMEDOUT
       raise Net::OpenTimeout, "Timeout to open TCP connection to " +
-        "#{host}:#{port} (exceeds #{@open_timeout} seconds)"
+        "#{host}:#{port} (exceeds #{open_timeout} seconds)"
     end
 
     def receive_responses
@@ -2959,7 +2959,7 @@ module Net
       @sock = SSLSocket.new(@sock, ssl_ctx)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
-      ssl_socket_connect(@sock, @open_timeout)
+      ssl_socket_connect(@sock, open_timeout)
       if ssl_ctx.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
