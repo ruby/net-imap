@@ -2397,10 +2397,15 @@ module Net
     # checks the connection for each 60 seconds.
     #
     #   loop do
-    #     imap.idle(60) do |res|
-    #       ...
+    #     imap.idle(60) do |response|
+    #       do_something_with(response)
+    #       imap.idle_done if some_condition?(response)
     #     end
     #   end
+    #
+    # Returns the server's response to indicate the IDLE state has ended.
+    # Returns +nil+ if the server does not respond to #idle_done within
+    # idle_response_timeout seconds.
     #
     # Related: #idle_done, #noop, #check
     #
@@ -2437,7 +2442,10 @@ module Net
       return response
     end
 
-    # Leaves IDLE.
+    # Leaves IDLE, allowing #idle to return.
+    #
+    # If the server does not respond within idle_response_timeout, #idle will
+    # return +nil+.
     #
     # Related: #idle
     def idle_done
