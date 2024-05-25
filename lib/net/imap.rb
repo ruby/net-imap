@@ -769,6 +769,11 @@ module Net
     # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
 
+    # The client configuration.  See Net::IMAP::Config.
+    #
+    # By default, config inherits from the global Net::IMAP.config.
+    attr_reader :config
+
     # Seconds to wait until a connection is opened.
     # If the IMAP object cannot open a connection within this time,
     # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
@@ -816,10 +821,19 @@ module Net
     #   the keys are names of attribute assignment methods on
     #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
     #
+    # [config]
+    #   A Net::IMAP::Config object to base the client #config on.  By default
+    #   the global Net::IMAP.config is used.  Note that this sets the _parent_
+    #   config object for inheritance.  Every Net::IMAP client has its own
+    #   unique #config for overrides.
+    #
     # [open_timeout]
     #   Seconds to wait until a connection is opened
     # [idle_response_timeout]
     #   Seconds to wait until an IDLE response is received
+    #
+    # Any other keyword arguments will be forwarded to Config.new, to create the
+    # client's #config.
     #
     # See DeprecatedClientOptions.new for deprecated arguments.
     #
@@ -877,10 +891,12 @@ module Net
     #   Connected to the host successfully, but it immediately said goodbye.
     #
     def initialize(host, port: nil, ssl:  nil,
-                   open_timeout: 30, idle_response_timeout: 5)
+                   open_timeout: 30, idle_response_timeout: 5,
+                   config: Config.global, **config_options)
       super()
       # Config options
       @host = host
+      @config = Config.new(config, **config_options)
       @port = port || (ssl ? SSL_PORT : PORT)
       @open_timeout = Integer(open_timeout)
       @idle_response_timeout = Integer(idle_response_timeout)
@@ -894,7 +910,7 @@ module Net
       @capabilities = nil
 
       # Client Protocol Receiver
-      @parser = ResponseParser.new
+      @parser = ResponseParser.new(config: @config)
       @responses = Hash.new {|h, k| h[k] = [] }
       @response_handlers = []
       @receiver_thread = nil
