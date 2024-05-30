@@ -3,6 +3,7 @@
 
 require_relative "config/attr_accessors"
 require_relative "config/attr_inheritance"
+require_relative "config/attr_type_coercion"
 
 module Net
   class IMAP
@@ -48,14 +49,19 @@ module Net
 
       include AttrAccessors
       include AttrInheritance
+      include AttrTypeCoercion
 
       # The debug mode (boolean)
       #
       # | Starting with version | The default value is |
       # |-----------------------|----------------------|
       # | _original_            | +false+              |
-      attr_accessor :debug
-      alias debug? debug
+      attr_accessor :debug, type: :boolean
+
+      # method: debug?
+      # :call-seq: debug? -> boolean
+      #
+      # Alias for #debug
 
       # Seconds to wait until a connection is opened.
       #
@@ -65,7 +71,7 @@ module Net
       # | Starting with version | The default value is |
       # |-----------------------|----------------------|
       # | _original_            | +30+ seconds         |
-      attr_accessor :open_timeout
+      attr_accessor :open_timeout, type: Integer
 
       # Seconds to wait until an IDLE response is received, after
       # the client asks to leave the IDLE state.  See Net::IMAP#idle_done.
@@ -73,7 +79,7 @@ module Net
       # | Starting with version | The default value is |
       # |-----------------------|----------------------|
       # | _original_            | +5+ seconds          |
-      attr_accessor :idle_response_timeout
+      attr_accessor :idle_response_timeout, type: Integer
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #

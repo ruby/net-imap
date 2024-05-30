@@ -28,6 +28,28 @@ class ConfigTest < Test::Unit::TestCase
     refute config.debug?
   end
 
+  test "boolean type constraints and conversion" do
+    config = Config.new
+    config.debug = 111
+    assert_equal true, config.debug
+    config.debug = nil
+    assert_equal false, config.debug
+  end
+
+  test "integer type constraints and conversion" do
+    config = Config.new
+    config.open_timeout = "111"
+    assert_equal 111, config.open_timeout
+    config.open_timeout = 222.0
+    assert_equal 222, config.open_timeout
+    config.open_timeout = 333.3
+    assert_equal 333, config.open_timeout
+    assert_raise(ArgumentError) do
+      config.open_timeout = "444 NaN"
+    end
+    assert_equal 333, config.open_timeout
+  end
+
   test ".default" do
     default = Config.default
     assert default.equal?(Config.default)
