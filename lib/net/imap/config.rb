@@ -147,6 +147,11 @@ module Net
         yield self if block_given?
       end
 
+      # :call-seq: to_h -> hash
+      #
+      # Returns all config attributes in a hash.
+      def to_h; data.members.to_h { [_1, send(_1)] } end
+
       @default = new(
         debug: false,
         open_timeout: 30,

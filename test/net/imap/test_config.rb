@@ -209,4 +209,17 @@ class ConfigTest < Test::Unit::TestCase
     assert child.inherited?(:idle_response_timeout)
   end
 
+  test "#to_h" do
+    expected = {
+      debug: false, open_timeout: 30, idle_response_timeout: 5, sasl_ir: true,
+    }
+    attributes = Config::AttrAccessors::Struct.members
+    default_hash = Config.default.to_h
+    assert_equal expected, default_hash.slice(*expected.keys)
+    assert_equal attributes, default_hash.keys
+    global_hash = Config.global.to_h
+    assert_equal attributes, global_hash.keys
+    assert_equal expected, global_hash.slice(*expected.keys)
+  end
+
 end
