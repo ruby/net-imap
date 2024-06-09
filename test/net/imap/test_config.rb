@@ -6,6 +6,10 @@ require "test/unit"
 class ConfigTest < Test::Unit::TestCase
   Config = Net::IMAP::Config
 
+  setup do
+    Config.global.reset
+  end
+
   test "#debug" do
     assert Config.new(debug: true).debug
     refute Config.new(debug: false).debug
@@ -30,6 +34,23 @@ class ConfigTest < Test::Unit::TestCase
     assert default.is_a?(Config)
     assert default.frozen?
     refute default.debug?
+  end
+
+  test ".global" do
+    global = Config.global
+    assert global.equal?(Config.global)
+    assert global.is_a?(Config)
+    assert_same Config.default, global.parent
+    assert_equal false, global.debug?
+    global.debug = true
+    assert_equal true, global.debug?
+    global.reset(:debug)
+    assert_equal false, global.debug?
+    refute global.frozen?
+  end
+
+  test "Net::IMAP.config" do
+    assert Net::IMAP.config.equal?(Config.global)
   end
 
   test ".new(parent, ...) and inheritance" do
@@ -74,6 +95,12 @@ class ConfigTest < Test::Unit::TestCase
     base.debug = true
     child = base.new(debug: false)
     assert_equal false, child.debug?
+  end
+
+  test ".new always sets a parent" do
+    assert_same Config.global,  Config.new.parent
+    assert_same Config.default, Config.new(Config.default).parent
+    assert_same Config.global,  Config.new(Config.global).parent
   end
 
   test "#inherited? and #reset(attr)" do

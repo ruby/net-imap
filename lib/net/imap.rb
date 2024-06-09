@@ -737,6 +737,9 @@ module Net
       include SSL
     end
 
+    # Returns the global Config object
+    def self.config; Config.global end
+
     # Returns the debug mode.
     def self.debug
       return @@debug

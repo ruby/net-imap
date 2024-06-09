@@ -32,7 +32,7 @@ module Net
 
         def initialize(parent = nil) # :notnew:
           super()
-          @parent = parent
+          @parent = Config[parent]
           reset
         end
 

@@ -8,12 +8,14 @@ module Net
   class IMAP
 
     # Net::IMAP::Config stores configuration options for Net::IMAP clients.
+    # The global configuration can be seen at either Net::IMAP.config or
+    # Net::IMAP::Config.global.
     #
     # ## Inheritance
     #
     # Configs have a parent[rdoc-ref:Config::AttrInheritance#parent] config, and
     # any attributes which have not been set locally will inherit the parent's
-    # value.
+    # value.  Config.global inherits from Config.default.
     #
     # See the following methods, defined by Config::AttrInheritance:
     # - {#new}[rdoc-ref:Config::AttrInheritance#reset] -- create a new config
@@ -30,6 +32,19 @@ module Net
     class Config
       # The default config, which is hardcoded and frozen.
       def self.default; @default end
+
+      # The global config object.
+      def self.global; @global end
+
+      def self.[](config) # :nodoc: unfinished API
+        if config.is_a?(Config) || config.nil? && global.nil?
+          config
+        else
+          raise TypeError, "no implicit conversion of %s to %s" % [
+            config.class, Config
+          ]
+        end
+      end
 
       include AttrAccessors
       include AttrInheritance
@@ -65,7 +80,7 @@ module Net
       # If +parent+ is not given, the global config is used by default.
       #
       # If a block is given, the new config object is yielded to it.
-      def initialize(parent = nil, **attrs)
+      def initialize(parent = Config.global, **attrs)
         super(parent)
         attrs.each do send(:"#{_1}=", _2) end
         yield self if block_given?
@@ -76,6 +91,8 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
       ).freeze
+
+      @global = default.new
 
     end
   end
