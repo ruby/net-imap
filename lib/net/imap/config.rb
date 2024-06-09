@@ -73,6 +73,10 @@ module Net
     #   client.config.sasl_ir                  # => true
     #   client.config.responses_without_block  # => :warn
     #
+    #   client = Net::IMAP.new(hostname, config: :future)
+    #   client.config.sasl_ir                  # => true
+    #   client.config.responses_without_block  # => :raise
+    #
     # The versioned default configs inherit certain specific config options from
     # Config.global, for example #debug:
     #
@@ -82,6 +86,26 @@ module Net
     #
     #   Net::IMAP.debug = true
     #   client.config.debug?  # => true
+    #
+    # === Named defaults
+    # In addition to +x.y+ version numbers, the following aliases are supported:
+    #
+    # [+:default+]
+    #   An alias for +:current+.
+    #
+    #   >>>
+    #   *NOTE*: This is _not_ the same as Config.default.  It inherits some
+    #   attributes from Config.global, for example: #debug.
+    # [+:current+]
+    #   An alias for the current +x.y+ version's defaults.
+    # [+:next+]
+    #   The _planned_ config for the next +x.y+ version.
+    # [+:future+]
+    #   The _planned_ eventual config for some future +x.y+ version.
+    #
+    # For example, to raise exceptions for all current deprecations:
+    #   client = Net::IMAP.new(hostname, config: :future)
+    #   client.responses  # raises an ArgumentError
     #
     # == Thread Safety
     #
@@ -128,6 +152,8 @@ module Net
             case config
             when Numeric
               raise RangeError, "unknown config version: %p" % [config]
+            when Symbol
+              raise KeyError, "unknown config name: %p" % [config]
             else
               raise TypeError, "no implicit conversion of %s to %s" % [
                 config.class, Config
@@ -273,6 +299,14 @@ module Net
 
       version_defaults[0.5] = Config[0.4].dup.update(
         responses_without_block: :warn,
+      ).freeze
+
+      version_defaults[:default] = Config[0.4]
+      version_defaults[:current] = Config[0.4]
+      version_defaults[:next]    = Config[0.5]
+
+      version_defaults[:future]  = Config[0.5].dup.update(
+        responses_without_block: :raise,
       ).freeze
 
       version_defaults.freeze

@@ -164,6 +164,17 @@ class ConfigTest < Test::Unit::TestCase
     assert_raise(RangeError) do Config[1] end
   end
 
+  test ".[] key errors" do
+    assert_raise(KeyError) do Config[:nonexistent] end
+  end
+
+  test ".[] with symbol names" do
+    assert_same    Config[0.4],   Config[:current]
+    assert_same    Config[0.4],   Config[:default]
+    assert_same    Config[0.5],   Config[:next]
+    assert_kind_of Config,        Config[:future]
+  end
+
   test ".[] with a hash" do
     config = Config[{responses_without_block: :raise, sasl_ir: false}]
     assert config.frozen?
@@ -179,6 +190,7 @@ class ConfigTest < Test::Unit::TestCase
     assert_same Config.default, Config.new(Config.default).parent
     assert_same Config.global,  Config.new(Config.global).parent
     assert_same Config[0.4],    Config.new(0.4).parent
+    assert_same Config[0.5],    Config.new(:next).parent
     assert_equal true, Config.new({debug: true}, debug: false).parent.debug?
     assert_equal true, Config.new({debug: true}, debug: false).parent.frozen?
   end
