@@ -54,21 +54,65 @@ module Net
     #   plain_client.config.inherited?(:debug)  # => true
     #   plain_client.config.debug?  # => false
     #
+    # == Versioned defaults
+    #
+    # The effective default configuration for a specific +x.y+ version of
+    # +net-imap+ can be loaded with the +config+ keyword argument to
+    # Net::IMAP.new.  Requesting default configurations for previous versions
+    # enables extra backward compatibility with those versions:
+    #
+    #   client = Net::IMAP.new(hostname, config: 0.3)
+    #   client.config.sasl_ir                  # => false
+    #   client.config.responses_without_block  # => :silence_deprecation_warning
+    #
+    #   client = Net::IMAP.new(hostname, config: 0.4)
+    #   client.config.sasl_ir                  # => true
+    #   client.config.responses_without_block  # => :silence_deprecation_warning
+    #
+    #   client = Net::IMAP.new(hostname, config: 0.5)
+    #   client.config.sasl_ir                  # => true
+    #   client.config.responses_without_block  # => :warn
+    #
+    # The versioned default configs inherit certain specific config options from
+    # Config.global, for example #debug:
+    #
+    #   client = Net::IMAP.new(hostname, config: 0.4)
+    #   Net::IMAP.debug = false
+    #   client.config.debug?  # => false
+    #
+    #   Net::IMAP.debug = true
+    #   client.config.debug?  # => true
     #
     # == Thread Safety
     #
     # *NOTE:* Updates to config objects are not synchronized for thread-safety.
     #
     class Config
+      # Array of attribute names that are _not_ loaded by #load_defaults.
+      DEFAULT_TO_INHERIT = %i[debug].freeze
+      private_constant :DEFAULT_TO_INHERIT
+
       # The default config, which is hardcoded and frozen.
       def self.default; @default end
 
       # The global config object.  Also available from Net::IMAP.config.
       def self.global; @global end
 
+      # A hash of hard-coded configurations, indexed by version number.
+      def self.version_defaults; @version_defaults end
+      @version_defaults = {}
+
       # :call-seq:
+      #  Net::IMAP::Config[number] -> versioned config
+      #  Net::IMAP::Config[symbol] -> named config
       #  Net::IMAP::Config[hash]   -> new frozen config
       #  Net::IMAP::Config[config] -> same config
+      #
+      # Given a version number, returns the default configuration for the target
+      # version.  See Config@Versioned+defaults.
+      #
+      # Given a version name, returns the default configuration for the target
+      # version.  See Config@Named+defaults.
       #
       # Given a Hash, creates a new _frozen_ config which inherits from
       # Config.global.  Use Config.new for an unfrozen config.
@@ -80,9 +124,16 @@ module Net
         elsif config.respond_to?(:to_hash)
           new(global, **config).freeze
         else
-          raise TypeError, "no implicit conversion of %s to %s" % [
-            config.class, Config
-          ]
+          version_defaults.fetch(config) {
+            case config
+            when Numeric
+              raise RangeError, "unknown config version: %p" % [config]
+            else
+              raise TypeError, "no implicit conversion of %s to %s" % [
+                config.class, Config
+              ]
+            end
+          }
         end
       end
 
@@ -208,6 +259,23 @@ module Net
 
       @global = default.new
 
+      version_defaults[0.4] = Config[
+        default.to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
+      ]
+
+      version_defaults[0] = Config[0.4].dup.update(
+        sasl_ir: false,
+      ).freeze
+      version_defaults[0.0] = Config[0]
+      version_defaults[0.1] = Config[0]
+      version_defaults[0.2] = Config[0]
+      version_defaults[0.3] = Config[0]
+
+      version_defaults[0.5] = Config[0.4].dup.update(
+        responses_without_block: :warn,
+      ).freeze
+
+      version_defaults.freeze
     end
   end
 end
