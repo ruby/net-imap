@@ -725,6 +725,8 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
+    autoload :Config,      File.expand_path("imap/config",       __dir__)
+
     autoload :SASL,        File.expand_path("imap/sasl",         __dir__)
     autoload :SASLAdapter, File.expand_path("imap/sasl_adapter", __dir__)
     autoload :StringPrep,  File.expand_path("imap/stringprep",   __dir__)
