@@ -24,4 +24,12 @@ class ConfigTest < Test::Unit::TestCase
     refute config.debug?
   end
 
+  test ".default" do
+    default = Config.default
+    assert default.equal?(Config.default)
+    assert default.is_a?(Config)
+    assert default.frozen?
+    refute default.debug?
+  end
+
 end
