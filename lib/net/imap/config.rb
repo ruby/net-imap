@@ -2,11 +2,26 @@
 # :markup: markdown
 
 require_relative "config/attr_accessors"
+require_relative "config/attr_inheritance"
 
 module Net
   class IMAP
 
     # Net::IMAP::Config stores configuration options for Net::IMAP clients.
+    #
+    # ## Inheritance
+    #
+    # Configs have a parent[rdoc-ref:Config::AttrInheritance#parent] config, and
+    # any attributes which have not been set locally will inherit the parent's
+    # value.
+    #
+    # See the following methods, defined by Config::AttrInheritance:
+    # - {#new}[rdoc-ref:Config::AttrInheritance#reset] -- create a new config
+    #   which inherits from the receiver.
+    # - {#inherited?}[rdoc-ref:Config::AttrInheritance#inherited?] -- return
+    #   whether a particular attribute is inherited.
+    # - {#reset}[rdoc-ref:Config::AttrInheritance#reset] -- reset attributes to
+    #   be inherited.
     #
     # ## Thread Safety
     #
@@ -17,6 +32,7 @@ module Net
       def self.default; @default end
 
       include AttrAccessors
+      include AttrInheritance
 
       # The debug mode (boolean)
       #
@@ -46,9 +62,11 @@ module Net
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
+      # If +parent+ is not given, the global config is used by default.
+      #
       # If a block is given, the new config object is yielded to it.
-      def initialize(**attrs)
-        super()
+      def initialize(parent = nil, **attrs)
+        super(parent)
         attrs.each do send(:"#{_1}=", _2) end
         yield self if block_given?
       end
