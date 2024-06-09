@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 # :markup: markdown
 
+require_relative "config/attr_accessors"
+
 module Net
   class IMAP
 
@@ -11,6 +13,7 @@ module Net
     # *NOTE:* Updates to config objects are not synchronized for thread-safety.
     #
     class Config
+      include AttrAccessors
 
       # The debug mode (boolean)
       attr_accessor :debug
