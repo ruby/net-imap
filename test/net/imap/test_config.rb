@@ -50,6 +50,22 @@ class ConfigTest < Test::Unit::TestCase
     assert_equal 333, config.open_timeout
   end
 
+  test "enum type constraint" do
+    config = Config.new
+    config.responses_without_block = :silence_deprecation_warning
+    assert_equal :silence_deprecation_warning, config.responses_without_block
+    config.responses_without_block = :warn
+    assert_equal :warn, config.responses_without_block
+    config.responses_without_block = :raise
+    assert_equal :raise, config.responses_without_block
+    assert_raise(ArgumentError) do config.responses_without_block = false end
+    assert_equal :raise, config.responses_without_block
+    assert_raise(ArgumentError) do config.responses_without_block = 12345 end
+    assert_equal :raise, config.responses_without_block
+    assert_raise(ArgumentError) do config.responses_without_block = "warn" end
+    assert_equal :raise, config.responses_without_block
+  end
+
   test ".default" do
     default = Config.default
     assert default.equal?(Config.default)

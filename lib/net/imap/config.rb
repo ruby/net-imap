@@ -125,7 +125,9 @@ module Net
       # | v0.4.13               | +:silence_deprecation_warning+ |
       # | v0.5                  | +:warn+                        |
       # | _eventually_          | +:raise+                       |
-      attr_accessor :responses_without_block
+      attr_accessor :responses_without_block, type: [
+        :silence_deprecation_warning, :warn, :raise,
+      ]
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
