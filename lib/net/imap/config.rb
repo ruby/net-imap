@@ -306,7 +306,7 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
         sasl_ir: true,
-        responses_without_block: :silence_deprecation_warning,
+        responses_without_block: :warn,
       ).freeze
 
       @global = default.new
