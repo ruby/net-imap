@@ -1,5 +1,4 @@
 # frozen_string_literal: true
-# :markup: markdown
 
 require_relative "config/attr_accessors"
 require_relative "config/attr_inheritance"
@@ -11,26 +10,52 @@ module Net
     # Net::IMAP::Config stores configuration options for Net::IMAP clients.
     # The global configuration can be seen at either Net::IMAP.config or
     # Net::IMAP::Config.global, and the client-specific configuration can be
-    # seen at Net::IMAP#config.  When creating a new client, all unhandled
-    # keyword arguments to Net::IMAP.new are delegated to Config.new.  Every
-    # client has its own config.
+    # seen at Net::IMAP#config.
     #
-    # ## Inheritance
+    # When creating a new client, all unhandled keyword arguments to
+    # Net::IMAP.new are delegated to Config.new.  Every client has its own
+    # config.
+    #
+    #   debug_client = Net::IMAP.new(hostname, debug: true)
+    #   quiet_client = Net::IMAP.new(hostname, debug: false)
+    #   debug_client.config.debug?  # => true
+    #   quiet_client.config.debug?  # => false
+    #
+    # == Inheritance
     #
     # Configs have a parent[rdoc-ref:Config::AttrInheritance#parent] config, and
     # any attributes which have not been set locally will inherit the parent's
     # value.  Every client creates its own specific config.  By default, client
-    # configs inherit from Config.global which inherits from Config.default.
+    # configs inherit from Config.global.
     #
-    # See the following methods, defined by Config::AttrInheritance:
-    # - {#new}[rdoc-ref:Config::AttrInheritance#reset] -- create a new config
-    #   which inherits from the receiver.
-    # - {#inherited?}[rdoc-ref:Config::AttrInheritance#inherited?] -- return
-    #   whether a particular attribute is inherited.
-    # - {#reset}[rdoc-ref:Config::AttrInheritance#reset] -- reset attributes to
-    #   be inherited.
+    #   plain_client = Net::IMAP.new(hostname)
+    #   debug_client = Net::IMAP.new(hostname, debug: true)
+    #   quiet_client = Net::IMAP.new(hostname, debug: false)
     #
-    # ## Thread Safety
+    #   plain_client.config.inherited?(:debug)  # => true
+    #   debug_client.config.inherited?(:debug)  # => false
+    #   quiet_client.config.inherited?(:debug)  # => false
+    #
+    #   plain_client.config.debug?  # => false
+    #   debug_client.config.debug?  # => true
+    #   quiet_client.config.debug?  # => false
+    #
+    #   # Net::IMAP.debug is delegated to Net::IMAP::Config.global.debug
+    #   Net::IMAP.debug = true
+    #   plain_client.config.debug?  # => true
+    #   debug_client.config.debug?  # => true
+    #   quiet_client.config.debug?  # => false
+    #
+    #   Net::IMAP.debug = false
+    #   plain_client.config.debug = true
+    #   plain_client.config.inherited?(:debug)  # => false
+    #   plain_client.config.debug?  # => true
+    #   plain_client.config.reset(:debug)
+    #   plain_client.config.inherited?(:debug)  # => true
+    #   plain_client.config.debug?  # => false
+    #
+    #
+    # == Thread Safety
     #
     # *NOTE:* Updates to config objects are not synchronized for thread-safety.
     #
