@@ -57,9 +57,7 @@ module Net
 
       # The debug mode (boolean)
       #
-      # | Starting with version | The default value is |
-      # |-----------------------|----------------------|
-      # | _original_            | +false+              |
+      # The default value is +false+.
       attr_accessor :debug, type: :boolean
 
       # method: debug?
@@ -72,17 +70,13 @@ module Net
       # If the IMAP object cannot open a connection within this time,
       # it raises a Net::OpenTimeout exception.  See Net::IMAP.new.
       #
-      # | Starting with version | The default value is |
-      # |-----------------------|----------------------|
-      # | _original_            | +30+ seconds         |
+      # The default value is +30+ seconds.
       attr_accessor :open_timeout, type: Integer
 
       # Seconds to wait until an IDLE response is received, after
       # the client asks to leave the IDLE state.  See Net::IMAP#idle_done.
       #
-      # | Starting with version | The default value is |
-      # |-----------------------|----------------------|
-      # | _original_            | +5+ seconds          |
+      # The default value is +5+ seconds.
       attr_accessor :idle_response_timeout, type: Integer
 
       # Creates a new config object and initialize its attribute with +attrs+.
