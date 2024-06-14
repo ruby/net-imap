@@ -11,12 +11,15 @@ module Net
       include ParserUtils
       extend  ParserUtils::Generator
 
+      attr_reader :config
+
       # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
-      def initialize
+      def initialize(config: Config.global)
         @str = nil
         @pos = nil
         @lex_state = nil
         @token = nil
+        @config = Config[config]
       end
 
       # :call-seq:

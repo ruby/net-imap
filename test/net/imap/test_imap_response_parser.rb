@@ -11,6 +11,7 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   extend  NetIMAPTestHelpers::TestFixtureGenerators
 
   def setup
+    Net::IMAP.config.reset
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
   end

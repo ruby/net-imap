@@ -725,6 +725,8 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
+    autoload :Config,      File.expand_path("imap/config",       __dir__)
+
     autoload :SASL,        File.expand_path("imap/sasl",         __dir__)
     autoload :SASLAdapter, File.expand_path("imap/sasl_adapter", __dir__)
     autoload :StringPrep,  File.expand_path("imap/stringprep",   __dir__)
@@ -735,14 +737,15 @@ module Net
       include SSL
     end
 
-    # Returns the debug mode.
-    def self.debug
-      return @@debug
-    end
+    # Returns the global Config object
+    def self.config; Config.global end
 
-    # Sets the debug mode.
+    # Returns the global debug mode.
+    def self.debug; config.debug end
+
+    # Sets the global debug mode.
     def self.debug=(val)
-      return @@debug = val
+      config.debug = val
     end
 
     # The default port for IMAP connections, port 143
@@ -764,13 +767,18 @@ module Net
     # Returns the initial greeting the server, an UntaggedResponse.
     attr_reader :greeting
 
+    # The client configuration.  See Net::IMAP::Config.
+    #
+    # By default, config inherits from the global Net::IMAP.config.
+    attr_reader :config
+
     # Seconds to wait until a connection is opened.
     # If the IMAP object cannot open a connection within this time,
     # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    attr_reader :open_timeout
+    def open_timeout; config.open_timeout end
 
     # Seconds to wait until an IDLE response is received.
-    attr_reader :idle_response_timeout
+    def idle_response_timeout; config.idle_response_timeout end
 
     # The hostname this client connected to
     attr_reader :host
@@ -810,6 +818,15 @@ module Net
     #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
     #   the keys are names of attribute assignment methods on
     #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #
+    # [config]
+    #   A Net::IMAP::Config object to base the client #config on.  By default
+    #   the global Net::IMAP.config is used.  Note that this sets the _parent_
+    #   config object for inheritance.  Every Net::IMAP client has its own
+    #   unique #config for overrides.
+    #
+    # Any other keyword arguments will be forwarded to Config.new, to create the
+    # client's #config.  For example:
     #
     # [open_timeout]
     #   Seconds to wait until a connection is opened
@@ -872,13 +889,12 @@ module Net
     #   Connected to the host successfully, but it immediately said goodbye.
     #
     def initialize(host, port: nil, ssl:  nil,
-                   open_timeout: 30, idle_response_timeout: 5)
+                   config: Config.global, **config_options)
       super()
       # Config options
       @host = host
+      @config = Config.new(config, **config_options)
       @port = port || (ssl ? SSL_PORT : PORT)
-      @open_timeout = Integer(open_timeout)
-      @idle_response_timeout = Integer(idle_response_timeout)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
@@ -889,7 +905,7 @@ module Net
       @capabilities = nil
 
       # Client Protocol Receiver
-      @parser = ResponseParser.new
+      @parser = ResponseParser.new(config: @config)
       @responses = Hash.new {|h, k| h[k] = [] }
       @response_handlers = []
       @receiver_thread = nil
@@ -2434,7 +2450,7 @@ module Net
           unless @receiver_thread_terminating
             remove_response_handler(response_handler)
             put_string("DONE#{CRLF}")
-            response = get_tagged_response(tag, "IDLE", @idle_response_timeout)
+            response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
         end
       end
@@ -2590,8 +2606,6 @@ module Net
     PORT = 143         # :nodoc:
     SSL_PORT = 993   # :nodoc:
 
-    @@debug = false
-
     def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
@@ -2619,12 +2633,12 @@ module Net
     end
 
     def tcp_socket(host, port)
-      s = Socket.tcp(host, port, :connect_timeout => @open_timeout)
+      s = Socket.tcp(host, port, :connect_timeout => open_timeout)
       s.setsockopt(:SOL_SOCKET, :SO_KEEPALIVE, true)
       s
     rescue Errno::ETIMEDOUT
       raise Net::OpenTimeout, "Timeout to open TCP connection to " +
-        "#{host}:#{port} (exceeds #{@open_timeout} seconds)"
+        "#{host}:#{port} (exceeds #{open_timeout} seconds)"
     end
 
     def receive_responses
@@ -2736,7 +2750,7 @@ module Net
         end
       end
       return nil if buff.length == 0
-      if @@debug
+      if config.debug?
         $stderr.print(buff.gsub(/^/n, "S: "))
       end
       return @parser.parse(buff)
@@ -2815,7 +2829,7 @@ module Net
 
     def put_string(str)
       @sock.print(str)
-      if @@debug
+      if config.debug?
         if @debug_output_bol
           $stderr.print("C: ")
         end
@@ -2942,7 +2956,7 @@ module Net
       @sock = SSLSocket.new(@sock, ssl_ctx)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
-      ssl_socket_connect(@sock, @open_timeout)
+      ssl_socket_connect(@sock, open_timeout)
       if ssl_ctx.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true

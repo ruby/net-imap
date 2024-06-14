@@ -9,6 +9,7 @@ class IMAPCapabilitiesTest < Test::Unit::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
   def setup
+    Net::IMAP.config.reset
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
     @threads = []
