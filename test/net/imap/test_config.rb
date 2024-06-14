@@ -332,4 +332,27 @@ class ConfigTest < Test::Unit::TestCase
     assert_equal [11, 5, true], vals
   end
 
+  test "#load_defaults" do
+    config = Config.global.load_defaults 0.3
+    assert_same Config.global, config
+    assert_same true,  config.inherited?(:debug)
+    assert_same false, config.inherited?(:sasl_ir)
+    assert_same false, config.sasl_ir
+    # does not _reset_ default
+    config.debug = true
+    Config.global.load_defaults 0.3
+    assert_same false, config.inherited?(:debug)
+    assert_same true,  config.debug?
+    # does not change parent
+    child           = Config.global.new
+    grandchild      = child.new
+    greatgrandchild = grandchild.new
+    child.load_defaults :current
+    grandchild.load_defaults :next
+    greatgrandchild.load_defaults :future
+    assert_same Config.global, child.parent
+    assert_same child, grandchild.parent
+    assert_same grandchild, greatgrandchild.parent
+  end
+
 end

@@ -87,6 +87,12 @@ module Net
     #   Net::IMAP.debug = true
     #   client.config.debug?  # => true
     #
+    # Use #load_defaults to globally behave like a specific version:
+    #   client = Net::IMAP.new(hostname)
+    #   client.config.sasl_ir              # => true
+    #   Net::IMAP.config.load_defaults 0.3
+    #   client.config.sasl_ir              # => false
+    #
     # === Named defaults
     # In addition to +x.y+ version numbers, the following aliases are supported:
     #
@@ -268,6 +274,23 @@ module Net
         copy = new(**attrs)
         copy.freeze if frozen?
         block_given? ? yield(copy) : copy
+      end
+
+      # :call-seq: load_defaults(version) -> self
+      #
+      # Resets the current config to behave like the versioned default
+      # configuration for +version+.  #parent will not be changed.
+      #
+      # Some config attributes default to inheriting from their #parent (which
+      # is usually Config.global) and are left unchanged, for example: #debug.
+      #
+      # See Config@Versioned+defaults and Config@Named+defaults.
+      def load_defaults(version)
+        [Numeric, Symbol, String].any? { _1 === version } or
+          raise ArgumentError, "expected number or symbol, got %p" % [version]
+        config = Config[version]
+        defaults = config.to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
+        update(**defaults)
       end
 
       # :call-seq: to_h -> hash
