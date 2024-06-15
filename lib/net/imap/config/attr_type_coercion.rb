@@ -26,6 +26,7 @@ module Net
           return unless type
           if    :boolean == type then boolean attr
           elsif Integer  == type then integer attr
+          elsif Array   === type then enum    attr, type
           else raise ArgumentError, "unknown type coercion %p" % [type]
           end
         end
@@ -37,6 +38,17 @@ module Net
 
         def self.integer(attr)
           define_method :"#{attr}=" do |val| super Integer val end
+        end
+
+        def self.enum(attr, enum)
+          enum = enum.dup.freeze
+          expected = -"one of #{enum.map(&:inspect).join(", ")}"
+          define_method :"#{attr}=" do |val|
+            unless enum.include?(val)
+              raise ArgumentError, "expected %s, got %p" % [expected, val]
+            end
+            super val
+          end
         end
 
       end

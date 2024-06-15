@@ -1122,10 +1122,22 @@ EOF
       assert_equal(1, imap.responses("RECENT", &:last))
       assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
       # Deprecated style, without a block:
-      # assert_warn(/Pass a block.*or.*clear_responses/i) do
-      #   assert_equal(%i[Answered Flagged Deleted Seen Draft],
-      #                imap.responses["FLAGS"]&.last)
-      # end
+      imap.config.responses_without_block = :raise
+      assert_raise(ArgumentError) do imap.responses end
+      imap.config.responses_without_block = :warn
+      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
+      assert_warn(/Pass a block.*or.*clear_responses/i) do
+        assert_equal(%i[Answered Flagged Deleted Seen Draft],
+                     imap.responses["FLAGS"]&.last)
+      end
+      # TODO: assert_no_warn?
+      imap.config.responses_without_block = :silence_deprecation_warning
+      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
+      stderr = EnvUtil.verbose_warning {
+        assert_equal(%i[Answered Flagged Deleted Seen Draft],
+                     imap.responses["FLAGS"]&.last)
+      }
+      assert_empty stderr
     end
   end
 

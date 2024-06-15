@@ -114,6 +114,21 @@ module Net
       # | v0.4                  | +true+  <em>(support added)</em>         |
       attr_accessor :sasl_ir, type: :boolean
 
+      # :markup: markdown
+      #
+      # Controls the behavior of Net::IMAP#responses when called without a
+      # block.  Valid options are `:warn`, `:raise`, or
+      # `:silence_deprecation_warning`.
+      #
+      # | Starting with version | The default value is           |
+      # |-----------------------|--------------------------------|
+      # | v0.4.13               | +:silence_deprecation_warning+ |
+      # | v0.5                  | +:warn+                        |
+      # | _eventually_          | +:raise+                       |
+      attr_accessor :responses_without_block, type: [
+        :silence_deprecation_warning, :warn, :raise,
+      ]
+
       # Creates a new config object and initialize its attribute with +attrs+.
       #
       # If +parent+ is not given, the global config is used by default.
@@ -130,6 +145,7 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
         sasl_ir: true,
+        responses_without_block: :silence_deprecation_warning,
       ).freeze
 
       @global = default.new
