@@ -63,7 +63,7 @@ module Net
       # The default config, which is hardcoded and frozen.
       def self.default; @default end
 
-      # The global config object.
+      # The global config object.  Also available from Net::IMAP.config.
       def self.global; @global end
 
       def self.[](config) # :nodoc: unfinished API
@@ -93,20 +93,27 @@ module Net
       # Seconds to wait until a connection is opened.
       #
       # If the IMAP object cannot open a connection within this time,
-      # it raises a Net::OpenTimeout exception.  See Net::IMAP.new.
+      # it raises a Net::OpenTimeout exception.
+      #
+      # See Net::IMAP.new.
       #
       # The default value is +30+ seconds.
       attr_accessor :open_timeout, type: Integer
 
       # Seconds to wait until an IDLE response is received, after
-      # the client asks to leave the IDLE state.  See Net::IMAP#idle_done.
+      # the client asks to leave the IDLE state.
+      #
+      # See Net::IMAP#idle and Net::IMAP#idle_done.
       #
       # The default value is +5+ seconds.
       attr_accessor :idle_response_timeout, type: Integer
 
       # :markup: markdown
       #
-      # Whether to use the +SASL-IR+ extension with IMAP#authenticate.
+      # Whether to use the +SASL-IR+ extension when the server and \SASL
+      # mechanism both support it.
+      #
+      # See Net::IMAP#authenticate.
       #
       # | Starting with version | The default value is                     |
       # |-----------------------|------------------------------------------|
@@ -120,11 +127,11 @@ module Net
       # block.  Valid options are `:warn`, `:raise`, or
       # `:silence_deprecation_warning`.
       #
-      # | Starting with version | The default value is           |
-      # |-----------------------|--------------------------------|
-      # | v0.4.13               | +:silence_deprecation_warning+ |
-      # | v0.5                  | +:warn+                        |
-      # | _eventually_          | +:raise+                       |
+      # | Starting with version   | The default value is           |
+      # |-------------------------|--------------------------------|
+      # | v0.4.13                 | +:silence_deprecation_warning+ |
+      # | v0.5 <em>(planned)</em> | +:warn+                        |
+      # | _eventually_            | +:raise+                       |
       attr_accessor :responses_without_block, type: [
         :silence_deprecation_warning, :warn, :raise,
       ]

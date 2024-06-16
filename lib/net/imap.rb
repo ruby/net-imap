@@ -767,7 +767,8 @@ module Net
 
     # The client configuration.  See Net::IMAP::Config.
     #
-    # By default, config inherits from the global Net::IMAP.config.
+    # By default, the client's local configuration inherits from the global
+    # Net::IMAP.config.
     attr_reader :config
 
     # Seconds to wait until a connection is opened.
@@ -818,18 +819,20 @@ module Net
     #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
     #
     # [config]
-    #   A Net::IMAP::Config object to base the client #config on.  By default
-    #   the global Net::IMAP.config is used.  Note that this sets the _parent_
-    #   config object for inheritance.  Every Net::IMAP client has its own
-    #   unique #config for overrides.
+    #   A Net::IMAP::Config object to use as the basis for #config.  By default,
+    #   the global Net::IMAP.config is used.
     #
-    # Any other keyword arguments will be forwarded to Config.new, to create the
-    # client's #config.  For example:
+    #   >>>
+    #     *NOTE:* +config+ does not set #config directly---it sets the _parent_
+    #     config for inheritance.  Every client creates its own unique #config.
     #
-    # [open_timeout]
-    #   Seconds to wait until a connection is opened
-    # [idle_response_timeout]
-    #   Seconds to wait until an IDLE response is received
+    #   All other keyword arguments are forwarded to Net::IMAP::Config.new, to
+    #   initialize the client's #config. For example:
+    #
+    #   [{open_timeout}[rdoc-ref:Config#open_timeout]]
+    #     Seconds to wait until a connection is opened
+    #   [{idle_response_timeout}[rdoc-ref:Config#idle_response_timeout]]
+    #     Seconds to wait until an IDLE response is received
     #
     # See DeprecatedClientOptions.new for deprecated arguments.
     #
@@ -1221,7 +1224,8 @@ module Net
     # +mechanism+ is the name of the \SASL authentication mechanism to be used.
     #
     # +sasl_ir+ allows or disallows sending an "initial response" (see the
-    # +SASL-IR+ capability, below).
+    # +SASL-IR+ capability, below).  Defaults to the #config value for
+    # {sasl_ir}[rdoc-ref:Config#sasl_ir], which defaults to +true+.
     #
     # All other arguments are forwarded to the registered SASL authenticator for
     # the requested mechanism.  <em>The documentation for each individual
@@ -2421,7 +2425,8 @@ module Net
     #
     # Returns the server's response to indicate the IDLE state has ended.
     # Returns +nil+ if the server does not respond to #idle_done within
-    # idle_response_timeout seconds.
+    # {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout]
+    # seconds.
     #
     # Related: #idle_done, #noop, #check
     #
@@ -2460,8 +2465,9 @@ module Net
 
     # Leaves IDLE, allowing #idle to return.
     #
-    # If the server does not respond within idle_response_timeout, #idle will
-    # return +nil+.
+    # If the server does not respond within
+    # {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout]
+    # seconds, #idle will return +nil+.
     #
     # Related: #idle
     def idle_done

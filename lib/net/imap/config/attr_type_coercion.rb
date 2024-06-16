@@ -3,7 +3,11 @@
 module Net
   class IMAP
     class Config
-      # Adds a +type+ keyword parameter to +attr_accessor+, which enforces
+      # >>>
+      #   *NOTE:* This module is an internal implementation detail, with no
+      #   guarantee of backward compatibility.
+      #
+      # Adds a +type+ keyword parameter to +attr_accessor+, to enforce that
       # config attributes have valid types, for example: boolean, numeric,
       # enumeration, non-nullable, etc.
       module AttrTypeCoercion
