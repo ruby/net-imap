@@ -5,10 +5,13 @@ require "forwardable"
 module Net
   class IMAP
     class Config
-
-      # Config values are stored in a struct rather than ivars to simplify:
-      # * ensuring that all config objects share a single object shape
-      # * querying only locally configured values, e.g for inspection.
+      # >>>
+      #   *NOTE:* This module is an internal implementation detail, with no
+      #   guarantee of backward compatibility.
+      #
+      # +attr_accessor+ values are stored in a struct rather than ivars, making
+      # it simpler to ensure that all config objects share a single object
+      # shape.  This also simplifies iteration over all defined attributes.
       module AttrAccessors
         module Macros # :nodoc: internal API
           def attr_accessor(name) AttrAccessors.attr_accessor(name) end

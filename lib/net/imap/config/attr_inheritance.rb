@@ -3,10 +3,25 @@
 module Net
   class IMAP
     class Config
-      # Inheritance forms a singly-linked-list, so lookup will be O(n) on the
-      # number of ancestors.  Without customization, ancestor trees will only be
-      # three or four deep:
-      #     client -> [versioned ->] global -> default
+      # >>>
+      #   *NOTE:* The public methods on this module are part of the stable
+      #   public API of Net::IMAP::Config.  But the module itself is an internal
+      #   implementation detail, with no guarantee of backward compatibility.
+      #
+      # +attr_accessor+ methods will delegate to their #parent when the local
+      # value does not contain an override.  Inheritance forms a singly linked
+      # list, so lookup will be <tt>O(n)</tt> on the number of ancestors.  In
+      # practice, the ancestor chain is not expected to be long.  Without
+      # customization, it is only three deep:
+      # >>>
+      #     IMAP#config → Config.global → Config.default
+      #
+      # When creating a client with the +config+ keyword, for example to use
+      # the appropriate defaults for an application or a library while still
+      # relying on global for configuration of +debug+ or +logger+, most likely
+      # the ancestor chain is still only four deep:
+      # >>>
+      #     IMAP#config → alternate defaults → Config.global → Config.default
       module AttrInheritance
         INHERITED = Module.new.freeze
         private_constant :INHERITED
