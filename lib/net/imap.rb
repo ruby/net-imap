@@ -816,7 +816,22 @@ module Net
     #   If +ssl+ is a hash, it's passed to
     #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params];
     #   the keys are names of attribute assignment methods on
-    #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].
+    #   SSLContext[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html].  For example:
+    #
+    #   [{ca_file}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#attribute-i-ca_file]]
+    #     The path to a file containing a PEM-format CA certificate.
+    #   [{ca_path}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#attribute-i-ca_path]]
+    #     The path to a directory containing CA certificates in PEM format.
+    #   [{min_version}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-min_version-3D]]
+    #     Sets the lower bound on the supported SSL/TLS protocol version. Set to
+    #     an +OpenSSL+ constant such as +OpenSSL::SSL::TLS1_2_VERSION+,
+    #   [{verify_mode}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#attribute-i-verify_mode]]
+    #     SSL session verification mode.  Valid modes include
+    #     +OpenSSL::SSL::VERIFY_PEER+ and +OpenSSL::SSL::VERIFY_NONE+.
+    #
+    #   See {OpenSSL::SSL::SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html] for other valid SSL context params.
+    #
+    #   See DeprecatedClientOptions.new for deprecated SSL arguments.
     #
     # [config]
     #   A Net::IMAP::Config object to use as the basis for #config.  By default,
@@ -834,7 +849,7 @@ module Net
     #   [{idle_response_timeout}[rdoc-ref:Config#idle_response_timeout]]
     #     Seconds to wait until an IDLE response is received
     #
-    # See DeprecatedClientOptions.new for deprecated arguments.
+    #   See Net::IMAP::Config for other valid options.
     #
     # ==== Examples
     #
