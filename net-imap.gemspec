@@ -25,9 +25,9 @@ Gem::Specification.new do |spec|
 
   # Specify which files should be added to the gem when it is released.
   # The `git ls-files -z` loads the files in the RubyGem that have been added into git.
-  spec.files         = Dir.chdir(File.expand_path('..', __FILE__)) do
+  spec.files         = Dir.chdir(__dir__) do
     `git ls-files -z 2>/dev/null`.split("\x0")
-      .grep_v(%r{^(\.git|\.mailmap|bin|test|spec|benchmarks|features|rfcs)/})
+      .grep_v(%r{^(\.git(ignore)?|\.mailmap|(\.github|bin|test|spec|benchmarks|features|rfcs)/)})
   end
   spec.bindir        = "exe"
   spec.executables   = spec.files.grep(%r{^exe/}) { |f| File.basename(f) }
