@@ -222,4 +222,35 @@ class ConfigTest < Test::Unit::TestCase
     assert_equal expected, global_hash.slice(*expected.keys)
   end
 
+  test "#update" do
+    config = Config.global.update(debug: true, sasl_ir: false, open_timeout: 2)
+    assert_same Config.global, config
+    assert_same true,  config.debug
+    assert_same false, config.sasl_ir
+    assert_same 2,     config.open_timeout
+  end
+
+  # It's simple to check first that the names are valid, so we do.
+  test "#update with invalid key name" do
+    config = Config.new(debug: true, sasl_ir: false, open_timeout: 2)
+    assert_raise(ArgumentError) do
+      config.update(debug: false, sasl_ir: true, bogus: :invalid)
+    end
+    assert_same true,  config.debug?
+    assert_same false, config.sasl_ir?
+    assert_same 2,     config.open_timeout
+  end
+
+  # Current behavior: partial updates are applied, in order they're received.
+  # We could make #update atomic, but the complexity probably isn't worth it.
+  test "#update with invalid value" do
+    config = Config.new(debug: true, sasl_ir: false, open_timeout: 2)
+    assert_raise(TypeError) do
+      config.update(debug: false, open_timeout: :bogus, sasl_ir: true)
+    end
+    assert_same false, config.debug?       # updated
+    assert_same 2,     config.open_timeout # unchanged
+    assert_same false, config.sasl_ir?     # unchanged
+  end
+
 end

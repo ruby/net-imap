@@ -143,8 +143,26 @@ module Net
       # If a block is given, the new config object is yielded to it.
       def initialize(parent = Config.global, **attrs)
         super(parent)
-        attrs.each do send(:"#{_1}=", _2) end
+        update(**attrs)
         yield self if block_given?
+      end
+
+      # :call-seq: update(**attrs) -> self
+      #
+      # Assigns all of the provided +attrs+ to this config, and returns +self+.
+      #
+      # An ArgumentError is raised unless every key in +attrs+ matches an
+      # assignment method on Config.
+      #
+      # >>>
+      #   *NOTE:*  #update is not atomic.  If an exception is raised due to an
+      #   invalid attribute value, +attrs+ may be partially applied.
+      def update(**attrs)
+        unless (bad = attrs.keys.reject { respond_to?(:"#{_1}=") }).empty?
+          raise ArgumentError, "invalid config options: #{bad.join(", ")}"
+        end
+        attrs.each do send(:"#{_1}=", _2) end
+        self
       end
 
       # :call-seq: to_h -> hash
