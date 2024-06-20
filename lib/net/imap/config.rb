@@ -165,6 +165,24 @@ module Net
         self
       end
 
+      # :call-seq:
+      #   with(**attrs) -> config
+      #   with(**attrs) {|config| } -> result
+      #
+      # Without a block, returns a new config which inherits from self.  With a
+      # block, yields the new config and returns the block's result.
+      #
+      # If no keyword arguments are given, an ArgumentError will be raised.
+      #
+      # If +self+ is frozen, the copy will also be frozen.
+      def with(**attrs)
+        attrs.empty? and
+          raise ArgumentError, "expected keyword arguments, none given"
+        copy = new(**attrs)
+        copy.freeze if frozen?
+        block_given? ? yield(copy) : copy
+      end
+
       # :call-seq: to_h -> hash
       #
       # Returns all config attributes in a hash.

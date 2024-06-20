@@ -253,4 +253,29 @@ class ConfigTest < Test::Unit::TestCase
     assert_same false, config.sasl_ir?     # unchanged
   end
 
+  test "#with" do
+    orig = Config.new(open_timeout: 123, sasl_ir: false)
+    assert_raise(ArgumentError) do
+      orig.with
+    end
+    copy = orig.with(open_timeout: 456, idle_response_timeout: 789)
+    refute copy.frozen?
+    assert_same orig, copy.parent
+    assert_equal 123, orig.open_timeout # unchanged
+    assert_equal 456, copy.open_timeout
+    assert_equal 789, copy.idle_response_timeout
+    vals = nil
+    result = orig.with(open_timeout: 99, idle_response_timeout: 88) do |c|
+      vals = [c.open_timeout, c.idle_response_timeout, c.frozen?]
+      :result
+    end
+    assert_equal :result, result
+    assert_equal [99, 88, false], vals
+    orig.freeze
+    result = orig.with(open_timeout: 11) do |c|
+      vals = [c.open_timeout, c.idle_response_timeout, c.frozen?]
+    end
+    assert_equal [11, 5, true], vals
+  end
+
 end
