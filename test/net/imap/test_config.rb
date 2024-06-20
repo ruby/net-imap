@@ -135,10 +135,22 @@ class ConfigTest < Test::Unit::TestCase
     assert_equal false, child.debug?
   end
 
+  test ".[] with a hash" do
+    config = Config[{responses_without_block: :raise, sasl_ir: false}]
+    assert config.frozen?
+    refute config.sasl_ir?
+    assert config.inherited?(:debug)
+    refute config.inherited?(:sasl_ir)
+    assert_same Config.global, config.parent
+    assert_same :raise, config.responses_without_block
+  end
+
   test ".new always sets a parent" do
     assert_same Config.global,  Config.new.parent
     assert_same Config.default, Config.new(Config.default).parent
     assert_same Config.global,  Config.new(Config.global).parent
+    assert_equal true, Config.new({debug: true}, debug: false).parent.debug?
+    assert_equal true, Config.new({debug: true}, debug: false).parent.frozen?
   end
 
   test "#freeze" do

@@ -66,9 +66,19 @@ module Net
       # The global config object.  Also available from Net::IMAP.config.
       def self.global; @global end
 
-      def self.[](config) # :nodoc: unfinished API
+      # :call-seq:
+      #  Net::IMAP::Config[hash]   -> new frozen config
+      #  Net::IMAP::Config[config] -> same config
+      #
+      # Given a Hash, creates a new _frozen_ config which inherits from
+      # Config.global.  Use Config.new for an unfrozen config.
+      #
+      # Given a config, returns that same config.
+      def self.[](config)
         if config.is_a?(Config) || config.nil? && global.nil?
           config
+        elsif config.respond_to?(:to_hash)
+          new(global, **config).freeze
         else
           raise TypeError, "no implicit conversion of %s to %s" % [
             config.class, Config
