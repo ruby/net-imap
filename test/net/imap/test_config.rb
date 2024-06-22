@@ -141,6 +141,47 @@ class ConfigTest < Test::Unit::TestCase
     assert_same Config.global,  Config.new(Config.global).parent
   end
 
+  test "#freeze" do
+    config = Config.new(open_timeout: 1)
+    config.freeze
+    assert_raise FrozenError do
+      config.open_timeout = 2
+    end
+    assert_same 1, config.open_timeout
+  end
+
+  test "#dup" do
+    original = Config.new(open_timeout: 1)
+    copy = original.dup
+    refute_same original, copy
+    copy.open_timeout = 2
+    assert_equal 1, original.open_timeout
+    assert_equal 2, copy.open_timeout
+
+    original.freeze
+    copy = original.dup
+    refute copy.frozen?
+    copy.open_timeout = 2
+    assert_equal 2, copy.open_timeout
+  end
+
+  test "#clone" do
+    original = Config.new(open_timeout: 1)
+    copy = original.clone
+    refute_same original, copy
+    copy.open_timeout = 2
+    assert_equal 1, original.open_timeout
+    assert_equal 2, copy.open_timeout
+
+    original.freeze
+    copy = original.clone
+    assert copy.frozen?
+    assert_raise FrozenError do
+      copy.open_timeout = 2
+    end
+    assert_equal 1, copy.open_timeout
+  end
+
   test "#inherited? and #reset(attr)" do
     base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
     child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10
