@@ -126,7 +126,7 @@ module Net
       def self.default; @default end
 
       # The global config object.  Also available from Net::IMAP.config.
-      def self.global; @global end
+      def self.global; @global if defined?(@global) end
 
       # A hash of hard-coded configurations, indexed by version number.
       def self.version_defaults; @version_defaults end
@@ -149,12 +149,11 @@ module Net
       #
       # Given a config, returns that same config.
       def self.[](config)
-        if config.is_a?(Config) || config.nil? && global.nil?
-          config
-        elsif config.respond_to?(:to_hash)
-          new(global, **config).freeze
+        if    config.is_a?(Config)         then config
+        elsif config.nil? && global.nil?   then nil
+        elsif config.respond_to?(:to_hash) then new(global, **config).freeze
         else
-          version_defaults.fetch(config) {
+          version_defaults.fetch(config) do
             case config
             when Numeric
               raise RangeError, "unknown config version: %p" % [config]
@@ -165,7 +164,7 @@ module Net
                 config.class, Config
               ]
             end
-          }
+          end
         end
       end
 
