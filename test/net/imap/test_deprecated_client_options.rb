@@ -24,7 +24,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
 
     test "Convert obsolete options hash to keywords" do
       run_fake_server_in_thread do |server|
-        with_client(server.host, {port: server.port, ssl: false}) do |client|
+        with_client(server.host, {port: server.port, ssl: false}, **{}) do |client|
           assert_equal server.host, client.host
           assert_equal server.port, client.port
           assert_equal false, client.ssl_ctx_params
