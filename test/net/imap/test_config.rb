@@ -135,10 +135,64 @@ class ConfigTest < Test::Unit::TestCase
     assert_equal false, child.debug?
   end
 
+  test ".version_defaults are all frozen, and inherit debug from global" do
+    Config.version_defaults.each do |name, config|
+      assert [0, Float, Symbol].any? { _1 === name }
+      assert_kind_of Config, config
+      assert config.frozen?,            "#{name} isn't frozen"
+      assert config.inherited?(:debug), "#{name} doesn't inherit debug"
+      assert_same Config.global, config.parent
+    end
+  end
+
+  test ".[] for all x.y versions" do
+    original = Config[0]
+    assert_kind_of Config, original
+    assert_same original, Config[0.0]
+    assert_same original, Config[0.1]
+    assert_same original, Config[0.2]
+    assert_same original, Config[0.3]
+    assert_kind_of Config, Config[0.4]
+    assert_kind_of Config, Config[0.5]
+  end
+
+  test ".[] range errors" do
+    assert_raise(RangeError) do Config[0.01] end
+    assert_raise(RangeError) do Config[0.11] end
+    assert_raise(RangeError) do Config[0.111] end
+    assert_raise(RangeError) do Config[0.9] end
+    assert_raise(RangeError) do Config[1] end
+  end
+
+  test ".[] key errors" do
+    assert_raise(KeyError) do Config[:nonexistent] end
+  end
+
+  test ".[] with symbol names" do
+    assert_same    Config[0.4],   Config[:current]
+    assert_same    Config[0.4],   Config[:default]
+    assert_same    Config[0.5],   Config[:next]
+    assert_kind_of Config,        Config[:future]
+  end
+
+  test ".[] with a hash" do
+    config = Config[{responses_without_block: :raise, sasl_ir: false}]
+    assert config.frozen?
+    refute config.sasl_ir?
+    assert config.inherited?(:debug)
+    refute config.inherited?(:sasl_ir)
+    assert_same Config.global, config.parent
+    assert_same :raise, config.responses_without_block
+  end
+
   test ".new always sets a parent" do
     assert_same Config.global,  Config.new.parent
     assert_same Config.default, Config.new(Config.default).parent
     assert_same Config.global,  Config.new(Config.global).parent
+    assert_same Config[0.4],    Config.new(0.4).parent
+    assert_same Config[0.5],    Config.new(:next).parent
+    assert_equal true, Config.new({debug: true}, debug: false).parent.debug?
+    assert_equal true, Config.new({debug: true}, debug: false).parent.frozen?
   end
 
   test "#freeze" do
