@@ -288,15 +288,19 @@ module Net
       def load_defaults(version)
         [Numeric, Symbol, String].any? { _1 === version } or
           raise ArgumentError, "expected number or symbol, got %p" % [version]
-        config = Config[version]
-        defaults = config.to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
-        update(**defaults)
+        update(**Config[version].defaults_hash)
       end
 
       # :call-seq: to_h -> hash
       #
       # Returns all config attributes in a hash.
       def to_h; data.members.to_h { [_1, send(_1)] } end
+
+      protected
+
+      def defaults_hash
+        to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
+      end
 
       @default = new(
         debug: false,
@@ -308,9 +312,7 @@ module Net
 
       @global = default.new
 
-      version_defaults[0.4] = Config[
-        default.to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
-      ]
+      version_defaults[0.4] = Config[default.send(:defaults_hash)]
 
       version_defaults[0] = Config[0.4].dup.update(
         sasl_ir: false,
