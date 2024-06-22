@@ -523,7 +523,7 @@ class IMAPTest < Test::Unit::TestCase
           t: Process.clock_gettime(Process::CLOCK_MONOTONIC),
         }
         #super
-        s = Socket.tcp(host, port, :connect_timeout => @open_timeout)
+        s = Socket.tcp(host, port)
         @@h[:in_tcp_socket_2] = {
           s: s.inspect,
           local_address: s.local_address,
