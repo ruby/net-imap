@@ -59,6 +59,11 @@ module Net
 
         private
 
+        def initialize_clone(other)
+          super
+          @data = other.data.clone
+        end
+
         def initialize_dup(other)
           super
           @data = other.data.dup
