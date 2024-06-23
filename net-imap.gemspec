@@ -16,7 +16,7 @@ Gem::Specification.new do |spec|
   spec.summary       = %q{Ruby client api for Internet Message Access Protocol}
   spec.description   = %q{Ruby client api for Internet Message Access Protocol}
   spec.homepage      = "https://github.com/ruby/net-imap"
-  spec.required_ruby_version = Gem::Requirement.new(">= 2.7.3")
+  spec.required_ruby_version = Gem::Requirement.new(">= 3.1.0")
   spec.licenses       = ["Ruby", "BSD-2-Clause"]
 
   spec.metadata["homepage_uri"] = spec.homepage

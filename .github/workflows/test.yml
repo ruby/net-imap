@@ -7,7 +7,7 @@ jobs:
     uses: ruby/actions/.github/workflows/ruby_versions.yml@master
     with:
       engine: cruby
-      min_version: 2.7
+      min_version: 3.1
 
   build:
     needs: ruby-versions
@@ -26,6 +26,6 @@ jobs:
       with:
         ruby-version: ${{ matrix.ruby }}
         bundler-cache: true
-        rubygems: 3.4.22
+        rubygems: 3.5.14
     - name: Run test
       run: bundle exec rake test
