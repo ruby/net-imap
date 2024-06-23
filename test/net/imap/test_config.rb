@@ -169,9 +169,9 @@ class ConfigTest < Test::Unit::TestCase
   end
 
   test ".[] with symbol names" do
-    assert_same    Config[0.4],   Config[:current]
-    assert_same    Config[0.4],   Config[:default]
-    assert_same    Config[0.5],   Config[:next]
+    assert_same    Config[0.5],   Config[:current]
+    assert_same    Config[0.5],   Config[:default]
+    assert_same    Config[0.6],   Config[:next]
     assert_kind_of Config,        Config[:future]
   end
 

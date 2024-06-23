@@ -311,25 +311,28 @@ module Net
 
       @global = default.new
 
-      version_defaults[0.4] = Config[default.send(:defaults_hash)]
+      version_defaults[:default] = Config[default.send(:defaults_hash)]
+      version_defaults[:current] = Config[:default]
 
-      version_defaults[0] = Config[0.4].dup.update(
+      version_defaults[0] = Config[:current].dup.update(
         sasl_ir: false,
+        responses_without_block: :silence_deprecation_warning,
       ).freeze
       version_defaults[0.0] = Config[0]
       version_defaults[0.1] = Config[0]
       version_defaults[0.2] = Config[0]
       version_defaults[0.3] = Config[0]
 
-      version_defaults[0.5] = Config[0.4].dup.update(
-        responses_without_block: :warn,
+      version_defaults[0.4] = Config[0.3].dup.update(
+        sasl_ir: true,
       ).freeze
 
-      version_defaults[:default] = Config[0.4]
-      version_defaults[:current] = Config[0.4]
-      version_defaults[:next]    = Config[0.5]
+      version_defaults[0.5] = Config[:current]
 
-      version_defaults[:future]  = Config[0.5].dup.update(
+      version_defaults[0.6] = Config[0.5]
+      version_defaults[:next] = Config[0.6]
+
+      version_defaults[:future]  = Config[0.6].dup.update(
         responses_without_block: :raise,
       ).freeze
 
