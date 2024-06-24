@@ -222,7 +222,7 @@ module Net
       # | Starting with version   | The default value is           |
       # |-------------------------|--------------------------------|
       # | v0.4.13                 | +:silence_deprecation_warning+ |
-      # | v0.5 <em>(planned)</em> | +:warn+                        |
+      # | v0.5                    | +:warn+                        |
       # | _eventually_            | +:raise+                       |
       attr_accessor :responses_without_block, type: [
         :silence_deprecation_warning, :warn, :raise,
