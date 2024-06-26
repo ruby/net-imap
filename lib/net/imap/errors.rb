@@ -7,6 +7,12 @@ module Net
     class Error < StandardError
     end
 
+    class LoginDisabledError < Error
+      def initialize(msg = "Remote server has disabled the LOGIN command", ...)
+        super
+      end
+    end
+
     # Error raised when data is in the incorrect format.
     class DataFormatError < Error
     end

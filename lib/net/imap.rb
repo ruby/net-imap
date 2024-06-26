@@ -1378,13 +1378,9 @@ module Net
     # ===== Capabilities
     #
     # An IMAP client MUST NOT call #login when the server advertises the
-    # +LOGINDISABLED+ capability.
-    #
-    #    if imap.capability? "LOGINDISABLED"
-    #      raise "Remote server has disabled the login command"
-    #    else
-    #      imap.login username, password
-    #    end
+    # +LOGINDISABLED+ capability.  By default, Net::IMAP will raise a
+    # LoginDisabledError when that capability is present.  See
+    # Config#enforce_logindisabled.
     #
     # Server capabilities may change after #starttls, #login, and #authenticate.
     # Cached capabilities _must_ be invalidated after this method completes.
@@ -1392,6 +1388,9 @@ module Net
     # ResponseCode.
     #
     def login(user, password)
+      if enforce_logindisabled? && capability?("LOGINDISABLED")
+        raise LoginDisabledError
+      end
       send_command("LOGIN", user, password)
         .tap { @capabilities = capabilities_from_resp_code _1 }
     end
@@ -2866,6 +2865,14 @@ module Net
         else
           @debug_output_bol = false
         end
+      end
+    end
+
+    def enforce_logindisabled?
+      if config.enforce_logindisabled == :when_capabilities_cached
+        capabilities_cached?
+      else
+        config.enforce_logindisabled
       end
     end
 

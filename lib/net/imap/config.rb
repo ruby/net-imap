@@ -215,6 +215,32 @@ module Net
 
       # :markup: markdown
       #
+      # Controls the behavior of Net::IMAP#login when the `LOGINDISABLED`
+      # capability is present.  When enforced, Net::IMAP will raise a
+      # LoginDisabledError when that capability is present.  Valid values are:
+      #
+      # [+false+]
+      #   Send the +LOGIN+ command without checking for +LOGINDISABLED+.
+      #
+      # [+:when_capabilities_cached+]
+      #   Enforce the requirement when Net::IMAP#capabilities_cached? is true,
+      #   but do not send a +CAPABILITY+ command to discover the capabilities.
+      #
+      # [+true+]
+      #   Only send the +LOGIN+ command if the +LOGINDISABLED+ capability is not
+      #   present.  When capabilities are unknown, Net::IMAP will automatically
+      #   send a +CAPABILITY+ command first before sending +LOGIN+.
+      #
+      # | Starting with version   | The default value is           |
+      # |-------------------------|--------------------------------|
+      # | _original_              | `false`                        |
+      # | v0.5                    | `true`                         |
+      attr_accessor :enforce_logindisabled, type: [
+        false, :when_capabilities_cached, true
+      ]
+
+      # :markup: markdown
+      #
       # Controls the behavior of Net::IMAP#responses when called without a
       # block.  Valid options are `:warn`, `:raise`, or
       # `:silence_deprecation_warning`.
@@ -306,6 +332,7 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
         sasl_ir: true,
+        enforce_logindisabled: true,
         responses_without_block: :warn,
       ).freeze
 
@@ -317,6 +344,7 @@ module Net
       version_defaults[0] = Config[:current].dup.update(
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
+        enforce_logindisabled: false,
       ).freeze
       version_defaults[0.0] = Config[0]
       version_defaults[0.1] = Config[0]
