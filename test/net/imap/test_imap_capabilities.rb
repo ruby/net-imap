@@ -259,7 +259,7 @@ class IMAPCapabilitiesTest < Test::Unit::TestCase
   end
 
   test "#capabilities cache is NOT cleared after #login fails" do
-    with_fake_server(preauth: false, cleartext_auth: true) do |server, imap|
+    with_fake_server(preauth: false, cleartext_login: true) do |server, imap|
       original_capabilities = imap.capabilities
       begin
         imap.login("wrong_user", "wrong-password")
