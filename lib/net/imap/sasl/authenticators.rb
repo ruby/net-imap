@@ -64,7 +64,7 @@ module Net::IMAP::SASL
     # When only a single argument is given, the authenticator class will be
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
     # preserved and non-alphanumeric characters are removed..
-    def add_authenticator(name, authenticator = nil)
+    def add_authenticator(name, authenticator = nil, warn_overwrite: true)
       key = -name.to_s.upcase.tr(?_, ?-)
       authenticator ||= begin
         class_name = "#{name.gsub(/[^a-zA-Z0-9]/, "")}Authenticator".to_sym
@@ -73,6 +73,11 @@ module Net::IMAP::SASL
           auth_class ||= Net::IMAP::SASL.const_get(class_name)
           auth_class.new(*creds, **props, &block)
         }
+      end
+      if warn_overwrite && (original = @authenticators[key])
+        warn("%p: replacing existing %p authenticator: %p" % [
+          self, key, original
+        ], uplevel: 1)
       end
       @authenticators[key] = authenticator
     end
