@@ -82,7 +82,7 @@ module Net
 
         def initialize(client, mechanism, authenticator, sasl_ir: true)
           @client = client
-          @mechanism = -mechanism.to_s.upcase.tr(?_, ?-)
+          @mechanism = Authenticators.normalize_name(mechanism)
           @authenticator = authenticator
           @sasl_ir = sasl_ir
           @processed = false

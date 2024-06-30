@@ -1342,7 +1342,7 @@ module Net
     def authenticate(mechanism, *creds,
                      sasl_ir: config.sasl_ir,
                      **props, &callback)
-      mechanism = mechanism.to_s.tr("_", "-").upcase
+      mechanism = SASL::Authenticators.normalize_name(mechanism)
       authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
       cmdargs = ["AUTHENTICATE", mechanism]
       if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
