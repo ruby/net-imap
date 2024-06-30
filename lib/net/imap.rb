@@ -1242,6 +1242,9 @@ module Net
     # +SASL-IR+ capability, below).  Defaults to the #config value for
     # {sasl_ir}[rdoc-ref:Config#sasl_ir], which defaults to +true+.
     #
+    # The +registry+ kwarg can be used to select the mechanism implementation
+    # from a custom registry.  See SASL.authenticator and SASL::Authenticators.
+    #
     # All other arguments are forwarded to the registered SASL authenticator for
     # the requested mechanism.  <em>The documentation for each individual
     # mechanism must be consulted for its specific parameters.</em>

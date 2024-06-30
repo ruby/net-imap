@@ -114,8 +114,8 @@ module Net
       # messages has not passed integrity checks.
       AuthenticationFailed = Class.new(Error)
 
-      # Indicates that authentication cannot proceed because one of the server's
-      # ended authentication prematurely.
+      # Indicates that authentication cannot proceed because the server ended
+      # authentication prematurely.
       class AuthenticationIncomplete < AuthenticationFailed
         # The success response from the server
         attr_reader :response
@@ -159,7 +159,10 @@ module Net
       # Returns the default global SASL::Authenticators instance.
       def self.authenticators; @authenticators ||= Authenticators.new end
 
-      # Delegates to <tt>registry.new</tt>  See Authenticators#new.
+      # Creates a new SASL authenticator, using SASL::Authenticators#new.
+      #
+      # +registry+ defaults to SASL.authenticators.  All other arguments are
+      # forwarded to to <tt>registry.new</tt>.
       def self.authenticator(*args, registry: authenticators, **kwargs, &block)
         registry.new(*args, **kwargs, &block)
       end
