@@ -7,10 +7,8 @@ module Net
       # AuthenticationExchange is used internally by Net::IMAP#authenticate.
       # But the API is still *experimental*, and may change.
       #
-      # TODO: catch exceptions in #process and send #cancel_response.
-      # TODO: raise an error if the command succeeds after being canceled.
-      # TODO: use with more clients, to verify the API can accommodate them.
-      # TODO: pass ClientAdapter#service to SASL.authenticator
+      # * TODO: use with more clients, to verify the API can accommodate them.
+      # * TODO: pass ClientAdapter#service to SASL.authenticator
       #
       # An AuthenticationExchange represents a single attempt to authenticate
       # a SASL client to a SASL server.  It is created from a client adapter, a
@@ -81,6 +79,9 @@ module Net
 
         attr_reader :mechanism, :authenticator
 
+        # An exception that has been raised by <tt>authenticator.process</tt>.
+        attr_reader :process_error
+
         def initialize(client, mechanism, authenticator, sasl_ir: true)
           @client = client
           @mechanism = Authenticators.normalize_name(mechanism)
@@ -93,8 +94,17 @@ module Net
         # using #authenticator.  Authentication failures will raise an
         # exception.  Any exceptions other than AuthenticationCanceled or those
         # in <tt>client.response_errors</tt> will drop the connection.
+        #
+        # When <tt>authenticator.process</tt> raises any StandardError
+        # (including AuthenticationCanceled), the authentication exchange will
+        # be canceled before re-raising the exception.  The server will usually
+        # respond with an error response, and the client will most likely raise
+        # that error.  This client error will supercede the original error.
+        # Unfortunately, the original error will not be the +#cause+ for the
+        # client error.  But it will be available on #process_error.
         def authenticate
           client.run_command(mechanism, initial_response) { process _1 }
+            .tap { raise process_error if process_error }
             .tap { raise AuthenticationIncomplete, _1 unless done? }
         rescue AuthenticationCanceled, *client.response_errors
           raise # but don't drop the connection
@@ -128,9 +138,12 @@ module Net
         end
 
         def process(challenge)
-          client.encode authenticator.process client.decode challenge
-        ensure
           @processed = true
+          return client.cancel_response if process_error
+          client.encode authenticator.process client.decode challenge
+        rescue => process_error
+          @process_error = process_error
+          client.cancel_response
         end
 
       end

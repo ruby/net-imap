@@ -165,4 +165,23 @@ class IMAPAuthenticateTest < Net::IMAP::TestCase
     end
   end
 
+  test "#authenticate can be canceled with SASL::AuthenticationCanceled" do
+    with_fake_server(
+      preauth: false, cleartext_auth: true,
+      sasl_ir: false, sasl_mechanisms: %i[PLAIN]
+    ) do |server, imap|
+      registry = Net::IMAP::SASL::Authenticators.new(use_defaults: false)
+      registry.add_authenticator :plain, ->(*a, **kw, &b) {
+        ->(challenge) {
+          raise(Net::IMAP::SASL::AuthenticationCanceled,
+                "a: %p, kw: %p, b: %p" % [a, kw, b])
+        }
+      }
+      assert_raise_with_message(Net::IMAP::BadResponseError, "canceled") do
+        imap.authenticate(:plain, hello: :world, registry: registry)
+      end
+      refute imap.disconnected?
+    end
+  end
+
 end
