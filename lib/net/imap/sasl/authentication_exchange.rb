@@ -81,6 +81,7 @@ module Net
         attr_reader :mechanism, :authenticator
 
         def initialize(client, mechanism, authenticator, sasl_ir: true)
+          client => SASL::ClientAdapter
           @client = client
           @mechanism = Authenticators.normalize_name(mechanism)
           @authenticator = authenticator
