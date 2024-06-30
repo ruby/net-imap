@@ -1351,11 +1351,19 @@ module Net
         response = authenticator.process(nil)
         cmdargs << (response.empty? ? "=" : [response].pack("m0"))
       end
+      process_error = nil
       result = send_command_with_continuations(*cmdargs) {|data|
-        challenge = data.unpack1("m")
-        response  = authenticator.process challenge
-        [response].pack("m0")
+        unless process_error
+          challenge = data.unpack1("m")
+          response  = begin
+            authenticator.process challenge
+          rescue => ex
+            process_error = ex
+          end
+        end
+        process_error ? "*" : [response].pack("m0")
       }
+      raise process_error if process_error
       if authenticator.respond_to?(:done?) && !authenticator.done?
         logout!
         raise SASL::AuthenticationIncomplete, result
