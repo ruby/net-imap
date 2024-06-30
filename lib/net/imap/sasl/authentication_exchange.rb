@@ -91,12 +91,12 @@ module Net
 
         # Call #authenticate to execute an authentication exchange for #client
         # using #authenticator.  Authentication failures will raise an
-        # exception.  Any exceptions other than those in RESPONSE_ERRORS will
-        # drop the connection.
+        # exception.  Any exceptions other than AuthenticationCanceled or those
+        # in <tt>client.response_errors</tt> will drop the connection.
         def authenticate
           client.run_command(mechanism, initial_response) { process _1 }
             .tap { raise AuthenticationIncomplete, _1 unless done? }
-        rescue *client.response_errors
+        rescue AuthenticationCanceled, *client.response_errors
           raise # but don't drop the connection
         rescue
           client.drop_connection
