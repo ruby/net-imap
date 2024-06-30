@@ -9,39 +9,70 @@ module Net
       # TODO: catch exceptions in #process and send #cancel_response.
       # TODO: raise an error if the command succeeds after being canceled.
       # TODO: use with more clients, to verify the API can accommodate them.
+      # TODO: pass ClientAdapter#service to SASL.authenticator
       #
-      # Create an AuthenticationExchange from a client adapter and a mechanism
-      # authenticator:
-      #     def authenticate(mechanism, ...)
-      #       authenticator = SASL.authenticator(mechanism, ...)
-      #       SASL::AuthenticationExchange.new(
-      #         sasl_adapter, mechanism, authenticator
-      #       ).authenticate
+      # An AuthenticationExchange represents a single attempt to authenticate
+      # a SASL client to a SASL server.  It is created from a client adapter, a
+      # mechanism name, and a mechanism authenticator.  When #authenticate is
+      # called, it will send the appropriate authenticate command to the server,
+      # returning the client response on success and raising an exception on
+      # failure.
+      #
+      # In most cases, the client will not need to use
+      # SASL::AuthenticationExchange directly at all.  Instead, use
+      # SASL::ClientAdapter#authenticate.  If customizations are needed, the
+      # custom client adapter is probably the best place for that code.
+      #
+      #     def authenticate(...)
+      #       MyClient::SASLAdapter.new(self).authenticate(...)
       #     end
       #
-      #     private
+      # SASL::ClientAdapter#authenticate delegates to ::authenticate, like so:
       #
-      #     def sasl_adapter = MyClientAdapter.new(self, &method(:send_command))
-      #
-      # Or delegate creation of the authenticator to ::build:
       #     def authenticate(...)
-      #       SASL::AuthenticationExchange.build(sasl_adapter, ...)
-      #         .authenticate
-      #     end
-      #
-      # As a convenience, ::authenticate combines ::build and #authenticate:
-      #     def authenticate(...)
+      #       sasl_adapter = MyClient::SASLAdapter.new(self)
       #       SASL::AuthenticationExchange.authenticate(sasl_adapter, ...)
       #     end
       #
-      # Likewise, ClientAdapter#authenticate delegates to #authenticate:
-      #     def authenticate(...) = sasl_adapter.authenticate(...)
+      # ::authenticate simply delegates to ::build and #authenticate, like so:
+      #
+      #     def authenticate(...)
+      #       sasl_adapter = MyClient::SASLAdapter.new(self)
+      #       SASL::AuthenticationExchange
+      #         .build(sasl_adapter, ...)
+      #         .authenticate
+      #     end
+      #
+      # And ::build delegates to SASL.authenticator and ::new, like so:
+      #
+      #     def authenticate(mechanism, ...)
+      #       sasl_adapter = MyClient::SASLAdapter.new(self)
+      #       authenticator = SASL.authenticator(mechanism, ...)
+      #       SASL::AuthenticationExchange
+      #         .new(sasl_adapter, mechanism, authenticator)
+      #         .authenticate
+      #     end
       #
       class AuthenticationExchange
         # Convenience method for <tt>build(...).authenticate</tt>
+        #
+        # See also: SASL::ClientAdapter#authenticate
         def self.authenticate(...) build(...).authenticate end
 
-        # Use +registry+ to override the global Authenticators registry.
+        # Convenience method to combine the creation of a new authenticator and
+        # a new Authentication exchange.
+        #
+        # +client+ must be an instance of SASL::ClientAdapter.
+        #
+        # +mechanism+ must be a SASL mechanism name, as a string or symbol.
+        #
+        # +sasl_ir+ allows or disallows sending an "initial response", depending
+        # also on whether the server capabilities, mechanism authenticator, and
+        # client adapter all support it.  Defaults to +true+.
+        #
+        # +mechanism+, +args+, +kwargs+, and +block+ are all forwarded to
+        # SASL.authenticator.  Use the +registry+ kwarg to override the global
+        # SASL::Authenticators registry.
         def self.build(client, mechanism, *args, sasl_ir: true, **kwargs, &block)
           authenticator = SASL.authenticator(mechanism, *args, **kwargs, &block)
           new(client, mechanism, authenticator, sasl_ir: sasl_ir)

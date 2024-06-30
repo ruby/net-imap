@@ -36,7 +36,7 @@ module Net
         # Delegates to AuthenticationExchange.authenticate.
         def authenticate(...) AuthenticationExchange.authenticate(self, ...) end
 
-        # Do the protocol and server both support an initial response?
+        # Do the protocol, server, and client all support an initial response?
         def sasl_ir_capable?; client.sasl_ir_capable? end
 
         # Does the server advertise support for the mechanism?
