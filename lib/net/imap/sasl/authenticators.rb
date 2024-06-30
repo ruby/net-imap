@@ -21,6 +21,10 @@ module Net::IMAP::SASL
   # ScramSHA1Authenticator for examples.
   class Authenticators
 
+    # Normalize the mechanism name as an uppercase string, with underscores
+    # converted to dashes.
+    def self.normalize_name(mechanism) -(mechanism.to_s.upcase.tr(?_, ?-)) end
+
     # Create a new Authenticators registry.
     #
     # This class is usually not instantiated directly.  Use SASL.authenticators
@@ -65,7 +69,6 @@ module Net::IMAP::SASL
     # lazily loaded from <tt>Net::IMAP::SASL::#{name}Authenticator</tt> (case is
     # preserved and non-alphanumeric characters are removed..
     def add_authenticator(name, authenticator = nil)
-      key = -name.to_s.upcase.tr(?_, ?-)
       authenticator ||= begin
         class_name = "#{name.gsub(/[^a-zA-Z0-9]/, "")}Authenticator".to_sym
         auth_class = nil
@@ -74,17 +77,18 @@ module Net::IMAP::SASL
           auth_class.new(*creds, **props, &block)
         }
       end
+      key = Authenticators.normalize_name(name)
       @authenticators[key] = authenticator
     end
 
     # Removes the authenticator registered for +name+
     def remove_authenticator(name)
-      key = -name.to_s.upcase.tr(?_, ?-)
+      key = Authenticators.normalize_name(name)
       @authenticators.delete(key)
     end
 
     def mechanism?(name)
-      key = -name.to_s.upcase.tr(?_, ?-)
+      key = Authenticators.normalize_name(name)
       @authenticators.key?(key)
     end
 
@@ -105,7 +109,7 @@ module Net::IMAP::SASL
     #   only.  Protocol client users should see refer to their client's
     #   documentation, e.g. Net::IMAP#authenticate.
     def authenticator(mechanism, ...)
-      key = -mechanism.to_s.upcase.tr(?_, ?-)
+      key = Authenticators.normalize_name(mechanism)
       auth = @authenticators.fetch(key) do
         raise ArgumentError, 'unknown auth type - "%s"' % key
       end
