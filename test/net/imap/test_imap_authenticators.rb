@@ -5,6 +5,13 @@ require "test/unit"
 
 class IMAPAuthenticatorsTest < Test::Unit::TestCase
 
+  test "SASL::Authenticators.normalize_name" do
+    authenticators = Net::IMAP::SASL::Authenticators
+    assert_equal "FOO-BAR-BAZ", authenticators.normalize_name(:foo_bar_baz)
+    assert_equal "SCRAM-SHA1-PLUS", authenticators.normalize_name(:scram_sha1_plus)
+    assert_equal "PLAIN", authenticators.normalize_name("pLAin")
+  end
+
   def test_net_imap_authenticator_deprecated
     assert_warn(/Net::IMAP\.authenticator .+deprecated./) do
       Net::IMAP.authenticator("PLAIN", "user", "pass")

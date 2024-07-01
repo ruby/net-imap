@@ -1242,6 +1242,9 @@ module Net
     # +SASL-IR+ capability, below).  Defaults to the #config value for
     # {sasl_ir}[rdoc-ref:Config#sasl_ir], which defaults to +true+.
     #
+    # The +registry+ kwarg can be used to select the mechanism implementation
+    # from a custom registry.  See SASL.authenticator and SASL::Authenticators.
+    #
     # All other arguments are forwarded to the registered SASL authenticator for
     # the requested mechanism.  <em>The documentation for each individual
     # mechanism must be consulted for its specific parameters.</em>
@@ -1336,29 +1339,9 @@ module Net
     # Previously cached #capabilities will be cleared when this method
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
-    def authenticate(mechanism, *creds,
-                     sasl_ir: config.sasl_ir,
-                     **props, &callback)
-      mechanism = mechanism.to_s.tr("_", "-").upcase
-      authenticator = SASL.authenticator(mechanism, *creds, **props, &callback)
-      cmdargs = ["AUTHENTICATE", mechanism]
-      if sasl_ir && capable?("SASL-IR") && auth_capable?(mechanism) &&
-          authenticator.respond_to?(:initial_response?) &&
-          authenticator.initial_response?
-        response = authenticator.process(nil)
-        cmdargs << (response.empty? ? "=" : [response].pack("m0"))
-      end
-      result = send_command_with_continuations(*cmdargs) {|data|
-        challenge = data.unpack1("m")
-        response  = authenticator.process challenge
-        [response].pack("m0")
-      }
-      if authenticator.respond_to?(:done?) && !authenticator.done?
-        logout!
-        raise SASL::AuthenticationIncomplete, result
-      end
-      @capabilities = capabilities_from_resp_code result
-      result
+    def authenticate(*args, sasl_ir: config.sasl_ir, **props, &callback)
+      sasl_adapter.authenticate(*args, sasl_ir: sasl_ir, **props, &callback)
+        .tap { @capabilities = capabilities_from_resp_code _1 }
     end
 
     # Sends a {LOGIN command [IMAP4rev1 §6.2.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.3]
