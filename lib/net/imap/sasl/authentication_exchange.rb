@@ -82,6 +82,9 @@ module Net
         # An exception that has been raised by <tt>authenticator.process</tt>.
         attr_reader :process_error
 
+        # An exception that represents an error response from the server.
+        attr_reader :response_error
+
         def initialize(client, mechanism, authenticator, sasl_ir: true)
           @client = client
           @mechanism = Authenticators.normalize_name(mechanism)
@@ -103,9 +106,11 @@ module Net
         # Unfortunately, the original error will not be the +#cause+ for the
         # client error.  But it will be available on #process_error.
         def authenticate
-          client.run_command(mechanism, initial_response) { process _1 }
-            .tap { raise process_error if process_error }
-            .tap { raise AuthenticationIncomplete, _1 unless done? }
+          handle_cancellation do
+            client.run_command(mechanism, initial_response) { process _1 }
+              .tap { raise process_error if process_error }
+              .tap { raise AuthenticationIncomplete, _1 unless done? }
+          end
         rescue AuthenticationCanceled, *client.response_errors
           raise # but don't drop the connection
         rescue
@@ -141,9 +146,51 @@ module Net
           @processed = true
           return client.cancel_response if process_error
           client.encode authenticator.process client.decode challenge
-        rescue => process_error
-          @process_error = process_error
+        rescue AuthenticationCanceled => error
+          @process_error = error
           client.cancel_response
+        rescue => error
+          @process_error = begin
+            raise AuthenticationError, "error while processing server challenge"
+          rescue
+            $!
+          end
+          client.cancel_response
+        end
+
+        # | process | response | => result                                |
+        # |---------|----------|------------------------------------------|
+        # | success | success  | success                                  |
+        # | success | error    | reraise response error                   |
+        # | error   | success  | raise incomplete error (cause = process) |
+        # | error   | error    | raise canceled error   (cause = process) |
+        def handle_cancellation
+          result = begin
+            yield
+          rescue *client.response_errors => error
+            @response_error = error
+            raise unless process_error
+          end
+          raise_mutual_cancellation!       if process_error &&  response_error
+          raise_incomplete_cancel!(result) if process_error && !response_error
+          result
+        end
+
+        def raise_mutual_cancellation!
+          raise process_error # sets the cause
+        rescue
+          raise AuthenticationCanceled.new(
+            "authentication canceled (see error #cause and #response)",
+            response: response_error
+          )
+        end
+
+        def raise_incomplete_cancellation!
+          raise process_error # sets the cause
+        rescue
+          raise AuthenticationIncomplete.new(
+            response_error, "server ignored canceled authentication"
+          )
         end
 
       end
