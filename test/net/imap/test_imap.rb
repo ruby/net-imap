@@ -1021,14 +1021,24 @@ EOF
     ) do |server, imap|
       registry = Net::IMAP::SASL::Authenticators.new(use_defaults: false)
       registry.add_authenticator :plain, ->(*a, **kw, &b) {
-        ->(challenge) {
+        obj = Object.new
+        obj.define_singleton_method(:process) do |challenge|
           raise(Net::IMAP::SASL::AuthenticationCanceled,
-                "a: %p, kw: %p, b: %p" % [a, kw, b])
-        }
+                "a: %p, kw: %p, b: %p, c: %p" % [a, kw, b, challenge])
+        end
+        obj
       }
-      assert_raise_with_message(Net::IMAP::BadResponseError, "canceled") do
-        imap.authenticate(:plain, hello: :world, registry: registry)
+      error = nil
+      assert_raise_with_message(Net::IMAP::SASL::AuthenticationCanceled,
+                                /authentication canceled/i) do
+        imap.authenticate(:plain, foo: :bar, registry: registry)
+      rescue => error
+        raise # for assert_raise
       end
+      assert_kind_of Net::IMAP::SASL::AuthenticationCanceled,  error.cause
+      assert_equal   'a: [], kw: {:foo=>:bar}, b: nil, c: ""', error.cause.to_s
+      assert_kind_of Net::IMAP::BadResponseError, error.response
+      assert_equal   "canceled",                  error.response.to_s
       refute imap.disconnected?
     end
   end
