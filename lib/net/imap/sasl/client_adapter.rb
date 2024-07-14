@@ -79,6 +79,12 @@ module Net
           command_proc.call(*args, &continuations_handler)
         end
 
+        # The hostname to which the client connected.
+        def host;             client.host end
+
+        # The destination port to which the client connected.
+        def port;             client.port end
+
         # Returns an array of server responses errors raised by run_command.
         # Exceptions in this array won't drop the connection.
         def response_errors; [] end
