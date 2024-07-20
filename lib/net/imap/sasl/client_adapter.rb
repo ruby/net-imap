@@ -18,6 +18,13 @@ module Net
       # will probably need to override some methods.  Additionally, subclasses
       # may need to include a protocol adapter mixin, if the default
       # ProtocolAdapters::Generic isn't sufficient.
+      #
+      # === Protocol Requirements
+      #
+      # {RFC4422 §4}[https://www.rfc-editor.org/rfc/rfc4422.html#section-4]
+      # lists requirements for protocol specifications to offer SASL.  Where
+      # possible, ClientAdapter delegates the handling of these requirements to
+      # SASL::ProtocolAdapters.
       class ClientAdapter
         extend Forwardable
 
