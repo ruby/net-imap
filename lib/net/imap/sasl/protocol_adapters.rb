@@ -8,7 +8,7 @@ module Net
         # This API is experimental, and may change.
         module Generic
           def command_name;     "AUTHENTICATE" end
-          def service;          raise "Implement in subclass or module" end
+          def service;          "host" end
           def encode_ir(string) string.empty? ? "=" : encode(string) end
           def encode(string)    [string].pack("m0") end
           def decode(string)    string.unpack1("m0") end
