@@ -2037,7 +2037,7 @@ module Net
               return Token.new(T_SPACE, $+)
             elsif $2
               len = $+.to_i
-              val = @str[@pos, len]
+              val = @str.byteslice(@pos, len)
               @pos += len
               return Token.new(T_LITERAL8, val)
             elsif $3 && $7
@@ -2068,7 +2068,7 @@ module Net
               return Token.new(T_RBRA, $+)
             elsif $16
               len = $+.to_i
-              val = @str[@pos, len]
+              val = @str.byteslice(@pos, len)
               @pos += len
               return Token.new(T_LITERAL, val)
             elsif $17
@@ -2097,7 +2097,7 @@ module Net
               return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $5
               len = $+.to_i
-              val = @str[@pos, len]
+              val = @str.byteslice(@pos, len)
               @pos += len
               return Token.new(T_LITERAL, val)
             elsif $6
