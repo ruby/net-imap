@@ -61,6 +61,19 @@
             xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\r\n\r\n"
       raw_data: *test_fetch_msg_att_HEADER_FIELDS
 
+  test_fetch_msg_att_HEADER.FIELDS_quoted:
+    :response: &test_fetch_msg_att_HEADER_FIELDS_quoted
+      "* 10 FETCH (BODY[HEADER.FIELDS (\"Content-Type\")] {95}\r\nContent-Type: multipart/alternative;\r\n
+        boundary=\"--==_mimepart_66cfb08b4f249_34306b61811e5\"\r\n\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 10
+        attr:
+          "BODY[HEADER.FIELDS (\"Content-Type\")]": "Content-Type: multipart/alternative;\r\n
+            boundary=\"--==_mimepart_66cfb08b4f249_34306b61811e5\"\r\n\r\n"
+      raw_data: *test_fetch_msg_att_HEADER_FIELDS_quoted
+
   test_fetch_msg_att_HEADER.FIELDS.NOT:
     :response: &test_fetch_msg_att_HEADER_FIELDS_NOT
       "* 20368 FETCH (BODY[HEADER.FIELDS.NOT (Received DKIM-Signature List-Unsubscribe

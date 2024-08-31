@@ -1339,7 +1339,8 @@ module Net
         assert_no_lookahead
         start = @pos
         astring
-        @str[start...@pos - 1]
+        end_pos = @token ? @pos - 1 : @pos
+        @str[start...end_pos]
       end
 
       # mailbox-data    =  "FLAGS" SP flag-list / "LIST" SP mailbox-list /
