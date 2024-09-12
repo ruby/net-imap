@@ -1284,8 +1284,7 @@ module Net
       # String, Set, Array, or... any type of object.
       def input_try_convert(input)
         SequenceSet.try_convert(input) ||
-          # Integer.try_convert(input) || # ruby 3.1+
-          input.respond_to?(:to_int) && Integer(input.to_int) ||
+          Integer.try_convert(input) ||
           String.try_convert(input) ||
           input
       end
