@@ -1950,7 +1950,7 @@ module Net
     # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
     def uid_expunge(uid_set)
       synchronize do
-        send_command("UID EXPUNGE", MessageSet.new(uid_set))
+        send_command("UID EXPUNGE", SequenceSet.new(uid_set))
         clear_responses("EXPUNGE")
       end
     end
@@ -2912,9 +2912,9 @@ module Net
       synchronize do
         clear_responses("FETCH")
         if mod
-          send_command(cmd, MessageSet.new(set), attr, mod)
+          send_command(cmd, SequenceSet.new(set), attr, mod)
         else
-          send_command(cmd, MessageSet.new(set), attr)
+          send_command(cmd, SequenceSet.new(set), attr)
         end
         clear_responses("FETCH")
       end
@@ -2922,7 +2922,7 @@ module Net
 
     def store_internal(cmd, set, attr, flags, unchangedsince: nil)
       attr = RawData.new(attr) if attr.instance_of?(String)
-      args = [MessageSet.new(set)]
+      args = [SequenceSet.new(set)]
       args << ["UNCHANGEDSINCE", Integer(unchangedsince)] if unchangedsince
       args << attr << flags
       synchronize do
@@ -2933,7 +2933,7 @@ module Net
     end
 
     def copy_internal(cmd, set, mailbox)
-      send_command(cmd, MessageSet.new(set), mailbox)
+      send_command(cmd, SequenceSet.new(set), mailbox)
     end
 
     def sort_internal(cmd, sort_keys, search_keys, charset)
@@ -2964,7 +2964,7 @@ module Net
       keys.collect! do |i|
         case i
         when -1, Range, Array
-          MessageSet.new(i)
+          SequenceSet.new(i)
         else
           i
         end
