@@ -20,11 +20,6 @@
               excl: false
             results: !ruby/object:Net::IMAP::SequenceSet
               string: 200:250,252:300
-              tuples:
-              - - 200
-                - 250
-              - - 252
-                - 300
       raw_data: "* ESEARCH (TAG \"A01\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
 
   "RFC9394 PARTIAL 3.1. example 2":
@@ -43,9 +38,6 @@
               excl: false
             results: !ruby/object:Net::IMAP::SequenceSet
               string: 55500:56000
-              tuples:
-              - - 55500
-                - 56000
       raw_data: "* ESEARCH (TAG \"A02\") UID PARTIAL (23500:24000 55500:56000)\r\n"
 
   "RFC9394 PARTIAL 3.1. example 3":
