@@ -8,18 +8,26 @@ module Net
       #
       # TODO: use with more clients, to verify the API can accommodate them.
       #
-      # An abstract base class for implementing a SASL authentication exchange.
-      # Different clients will each have their own adapter subclass, overridden
-      # to match their needs.
+      # Represents the client to a SASL::AuthenticationExchange.  By default,
+      # most methods simply delegate to #client.  Clients should subclass
+      # SASL::ClientAdapter and override methods as needed to match the
+      # semantics of this API to their API.
       #
-      # Although the default implementations _may_ be sufficient, subclasses
-      # will probably need to override some methods.  Additionally, subclasses
-      # may need to include a protocol adapter mixin, if the default
+      # Subclasses should also include a protocol adapter mixin when the default
       # ProtocolAdapters::Generic isn't sufficient.
+      #
+      # === Protocol Requirements
+      #
+      # {RFC4422 §4}[https://www.rfc-editor.org/rfc/rfc4422.html#section-4]
+      # lists requirements for protocol specifications to offer SASL.  Where
+      # possible, ClientAdapter delegates the handling of these requirements to
+      # SASL::ProtocolAdapters.
       class ClientAdapter
         include ProtocolAdapters::Generic
 
         # The client that handles communication with the protocol server.
+        #
+        # Most ClientAdapter methods are simply delegated to #client by default.
         attr_reader :client
 
         # +command_proc+ can used to avoid exposing private methods on #client.
@@ -52,13 +60,9 @@ module Net
         def authenticate(...) AuthenticationExchange.authenticate(self, ...) end
 
         # Do the protocol, server, and client all support an initial response?
-        #
-        # By default, this simply delegates to <tt>client.sasl_ir_capable?</tt>.
         def sasl_ir_capable?; client.sasl_ir_capable? end
 
-        # Does the server advertise support for the mechanism?
-        #
-        # By default, this simply delegates to <tt>client.auth_capable?</tt>.
+        # Does the server advertise support for the +mechanism+?
         def auth_capable?(mechanism); client.auth_capable?(mechanism) end
 
         # Calls command_proc with +command_name+ (see
@@ -89,15 +93,12 @@ module Net
         # Exceptions in this array won't drop the connection.
         def response_errors; [] end
 
-        # Drop the connection gracefully.
-        #
-        # By default, this simply delegates to <tt>client.drop_connection</tt>.
+        # Drop the connection gracefully, sending a "LOGOUT" command as needed.
         def drop_connection;  client.drop_connection end
 
-        # Drop the connection abruptly.
-        #
-        # By default, this simply delegates to <tt>client.drop_connection!</tt>.
+        # Drop the connection abruptly, closing the socket without logging out.
         def drop_connection!; client.drop_connection! end
+
       end
     end
   end
