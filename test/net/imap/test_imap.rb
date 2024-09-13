@@ -626,17 +626,20 @@ class IMAPTest < Test::Unit::TestCase
         imap.__send__(:send_command, "TEST", 2**32)
       end
       # MessageSet numbers may be non-zero uint32
-      assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
+      stderr = EnvUtil.verbose_warning do
+        assert_raise(Net::IMAP::DataFormatError) do
+          imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
+        end
+        assert_raise(Net::IMAP::DataFormatError) do
+          imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
+        end
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
+        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32 - 1))
+        assert_raise(Net::IMAP::DataFormatError) do
+          imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32))
+        end
       end
-      assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
-      end
-      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
-      imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32 - 1))
-      assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32))
-      end
+      assert_match(/DEPRECATED:.+MessageSet.+replace.+with.+SequenceSet/, stderr)
       # SequenceSet numbers may be non-zero uint3, and -1 is translated to *
       imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(-1))
       assert_raise(Net::IMAP::DataFormatError) do

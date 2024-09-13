@@ -179,6 +179,7 @@ module Net
       end
     end
 
+    # *DEPRECATED*.  Replaced by SequenceSet.
     class MessageSet # :nodoc:
       def send_data(imap, tag)
         imap.__send__(:put_string, format_internal(@data))
@@ -192,6 +193,15 @@ module Net
 
       def initialize(data)
         @data = data
+        warn "DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}."
+        begin
+          # to ensure the input works with SequenceSet, too
+          SequenceSet.new(data)
+        rescue
+          warn "MessageSet input is incompatible with SequenceSet: [%s] %s" % [
+            $!.class, $!.message
+          ]
+        end
       end
 
       def format_internal(data)
