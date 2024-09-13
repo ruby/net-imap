@@ -61,6 +61,7 @@ class Net::IMAP::FakeServer
     @config     = Configuration.new(...)
     @tcp_server = TCPServer.new(config.hostname, config.port)
     @connection = nil
+    @mutex      = Thread::Mutex.new
   end
 
   def host; tcp_server.addr[2] end
@@ -84,9 +85,11 @@ class Net::IMAP::FakeServer
   # accepted and closed.  This may change in the future.  Call #shutdown
   # explicitly to ensure the server socket is unbound.
   def shutdown
-    connection&.close
-    commands&.close if connection&.commands&.closed?&.!
-    tcp_server.close
+    @mutex.synchronize do
+      connection&.close
+      commands&.close if connection&.commands&.closed?&.!
+      tcp_server.close
+    end
   end
 
   # A Queue that contains every command the server has received.
