@@ -1406,12 +1406,11 @@ module Net
       end
 
       def nz_number(num)
-        case num
-        when Integer, /\A[1-9]\d*\z/ then num = Integer(num)
-        else raise DataFormatError, "%p is not a valid nz-number" % [num]
-        end
-        NumValidator.ensure_nz_number(num)
-        num
+        String === num && !/\A[1-9]\d*\z/.match?(num) and
+          raise DataFormatError, "%p is not a valid nz-number" % [num]
+        NumValidator.ensure_nz_number Integer num
+      rescue TypeError # To catch errors from Integer()
+        raise DataFormatError, $!.message
       end
 
       # intentionally defined after the class implementation
