@@ -99,6 +99,8 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet.new "2 "         end
     assert_raise DataFormatError do SequenceSet.new "2,"         end
     assert_raise DataFormatError do SequenceSet.new Time.now     end
+    assert_raise DataFormatError do SequenceSet.new Set[1, [2]]  end
+    assert_raise DataFormatError do SequenceSet.new Set[1..20]   end
   end
 
   test ".new, input may be empty" do

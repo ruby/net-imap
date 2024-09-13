@@ -37,7 +37,8 @@ module Net
     #
     # SequenceSet.new may receive a single optional argument: a non-zero 32 bit
     # unsigned integer, a range, a <tt>sequence-set</tt> formatted string,
-    # another sequence set, or an enumerable containing any of these.
+    # another sequence set, a Set (containing only numbers), or an enumerable
+    # containing any of these (which may be nested).
     #
     #     set = Net::IMAP::SequenceSet.new(1)
     #     set.valid_string  #=> "1"
@@ -1271,6 +1272,7 @@ module Net
         when *STARS, Integer, Range then [input_to_tuple(obj)]
         when String      then str_to_tuples obj
         when SequenceSet then obj.tuples
+        when Set         then obj.map      { to_tuple_int _1 }
         when ENUMABLE    then obj.flat_map { input_to_tuples _1 }
         when nil         then []
         else
