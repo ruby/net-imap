@@ -52,11 +52,6 @@
           SEQ: !ruby/struct:Net::IMAP::ExtensionData
             data: !ruby/object:Net::IMAP::SequenceSet
               string: 1234:5,*:789654
-              tuples:
-              - - 5
-                - 1234
-              - - 789654
-                - 4294967296
           COMP-EMPTY: !ruby/struct:Net::IMAP::ExtensionData
             data: []
           COMP-QUOTED: !ruby/struct:Net::IMAP::ExtensionData

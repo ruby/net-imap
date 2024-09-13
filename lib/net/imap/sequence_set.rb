@@ -1369,6 +1369,18 @@ module Net
         imap.__send__(:put_string, valid_string)
       end
 
+      # For YAML serialization
+      def encode_with(coder) # :nodoc:
+        # we can perfectly reconstruct from the string
+        coder['string'] = to_s
+      end
+
+      # For YAML deserialization
+      def init_with(coder) # :nodoc:
+        @tuples = []
+        self.string = coder['string']
+      end
+
       protected
 
       attr_reader :tuples # :nodoc:
