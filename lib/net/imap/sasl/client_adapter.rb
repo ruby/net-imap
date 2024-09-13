@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "forwardable"
+
 module Net
   class IMAP
     module SASL
@@ -8,18 +10,28 @@ module Net
       #
       # TODO: use with more clients, to verify the API can accommodate them.
       #
-      # An abstract base class for implementing a SASL authentication exchange.
-      # Different clients will each have their own adapter subclass, overridden
-      # to match their needs.
+      # Represents the client to a SASL::AuthenticationExchange.  By default,
+      # most methods simply delegate to #client.  Clients should subclass
+      # SASL::ClientAdapter and override methods as needed to match the
+      # semantics of this API to their API.
       #
-      # Although the default implementations _may_ be sufficient, subclasses
-      # will probably need to override some methods.  Additionally, subclasses
-      # may need to include a protocol adapter mixin, if the default
+      # Subclasses should also include a protocol adapter mixin when the default
       # ProtocolAdapters::Generic isn't sufficient.
+      #
+      # === Protocol Requirements
+      #
+      # {RFC4422 §4}[https://www.rfc-editor.org/rfc/rfc4422.html#section-4]
+      # lists requirements for protocol specifications to offer SASL.  Where
+      # possible, ClientAdapter delegates the handling of these requirements to
+      # SASL::ProtocolAdapters.
       class ClientAdapter
+        extend Forwardable
+
         include ProtocolAdapters::Generic
 
         # The client that handles communication with the protocol server.
+        #
+        # Most ClientAdapter methods are simply delegated to #client by default.
         attr_reader :client
 
         # +command_proc+ can used to avoid exposing private methods on #client.
@@ -51,15 +63,17 @@ module Net
         # AuthenticationExchange.authenticate.
         def authenticate(...) AuthenticationExchange.authenticate(self, ...) end
 
+        ##
+        # method: sasl_ir_capable?
         # Do the protocol, server, and client all support an initial response?
-        #
-        # By default, this simply delegates to <tt>client.sasl_ir_capable?</tt>.
-        def sasl_ir_capable?; client.sasl_ir_capable? end
+        def_delegator :client, :sasl_ir_capable?
 
-        # Does the server advertise support for the mechanism?
+        ##
+        # method: auth_capable?
+        # call-seq: auth_capable?(mechanism)
         #
-        # By default, this simply delegates to <tt>client.auth_capable?</tt>.
-        def auth_capable?(mechanism); client.auth_capable?(mechanism) end
+        # Does the server advertise support for the +mechanism+?
+        def_delegator :client, :auth_capable?
 
         # Calls command_proc with +command_name+ (see
         # SASL::ProtocolAdapters::Generic#command_name),
@@ -79,19 +93,30 @@ module Net
           command_proc.call(*args, &continuations_handler)
         end
 
+        ##
+        # method: host
+        # The hostname to which the client connected.
+        def_delegator :client, :host
+
+        ##
+        # method: port
+        # The destination port to which the client connected.
+        def_delegator :client, :port
+
         # Returns an array of server responses errors raised by run_command.
         # Exceptions in this array won't drop the connection.
         def response_errors; [] end
 
-        # Drop the connection gracefully.
-        #
-        # By default, this simply delegates to <tt>client.drop_connection</tt>.
-        def drop_connection;  client.drop_connection end
+        ##
+        # method: drop_connection
+        # Drop the connection gracefully, sending a "LOGOUT" command as needed.
+        def_delegator :client, :drop_connection
 
-        # Drop the connection abruptly.
-        #
-        # By default, this simply delegates to <tt>client.drop_connection!</tt>.
-        def drop_connection!; client.drop_connection! end
+        ##
+        # method: drop_connection!
+        # Drop the connection abruptly, closing the socket without logging out.
+        def_delegator :client, :drop_connection!
+
       end
     end
   end
