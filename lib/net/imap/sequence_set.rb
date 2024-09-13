@@ -14,13 +14,6 @@ module Net
     # receive a SequenceSet as an argument, for example IMAP#search, IMAP#fetch,
     # and IMAP#store.
     #
-    # == EXPERIMENTAL API
-    #
-    # SequenceSet is currently experimental.  Only two methods, ::[] and
-    # #valid_string, are considered stable.  Although the API isn't expected to
-    # change much, any other methods may be removed or changed without
-    # deprecation.
-    #
     # == Creating sequence sets
     #
     # SequenceSet.new with no arguments creates an empty sequence set.  Note
