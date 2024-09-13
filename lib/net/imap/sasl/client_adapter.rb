@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "forwardable"
+
 module Net
   class IMAP
     module SASL
@@ -23,6 +25,8 @@ module Net
       # possible, ClientAdapter delegates the handling of these requirements to
       # SASL::ProtocolAdapters.
       class ClientAdapter
+        extend Forwardable
+
         include ProtocolAdapters::Generic
 
         # The client that handles communication with the protocol server.
@@ -59,11 +63,17 @@ module Net
         # AuthenticationExchange.authenticate.
         def authenticate(...) AuthenticationExchange.authenticate(self, ...) end
 
+        ##
+        # method: sasl_ir_capable?
         # Do the protocol, server, and client all support an initial response?
-        def sasl_ir_capable?; client.sasl_ir_capable? end
+        def_delegator :client, :sasl_ir_capable?
 
+        ##
+        # method: auth_capable?
+        # call-seq: auth_capable?(mechanism)
+        #
         # Does the server advertise support for the +mechanism+?
-        def auth_capable?(mechanism); client.auth_capable?(mechanism) end
+        def_delegator :client, :auth_capable?
 
         # Calls command_proc with +command_name+ (see
         # SASL::ProtocolAdapters::Generic#command_name),
@@ -83,21 +93,29 @@ module Net
           command_proc.call(*args, &continuations_handler)
         end
 
+        ##
+        # method: host
         # The hostname to which the client connected.
-        def host;             client.host end
+        def_delegator :client, :host
 
+        ##
+        # method: port
         # The destination port to which the client connected.
-        def port;             client.port end
+        def_delegator :client, :port
 
         # Returns an array of server responses errors raised by run_command.
         # Exceptions in this array won't drop the connection.
         def response_errors; [] end
 
+        ##
+        # method: drop_connection
         # Drop the connection gracefully, sending a "LOGOUT" command as needed.
-        def drop_connection;  client.drop_connection end
+        def_delegator :client, :drop_connection
 
+        ##
+        # method: drop_connection!
         # Drop the connection abruptly, closing the socket without logging out.
-        def drop_connection!; client.drop_connection! end
+        def_delegator :client, :drop_connection!
 
       end
     end
