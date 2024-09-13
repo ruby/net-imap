@@ -37,7 +37,8 @@ module Net
     #
     # SequenceSet.new may receive a single optional argument: a non-zero 32 bit
     # unsigned integer, a range, a <tt>sequence-set</tt> formatted string,
-    # another sequence set, or an enumerable containing any of these.
+    # another sequence set, a Set (containing only numbers), or an Array
+    # containing any of these (array inputs may be nested).
     #
     #     set = Net::IMAP::SequenceSet.new(1)
     #     set.valid_string  #=> "1"
@@ -289,8 +290,7 @@ module Net
       private_constant :STAR_INT, :STARS
 
       COERCIBLE = ->{ _1.respond_to? :to_sequence_set }
-      ENUMABLE  = ->{ _1.respond_to?(:each) && _1.respond_to?(:empty?) }
-      private_constant :COERCIBLE, :ENUMABLE
+      private_constant :COERCIBLE
 
       class << self
 
@@ -1271,7 +1271,8 @@ module Net
         when *STARS, Integer, Range then [input_to_tuple(obj)]
         when String      then str_to_tuples obj
         when SequenceSet then obj.tuples
-        when ENUMABLE    then obj.flat_map { input_to_tuples _1 }
+        when Set         then obj.map      { to_tuple_int _1 }
+        when Array       then obj.flat_map { input_to_tuples _1 }
         when nil         then []
         else
           raise DataFormatError,
@@ -1406,12 +1407,11 @@ module Net
       end
 
       def nz_number(num)
-        case num
-        when Integer, /\A[1-9]\d*\z/ then num = Integer(num)
-        else raise DataFormatError, "%p is not a valid nz-number" % [num]
-        end
-        NumValidator.ensure_nz_number(num)
-        num
+        String === num && !/\A[1-9]\d*\z/.match?(num) and
+          raise DataFormatError, "%p is not a valid nz-number" % [num]
+        NumValidator.ensure_nz_number Integer num
+      rescue TypeError # To catch errors from Integer()
+        raise DataFormatError, $!.message
       end
 
       # intentionally defined after the class implementation
