@@ -944,20 +944,12 @@ module Net
       @sock = tcp_socket(@host, @port)
       start_tls_session if ssl_ctx
       start_imap_connection
-
-      # DEPRECATED: to remove in next version
-      @client_thread = Thread.current
     end
 
     # Returns true after the TLS negotiation has completed and the remote
     # hostname has been verified.  Returns false when TLS has been established
     # but peer verification was disabled.
     def tls_verified?; @tls_verified end
-
-    def client_thread # :nodoc:
-      warn "Net::IMAP#client_thread is deprecated and will be removed soon."
-      @client_thread
-    end
 
     # Disconnects from the server.
     #
