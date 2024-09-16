@@ -9,7 +9,7 @@ module Net::IMAP::Authenticators
       "%s.%s is deprecated.  Use %s.%s instead." % [
         Net::IMAP, __method__, Net::IMAP::SASL, __method__
       ],
-      uplevel: 1
+      uplevel: 1, category: :deprecated
     )
     Net::IMAP::SASL.add_authenticator(...)
   end
@@ -20,7 +20,7 @@ module Net::IMAP::Authenticators
       "%s.%s is deprecated.  Use %s.%s instead." % [
         Net::IMAP, __method__, Net::IMAP::SASL, __method__
       ],
-      uplevel: 1
+      uplevel: 1, category: :deprecated
     )
     Net::IMAP::SASL.authenticator(...)
   end

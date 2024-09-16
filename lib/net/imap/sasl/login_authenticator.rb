@@ -29,7 +29,8 @@ class Net::IMAP::SASL::LoginAuthenticator
                  warn_deprecation: true,
                  **)
     if warn_deprecation
-      warn "WARNING: LOGIN SASL mechanism is deprecated. Use PLAIN instead."
+      warn "WARNING: LOGIN SASL mechanism is deprecated. Use PLAIN instead.",
+           category: :deprecated
     end
     @user = authcid || username || user
     @password = password || secret || pass

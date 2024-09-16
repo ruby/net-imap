@@ -939,7 +939,8 @@ module Net
       # for something else?
       #++
       def media_subtype
-        warn("media_subtype is obsolete, use subtype instead.\n", uplevel: 1)
+        warn("media_subtype is obsolete, use subtype instead.\n",
+             uplevel: 1, category: :deprecated)
         return subtype
       end
     end
@@ -984,7 +985,8 @@ module Net
       # generate a warning message to +stderr+, then return
       # the value of +subtype+.
       def media_subtype
-        warn("media_subtype is obsolete, use subtype instead.\n", uplevel: 1)
+        warn("media_subtype is obsolete, use subtype instead.\n",
+             uplevel: 1, category: :deprecated)
         return subtype
       end
     end
@@ -1182,7 +1184,8 @@ module Net
       # generate a warning message to +stderr+, then return
       # the value of +subtype+.
       def media_subtype
-        warn("media_subtype is obsolete, use subtype instead.\n", uplevel: 1)
+        warn("media_subtype is obsolete, use subtype instead.\n",
+             uplevel: 1, category: :deprecated)
         return subtype
       end
     end

@@ -20,7 +20,7 @@ class Net::IMAP::SASL::CramMD5Authenticator
                  warn_deprecation: true,
                  **)
     if warn_deprecation
-      warn "WARNING: CRAM-MD5 mechanism is deprecated." # TODO: recommend SCRAM
+      warn "WARNING: CRAM-MD5 mechanism is deprecated.", category: :deprecated
     end
     require "digest/md5"
     @user = authcid || username || user
