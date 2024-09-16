@@ -193,7 +193,8 @@ module Net
 
       def initialize(data)
         @data = data
-        warn "DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}."
+        warn("DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}.",
+             uplevel: 1, category: :deprecated)
         begin
           # to ensure the input works with SequenceSet, too
           SequenceSet.new(data)

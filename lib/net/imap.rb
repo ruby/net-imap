@@ -2545,7 +2545,8 @@ module Net
         when :raise
           raise ArgumentError, "Pass a block or use #clear_responses"
         when :warn
-          warn("DEPRECATED: pass a block or use #clear_responses", uplevel: 1)
+          warn("DEPRECATED: pass a block or use #clear_responses",
+               uplevel: 1, category: :deprecated)
         end
         @responses
       end

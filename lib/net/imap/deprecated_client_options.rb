@@ -83,10 +83,12 @@ module Net
         elsif deprecated.empty?
           super host, port: port_or_options
         elsif deprecated.shift
-          warn "DEPRECATED: Call Net::IMAP.new with keyword options", uplevel: 1
+          warn("DEPRECATED: Call Net::IMAP.new with keyword options",
+               uplevel: 1, category: :deprecated)
           super host, port: port_or_options, ssl: create_ssl_params(*deprecated)
         else
-          warn "DEPRECATED: Call Net::IMAP.new with keyword options", uplevel: 1
+          warn("DEPRECATED: Call Net::IMAP.new with keyword options",
+               uplevel: 1, category: :deprecated)
           super host, port: port_or_options, ssl: false
         end
       end
@@ -113,7 +115,8 @@ module Net
         elsif deprecated.first.respond_to?(:to_hash)
           super(**Hash.try_convert(deprecated.first))
         else
-          warn "DEPRECATED: Call Net::IMAP#starttls with keyword options", uplevel: 1
+          warn("DEPRECATED: Call Net::IMAP#starttls with keyword options",
+               uplevel: 1, category: :deprecated)
           super(**create_ssl_params(*deprecated))
         end
       end

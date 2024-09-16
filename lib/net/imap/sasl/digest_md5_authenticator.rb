@@ -161,7 +161,8 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     password ||= secret || pass or raise ArgumentError, "missing password"
     authzid  ||= authz
     if warn_deprecation
-      warn "WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331."
+      warn("WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331.",
+           category: :deprecated)
     end
 
     require "digest/md5"
