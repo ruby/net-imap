@@ -26,7 +26,6 @@ class IMAPRegexpsTest < Test::Unit::TestCase
       Net::IMAP,
       exclude_map: {
         Net::IMAP => %i[
-          BodyTypeAttachment BodyTypeExtension
           PlainAuthenticator
           XOauth2Authenticator
         ], # deprecated
