@@ -4,7 +4,8 @@ module Net
   class IMAP
     module SASL
 
-      # This API is *experimental*, and may change.
+      # AuthenticationExchange is used internally by Net::IMAP#authenticate.
+      # But the API is still *experimental*, and may change.
       #
       # TODO: catch exceptions in #process and send #cancel_response.
       # TODO: raise an error if the command succeeds after being canceled.
