@@ -100,6 +100,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC 9208: QUOTA extension
   generate_tests_from fixture_file: "rfc9208_quota_responses.yml"
 
+  # RFC 9586: UIDONLY extension
+  generate_tests_from fixture_file: "rfc9586_uidonly_responses.yml"
+
   ############################################################################
   # Workarounds or unspecified extensions:
   generate_tests_from fixture_file: "quirky_behaviors.yml"

@@ -1,0 +1,14 @@
+---
+:tests: 
+  "RFC9586 UIDONLY 3. UIDREQUIRED response code":
+    :response: "07 BAD [UIDREQUIRED] Message numbers are not allowed once UIDONLY is enabled\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag: '07'
+      name: BAD
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: UIDREQUIRED
+          data: 
+        text: Message numbers are not allowed once UIDONLY is enabled
+      raw_data: "07 BAD [UIDREQUIRED] Message numbers are not allowed once UIDONLY
+        is enabled\r\n"
