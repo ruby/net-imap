@@ -4,6 +4,7 @@ module Net
   class IMAP < Protocol
     autoload :ESearchResult,    "#{__dir__}/esearch_result"
     autoload :FetchData,        "#{__dir__}/fetch_data"
+    autoload :UIDFetchData,     "#{__dir__}/fetch_data"
     autoload :SearchResult,     "#{__dir__}/search_result"
     autoload :SequenceSet,      "#{__dir__}/sequence_set"
     autoload :VanishedData,     "#{__dir__}/vanished_data"

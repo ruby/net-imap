@@ -12,3 +12,15 @@
         text: Message numbers are not allowed once UIDONLY is enabled
       raw_data: "07 BAD [UIDREQUIRED] Message numbers are not allowed once UIDONLY
         is enabled\r\n"
+
+  "RFC9586 UIDONLY 3.3 UIDFETCH response":
+    :response: "* 25997 UIDFETCH (FLAGS (\\Flagged \\Answered))\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: UIDFETCH
+      data: !ruby/struct:Net::IMAP::UIDFetchData
+        uid: 25997
+        attr:
+          FLAGS:
+          - :Flagged
+          - :Answered
+      raw_data: "* 25997 UIDFETCH (FLAGS (\\Flagged \\Answered))\r\n"

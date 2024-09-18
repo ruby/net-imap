@@ -514,5 +514,8 @@ module Net
       end
 
     end
+    class UIDFetchData < Struct.new(:uid, :attr)
+      # TBD...
+    end
   end
 end
