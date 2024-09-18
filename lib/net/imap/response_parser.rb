@@ -1935,6 +1935,9 @@ module Net
       #
       # RFC8474: OBJECTID
       #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
+      #
+      # RFC9586: UIDONLY
+      #   resp-text-code   =/ "UIDREQUIRED"
       def resp_text_code
         name = resp_text_code__name
         data =
@@ -1957,6 +1960,7 @@ module Net
           when "HIGHESTMODSEQ"      then SP!; mod_sequence_value   # CONDSTORE
           when "MODIFIED"           then SP!; sequence_set         # CONDSTORE
           when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
+          when "UIDREQUIRED"        then                           # RFC9586: UIDONLY
           else
             SP? and text_chars_except_rbra
           end
