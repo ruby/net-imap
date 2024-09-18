@@ -539,6 +539,12 @@ module Net
   #   ESearchResult#partial return data.
   # - Updates #uid_fetch with the +partial+ modifier.
   #
+  # ==== RFC9586: +UIDONLY+
+  # - Updates #enable with +UIDONLY+ parameter.
+  # - Updates #uid_fetch and #uid_store to return +UIDFETCH+ response.
+  # - Updates #expunge and #uid_expunge to return +VANISHED+ response.
+  # - Prohibits use of message sequence numbers in responses or requests.
+  #
   # == References
   #
   # [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501.html]]::
@@ -711,6 +717,11 @@ module Net
   #   "IMAP PARTIAL Extension for Paged SEARCH and FETCH", RFC 9394,
   #   DOI 10.17487/RFC9394, June 2023,
   #   <https://www.rfc-editor.org/info/rfc9394>.
+  # [UIDONLY[https://www.rfc-editor.org/rfc/rfc9586.pdf]]::
+  #   Melnikov, A., Achuthan, A., Nagulakonda, V., Singh, A., and L. Alves,
+  #   "\IMAP Extension for Using and Returning Unique Identifiers (UIDs) Only",
+  #   RFC 9586, DOI 10.17487/RFC9586, May 2024,
+  #   <https://www.rfc-editor.org/info/rfc9586>.
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
@@ -2772,6 +2783,16 @@ module Net
     #   the client <tt>enable("UTF8=ACCEPT")</tt> before any mailboxes may be
     #   selected.  For convenience, <tt>enable("UTF8=ONLY")</tt> is aliased to
     #   <tt>enable("UTF8=ACCEPT")</tt>.
+    #
+    # [+UIDONLY+ {[RFC9586]}[https://www.rfc-editor.org/rfc/rfc9586.pdf]]
+    #
+    #   When UIDONLY is enabled, the #fetch, #store, #search, #copy, and #move
+    #   commands are prohibited and result in a tagged BAD response. Clients
+    #   should instead use uid_fetch, uid_store, uid_search, uid_copy, or
+    #   uid_move, respectively. All +FETCH+ responses that would be returned are
+    #   replaced by +UIDFETCH+ responses. All +EXPUNGED+ responses that would be
+    #   returned are replaced by +VANISHED+ responses. The "<sequence set>"
+    #   uid_search criterion is prohibited.
     #
     # ===== Unsupported capabilities
     #
