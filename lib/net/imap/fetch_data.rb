@@ -235,7 +235,7 @@ module Net
         fields && except and
           raise ArgumentError, "conflicting 'fields' and 'except' arguments"
         if fields
-          text = "HEADER.FIELDS (%s)"     % [fields.join(" ").upcase]
+          text = "HEADER.FIELDS (%s)" % [fields.join(" ").upcase]
           attr_upcase[body_section_attr(part_nums, text, offset: offset)]
         elsif except
           text = "HEADER.FIELDS.NOT (%s)" % [except.join(" ").upcase]
@@ -308,6 +308,7 @@ module Net
       # This is the same as getting the value for <tt>"BODYSTRUCTURE"</tt> from
       # #attr.
       def bodystructure; attr["BODYSTRUCTURE"] end
+
       alias body_structure bodystructure
 
       # :call-seq: envelope -> Envelope or nil
@@ -349,6 +350,7 @@ module Net
       def internaldate
         attr["INTERNALDATE"]&.then { IMAP.decode_time _1 }
       end
+
       alias internal_date internaldate
 
       # :call-seq: rfc822 -> String
@@ -379,6 +381,7 @@ module Net
       #   interpreted as a reference to the updated
       #   RFC5322[https://www.rfc-editor.org/rfc/rfc5322.html] standard.
       def rfc822_size; attr["RFC822.SIZE"] end
+
       alias size rfc822_size
 
       # :call-seq: rfc822_header -> String
@@ -508,14 +511,18 @@ module Net
         spec = Array(part).flatten.map { Integer(_1) }
         spec << text if text
         spec = spec.join(".")
-        if offset then "%s[%s]<%d>" % [attr, spec, Integer(offset)]
-        else           "%s[%s]"     % [attr, spec]
-        end
+        if offset then "%s[%s]<%d>" % [attr, spec, Integer(offset)] else "%s[%s]" % [attr, spec] end
       end
-
     end
+
     class UIDFetchData < Struct.new(:uid, :attr)
-      # TBD...
+      def initialize(...)
+        super
+        attr and
+          attr_uid = attr["UID"] and
+          attr_uid != uid and
+          warn "#{self.class} UIDs do not match (#{attr_uid} != #{uid})"
+      end
     end
   end
 end
