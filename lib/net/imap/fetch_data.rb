@@ -103,7 +103,10 @@ module Net
     # Note that the data will always be _returned_ without <tt>".PEEK"</tt>, in
     # <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
     #
-    class FetchData < Struct.new(:seqno, :attr)
+    class FetchData < Struct.new(:__msg_id_num__, :attr)
+      protected :__msg_id_num__
+
+      alias seqno __msg_id_num__
       ##
       # method: seqno
       # :call-seq: seqno -> Integer
@@ -515,7 +518,10 @@ module Net
       end
     end
 
-    class UIDFetchData < Struct.new(:uid, :attr)
+    class UIDFetchData < FetchData
+      undef seqno
+
+      alias uid __msg_id_num__
       def initialize(...)
         super
         attr and
