@@ -1573,12 +1573,6 @@ module Net
     # or when existing messages are expunged; see #add_response_handler for a
     # way to detect these events.
     #
-    # When the +condstore+ keyword argument is true, the server is told to
-    # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
-    # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
-    # #select and all `FETCH` responses will include FetchData#modseq.
-    # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
-    #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
     #
@@ -1593,9 +1587,22 @@ module Net
     #   imap.responses("NO", &:last)&.code&.name == "UIDNOTSTICKY"
     #
     # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported,
-    # the +condstore+ keyword parameter may be used.
+    # the +condstore+ keyword parameter may be used.  When the +condstore+
+    # keyword argument is true, the server is told to enable the extension.  If
+    # +mailbox+ supports persistence of mod-sequences, the +HIGHESTMODSEQ+
+    # ResponseCode will be sent as an untagged response to #select and all
+    # `FETCH` responses will include FetchData#modseq.  Otherwise, the
+    # +NOMODSEQ+ ResponseCode will be sent.
+    #
     #   imap.select("mbox", condstore: true)
     #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
+    #
+    # If [QRESYNC[https://www.rfc-editor.org/rfc/rfc7162.html]] is enabled,
+    # the +qresync+ keyword parameter may be used.  The optional +qresync+
+    # argument can provide quick resynchronization parameters: the last known
+    # UIDVALIDITY, the last known MODSEQ, <em>(optional)</em> known UIDs, and
+    # <em>(optional)</em> message sequence match data.
+    #
     def select(...)
       select_internal("SELECT", ...)
     end
@@ -2975,9 +2982,6 @@ module Net
     #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+QRESYNC+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
-    #   *NOTE:* The +QRESYNC+ argument to #select and #examine is not supported
-    #   yet.
-    #
     #   Adds quick resynchronization options to #select, #examine, and
     #   #uid_fetch.  +QRESYNC+ _must_ be explicitly enabled before using any of
     #   the extension's command parameters.  All +EXPUNGE+ responses will be
@@ -3600,9 +3604,12 @@ module Net
       end
     end
 
-    def select_internal(command, mailbox, condstore: false)
+    def select_internal(command, mailbox, condstore: false, qresync: nil)
       args = [command, mailbox]
-      args << ["CONDSTORE"] if condstore
+      params = []
+      params << "CONDSTORE"          if condstore
+      params << "QRESYNC" << qresync if qresync # TODO: validate qresync params
+      args   << params unless params.empty?
       synchronize do
         state_unselected! # implicitly closes current mailbox
         @responses.clear
