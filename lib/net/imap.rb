@@ -1885,18 +1885,39 @@ module Net
       send_command("UNSELECT")
     end
 
+    # call-seq:
+    #   expunge -> array of message sequence numbers
+    #   expunge -> VanishedData of UIDs
+    #
     # Sends an {EXPUNGE command [IMAP4rev1 §6.4.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.3]
-    # Sends a EXPUNGE command to permanently remove from the currently
-    # selected mailbox all messages that have the \Deleted flag set.
+    # to permanently remove all messages with the +\Deleted+ flag from the
+    # currently selected mailbox.
     #
     # Related: #uid_expunge
+    #
+    # ===== Capabilities
+    #
+    # When either QRESYNC[https://tools.ietf.org/html/rfc7162] or
+    # UIDONLY[https://tools.ietf.org/html/rfc9586] are enabled, #expunge
+    # returns VanishedData, which contains UIDs---<em>not message sequence
+    # numbers</em>.
+    #
+    # *NOTE:* Any unhandled +VANISHED+ #responses without the +EARLIER+ modifier
+    # will be merged into the VanishedData and deleted from #responses.  This is
+    # consistent with how Net::IMAP handles +EXPUNGE+ responses.  Unhandled
+    # <tt>VANISHED (EARLIER)</tt> responses will _not_ be merged or returned.
+    #
+    # *NOTE:* When no messages are expunged, Net::IMAP currently returns an
+    # empty array, regardless of which extensions have been enabled.  In the
+    # future, an empty VanishedData will be returned instead.
     def expunge
-      synchronize do
-        send_command("EXPUNGE")
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("EXPUNGE")
     end
 
+    # call-seq:
+    #   uid_expunge -> array of message sequence numbers
+    #   uid_expunge -> VanishedData of UIDs
+    #
     # Sends a {UID EXPUNGE command [RFC4315 §2.1]}[https://www.rfc-editor.org/rfc/rfc4315#section-2.1]
     # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
     # to permanently remove all messages that have both the <tt>\\Deleted</tt>
@@ -1920,13 +1941,13 @@ module Net
     #
     # ===== Capabilities
     #
-    # The server's capabilities must include +UIDPLUS+
+    # The server's capabilities must include either +IMAP4rev2+ or +UIDPLUS+
     # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
+    #
+    # Otherwise, #uid_expunge is updated by extensions in the same way as
+    # #expunge.
     def uid_expunge(uid_set)
-      synchronize do
-        send_command("UID EXPUNGE", SequenceSet.new(uid_set))
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("UID EXPUNGE", SequenceSet.new(uid_set))
     end
 
     # :call-seq:
@@ -3128,6 +3149,21 @@ module Net
         capabilities_cached?
       else
         config.enforce_logindisabled
+      end
+    end
+
+    def expunge_internal(...)
+      synchronize do
+        send_command(...)
+        vanished_array = extract_responses("VANISHED") { !_1.earlier? }
+        if vanished_array.empty?
+          clear_responses("EXPUNGE")
+        elsif vanished_array.length == 1
+          vanished_array.first
+        else
+          merged_uids = SequenceSet[*vanished_array.map(&:uids)]
+          VanishedData[uids: merged_uids, earlier: false]
+        end
       end
     end
 
