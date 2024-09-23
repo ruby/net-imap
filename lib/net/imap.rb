@@ -2961,6 +2961,18 @@ module Net
     #   command parameters defined by the extension will implicitly enable it.
     #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
+    # [+QRESYNC+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
+    #   *NOTE:* Enabling QRESYNC will replace +EXPUNGE+ with +VANISHED+, but
+    #   the extension arguments to #select, #examine, and #uid_fetch are not
+    #   supported yet.
+    #
+    #   Adds quick resynchronization options to #select, #examine, and
+    #   #uid_fetch.  +QRESYNC+ _must_ be explicitly enabled before using any of
+    #   the extension's command parameters.  All +EXPUNGE+ responses will be
+    #   replaced with +VANISHED+ responses.  Enabling +QRESYNC+ implicitly
+    #   enables +CONDSTORE+ as well.
+    #   See {[RFC7162 §3.2]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.2].
+    #
     # [+:utf8+ --- an alias for <tt>"UTF8=ACCEPT"</tt>]
     #
     #   In a future release, <tt>enable(:utf8)</tt> will enable either
