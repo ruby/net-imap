@@ -118,6 +118,9 @@ module Net
       #   This is not the same as the unique identifier (UID), not even for the
       #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
       #   returned.
+      #
+      # [NOTE:]
+      #   UIDFetchData will raise a NoMethodError.
 
       ##
       # method: attr
@@ -420,6 +423,10 @@ module Net
       # A number expressing the unique identifier of the message.
       #
       # This is the same as getting the value for <tt>"UID"</tt> from #attr.
+      #
+      # [NOTE:]
+      #   For UIDFetchData, this returns the uniqueid at the beginning of the
+      #   +UIDFETCH+ response, _not_ the value from #attr.
       def uid; attr["UID"] end
 
       # :call-seq:
@@ -525,10 +532,49 @@ module Net
       end
     end
 
+    # Net::IMAP::UIDFetchData represents the contents of a +UIDFETCH+ response,
+    # When the +UIDONLY+ extension has been enabled, Net::IMAP#uid_fetch and
+    # Net::IMAP#uid_store will both return an array of UIDFetchData objects
+    #
+    # UIDFetchData contains the same response data items as specified for
+    # FetchData.  However, +UIDFETCH+ responses return the UID at the beginning
+    # of the response, replacing FetchData#seqno.  UIDFetchData never contains a
+    # message sequence number.
+    #
+    # See FetchData@Fetch+attributes for a list of standard fetch response
+    # message attributes.
     class UIDFetchData < FetchData
       undef seqno
 
       alias uid __msg_id_num__
+      # why won't rdoc 6.7 render documention added directly above this alias?
+
+      ##
+      # method: uid
+      # call-seq: uid -> Integer
+      #
+      # A number expressing the unique identifier of the message.
+      #
+      # [NOTE:]
+      #   Although #attr may _also_ have a redundant +UID+ attribute, #uid
+      #   returns the uniqueid at the beginning of the +UIDFETCH+ response.
+
+      ##
+      # method: attr
+      # call-seq: attr -> hash
+      #
+      # Each key specifies a message attribute, and the value is the
+      # corresponding data item.  Standard data items have corresponding
+      # accessor methods.  The definitions of each attribute type is documented
+      # on its accessor.  See FetchData@Fetch+attributes.
+      #
+      # [NOTE:]
+      #   #uid is not a message attribute.  Although the server may return a
+      #   +UID+ message attribute, it is not required to.  #uid is taken from
+      #   its corresponding +UIDFETCH+ field.
+
+      # UIDFetchData will print a warning if <tt>#attr["UID"]</tt> is present
+      # but not identical to #uid.
       def initialize(...)
         super
         attr and
