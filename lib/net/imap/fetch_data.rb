@@ -63,8 +63,7 @@ module Net
     #   * <b><tt>"X-GM-MSGID"</tt></b> --- unique message ID.  Access via #attr.
     #   * <b><tt>"X-GM-THRID"</tt></b> --- Thread ID.  Access via #attr.
     #
-    # [Note:]
-    #   >>>
+    # [NOTE:]
     #     Additional static fields are defined in other \IMAP extensions, but
     #     Net::IMAP can't parse them yet.
     #
@@ -87,8 +86,7 @@ module Net
     #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
     #   * <b><tt>"X-GM-LABELS"</tt></b> --- Gmail labels.  Access via #attr.
     #
-    # [Note:]
-    #   >>>
+    # [NOTE:]
     #     Additional dynamic fields are defined in other \IMAP extensions, but
     #     Net::IMAP can't parse them yet.
     #
@@ -100,23 +98,29 @@ module Net
     # <tt>BODY.PEEK[#{section}]</tt> or <tt>BINARY.PEEK[#{section}]</tt>
     # instead.
     #
-    # Note that the data will always be _returned_ without <tt>".PEEK"</tt>, in
-    # <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
+    # [NOTE:]
+    #   The data will always be _returned_ without the <tt>".PEEK"</tt> suffix,
+    #   as <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
     #
     class FetchData < Struct.new(:__msg_id_num__, :attr)
       protected :__msg_id_num__
 
       alias seqno __msg_id_num__
+      # why won't rdoc 6.7 render documention added directly above this alias?
+
       ##
       # method: seqno
       # :call-seq: seqno -> Integer
       #
       # The message sequence number.
       #
-      # [Note]
-      #   This is never the unique identifier (UID), not even for the
+      # [NOTE:]
+      #   This is not the same as the unique identifier (UID), not even for the
       #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
       #   returned.
+      #
+      # [NOTE:]
+      #   UIDFetchData will raise a NoMethodError.
 
       ##
       # method: attr
@@ -127,8 +131,8 @@ module Net
       # accessor methods.  The definitions of each attribute type is documented
       # on its accessor.
       #
-      # >>>
-      #   *Note:* #seqno is not a message attribute.
+      # [NOTE:]
+      #   #seqno is not a message attribute.
 
       # :call-seq: attr_upcase -> hash
       #
@@ -145,7 +149,7 @@ module Net
       #
       # This is the same as getting the value for <tt>"BODY"</tt> from #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   Use #message, #part, #header, #header_fields, #header_fields_not,
       #   #text, or #mime to retrieve <tt>BODY[#{section_spec}]</tt> attributes.
       def body; attr["BODY"] end
@@ -324,7 +328,7 @@ module Net
       # #attr.
       def envelope; attr["ENVELOPE"] end
 
-      # :call-seq: flags -> array of Symbols and Strings
+      # :call-seq: flags -> array of Symbols and Strings, or nil
       #
       # A array of flags that are set for this message.  System flags are
       # symbols that have been capitalized by String#capitalize.  Keyword flags
@@ -332,7 +336,7 @@ module Net
       #
       # This is the same as getting the value for <tt>"FLAGS"</tt> from #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   The +FLAGS+ field is dynamic, and can change for a uniquely identified
       #   message.
       def flags; attr["FLAGS"] end
@@ -347,7 +351,7 @@ module Net
       # This is similar to getting the value for <tt>"INTERNALDATE"</tt> from
       # #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   <tt>attr["INTERNALDATE"]</tt> returns a string, and this method
       #   returns a Time object.
       def internaldate
@@ -356,17 +360,17 @@ module Net
 
       alias internal_date internaldate
 
-      # :call-seq: rfc822 -> String
+      # :call-seq: rfc822 -> String or nil
       #
       # Semantically equivalent to #message with no arguments.
       #
       # This is the same as getting the value for <tt>"RFC822"</tt> from #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   +IMAP4rev2+ deprecates <tt>RFC822</tt>.
       def rfc822; attr["RFC822"] end
 
-      # :call-seq: rfc822_size -> Integer
+      # :call-seq: rfc822_size -> Integer or nil
       #
       # A number expressing the [RFC5322[https://tools.ietf.org/html/rfc5322]]
       # size of the message.
@@ -374,7 +378,7 @@ module Net
       # This is the same as getting the value for <tt>"RFC822.SIZE"</tt> from
       # #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   \IMAP was originally developed for the older
       #   RFC822[https://www.rfc-editor.org/rfc/rfc822.html] standard, and as a
       #   consequence several fetch items in \IMAP incorporate "RFC822" in their
@@ -385,34 +389,44 @@ module Net
       #   RFC5322[https://www.rfc-editor.org/rfc/rfc5322.html] standard.
       def rfc822_size; attr["RFC822.SIZE"] end
 
-      alias size rfc822_size
+      # NOTE: a bug in rdoc 6.7 prevents us from adding a call-seq to
+      # rfc822_size _and_ aliasing size => rfc822_size.  Is it because this
+      # class inherits from Struct?
 
-      # :call-seq: rfc822_header -> String
+      # Alias for: rfc822_size
+      def size; rfc822_size end
+
+
+      # :call-seq: rfc822_header -> String or nil
       #
       # Semantically equivalent to #header, with no arguments.
       #
       # This is the same as getting the value for <tt>"RFC822.HEADER"</tt> from #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   +IMAP4rev2+ deprecates <tt>RFC822.HEADER</tt>.
       def rfc822_header; attr["RFC822.HEADER"] end
 
-      # :call-seq: rfc822_text -> String
+      # :call-seq: rfc822_text -> String or nil
       #
       # Semantically equivalent to #text, with no arguments.
       #
       # This is the same as getting the value for <tt>"RFC822.TEXT"</tt> from
       # #attr.
       #
-      # [Note]
+      # [NOTE:]
       #   +IMAP4rev2+ deprecates <tt>RFC822.TEXT</tt>.
       def rfc822_text; attr["RFC822.TEXT"] end
 
-      # :call-seq: uid -> Integer
+      # :call-seq: uid -> Integer or nil
       #
       # A number expressing the unique identifier of the message.
       #
       # This is the same as getting the value for <tt>"UID"</tt> from #attr.
+      #
+      # [NOTE:]
+      #   For UIDFetchData, this returns the uniqueid at the beginning of the
+      #   +UIDFETCH+ response, _not_ the value from #attr.
       def uid; attr["UID"] end
 
       # :call-seq:
@@ -458,7 +472,7 @@ module Net
         attr[section_attr("BINARY.SIZE", part_nums)]
       end
 
-      # :call-seq: modseq -> Integer
+      # :call-seq: modseq -> Integer or nil
       #
       # The modification sequence number associated with this IMAP message.
       #
@@ -467,7 +481,7 @@ module Net
       # The server must support the +CONDSTORE+ extension
       # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
       #
-      # [Note]
+      # [NOTE:]
       #   The +MODSEQ+ field is dynamic, and can change for a uniquely
       #   identified message.
       def modseq; attr["MODSEQ"] end
@@ -518,10 +532,49 @@ module Net
       end
     end
 
+    # Net::IMAP::UIDFetchData represents the contents of a +UIDFETCH+ response,
+    # When the +UIDONLY+ extension has been enabled, Net::IMAP#uid_fetch and
+    # Net::IMAP#uid_store will both return an array of UIDFetchData objects
+    #
+    # UIDFetchData contains the same response data items as specified for
+    # FetchData.  However, +UIDFETCH+ responses return the UID at the beginning
+    # of the response, replacing FetchData#seqno.  UIDFetchData never contains a
+    # message sequence number.
+    #
+    # See FetchData@Fetch+attributes for a list of standard fetch response
+    # message attributes.
     class UIDFetchData < FetchData
       undef seqno
 
       alias uid __msg_id_num__
+      # why won't rdoc 6.7 render documention added directly above this alias?
+
+      ##
+      # method: uid
+      # call-seq: uid -> Integer
+      #
+      # A number expressing the unique identifier of the message.
+      #
+      # [NOTE:]
+      #   Although #attr may _also_ have a redundant +UID+ attribute, #uid
+      #   returns the uniqueid at the beginning of the +UIDFETCH+ response.
+
+      ##
+      # method: attr
+      # call-seq: attr -> hash
+      #
+      # Each key specifies a message attribute, and the value is the
+      # corresponding data item.  Standard data items have corresponding
+      # accessor methods.  The definitions of each attribute type is documented
+      # on its accessor.  See FetchData@Fetch+attributes.
+      #
+      # [NOTE:]
+      #   #uid is not a message attribute.  Although the server may return a
+      #   +UID+ message attribute, it is not required to.  #uid is taken from
+      #   its corresponding +UIDFETCH+ field.
+
+      # UIDFetchData will print a warning if <tt>#attr["UID"]</tt> is present
+      # but not identical to #uid.
       def initialize(...)
         super
         attr and
