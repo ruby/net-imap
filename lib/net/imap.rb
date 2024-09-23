@@ -1557,7 +1557,7 @@ module Net
     end
 
     # :call-seq:
-    #   select(mailbox, **opts) -> result
+    #   select(mailbox, condstore: false, qresync: nil) -> result
     #
     # Sends a {SELECT command [IMAP4rev1 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.1]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
@@ -1572,8 +1572,29 @@ module Net
     # When the +condstore+ keyword argument is true, the server is told to
     # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
     # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
-    # #select and all `FETCH` responses will include FetchData#modseq.
+    # #select and all +FETCH+ responses will include FetchStruct#modseq.
     # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
+    # <em>Requires the +CONDSTORE+ capabability.</em>
+    # {[RFC7162]}[https://rfc-editor.org/rfc/rfc7162]
+    #
+    #   imap.select("mbox", condstore: true)
+    #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
+    #
+    # The optional +qresync+ argument can provide quick resynchronization
+    # parameters: the last known UIDVALIDITY, the last known MODSEQ,
+    # known UIDs <em>(optional)</em>, and message sequence match data
+    # <em>(optional)</em>.  When +qresync+ is provided, a SelectResult object
+    # is returned with +UIDVALIDITY+, +HIGHESTMODSEQ+, +VANISHED+, and +FETCH+
+    # results.  Sending +qresync+ implicitly enables +condstore+, too.
+    # <em>Requires the +QRESYNC+ capabability.</em>
+    # {[RFC7162]}[https://rfc-editor.org/rfc/rfc7162]
+    #
+    #   imap.enable("QRESYNC") # must enable before selecting the mailbox
+    #   qresync = imap.select("INBOX", qresync: [uidvalidity, modseq, known_uids])
+    #   qresync => { uidvalidity: ^uidvalidity, highestmodseq: modseq,
+    #                vanished:, updated: }
+    #   vanished.each do delete_message _1 end
+    #   updated .each do update_message _1.uid, flags: _1.flags, modseq: _1.modseq end
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
@@ -1582,7 +1603,8 @@ module Net
     #
     # ==== Capabilities
     #
-    # If [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]] is supported,
+    # If either [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]]
+    # or [IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]] is supported,
     # the server may return an untagged "NO" response with a "UIDNOTSTICKY"
     # response code indicating that the mailstore does not support persistent
     # UIDs:
@@ -1590,14 +1612,15 @@ module Net
     #
     # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported,
     # the +condstore+ keyword parameter may be used.
-    #   imap.select("mbox", condstore: true)
-    #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
+    #
+    # If [QRESYNC[https://www.rfc-editor.org/rfc/rfc7162.html]] is enabled,
+    # the +qresync+ keyword parameter may be used.
     def select(...)
       select_internal("SELECT", ...)
     end
 
     # :call-seq:
-    #   examine(mailbox, **opts) -> result
+    #   examine(mailbox, condstore: false, qresync: nil) -> result
     #
     # Sends a {EXAMINE command [IMAP4rev1 §6.3.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.2]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
@@ -2951,9 +2974,7 @@ module Net
     #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+QRESYNC+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
-    #   *NOTE:* Enabling QRESYNC will replace +EXPUNGE+ with +VANISHED+, but
-    #   the extension arguments to #select, #examine, and #uid_fetch are not
-    #   supported yet.
+    #   *NOTE:* The +QRESYNC+ argument to #uid_fetch is not supported yet.
     #
     #   Adds quick resynchronization options to #select, #examine, and
     #   #uid_fetch.  +QRESYNC+ _must_ be explicitly enabled before using any of
@@ -3577,9 +3598,12 @@ module Net
       end
     end
 
-    def select_internal(command, mailbox, condstore: false)
+    def select_internal(command, mailbox, condstore: false, qresync: nil)
       args = [command, mailbox]
-      args << ["CONDSTORE"] if condstore
+      params = []
+      params << "CONDSTORE"          if condstore
+      params << "QRESYNC" << qresync if qresync # TODO: validate qresync params
+      args   << params unless params.empty?
       synchronize do
         state_unselected! # implicitly closes current mailbox
         @responses.clear
