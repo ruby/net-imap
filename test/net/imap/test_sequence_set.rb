@@ -101,6 +101,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet.new Time.now     end
   end
 
+  test ".[frozen SequenceSet] returns that SequenceSet" do
+    frozen_seqset = SequenceSet[123..456]
+    assert_same frozen_seqset, SequenceSet[frozen_seqset]
+  end
+
   test ".new, input may be empty" do
     assert_empty SequenceSet.new
     assert_empty SequenceSet.new []

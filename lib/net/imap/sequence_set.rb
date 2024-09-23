@@ -304,7 +304,7 @@ module Net
         # Use ::new to create a mutable or empty SequenceSet.
         def [](first, *rest)
           if rest.empty?
-            if first.is_a?(SequenceSet) && set.frozen? && set.valid?
+            if first.is_a?(SequenceSet) && first.frozen? && first.valid?
               first
             else
               new(first).validate.freeze
