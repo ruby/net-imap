@@ -52,9 +52,8 @@ module Net
       def initialize(uids:, earlier:)
         raise ArgumentError, "uids must not be nil" if uids.nil?
         raise ArgumentError, "earlier must be true or false" if earlier.nil?
-        @uids    = SequenceSet.new(uids).freeze
+        @uids    = SequenceSet.new(uids)
         @earlier = !!earlier
-        freeze
       end
 
       # Delegates to #uids.
