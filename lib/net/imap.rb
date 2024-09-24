@@ -288,6 +288,8 @@ module Net
   #   pre-authenticated connection.
   # - #responses: Yields unhandled UntaggedResponse#data and <em>non-+nil+</em>
   #   ResponseCode#data.
+  # - #extract_responses: Removes and returns the responses for which the block
+  #   returns a true value.
   # - #clear_responses: Deletes unhandled data from #responses and returns it.
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
@@ -2534,7 +2536,7 @@ module Net
     # return the TaggedResponse directly, #add_response_handler must be used to
     # handle all response codes.
     #
-    # Related: #clear_responses, #response_handlers, #greeting
+    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
     def responses(type = nil)
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
@@ -2562,7 +2564,7 @@ module Net
     # Clearing responses is synchronized with other threads.  The lock is
     # released before returning.
     #
-    # Related: #responses, #response_handlers
+    # Related: #extract_responses, #responses, #response_handlers
     def clear_responses(type = nil)
       synchronize {
         if type
@@ -2574,6 +2576,30 @@ module Net
         end
       }
         .freeze
+    end
+
+    # :call-seq:
+    #   extract_responses(type) {|response| ... } -> array
+    #
+    # Yields all of the unhandled #responses for a single response +type+.
+    # Removes and returns the responses for which the block returns a true
+    # value.
+    #
+    # Extracting responses is synchronized with other threads.  The lock is
+    # released before returning.
+    #
+    # Related: #responses, #clear_responses
+    def extract_responses(type)
+      type = String.try_convert(type) or
+        raise ArgumentError, "type must be a string"
+      raise ArgumentError, "must provide a block" unless block_given?
+      extracted = []
+      responses(type) do |all|
+        all.reject! do |response|
+          extracted << response if yield response
+        end
+      end
+      extracted
     end
 
     # Returns all response handlers, including those that are added internally
