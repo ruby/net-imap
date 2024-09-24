@@ -103,6 +103,9 @@ class Net::IMAP::FakeServer
   # See CommandRouter#on
   def on(...) connection&.on(...) end
 
+  # See Connection#unsolicited
+  def unsolicited(...) @mutex.synchronize { connection&.unsolicited(...) } end
+
   private
 
   attr_reader :tcp_server, :connection
