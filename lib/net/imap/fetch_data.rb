@@ -3,138 +3,7 @@
 module Net
   class IMAP < Protocol
 
-    # Net::IMAP::FetchData represents the contents of a FETCH response.
-    # Net::IMAP#fetch and Net::IMAP#uid_fetch both return an array of
-    # FetchData objects.
-    #
-    # === Fetch attributes
-    #
-    # See {[IMAP4rev1 §7.4.2]}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
-    # and {[IMAP4rev2 §7.5.2]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]
-    # for a full description of the standard fetch response data items, and
-    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
-    #
-    # ==== Static fetch data items
-    #
-    # Most message attributes are static, and must never change for a given
-    # <tt>(server, account, mailbox, UIDVALIDITY, UID)</tt> tuple.
-    #
-    # The static fetch data items defined by both
-    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] and
-    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] are:
-    #
-    # * <b><tt>"UID"</tt></b> --- See #uid.
-    # * <b><tt>"BODY"</tt></b> --- See #body.
-    # * <b><tt>"BODY[#{section_spec}]"</tt></b>,
-    #   <b><tt>"BODY[#{section_spec}]<#{offset}>"</tt></b> --- See #message,
-    #   #part, #header, #header_fields, #header_fields_not, #mime, and #text.
-    # * <b><tt>"BODYSTRUCTURE"</tt></b> --- See #bodystructure.
-    # * <b><tt>"ENVELOPE"</tt></b> --- See #envelope.
-    # * <b><tt>"INTERNALDATE"</tt></b> --- See #internaldate.
-    # * <b><tt>"RFC822.SIZE"</tt></b> --- See #rfc822_size.
-    #
-    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] adds the
-    # additional fetch items from the +BINARY+ extension
-    # {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516.html]:
-    #
-    # * <b><tt>"BINARY[#{part}]"</tt></b>,
-    #   <b><tt>"BINARY[#{part}]<#{offset}>"</tt></b> -- See #binary.
-    # * <b><tt>"BINARY.SIZE[#{part}]"</tt></b> -- See #binary_size.
-    #
-    # Several static message attributes in
-    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] are obsolete and
-    # been removed from
-    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]:
-    #
-    # * <b><tt>"RFC822"</tt></b> --- See #rfc822 or replace with
-    #   <tt>"BODY[]"</tt> and #message.
-    # * <b><tt>"RFC822.HEADER"</tt></b> --- See #rfc822_header or replace with
-    #   <tt>"BODY[HEADER]"</tt> and #header.
-    # * <b><tt>"RFC822.TEXT"</tt></b> --- See #rfc822_text or replace with
-    #   <tt>"BODY[TEXT]"</tt> and #text.
-    #
-    # Net::IMAP supports static attributes defined by the following extensions:
-    # * +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html]
-    #   * <b><tt>"EMAILID"</tt></b> --- See #emailid.
-    #   * <b><tt>"THREADID"</tt></b> --- See #threadid.
-    #
-    # * +X-GM-EXT-1+ {[non-standard Gmail
-    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
-    #   * <b><tt>"X-GM-MSGID"</tt></b> --- unique message ID.  Access via #attr.
-    #   * <b><tt>"X-GM-THRID"</tt></b> --- Thread ID.  Access via #attr.
-    #
-    # [NOTE:]
-    #     Additional static fields are defined in other \IMAP extensions, but
-    #     Net::IMAP can't parse them yet.
-    #
-    # ==== Dynamic message attributes
-    #
-    # Some message attributes can be dynamically changed, for example using the
-    # {STORE command}[rdoc-ref:Net::IMAP#store].
-    #
-    # The only dynamic message attribute defined by
-    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] and
-    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] is:
-    #
-    # * <b><tt>"FLAGS"</tt></b> --- See #flags.
-    #
-    # Net::IMAP supports dynamic attributes defined by the following extensions:
-    #
-    # * +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]:
-    #   * <b><tt>"MODSEQ"</tt></b> --- See #modseq.
-    # * +X-GM-EXT-1+ {[non-standard Gmail
-    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
-    #   * <b><tt>"X-GM-LABELS"</tt></b> --- Gmail labels.  Access via #attr.
-    #
-    # [NOTE:]
-    #     Additional dynamic fields are defined in other \IMAP extensions, but
-    #     Net::IMAP can't parse them yet.
-    #
-    # === Implicitly setting <tt>\Seen</tt> and using +PEEK+
-    #
-    # Unless the mailbox is has been opened as read-only, fetching
-    # <tt>BODY[#{section}]</tt> or <tt>BINARY[#{section}]</tt>
-    # will implicitly set the <tt>\Seen</tt> flag.  To avoid this, fetch using
-    # <tt>BODY.PEEK[#{section}]</tt> or <tt>BINARY.PEEK[#{section}]</tt>
-    # instead.
-    #
-    # [NOTE:]
-    #   The data will always be _returned_ without the <tt>".PEEK"</tt> suffix,
-    #   as <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
-    #
-    class FetchData < Struct.new(:__msg_id_num__, :attr)
-      protected :__msg_id_num__
-
-      alias seqno __msg_id_num__
-      public :seqno
-      # why won't rdoc 6.7 render documention added directly above this alias?
-
-      ##
-      # method: seqno
-      # :call-seq: seqno -> Integer
-      #
-      # The message sequence number.
-      #
-      # [NOTE:]
-      #   This is not the same as the unique identifier (UID), not even for the
-      #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
-      #   returned.
-      #
-      # [NOTE:]
-      #   UIDFetchData will raise a NoMethodError.
-
-      ##
-      # method: attr
-      # :call-seq: attr -> hash
-      #
-      # Each key specifies a message attribute, and the value is the
-      # corresponding data item.  Standard data items have corresponding
-      # accessor methods.  The definitions of each attribute type is documented
-      # on its accessor.
-      #
-      # [NOTE:]
-      #   #seqno is not a message attribute.
-
+    class FetchStruct < Struct
       # :call-seq: attr_upcase -> hash
       #
       # A transformation of #attr, with all the keys converted to upper case.
@@ -533,6 +402,133 @@ module Net
       end
     end
 
+    # Net::IMAP::FetchData represents the contents of a FETCH response.
+    # Net::IMAP#fetch and Net::IMAP#uid_fetch both return an array of
+    # FetchData objects.
+    #
+    # === Fetch attributes
+    #
+    # See {[IMAP4rev1 §7.4.2]}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
+    # and {[IMAP4rev2 §7.5.2]}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]
+    # for a full description of the standard fetch response data items, and
+    # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
+    #
+    # ==== Static fetch data items
+    #
+    # Most message attributes are static, and must never change for a given
+    # <tt>(server, account, mailbox, UIDVALIDITY, UID)</tt> tuple.
+    #
+    # The static fetch data items defined by both
+    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] and
+    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] are:
+    #
+    # * <b><tt>"UID"</tt></b> --- See #uid.
+    # * <b><tt>"BODY"</tt></b> --- See #body.
+    # * <b><tt>"BODY[#{section_spec}]"</tt></b>,
+    #   <b><tt>"BODY[#{section_spec}]<#{offset}>"</tt></b> --- See #message,
+    #   #part, #header, #header_fields, #header_fields_not, #mime, and #text.
+    # * <b><tt>"BODYSTRUCTURE"</tt></b> --- See #bodystructure.
+    # * <b><tt>"ENVELOPE"</tt></b> --- See #envelope.
+    # * <b><tt>"INTERNALDATE"</tt></b> --- See #internaldate.
+    # * <b><tt>"RFC822.SIZE"</tt></b> --- See #rfc822_size.
+    #
+    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] adds the
+    # additional fetch items from the +BINARY+ extension
+    # {[RFC3516]}[https://www.rfc-editor.org/rfc/rfc3516.html]:
+    #
+    # * <b><tt>"BINARY[#{part}]"</tt></b>,
+    #   <b><tt>"BINARY[#{part}]<#{offset}>"</tt></b> -- See #binary.
+    # * <b><tt>"BINARY.SIZE[#{part}]"</tt></b> -- See #binary_size.
+    #
+    # Several static message attributes in
+    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] are obsolete and
+    # been removed from
+    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html]:
+    #
+    # * <b><tt>"RFC822"</tt></b> --- See #rfc822 or replace with
+    #   <tt>"BODY[]"</tt> and #message.
+    # * <b><tt>"RFC822.HEADER"</tt></b> --- See #rfc822_header or replace with
+    #   <tt>"BODY[HEADER]"</tt> and #header.
+    # * <b><tt>"RFC822.TEXT"</tt></b> --- See #rfc822_text or replace with
+    #   <tt>"BODY[TEXT]"</tt> and #text.
+    #
+    # Net::IMAP supports static attributes defined by the following extensions:
+    # * +OBJECTID+ {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html]
+    #   * <b><tt>"EMAILID"</tt></b> --- See #emailid.
+    #   * <b><tt>"THREADID"</tt></b> --- See #threadid.
+    #
+    # * +X-GM-EXT-1+ {[non-standard Gmail
+    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
+    #   * <b><tt>"X-GM-MSGID"</tt></b> --- unique message ID.  Access via #attr.
+    #   * <b><tt>"X-GM-THRID"</tt></b> --- Thread ID.  Access via #attr.
+    #
+    # [NOTE:]
+    #     Additional static fields are defined in other \IMAP extensions, but
+    #     Net::IMAP can't parse them yet.
+    #
+    # ==== Dynamic message attributes
+    #
+    # Some message attributes can be dynamically changed, for example using the
+    # {STORE command}[rdoc-ref:Net::IMAP#store].
+    #
+    # The only dynamic message attribute defined by
+    # IMAP4rev1[https://www.rfc-editor.org/rfc/rfc3501.html] and
+    # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051.html] is:
+    #
+    # * <b><tt>"FLAGS"</tt></b> --- See #flags.
+    #
+    # Net::IMAP supports dynamic attributes defined by the following extensions:
+    #
+    # * +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]:
+    #   * <b><tt>"MODSEQ"</tt></b> --- See #modseq.
+    # * +X-GM-EXT-1+ {[non-standard Gmail
+    #   extension]}[https://developers.google.com/gmail/imap/imap-extensions]
+    #   * <b><tt>"X-GM-LABELS"</tt></b> --- Gmail labels.  Access via #attr.
+    #
+    # [NOTE:]
+    #     Additional dynamic fields are defined in other \IMAP extensions, but
+    #     Net::IMAP can't parse them yet.
+    #
+    # === Implicitly setting <tt>\Seen</tt> and using +PEEK+
+    #
+    # Unless the mailbox is has been opened as read-only, fetching
+    # <tt>BODY[#{section}]</tt> or <tt>BINARY[#{section}]</tt>
+    # will implicitly set the <tt>\Seen</tt> flag.  To avoid this, fetch using
+    # <tt>BODY.PEEK[#{section}]</tt> or <tt>BINARY.PEEK[#{section}]</tt>
+    # instead.
+    #
+    # [NOTE:]
+    #   The data will always be _returned_ without the <tt>".PEEK"</tt> suffix,
+    #   as <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
+    #
+    class FetchData < FetchStruct.new(:seqno, :attr)
+      ##
+      # method: seqno
+      # :call-seq: seqno -> Integer
+      #
+      # The message sequence number.
+      #
+      # [NOTE:]
+      #   This is not the same as the unique identifier (UID), not even for the
+      #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
+      #   returned.
+      #
+      # [NOTE:]
+      #   UIDFetchData will raise a NoMethodError.
+
+      ##
+      # method: attr
+      # :call-seq: attr -> hash
+      #
+      # Each key specifies a message attribute, and the value is the
+      # corresponding data item.  Standard data items have corresponding
+      # accessor methods.  The definitions of each attribute type is documented
+      # on its accessor.
+      #
+      # [NOTE:]
+      #   #seqno is not a message attribute.
+    end
+
     # Net::IMAP::UIDFetchData represents the contents of a +UIDFETCH+ response,
     # When the +UIDONLY+ extension has been enabled, Net::IMAP#uid_fetch and
     # Net::IMAP#uid_store will both return an array of UIDFetchData objects
@@ -544,12 +540,7 @@ module Net
     #
     # See FetchData@Fetch+attributes for a list of standard fetch response
     # message attributes.
-    class UIDFetchData < FetchData
-      undef seqno
-
-      alias uid __msg_id_num__
-      # why won't rdoc 6.7 render documention added directly above this alias?
-
+    class UIDFetchData < FetchStruct.new(:uid, :attr)
       ##
       # method: uid
       # call-seq: uid -> Integer
