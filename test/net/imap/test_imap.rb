@@ -1420,4 +1420,16 @@ EOF
   def server_addr
     Addrinfo.tcp("localhost", 0).ip_address
   end
+
+  def wait_for_response_count(imap, type:, count:,
+                              timeout: 0.5, interval: 0.001)
+    deadline = Time.now + timeout
+    loop do
+      current_count = imap.responses(type, &:size)
+      break :count    if count <= current_count
+      break :deadline if deadline < Time.now
+      sleep interval
+    end
+  end
+
 end
