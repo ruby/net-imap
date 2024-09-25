@@ -3035,8 +3035,7 @@ module Net
         else
           send_command(cmd, SequenceSet.new(set), attr)
         end
-        uidfetches = clear_responses("UIDFETCH")
-        uidfetches.any? ? uidfetches : clear_responses("FETCH")
+        clear_fetch_responses
       end
     end
 
@@ -3049,9 +3048,13 @@ module Net
         clear_responses("FETCH")
         clear_responses("UIDFETCH")
         send_command(cmd, *args)
-        uidfetches = clear_responses("UIDFETCH")
-        uidfetches.any? ? uidfetches : clear_responses("FETCH")
+        clear_fetch_responses
       end
+    end
+
+    def clear_fetch_responses
+      uidfetches = clear_responses("UIDFETCH")
+      uidfetches.any? ? uidfetches : clear_responses("FETCH")
     end
 
     def copy_internal(cmd, set, mailbox)
