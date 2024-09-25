@@ -1205,6 +1205,10 @@ EOF
         resp.done_ok
       end
       fetched = imap.fetch [123, 456, 789], %w[UID FLAGS]
+      assert_equal 3, fetched.size
+      assert_instance_of Net::IMAP::FetchData, fetched[0]
+      assert_instance_of Net::IMAP::FetchData, fetched[1]
+      assert_instance_of Net::IMAP::FetchData, fetched[2]
       assert_equal 123,  fetched[0].seqno
       assert_equal 456,  fetched[1].seqno
       assert_equal 789,  fetched[2].seqno
@@ -1215,6 +1219,30 @@ EOF
       assert_equal [:Seen, :Answered],  fetched[1].flags
       assert_equal [],                  fetched[2].flags
       assert_equal("RUBY0002 FETCH 123,456,789 (UID FLAGS)",
+                   server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#uid_fetch with UIDFETCH responses" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID FETCH") do |resp|
+        resp.untagged("1111 UIDFETCH (FLAGS (\\Seen $MDNSent))")
+        resp.untagged("4444 UIDFETCH (FLAGS (\\Seen \\Answered))")
+        resp.untagged("7777 UIDFETCH (FLAGS ())")
+        resp.done_ok
+      end
+      fetched = imap.uid_fetch [123, 456, 789], %w[FLAGS]
+      assert_equal 3, fetched.size
+      assert_instance_of Net::IMAP::UIDFetchData, fetched[0]
+      assert_instance_of Net::IMAP::UIDFetchData, fetched[1]
+      assert_instance_of Net::IMAP::UIDFetchData, fetched[2]
+      assert_equal 1111, fetched[0].uid
+      assert_equal 4444, fetched[1].uid
+      assert_equal 7777, fetched[2].uid
+      assert_equal [:Seen, "$MDNSent"], fetched[0].flags
+      assert_equal [:Seen, :Answered],  fetched[1].flags
+      assert_equal [],                  fetched[2].flags
+      assert_equal("RUBY0002 UID FETCH 123,456,789 (FLAGS)",
                    server.commands.pop.raw.strip)
     end
   end
