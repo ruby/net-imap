@@ -3,9 +3,9 @@
 module Net
   class IMAP < Protocol
 
-    # Net::IMAP::FetchData represents the contents of a FETCH response.
-    # Net::IMAP#fetch and Net::IMAP#uid_fetch both return an array of
-    # FetchData objects.
+    # Net::IMAP::FetchStruct is the superclass for FetchData and UIDFetchData.
+    # Net::IMAP#fetch, Net::IMAP#uid_fetch, Net::IMAP#store, and
+    # Net::IMAP#uid_store all return arrays of FetchStruct objects.
     #
     # === Fetch attributes
     #
@@ -102,38 +102,7 @@ module Net
     #   The data will always be _returned_ without the <tt>".PEEK"</tt> suffix,
     #   as <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
     #
-    class FetchData < Struct.new(:__msg_id_num__, :attr)
-      protected :__msg_id_num__
-
-      alias seqno __msg_id_num__
-      # why won't rdoc 6.7 render documention added directly above this alias?
-
-      ##
-      # method: seqno
-      # :call-seq: seqno -> Integer
-      #
-      # The message sequence number.
-      #
-      # [NOTE:]
-      #   This is not the same as the unique identifier (UID), not even for the
-      #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
-      #   returned.
-      #
-      # [NOTE:]
-      #   UIDFetchData will raise a NoMethodError.
-
-      ##
-      # method: attr
-      # :call-seq: attr -> hash
-      #
-      # Each key specifies a message attribute, and the value is the
-      # corresponding data item.  Standard data items have corresponding
-      # accessor methods.  The definitions of each attribute type is documented
-      # on its accessor.
-      #
-      # [NOTE:]
-      #   #seqno is not a message attribute.
-
+    class FetchStruct < Struct
       # :call-seq: attr_upcase -> hash
       #
       # A transformation of #attr, with all the keys converted to upper case.
@@ -532,23 +501,53 @@ module Net
       end
     end
 
+    # Net::IMAP::FetchData represents the contents of a +FETCH+ response.
+    # Net::IMAP#fetch, Net::IMAP#uid_fetch, Net::IMAP#store, and
+    # Net::IMAP#uid_store all return arrays of FetchData objects, except when
+    # the +UIDONLY+ extension is enabled.
+    #
+    # See FetchStruct documentation for a list of standard message attributes.
+    class FetchData < FetchStruct.new(:seqno, :attr)
+      ##
+      # method: seqno
+      # :call-seq: seqno -> Integer
+      #
+      # The message sequence number.
+      #
+      # [NOTE:]
+      #   This is not the same as the unique identifier (UID), not even for the
+      #   Net::IMAP#uid_fetch result.  The UID is available from #uid, if it was
+      #   returned.
+      #
+      # [NOTE:]
+      #   UIDFetchData will raise a NoMethodError.
+
+      ##
+      # method: attr
+      # :call-seq: attr -> hash
+      #
+      # Each key specifies a message attribute, and the value is the
+      # corresponding data item.  Standard data items have corresponding
+      # accessor methods.  The definitions of each attribute type is documented
+      # on its accessor.
+      #
+      # See FetchStruct documentation for message attribute accessors.
+      #
+      # [NOTE:]
+      #   #seqno is not a message attribute.
+    end
+
     # Net::IMAP::UIDFetchData represents the contents of a +UIDFETCH+ response,
     # When the +UIDONLY+ extension has been enabled, Net::IMAP#uid_fetch and
-    # Net::IMAP#uid_store will both return an array of UIDFetchData objects
+    # Net::IMAP#uid_store will both return an array of UIDFetchData objects.
     #
-    # UIDFetchData contains the same response data items as specified for
-    # FetchData.  However, +UIDFETCH+ responses return the UID at the beginning
-    # of the response, replacing FetchData#seqno.  UIDFetchData never contains a
-    # message sequence number.
+    # UIDFetchData contains the same message attributes as FetchData.  However,
+    # +UIDFETCH+ responses return the UID at the beginning of the response,
+    # replacing FetchData#seqno.  UIDFetchData never contains a message sequence
+    # number.
     #
-    # See FetchData@Fetch+attributes for a list of standard fetch response
-    # message attributes.
-    class UIDFetchData < FetchData
-      undef seqno
-
-      alias uid __msg_id_num__
-      # why won't rdoc 6.7 render documention added directly above this alias?
-
+    # See FetchStruct documentation for a list of standard message attributes.
+    class UIDFetchData < FetchStruct.new(:uid, :attr)
       ##
       # method: uid
       # call-seq: uid -> Integer
@@ -566,7 +565,9 @@ module Net
       # Each key specifies a message attribute, and the value is the
       # corresponding data item.  Standard data items have corresponding
       # accessor methods.  The definitions of each attribute type is documented
-      # on its accessor.  See FetchData@Fetch+attributes.
+      # on its accessor.
+      #
+      # See FetchStruct documentation for message attribute accessors.
       #
       # [NOTE:]
       #   #uid is not a message attribute.  Although the server may return a

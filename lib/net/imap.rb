@@ -2408,8 +2408,8 @@ module Net
     # to {SequenceSet[...]}[rdoc-ref:SequenceSet@Creating+sequence+sets].
     # (For UIDs, use #uid_fetch instead.)
     #
-    # +attr+ is a list of attributes to fetch; see the documentation
-    # for FetchData for a list of valid attributes.
+    # +attr+ is a list of attributes to fetch; see FetchStruct documentation for
+    # a list of supported attributes.
     #
     # +changedsince+ is an optional integer mod-sequence.  It limits results to
     # messages with a mod-sequence greater than +changedsince+.
@@ -2438,8 +2438,8 @@ module Net
     #
     # ==== Capabilities
     #
-    # Many extensions define new message +attr+ names.  See FetchData for a list
-    # of supported extension fields.
+    # Many extensions define new message +attr+ names.  See FetchStruct for a
+    # list of supported extension fields.
     #
     # The server's capabilities must include +CONDSTORE+
     # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the

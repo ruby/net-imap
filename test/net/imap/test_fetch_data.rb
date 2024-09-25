@@ -43,6 +43,12 @@ class UIDFetchDataTest < Test::Unit::TestCase
     end
     assert_equal 22222, data.uid
   end
+
+  test "#deconstruct_keys" do
+    Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321) => {
+      uid: 22222
+    }
+  end
 end
 
 DEFINE_FETCH_DATA_SHARED_TESTS = proc do
