@@ -106,6 +106,7 @@ module Net
       protected :__msg_id_num__
 
       alias seqno __msg_id_num__
+      public :seqno
       # why won't rdoc 6.7 render documention added directly above this alias?
 
       ##
