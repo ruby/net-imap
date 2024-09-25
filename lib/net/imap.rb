@@ -288,6 +288,8 @@ module Net
   #   pre-authenticated connection.
   # - #responses: Yields unhandled UntaggedResponse#data and <em>non-+nil+</em>
   #   ResponseCode#data.
+  # - #extract_responses: Removes and returns the responses for which the block
+  #   returns a true value.
   # - #clear_responses: Deletes unhandled data from #responses and returns it.
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
@@ -1914,18 +1916,39 @@ module Net
       send_command("UNSELECT")
     end
 
+    # call-seq:
+    #   expunge -> array of message sequence numbers
+    #   expunge -> VanishedData of UIDs
+    #
     # Sends an {EXPUNGE command [IMAP4rev1 §6.4.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.3]
-    # Sends a EXPUNGE command to permanently remove from the currently
-    # selected mailbox all messages that have the \Deleted flag set.
+    # to permanently remove all messages with the +\Deleted+ flag from the
+    # currently selected mailbox.
     #
     # Related: #uid_expunge
+    #
+    # ===== Capabilities
+    #
+    # When either QRESYNC[https://tools.ietf.org/html/rfc7162] or
+    # UIDONLY[https://tools.ietf.org/html/rfc9586] are enabled, #expunge
+    # returns VanishedData, which contains UIDs---<em>not message sequence
+    # numbers</em>.
+    #
+    # *NOTE:* Any unhandled +VANISHED+ #responses without the +EARLIER+ modifier
+    # will be merged into the VanishedData and deleted from #responses.  This is
+    # consistent with how Net::IMAP handles +EXPUNGE+ responses.  Unhandled
+    # <tt>VANISHED (EARLIER)</tt> responses will _not_ be merged or returned.
+    #
+    # *NOTE:* When no messages are expunged, Net::IMAP currently returns an
+    # empty array, regardless of which extensions have been enabled.  In the
+    # future, an empty VanishedData will be returned instead.
     def expunge
-      synchronize do
-        send_command("EXPUNGE")
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("EXPUNGE")
     end
 
+    # call-seq:
+    #   uid_expunge -> array of message sequence numbers
+    #   uid_expunge -> VanishedData of UIDs
+    #
     # Sends a {UID EXPUNGE command [RFC4315 §2.1]}[https://www.rfc-editor.org/rfc/rfc4315#section-2.1]
     # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
     # to permanently remove all messages that have both the <tt>\\Deleted</tt>
@@ -1949,13 +1972,13 @@ module Net
     #
     # ===== Capabilities
     #
-    # The server's capabilities must include +UIDPLUS+
+    # The server's capabilities must include either +IMAP4rev2+ or +UIDPLUS+
     # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
+    #
+    # Otherwise, #uid_expunge is updated by extensions in the same way as
+    # #expunge.
     def uid_expunge(uid_set)
-      synchronize do
-        send_command("UID EXPUNGE", SequenceSet.new(uid_set))
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("UID EXPUNGE", SequenceSet.new(uid_set))
     end
 
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
@@ -2555,7 +2578,7 @@ module Net
     # return the TaggedResponse directly, #add_response_handler must be used to
     # handle all response codes.
     #
-    # Related: #clear_responses, #response_handlers, #greeting
+    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
     def responses(type = nil)
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
@@ -2583,7 +2606,7 @@ module Net
     # Clearing responses is synchronized with other threads.  The lock is
     # released before returning.
     #
-    # Related: #responses, #response_handlers
+    # Related: #extract_responses, #responses, #response_handlers
     def clear_responses(type = nil)
       synchronize {
         if type
@@ -2595,6 +2618,30 @@ module Net
         end
       }
         .freeze
+    end
+
+    # :call-seq:
+    #   extract_responses(type) {|response| ... } -> array
+    #
+    # Yields all of the unhandled #responses for a single response +type+.
+    # Removes and returns the responses for which the block returns a true
+    # value.
+    #
+    # Extracting responses is synchronized with other threads.  The lock is
+    # released before returning.
+    #
+    # Related: #responses, #clear_responses
+    def extract_responses(type)
+      type = String.try_convert(type) or
+        raise ArgumentError, "type must be a string"
+      raise ArgumentError, "must provide a block" unless block_given?
+      extracted = []
+      responses(type) do |all|
+        all.reject! do |response|
+          extracted << response if yield response
+        end
+      end
+      extracted
     end
 
     # Returns all response handlers, including those that are added internally
@@ -2890,6 +2937,21 @@ module Net
         capabilities_cached?
       else
         config.enforce_logindisabled
+      end
+    end
+
+    def expunge_internal(...)
+      synchronize do
+        send_command(...)
+        vanished_array = extract_responses("VANISHED") { !_1.earlier? }
+        if vanished_array.empty?
+          clear_responses("EXPUNGE")
+        elsif vanished_array.length == 1
+          vanished_array.first
+        else
+          merged_uids = SequenceSet[*vanished_array.map(&:uids)]
+          VanishedData[uids: merged_uids, earlier: false]
+        end
       end
     end
 

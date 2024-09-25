@@ -19,6 +19,7 @@ class Net::IMAP::FakeServer
 
     def commands; state.commands end
     def on(...) router.on(...) end
+    def unsolicited(...) writer.untagged(...) end
 
     def run
       writer.greeting
