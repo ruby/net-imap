@@ -321,6 +321,20 @@ module Net
         SEQUENCE_SET      = /#{SEQUENCE_SET_ITEM}(?:,#{SEQUENCE_SET_ITEM})*/n
         SEQUENCE_SET_STR  = /\A#{SEQUENCE_SET}\z/n
 
+        # partial-range-first = nz-number ":" nz-number
+        #     ;; Request to search from oldest (lowest UIDs) to
+        #     ;; more recent messages.
+        #     ;; A range 500:400 is the same as 400:500.
+        #     ;; This is similar to <seq-range> from [RFC3501]
+        #     ;; but cannot contain "*".
+        PARTIAL_RANGE_FIRST = /\A(#{NZ_NUMBER}):(#{NZ_NUMBER})\z/n
+
+        # partial-range-last  = MINUS nz-number ":" MINUS nz-number
+        #     ;; Request to search from newest (highest UIDs) to
+        #     ;; oldest messages.
+        #     ;; A range -500:-400 is the same as -400:-500.
+        PARTIAL_RANGE_LAST  = /\A(-#{NZ_NUMBER}):(-#{NZ_NUMBER})\z/n
+
         # RFC3501:
         #   literal          = "{" number "}" CRLF *CHAR8
         #                        ; Number represents the number of CHAR8s
@@ -769,7 +783,6 @@ module Net
       def response_data__ignored; response_data__unhandled(IgnoredResponse) end
       alias response_data__noop     response_data__ignored
 
-      alias esearch_response        response_data__unhandled
       alias expunged_resp           response_data__unhandled
       alias uidfetch_resp           response_data__unhandled
       alias listrights_data         response_data__unhandled
@@ -1467,6 +1480,168 @@ module Net
         UntaggedResponse.new(name, data, @str)
       end
       alias sort_data mailbox_data__search
+
+      # esearch-response  = "ESEARCH" [search-correlator] [SP "UID"]
+      #                      *(SP search-return-data)
+      #                    ;; Note that SEARCH and ESEARCH responses
+      #                    ;; SHOULD be mutually exclusive,
+      #                    ;; i.e., only one of the response types
+      #                    ;; should be
+      #                    ;; returned as a result of a command.
+      # esearch-response  = "ESEARCH" [search-correlator] [SP "UID"]
+      #                     *(SP search-return-data)
+      #                   ; ESEARCH response replaces SEARCH response
+      #                   ; from IMAP4rev1.
+      # search-correlator  = SP "(" "TAG" SP tag-string ")"
+      def esearch_response
+        name = label("ESEARCH")
+        tag  = search_correlator if peek_str?(" (")
+        uid  = peek_re?(/\G UID\b/i) && (SP!; label("UID"); true)
+        data = []
+        data << search_return_data while SP?
+        esearch = ESearchResult.new(tag, uid, data)
+        UntaggedResponse.new(name, esearch, @str)
+      end
+
+      # From RFC4731 (ESEARCH):
+      #   search-return-data    = "MIN" SP nz-number /
+      #                           "MAX" SP nz-number /
+      #                           "ALL" SP sequence-set /
+      #                           "COUNT" SP number /
+      #                           search-ret-data-ext
+      #                           ; All return data items conform to
+      #                           ; search-ret-data-ext syntax.
+      #   search-ret-data-ext   = search-modifier-name SP search-return-value
+      #   search-modifier-name  = tagged-ext-label
+      #   search-return-value   = tagged-ext-val
+      #
+      # From RFC4731 (ESEARCH):
+      #   search-return-data    =/ "MODSEQ" SP mod-sequence-value
+      #
+      # From RFC5267 (CONTEXT=SEARCH, CONTEXT=SORT):
+      #   search-return-data    =/ ret-data-partial / ret-data-addto /
+      #                            ret-data-removefrom
+      #
+      # From RFC6203 (SEARCH=FUZZY):
+      #   search-return-data    =/ "RELEVANCY" SP score-list
+      #
+      # From RFC9394 (PARTIAL):
+      #   search-return-data  =/ ret-data-partial
+      #
+      def search_return_data
+        label = search_modifier_name; SP!
+        value =
+          case label
+          when "MIN"        then nz_number
+          when "MAX"        then nz_number
+          when "ALL"        then sequence_set
+          when "COUNT"      then number
+          when "MODSEQ"     then mod_sequence_value         # RFC7162: CONDSTORE
+          when "RELEVANCY"  then score_list                 # RFC6203: SEARCH=FUZZY
+          when "PARTIAL"    then ret_data_partial__value    # RFC9394: PARTIAL
+          when "ADDTO"      then ret_data_addto__value      # RFC5267: CONTEXT=*
+          when "REMOVEFROM" then ret_data_removefrom__value # RFC5267: CONTEXT=*
+          else search_return_value
+          end
+        [label, value]
+      end
+
+      # From RFC5267 (CONTEXT=SEARCH, CONTEXT=SORT) and RFC9394 (PARTIAL):
+      #   ret-data-partial    = "PARTIAL"
+      #                         SP "(" partial-range SP partial-results ")"
+      def ret_data_partial__value
+        lpar
+        range   = partial_range;   SP!
+        results = partial_results
+        rpar
+        ESearchResult::PartialResult.new(range, results)
+      end
+
+      # partial-range       = partial-range-first / partial-range-last
+      # tagged-ext-simple   =/ partial-range-last
+      def partial_range
+        case (str = atom)
+        when Patterns::PARTIAL_RANGE_FIRST, Patterns::PARTIAL_RANGE_LAST
+          min, max = [Integer($1), Integer($2)].minmax
+          min..max
+        else
+          parse_error("unexpected atom %p, expected partial-range", str)
+        end
+      end
+
+      # partial-results     = sequence-set / "NIL"
+      #     ;; <sequence-set> from [RFC3501].
+      #     ;; NIL indicates that no results correspond to
+      #     ;; the requested range.
+      def partial_results; NIL? ? nil : sequence_set end
+
+      #   ret-data-addto        = "ADDTO"
+      #                            SP "(" context-position SP sequence-set
+      #                            *(SP context-position SP sequence-set)
+      #                            ")"
+      def ret_data_addto__value
+        lpar; list = [ret_data_addto__item]
+        (SP!; list << ret_data_addto__item) until rpar?
+        list
+      end
+
+      def ret_data_addto__item
+        ESearchResult::AddToContext.new(context_position, (SP!; sequence_set))
+      end
+
+      #   ret-data-removefrom   = "REMOVEFROM"
+      #                            SP "(" context-position SP sequence-set
+      #                            *(SP context-position SP sequence-set)
+      #                            ")"
+      def ret_data_removefrom__value
+        lpar; list = [ret_data_removefrom__item]
+        (SP!; list << ret_data_removefrom__item) until rpar?
+        list
+      end
+
+      def ret_data_removefrom__item
+        ESearchResult::RemoveFromContext.new(context_position,
+                                             (SP!; sequence_set))
+      end
+
+      #   context-position      = number
+      #       ;; Context position may be 0 for SEARCH result additions.
+      #       ;; <number> from [IMAP]
+      alias context_position number
+
+      # search-modifier-name = tagged-ext-label
+      alias search_modifier_name tagged_ext_label
+
+      # search-return-value = tagged-ext-val
+      #                     ; Data for the returned search option.
+      #                     ; A single "nz-number"/"number"/"number64" value
+      #                     ; can be returned as an atom (i.e., without
+      #                     ; quoting).  A sequence-set can be returned
+      #                     ; as an atom as well.
+      def search_return_value; ExtensionData.new(tagged_ext_val) end
+
+      # From RFC6203 (SEARCH=FUZZY):
+      # score              = 1*3DIGIT
+      #    ;; (1 <= n <= 100)
+      alias score nz_number
+
+      # From RFC6203 (SEARCH=FUZZY):
+      # score-list         = "(" [score *(SP score)] ")"
+      def score_list
+        lpar; return [] if rpar?
+        list = [score]; (SP!; list << score) until rpar?
+        list
+      end
+
+      # search-correlator  = SP "(" "TAG" SP tag-string ")"
+      def search_correlator
+        SP!; lpar; label("TAG"); SP!; tag = tag_string; rpar
+        tag
+      end
+
+      # tag-string      = astring
+      #                   ; <tag> represented as <astring>
+      alias tag_string astring
 
       # RFC5256: THREAD
       #   thread-data     = "THREAD" [SP 1*thread-list]

@@ -1,0 +1,114 @@
+---
+:tests:
+
+  "RFC5267 4.3.3. ADDTO Return Data Item example 1":
+    :response: "* ESEARCH (TAG \"B01\") UID ADDTO (0 32768:32769)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: B01
+        uid: true
+        data:
+        - - ADDTO
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 0
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: 32768:32769
+                tuples:
+                - - 32768
+                  - 32769
+      raw_data: "* ESEARCH (TAG \"B01\") UID ADDTO (0 32768:32769)\r\n"
+
+  "RFC5267 4.3.3. ADDTO Return Data Item example 2":
+    :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733 1 2732 1 2731)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C01
+        uid: true
+        data:
+        - - ADDTO
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: '2733'
+                tuples:
+                - - 2733
+                  - 2733
+            - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: '2732'
+                tuples:
+                - - 2732
+                  - 2732
+            - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: '2731'
+                tuples:
+                - - 2731
+                  - 2731
+      raw_data: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733 1 2732 1 2731)\r\n"
+
+  "RFC5267 4.3.3. ADDTO Return Data Item example 3":
+    :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733) ADDTO (1 2731:2732)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C01
+        uid: true
+        data:
+        - - ADDTO
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: '2733'
+                tuples:
+                - - 2733
+                  - 2733
+        - - ADDTO
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: 2731:2732
+                tuples:
+                - - 2731
+                  - 2732
+      raw_data: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733) ADDTO (1 2731:2732)\r\n"
+
+  "RFC5267 4.3.3. ADDTO Return Data Item example 4":
+    :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2731:2733)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C01
+        uid: true
+        data:
+        - - ADDTO
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
+              position: 1
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: 2731:2733
+                tuples:
+                - - 2731
+                  - 2733
+      raw_data: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2731:2733)\r\n"
+
+  "RFC5267 4.3.4. REMOVEFROM Return Data Item":
+    :response: "* ESEARCH (TAG \"B01\") UID REMOVEFROM (0 32768)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: B01
+        uid: true
+        data:
+        - - REMOVEFROM
+          - - !ruby/object:Net::IMAP::ESearchResult::RemoveFromContext
+              position: 0
+              set: !ruby/object:Net::IMAP::SequenceSet
+                string: '32768'
+                tuples:
+                - - 32768
+                  - 32768
+      raw_data: "* ESEARCH (TAG \"B01\") UID REMOVEFROM (0 32768)\r\n"
