@@ -57,6 +57,32 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal set, set.freeze
   end
 
+  data "#clear",       :clear
+  data "#replace seq", ->{ _1.replace SequenceSet[1] }
+  data "#replace num", ->{ _1.replace   1 }
+  data "#replace str", ->{ _1.replace  ?1 }
+  data "#string=",     ->{ _1.string = ?1 }
+  data "#add",         ->{ _1.add       1 }
+  data "#add?",        ->{ _1.add?      1 }
+  data "#<<",          ->{ _1 <<        1 }
+  data "#append",      ->{ _1.append    1 }
+  data "#delete",      ->{ _1.delete    3 }
+  data "#delete?",     ->{ _1.delete?   3 }
+  data "#delete_at",   ->{ _1.delete_at 3 }
+  data "#slice!",      ->{ _1.slice!    1 }
+  data "#merge",       ->{ _1.merge     1 }
+  data "#subtract",    ->{ _1.subtract  1 }
+  data "#limit!",      ->{ _1.limit! max: 10 }
+  data "#complement!", :complement!
+  data "#normalize!",  :normalize!
+  test "frozen error message" do |modification|
+    set = SequenceSet["2:4,7:11,99,999"]
+    msg = "can't modify frozen Net::IMAP::SequenceSet: %p" % [set]
+    assert_raise_with_message FrozenError, msg do
+      modification.to_proc.(set)
+    end
+  end
+
   %i[clone dup].each do |method|
     test "##{method}" do
       orig = SequenceSet.new "2:4,7:11,99,999"

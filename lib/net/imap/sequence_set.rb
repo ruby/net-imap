@@ -675,6 +675,7 @@ module Net
       # Unlike #add, #merge, or #union, the new value is appended to #string.
       # This may result in a #string which has duplicates or is out-of-order.
       def append(object)
+        modifying!
         tuple = input_to_tuple object
         entry = tuple_to_str tuple
         tuple_add tuple
@@ -1310,6 +1311,12 @@ module Net
           range.include?(min) || range.include?(max) || (min..max).cover?(range)
       end
 
+      def modifying!
+        if frozen?
+          raise FrozenError, "can't modify frozen #{self.class}: %p" % [self]
+        end
+      end
+
       def tuples_add(tuples)      tuples.each do tuple_add _1      end; self end
       def tuples_subtract(tuples) tuples.each do tuple_subtract _1 end; self end
 
@@ -1324,6 +1331,7 @@ module Net
       #   ---------??===lower==|--|==|----|===upper===|-- join until upper
       #   ---------??===lower==|--|==|--|=====upper===|-- join to upper
       def tuple_add(tuple)
+        modifying!
         min, max = tuple
         lower, lower_idx = tuple_gte_with_index(min - 1)
         if    lower.nil?              then tuples << tuple
@@ -1360,6 +1368,7 @@ module Net
       # -------??=====lower====|--|====|---|====upper====|-- 7. delete until
       # -------??=====lower====|--|====|--|=====upper====|-- 8. delete and trim
       def tuple_subtract(tuple)
+        modifying!
         min, max = tuple
         lower, idx = tuple_gte_with_index(min)
         if    lower.nil?        then nil # case 1.
