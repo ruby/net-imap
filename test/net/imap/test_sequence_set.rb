@@ -140,6 +140,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_empty SequenceSet.new [[]]
     assert_empty SequenceSet.new nil
     assert_empty SequenceSet.new ""
+    assert_empty SequenceSet.new Set.new
   end
 
   test ".[] must not be empty" do
@@ -148,6 +149,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet[[[]]] end
     assert_raise DataFormatError do SequenceSet[nil]  end
     assert_raise DataFormatError do SequenceSet[""]   end
+    assert_raise DataFormatError do SequenceSet[Set.new] end
   end
 
   test "#[non-negative index]" do
@@ -709,6 +711,18 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
 
   data "nested array", {
     input:      [["1:5", [3..4], [[[9..11, "10"], 99], :*]]],
+    elements:   [1..5, 9..11, 99, :*],
+    entries:    [1..5, 9..11, 99, :*],
+    ranges:     [1..5, 9..11, 99..99, :*..],
+    numbers:    RangeError,
+    to_s:       "1:5,9:11,99,*",
+    normalize:  "1:5,9:11,99,*",
+    count:      10,
+    complement: "6:8,12:98,100:#{2**32 - 1}",
+  }, keep: true
+
+  data "Set", {
+    input:      Set[*(9..11), :*, 99, *(1..5)],
     elements:   [1..5, 9..11, 99, :*],
     entries:    [1..5, 9..11, 99, :*],
     ranges:     [1..5, 9..11, 99..99, :*..],
