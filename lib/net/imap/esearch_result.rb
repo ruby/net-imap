@@ -169,14 +169,18 @@ module Net
       # See +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
       # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
       # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
-      class PartialResult < Struct.new(:range, :results)
-        ##
-        # method: range
-        # :call-seq: range -> range
+      class PartialResult < DataLite
+        def self.members; %i[range results].freeze end
+        def initialize(range: nil, results: nil)
+          @range, @results = range, results
+          freeze
+        end
 
-        ##
-        # method: results
+        # :call-seq: range -> range
+        attr_reader :range
+
         # :call-seq: results -> sequence set or nil
+        attr_reader :results
       end
 
       # :call-seq: partial -> PartialResult or nil

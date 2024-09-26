@@ -13,7 +13,7 @@
         uid: true
         data:
         - - PARTIAL
-          - !ruby/struct:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: -100
               end: -1
@@ -36,7 +36,7 @@
         uid: true
         data:
         - - PARTIAL
-          - !ruby/struct:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: 23500
               end: 24000
@@ -57,7 +57,7 @@
         uid: true
         data:
         - - PARTIAL
-          - !ruby/struct:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: 24000
               end: 24500
