@@ -5,7 +5,7 @@
     :response: "* ESEARCH (TAG \"B01\") UID ADDTO (0 32768:32769)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: B01
         uid: true
         data:
@@ -23,7 +23,7 @@
     :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733 1 2732 1 2731)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: C01
         uid: true
         data:
@@ -55,7 +55,7 @@
     :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733) ADDTO (1 2731:2732)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: C01
         uid: true
         data:
@@ -81,7 +81,7 @@
     :response: "* ESEARCH (TAG \"C01\") UID ADDTO (1 2731:2733)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: C01
         uid: true
         data:
@@ -99,7 +99,7 @@
     :response: "* ESEARCH (TAG \"B01\") UID REMOVEFROM (0 32768)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: B01
         uid: true
         data:

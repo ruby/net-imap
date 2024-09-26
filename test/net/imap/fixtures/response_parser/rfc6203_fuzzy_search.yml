@@ -5,7 +5,7 @@
     :response: "* ESEARCH (TAG \"B1\") ALL 1,5,10 RELEVANCY (4 99 42)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: B1
         uid: false
         data:
@@ -33,7 +33,7 @@
     :response: "* ESEARCH (TAG \"C2\") ALL 5,10,1 RELEVANCY (99 42 4)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/struct:Net::IMAP::ESearchResult
+      data: !ruby/object:Net::IMAP::ESearchResult
         tag: C2
         uid: false
         data:
