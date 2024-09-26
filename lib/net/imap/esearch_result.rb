@@ -118,7 +118,13 @@ module Net
       # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
       def modseq;     data.assoc("MODSEQ")&.last     end
 
-      class ContextUpdate < Struct.new(:position, :set)
+      class ContextUpdate < DataLite
+        def self.members; %i[position set].freeze end
+        def initialize(position: nil, set: nil)
+          @position, @set = position, set
+          freeze
+        end
+        attr_reader :position, :set
       end
 
       class AddToContext < ContextUpdate

@@ -10,7 +10,7 @@
         uid: true
         data:
         - - ADDTO
-          - - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 0
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: 32768:32769
@@ -28,21 +28,21 @@
         uid: true
         data:
         - - ADDTO
-          - - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: '2733'
                 tuples:
                 - - 2733
                   - 2733
-            - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+            - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: '2732'
                 tuples:
                 - - 2732
                   - 2732
-            - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+            - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: '2731'
@@ -60,7 +60,7 @@
         uid: true
         data:
         - - ADDTO
-          - - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: '2733'
@@ -68,7 +68,7 @@
                 - - 2733
                   - 2733
         - - ADDTO
-          - - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: 2731:2732
@@ -86,7 +86,7 @@
         uid: true
         data:
         - - ADDTO
-          - - !ruby/struct:Net::IMAP::ESearchResult::AddToContext
+          - - !ruby/object:Net::IMAP::ESearchResult::AddToContext
               position: 1
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: 2731:2733
@@ -104,7 +104,7 @@
         uid: true
         data:
         - - REMOVEFROM
-          - - !ruby/struct:Net::IMAP::ESearchResult::RemoveFromContext
+          - - !ruby/object:Net::IMAP::ESearchResult::RemoveFromContext
               position: 0
               set: !ruby/object:Net::IMAP::SequenceSet
                 string: '32768'
