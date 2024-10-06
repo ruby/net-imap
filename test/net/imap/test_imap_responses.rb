@@ -89,12 +89,35 @@ class IMAPResponsesTest < Test::Unit::TestCase
     end
   end
 
-  # with with a type and no block: always raise an exception
+  # with with a type and no block: always returns a frozen duplicate
   test "#responses(type, &nil)" do
     with_fake_server do |server, imap|
-      for_each_config_option(imap) do
-        assert_raise(ArgumentError) do imap.responses("CAPABILITY") end
+      stderr = EnvUtil.verbose_warning do
+        # Config options make no difference to responses(type)
+        for_each_config_option(imap) do
+          # responses available before SELECT/EXAMINE
+          assert imap.responses("CAPABILITY").frozen?
+          assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                       imap.responses("CAPABILITY").last)
+        end
+        # responses are cleared after SELECT/EXAMINE
+        imap.select "INBOX"
+        for_each_config_option(imap) do
+          assert imap.responses("CAPABILITY").frozen?
+          assert imap.responses("EXISTS").frozen?
+          assert imap.responses("UIDVALIDITIY").frozen?
+          assert_equal [],           imap.responses("CAPABILITY")
+          assert_equal [172],        imap.responses("EXISTS")
+          assert_equal [3857529045], imap.responses("UIDVALIDITY")
+          assert_equal 1, imap.responses("RECENT").last
+          assert imap.responses("UIDNEXT").frozen?
+          assert_equal [4392], imap.responses("UIDNEXT")
+          assert imap.responses("FLAGS").frozen?
+          assert_equal(%i[Answered Flagged Deleted Seen Draft],
+                       imap.responses("FLAGS").last)
+        end
       end
+      assert_empty stderr # never warn when type is given
     end
   end
 

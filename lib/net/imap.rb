@@ -2497,17 +2497,21 @@ module Net
     private_constant :RESPONSES_DEPRECATION_MSG
 
     # :call-seq:
+    #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
     #
-    # Yields unhandled server responses and returns the result of the block.
-    # Unhandled responses are stored in a hash, with arrays of
-    # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
-    # and ResponseCode#data keyed by ResponseCode#name.
+    # Yields or returns unhandled server responses.  Unhandled responses are
+    # stored in a hash, with arrays of UntaggedResponse#data keyed by
+    # UntaggedResponse#name and <em>non-+nil+</em> untagged ResponseCode#data
+    # keyed by ResponseCode#name.
+    #
+    # When a block is given, yields unhandled responses and returns the block's
+    # result.  Without a block, returns the unhandled responses.
     #
     # [With +type+]
-    #   Yield only the array of responses for that +type+.
-    #   When no block is given, an +ArgumentError+ is raised.
+    #   Yield or return only the array of responses for that +type+.
+    #   When no block is given, the returned array is a frozen copy.
     # [Without +type+]
     #   Yield or return the entire responses hash.
     #
@@ -2528,7 +2532,7 @@ module Net
     # For example:
     #
     #   imap.select("inbox")
-    #   p imap.responses("EXISTS", &:last)
+    #   p imap.responses("EXISTS").last
     #   #=> 2
     #   p imap.responses("UIDNEXT", &:last)
     #   #=> 123456
@@ -2586,7 +2590,7 @@ module Net
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
       elsif type
-        raise ArgumentError, "Pass a block or use #clear_responses"
+        synchronize { @responses[type.to_s.upcase].dup.freeze }
       else
         case config.responses_without_block
         when :raise
