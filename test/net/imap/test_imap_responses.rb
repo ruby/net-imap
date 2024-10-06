@@ -7,6 +7,12 @@ require_relative "fake_server"
 class IMAPResponsesTest < Test::Unit::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
+  CONFIG_OPTIONS = %i[
+    silence_deprecation_warning
+    warn
+    raise
+  ].freeze
+
   def setup
     Net::IMAP.config.reset
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
@@ -22,36 +28,113 @@ class IMAPResponsesTest < Test::Unit::TestCase
     Socket.do_not_reverse_lookup = @do_not_reverse_lookup
   end
 
-  test "#responses" do
+  def for_each_config_option(imap)
+    original = imap.config.responses_without_block
+    CONFIG_OPTIONS.each do |option|
+      imap.config.responses_without_block = option
+      yield option
+    end
+  ensure
+    imap.config.responses_without_block = original
+  end
+
+  # with a block: returns the block result
+  test "#responses(&block)" do
     with_fake_server do |server, imap|
-      # responses available before SELECT/EXAMINE
-      assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
-                   imap.responses("CAPABILITY", &:last))
-      resp = imap.select "INBOX"
-      # responses are cleared after SELECT/EXAMINE
-      assert_equal(nil, imap.responses("CAPABILITY", &:last))
-      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
-                   [resp.class, resp.tag, resp.name])
-      assert_equal([172], imap.responses { _1["EXISTS"] })
-      assert_equal([3857529045], imap.responses("UIDVALIDITY") { _1 })
-      assert_equal(1, imap.responses("RECENT", &:last))
-      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
-      # Deprecated style, without a block:
+      stderr = EnvUtil.verbose_warning do
+        # Config options make no difference to responses(&block)
+        for_each_config_option(imap) do
+          # responses available before SELECT/EXAMINE
+          assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                       imap.responses { _1["CAPABILITY"].last })
+        end
+        # responses are cleared after SELECT/EXAMINE
+        imap.select "INBOX"
+        for_each_config_option(imap) do
+          assert_equal nil,          imap.responses { _1["CAPABILITY"].last }
+          assert_equal [172],        imap.responses { _1["EXISTS"].dup }
+          assert_equal [3857529045], imap.responses { _1["UIDVALIDITY"].dup }
+          assert_equal 1,            imap.responses { _1["RECENT"].last }
+          assert_equal(%i[Answered Flagged Deleted Seen Draft],
+                      imap.responses { _1["FLAGS"].last })
+        end
+      end
+      assert_empty stderr # never warn when a block is given
+    end
+  end
+
+  # with a type and a block: returns the block result
+  test "#responses(type, &block)" do
+    with_fake_server do |server, imap|
+      stderr = EnvUtil.verbose_warning do
+        # Config options make no difference to responses(type, &block)
+        for_each_config_option(imap) do
+          # responses available before SELECT/EXAMINE
+          assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                       imap.responses("CAPABILITY", &:last))
+        end
+        # responses are cleared after SELECT/EXAMINE
+        imap.select "INBOX"
+        for_each_config_option(imap) do
+          assert_equal nil,          imap.responses("CAPABILITY", &:last)
+          assert_equal [172],        imap.responses("EXISTS", &:dup)
+          assert_equal [3857529045], imap.responses("UIDVALIDITY", &:dup)
+          assert_equal 1, imap.responses("RECENT", &:last)
+          assert_equal [4392], imap.responses("UIDNEXT", &:dup)
+          assert_equal(%i[Answered Flagged Deleted Seen Draft],
+                       imap.responses("FLAGS", &:last))
+        end
+      end
+      assert_empty stderr # never warn when type or block are given
+    end
+  end
+
+  # with with a type and no block: always raise an exception
+  test "#responses(type, &nil)" do
+    with_fake_server do |server, imap|
+      for_each_config_option(imap) do
+        assert_raise(ArgumentError) do imap.responses("CAPABILITY") end
+      end
+    end
+  end
+
+  def assert_responses_warn
+    assert_warn(/Pass a block.*or.*clear_responses/i) do
+      yield
+    end
+  end
+
+  # without type or block: relies on config.responses_without_block
+  test "#responses without type or block" do
+    with_fake_server do |server, imap|
+      # can be configured to raise
       imap.config.responses_without_block = :raise
       assert_raise(ArgumentError) do imap.responses end
+      # with warnings (default for v0.5)
       imap.config.responses_without_block = :warn
-      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
-      assert_warn(/Pass a block.*or.*clear_responses/i) do
-        assert_equal(%i[Answered Flagged Deleted Seen Draft],
-                     imap.responses["FLAGS"]&.last)
+      assert_responses_warn do assert_kind_of Hash, imap.responses end
+      assert_responses_warn do refute imap.responses.frozen? end
+      assert_responses_warn do refute imap.responses["CAPABILITY"].frozen? end
+      assert_responses_warn do
+        assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                     imap.responses["CAPABILITY"].last)
       end
-      # TODO: assert_no_warn?
+      assert_responses_warn do imap.responses["FAKE"] = :uh_oh! end
+      assert_responses_warn do assert_equal :uh_oh!, imap.responses["FAKE"] end
+      assert_responses_warn do imap.responses.delete("FAKE") end
+      assert_responses_warn do assert_equal [], imap.responses["FAKE"] end
+      # warnings can be silenced
       imap.config.responses_without_block = :silence_deprecation_warning
-      assert_raise(ArgumentError) do imap.responses("UIDNEXT") end
-      stderr = EnvUtil.verbose_warning {
-        assert_equal(%i[Answered Flagged Deleted Seen Draft],
-                     imap.responses["FLAGS"]&.last)
-      }
+      stderr = EnvUtil.verbose_warning do
+        refute imap.responses.frozen?
+        refute imap.responses["CAPABILITY"].frozen?
+        assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                     imap.responses["CAPABILITY"].last)
+        imap.responses["FAKE"] = :uh_oh!
+        assert_equal :uh_oh!, imap.responses["FAKE"]
+        imap.responses.delete("FAKE")
+        assert_equal [], imap.responses["FAKE"]
+      end
       assert_empty stderr
     end
   end
