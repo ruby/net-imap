@@ -2497,10 +2497,12 @@ module Net
     private_constant :RESPONSES_DEPRECATION_MSG
 
     # :call-seq:
+    #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
     #
-    # Yields unhandled responses and returns the result of the block.
+    # When a block is given, unhandled responses are yielded and the result
+    # of the block is returned.
     #
     # Unhandled responses are stored in a hash, with arrays of
     # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
@@ -2520,11 +2522,20 @@ module Net
     #   *Note:* Access to the responses hash is synchronized for thread-safety.
     #   The receiver thread and response_handlers cannot process new responses
     #   until the block completes.  Accessing either the response hash or its
-    #   response type arrays outside of the block is unsafe.
+    #   response type arrays outside of the block is unsafe.  They can be safely
+    #   updated inside the block.
     #
-    #   Calling without a block is unsafe and deprecated.  Future releases will
-    #   raise ArgumentError unless a block is given.
-    #   See Config#responses_without_block.
+    #   Net::IMAP will update the responses hash and its array values, but it
+    #   will not modify response data after was added to the responses hash.
+    #
+    # When +type+ is given without a block, a frozen copy of the unhandled
+    # responses array will be returned.  Note that the array is not deeply
+    # frozen, and it is unsafe to modify elements in the array from multiple
+    # threads.
+    #
+    # Calling without +type+ or a block is unsafe and deprecated.  Future
+    # releases may raise ArgumentError unless a block is given.  See
+    # Config#responses_without_block.
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
@@ -2547,7 +2558,7 @@ module Net
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
       elsif type
-        raise ArgumentError, "Pass a block or use #clear_responses"
+        synchronize { @responses[type.to_s.upcase].dup.freeze }
       else
         case config.responses_without_block
         when :raise

@@ -241,9 +241,9 @@ module Net
 
       # :markup: markdown
       #
-      # Controls the behavior of Net::IMAP#responses when called without a
-      # block.  Valid options are `:warn`, `:raise`, or
-      # `:silence_deprecation_warning`.
+      # Controls the behavior of Net::IMAP#responses when called without any
+      # arguments (a type or block).  Valid options are `:warn`,
+      # `:silence_deprecation_warning`, or `:raise`.
       #
       # | Starting with version   | The default value is           |
       # |-------------------------|--------------------------------|
@@ -253,6 +253,8 @@ module Net
       attr_accessor :responses_without_block, type: [
         :silence_deprecation_warning, :warn, :raise,
       ]
+      alias responses_without_args  responses_without_block
+      alias responses_without_args= responses_without_block=
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
