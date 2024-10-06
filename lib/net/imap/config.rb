@@ -240,9 +240,18 @@ module Net
       # [+:raise+ <em>(planned future default)</em>]
       #   Raise an ArgumentError with the deprecation warning.
       #
+      # Note: #responses_without_args is an alias for #responses_without_block.
       attr_accessor :responses_without_block, type: [
-        :silence_deprecation_warning, :warn, :raise,
+        :silence_deprecation_warning, :warn, :frozen_dup, :raise,
       ]
+
+      alias responses_without_args  responses_without_block  # :nodoc:
+      alias responses_without_args= responses_without_block= # :nodoc:
+
+      ##
+      # :attr_accessor: responses_without_args
+      #
+      # Alias for responses_without_block
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
