@@ -3028,6 +3028,7 @@ module Net
     def sort_internal(cmd, sort_keys, search_keys, charset)
       search_keys = normalize_searching_criteria(search_keys)
       synchronize do
+        # TODO: handle ESEARCH response (for ESORT extension)
         send_command(cmd, sort_keys, charset, *search_keys)
         clear_responses("SORT").last || []
       end
