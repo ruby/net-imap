@@ -241,18 +241,34 @@ module Net
 
       # :markup: markdown
       #
-      # Controls the behavior of Net::IMAP#responses when called without a
-      # block.  Valid options are `:warn`, `:raise`, or
-      # `:silence_deprecation_warning`.
+      # Controls the behavior of Net::IMAP#responses when called without any
+      # arguments (`type` or block).  Valid options are `:frozen_dup`, `:warn`,
+      # `:silence_deprecation_warning`, or `:raise`.
+      #
+      # [+:silence_deprecation_warning+]
+      #   Return the responses hash without any deprecation warnings.
+      #
+      # [+:warn+]
+      #   Return the responses hash, after printing a deprecation warning.
+      #
+      # [+:frozen_dup+]
+      #   Return a frozen copy of the unhandled responses.  This is always the
+      #   behavior when calling IMAP#responses with a `type` argument but
+      #   without a block.
+      #
+      # [+:raise+]
+      #   Raise an ArgumentError with the deprecation warning.
       #
       # | Starting with version   | The default value is           |
       # |-------------------------|--------------------------------|
       # | v0.4.13                 | +:silence_deprecation_warning+ |
       # | v0.5                    | +:warn+                        |
-      # | _eventually_            | +:raise+                       |
+      # | v0.6 _(planned)_        | +:frozen_dup+                  |
       attr_accessor :responses_without_block, type: [
-        :silence_deprecation_warning, :warn, :raise,
+        :silence_deprecation_warning, :warn, :frozen_dup, :raise,
       ]
+      alias responses_without_args  responses_without_block
+      alias responses_without_args= responses_without_block=
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #

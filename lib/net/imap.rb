@@ -2490,11 +2490,20 @@ module Net
       end
     end
 
+    RESPONSES_DEPRECATION_MSG =
+      "Pass a type or block to #responses, " \
+      "set config.responses_without_block to :silence_deprecation_warning, " \
+      "or use #extract_responses or #clear_responses."
+    private_constant :RESPONSES_DEPRECATION_MSG
+
     # :call-seq:
+    #   responses       -> hash of {String => Array} (see deprecation note)
+    #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
     #
-    # Yields unhandled responses and returns the result of the block.
+    # When a block is given, unhandled responses are yielded and the result
+    # of the block is returned.
     #
     # Unhandled responses are stored in a hash, with arrays of
     # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
@@ -2514,11 +2523,21 @@ module Net
     #   *Note:* Access to the responses hash is synchronized for thread-safety.
     #   The receiver thread and response_handlers cannot process new responses
     #   until the block completes.  Accessing either the response hash or its
-    #   response type arrays outside of the block is unsafe.
+    #   response type arrays outside of the block is unsafe.  They can be safely
+    #   updated inside the block.
     #
-    #   Calling without a block is unsafe and deprecated.  Future releases will
-    #   raise ArgumentError unless a block is given.
-    #   See Config#responses_without_block.
+    #   Net::IMAP will update the responses hash and its array values, but it
+    #   will not modify response data after was added to the responses hash.
+    #
+    # When +type+ is given without a block, a frozen copy of the unhandled
+    # responses array will be returned.  Note that the array is not deeply
+    # frozen, and it is unsafe to modify elements in the array from multiple
+    # threads.
+    #
+    # With the default v0.5 config, calling #responses without any arguments
+    # is unsafe and prints a warning.  In v0.6, it will return a frozen hash
+    # with frozen array values.  Set Config#responses_without_block to silence
+    # the warning or opt-in to the frozen dup behavior.
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
@@ -2541,14 +2560,20 @@ module Net
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
       elsif type
-        raise ArgumentError, "Pass a block or use #clear_responses"
+        synchronize { @responses[type.to_s.upcase].dup.freeze }
       else
         case config.responses_without_block
         when :raise
-          raise ArgumentError, "Pass a block or use #clear_responses"
+          raise ArgumentError, RESPONSES_DEPRECATION_MSG
         when :warn
-          warn("DEPRECATED: pass a block or use #clear_responses",
-               uplevel: 1, category: :deprecated)
+          warn(RESPONSES_DEPRECATION_MSG, uplevel: 1, category: :deprecated)
+        when :frozen_dup
+          synchronize {
+            responses = @responses.transform_values(&:freeze)
+            responses.default_proc = nil
+            responses.default = [].freeze
+            return responses.freeze
+          }
         end
         @responses
       end
