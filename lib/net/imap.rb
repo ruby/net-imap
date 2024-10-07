@@ -2497,6 +2497,7 @@ module Net
     private_constant :RESPONSES_DEPRECATION_MSG
 
     # :call-seq:
+    #   responses       -> hash of {String => Array} (see deprecation note)
     #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
@@ -2533,9 +2534,10 @@ module Net
     # frozen, and it is unsafe to modify elements in the array from multiple
     # threads.
     #
-    # Calling without +type+ or a block is unsafe and deprecated.  Future
-    # releases may raise ArgumentError unless a block is given.  See
-    # Config#responses_without_block.
+    # With the default v0.5 config, calling #responses without any arguments
+    # is unsafe and prints a warning.  In v0.6, it will return a frozen hash
+    # with frozen array values.  Set Config#responses_without_block to silence
+    # the warning or opt-in to the frozen dup behavior.
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
@@ -2565,6 +2567,13 @@ module Net
           raise ArgumentError, RESPONSES_DEPRECATION_MSG
         when :warn
           warn(RESPONSES_DEPRECATION_MSG, uplevel: 1, category: :deprecated)
+        when :frozen_dup
+          synchronize {
+            responses = @responses.transform_values(&:freeze)
+            responses.default_proc = nil
+            responses.default = [].freeze
+            return responses.freeze
+          }
         end
         @responses
       end
