@@ -2490,6 +2490,12 @@ module Net
       end
     end
 
+    RESPONSES_DEPRECATION_MSG =
+      "Pass a type or block to #responses, " \
+      "set config.responses_without_block to :silence_deprecation_warning, " \
+      "or use #extract_responses or #clear_responses."
+    private_constant :RESPONSES_DEPRECATION_MSG
+
     # :call-seq:
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
@@ -2584,10 +2590,9 @@ module Net
       else
         case config.responses_without_block
         when :raise
-          raise ArgumentError, "Pass a block or use #clear_responses"
+          raise ArgumentError, RESPONSES_DEPRECATION_MSG
         when :warn
-          warn("DEPRECATED: pass a block or use #clear_responses",
-               uplevel: 1, category: :deprecated)
+          warn(RESPONSES_DEPRECATION_MSG, uplevel: 1, category: :deprecated)
         end
         @responses
       end
