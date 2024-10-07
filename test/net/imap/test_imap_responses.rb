@@ -99,7 +99,14 @@ class IMAPResponsesTest < Test::Unit::TestCase
   end
 
   def assert_responses_warn
-    assert_warn(/Pass a block.*or.*clear_responses/i) do
+    assert_warn(
+      /
+        (?=(?-x)Pass a type or block to #responses\b)
+        (?=.*config\.responses_without_block.*:silence_deprecation_warning\b)
+        (?=.*\#extract_responses\b)
+           .*\#clear_responses\b
+      /ix
+    ) do
       yield
     end
   end
