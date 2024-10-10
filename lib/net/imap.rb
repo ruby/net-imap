@@ -2498,11 +2498,13 @@ module Net
 
     RESPONSES_DEPRECATION_MSG =
       "Pass a type or block to #responses, " \
-      "set config.responses_without_block to :silence_deprecation_warning, " \
+      "set config.responses_without_block to :frozen_dup " \
+      "or :silence_deprecation_warning, " \
       "or use #extract_responses or #clear_responses."
     private_constant :RESPONSES_DEPRECATION_MSG
 
     # :call-seq:
+    #   responses       -> hash of {String => Array} (see config.responses_without_block)
     #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
@@ -2531,6 +2533,10 @@ module Net
     #     [+:warn+ <em>(default since +v0.5+)</em>]
     #       Prints a warning and returns the mutable responses hash.
     #       <em>This is not thread-safe.</em>
+    #
+    #     [+:frozen_dup+</em>]
+    #       Returns a frozen copy of the unhandled responses hash, with frozen
+    #       array values.
     #
     #     [+:raise+ <em>(planned future default)</em>]
     #       Raise an +ArgumentError+ with the deprecation warning.
@@ -2603,6 +2609,13 @@ module Net
           raise ArgumentError, RESPONSES_DEPRECATION_MSG
         when :warn
           warn(RESPONSES_DEPRECATION_MSG, uplevel: 1)
+        when :frozen_dup
+          synchronize {
+            responses = @responses.transform_values(&:freeze)
+            responses.default_proc = nil
+            responses.default = [].freeze
+            return responses.freeze
+          }
         end
         @responses
       end
