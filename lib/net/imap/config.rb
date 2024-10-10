@@ -260,7 +260,7 @@ module Net
       #   Prints a warning and returns the mutable responses hash.
       #   <em>This is not thread-safe.</em>
       #
-      # [+:frozen_dup+</em>]
+      # [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
       #   Returns a frozen copy of the unhandled responses hash, with frozen
       #   array values.
       #
@@ -269,7 +269,7 @@ module Net
       #
       #   <em>(+:frozen_dup+ config option was added in +v0.4.17+)</em>
       #
-      # [+:raise+ <em>(planned future default)</em>]
+      # [+:raise+]
       #   Raise an ArgumentError with the deprecation warning.
       #
       # Note: #responses_without_args is an alias for #responses_without_block.
@@ -388,12 +388,11 @@ module Net
 
       version_defaults[0.5] = Config[:current]
 
-      version_defaults[0.6] = Config[0.5]
-      version_defaults[:next] = Config[0.6]
-
-      version_defaults[:future]  = Config[0.6].dup.update(
-        responses_without_block: :raise,
+      version_defaults[0.6] = Config[0.5].dup.update(
+        responses_without_block: :frozen_dup,
       ).freeze
+      version_defaults[:next] = Config[0.6]
+      version_defaults[:future] = Config[:next]
 
       version_defaults.freeze
     end

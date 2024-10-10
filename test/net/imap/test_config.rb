@@ -190,7 +190,7 @@ class ConfigTest < Test::Unit::TestCase
     assert_same Config.default, Config.new(Config.default).parent
     assert_same Config.global,  Config.new(Config.global).parent
     assert_same Config[0.4],    Config.new(0.4).parent
-    assert_same Config[0.5],    Config.new(:next).parent
+    assert_same Config[0.6],    Config.new(:next).parent
     assert_equal true, Config.new({debug: true}, debug: false).parent.debug?
     assert_equal true, Config.new({debug: true}, debug: false).parent.frozen?
   end
