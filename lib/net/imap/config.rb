@@ -260,6 +260,15 @@ module Net
       #   Prints a warning and returns the mutable responses hash.
       #   <em>This is not thread-safe.</em>
       #
+      # [+:frozen_dup+</em>]
+      #   Returns a frozen copy of the unhandled responses hash, with frozen
+      #   array values.
+      #
+      #   Note that calling IMAP#responses with a +type+ and without a block is
+      #   not configurable and always behaves like +:frozen_dup+.
+      #
+      #   <em>(+:frozen_dup+ config option was added in +v0.4.17+)</em>
+      #
       # [+:raise+ <em>(planned future default)</em>]
       #   Raise an ArgumentError with the deprecation warning.
       #

@@ -166,6 +166,15 @@ class IMAPResponsesTest < Test::Unit::TestCase
         assert_equal [], imap.responses["FAKE"]
       end
       assert_empty stderr
+      # opt-in to future behavior
+      imap.config.responses_without_block = :frozen_dup
+      stderr = EnvUtil.verbose_warning do
+        assert imap.responses.frozen?
+        assert imap.responses["CAPABILITY"].frozen?
+        assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
+                     imap.responses["CAPABILITY"].last)
+      end
+      assert_empty stderr
     end
   end
 
