@@ -2500,37 +2500,78 @@ module Net
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
     #
-    # Yields unhandled responses and returns the result of the block.
-    #
+    # Yields unhandled server responses and returns the result of the block.
     # Unhandled responses are stored in a hash, with arrays of
     # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
-    # and ResponseCode#data keyed by ResponseCode#name.  Call without +type+ to
-    # yield the entire responses hash.  Call with +type+ to yield only the array
-    # of responses for that type.
+    # and ResponseCode#data keyed by ResponseCode#name.
+    #
+    # [With +type+]
+    #   Yield only the array of responses for that +type+.
+    #   When no block is given, an +ArgumentError+ is raised.
+    # [Without +type+]
+    #   Yield or return the entire responses hash.
+    #
+    #   When no block is given, the behavior is determined by
+    #   Config#responses_without_block:
+    #   >>>
+    #     [+:silence_deprecation_warning+ <em>(original behavior)</em>]
+    #       Returns the mutable responses hash (without any warnings).
+    #       <em>This is not thread-safe.</em>
+    #
+    #     [+:warn+ <em>(default since +v0.5+)</em>]
+    #       Prints a warning and returns the mutable responses hash.
+    #       <em>This is not thread-safe.</em>
+    #
+    #     [+:raise+ <em>(planned future default)</em>]
+    #       Raise an +ArgumentError+ with the deprecation warning.
     #
     # For example:
     #
     #   imap.select("inbox")
     #   p imap.responses("EXISTS", &:last)
     #   #=> 2
+    #   p imap.responses("UIDNEXT", &:last)
+    #   #=> 123456
     #   p imap.responses("UIDVALIDITY", &:last)
     #   #=> 968263756
+    #   p imap.responses {|responses|
+    #     {
+    #       exists:      responses.delete("EXISTS").last,
+    #       uidnext:     responses.delete("UIDNEXT").last,
+    #       uidvalidity: responses.delete("UIDVALIDITY").last,
+    #     }
+    #   }
+    #   #=> {:exists=>2, :uidnext=>123456, :uidvalidity=>968263756}
+    #   # "EXISTS", "UIDNEXT", and "UIDVALIDITY" have been removed:
+    #   p imap.responses(&:keys)
+    #   #=> ["FLAGS", "OK", "PERMANENTFLAGS", "RECENT", "HIGHESTMODSEQ"]
     #
+    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
+    #
+    # ===== Thread safety
     # >>>
     #   *Note:* Access to the responses hash is synchronized for thread-safety.
     #   The receiver thread and response_handlers cannot process new responses
     #   until the block completes.  Accessing either the response hash or its
-    #   response type arrays outside of the block is unsafe.
+    #   response type arrays outside of the block is unsafe.  They can be safely
+    #   updated inside the block.  Consider using #clear_responses or
+    #   #extract_responses instead.
     #
-    #   Calling without a block is unsafe and deprecated.  Future releases will
-    #   raise ArgumentError unless a block is given.
-    #   See Config#responses_without_block.
+    #   Net::IMAP will add and remove responses from the responses hash and its
+    #   array values, in the calling threads for commands and in the receiver
+    #   thread, but will not modify any responses after adding them to the
+    #   responses hash.
+    #
+    # ===== Clearing responses
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
     # unhandled server responses, which must be pruned or they will continually
     # consume more memory.  Update or clear the responses hash or arrays inside
-    # the block, or use #clear_responses.
+    # the block, or remove responses with #extract_responses, #clear_responses,
+    # or #add_response_handler.
+    #
+    # ===== Missing responses
     #
     # Only non-+nil+ data is stored.  Many important response codes have no data
     # of their own, but are used as "tags" on the ResponseText object they are
@@ -2541,8 +2582,6 @@ module Net
     # ResponseCode#data on tagged responses.  Although some command methods do
     # return the TaggedResponse directly, #add_response_handler must be used to
     # handle all response codes.
-    #
-    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
     def responses(type = nil)
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
