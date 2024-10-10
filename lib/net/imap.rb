@@ -2534,11 +2534,11 @@ module Net
     #       Prints a warning and returns the mutable responses hash.
     #       <em>This is not thread-safe.</em>
     #
-    #     [+:frozen_dup+</em>]
+    #     [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
     #       Returns a frozen copy of the unhandled responses hash, with frozen
     #       array values.
     #
-    #     [+:raise+ <em>(planned future default)</em>]
+    #     [+:raise+]
     #       Raise an +ArgumentError+ with the deprecation warning.
     #
     # For example:
