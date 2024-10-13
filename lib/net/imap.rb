@@ -2490,41 +2490,98 @@ module Net
       end
     end
 
+    RESPONSES_DEPRECATION_MSG =
+      "Pass a type or block to #responses, " \
+      "set config.responses_without_block to :frozen_dup " \
+      "or :silence_deprecation_warning, " \
+      "or use #extract_responses or #clear_responses."
+    private_constant :RESPONSES_DEPRECATION_MSG
+
     # :call-seq:
+    #   responses       -> hash of {String => Array} (see config.responses_without_block)
+    #   responses(type) -> frozen array
     #   responses       {|hash|  ...} -> block result
     #   responses(type) {|array| ...} -> block result
     #
-    # Yields unhandled responses and returns the result of the block.
+    # Yields or returns unhandled server responses.  Unhandled responses are
+    # stored in a hash, with arrays of UntaggedResponse#data keyed by
+    # UntaggedResponse#name and <em>non-+nil+</em> untagged ResponseCode#data
+    # keyed by ResponseCode#name.
     #
-    # Unhandled responses are stored in a hash, with arrays of
-    # <em>non-+nil+</em> UntaggedResponse#data keyed by UntaggedResponse#name
-    # and ResponseCode#data keyed by ResponseCode#name.  Call without +type+ to
-    # yield the entire responses hash.  Call with +type+ to yield only the array
-    # of responses for that type.
+    # When a block is given, yields unhandled responses and returns the block's
+    # result.  Without a block, returns the unhandled responses.
+    #
+    # [With +type+]
+    #   Yield or return only the array of responses for that +type+.
+    #   When no block is given, the returned array is a frozen copy.
+    # [Without +type+]
+    #   Yield or return the entire responses hash.
+    #
+    #   When no block is given, the behavior is determined by
+    #   Config#responses_without_block:
+    #   >>>
+    #     [+:silence_deprecation_warning+ <em>(original behavior)</em>]
+    #       Returns the mutable responses hash (without any warnings).
+    #       <em>This is not thread-safe.</em>
+    #
+    #     [+:warn+ <em>(default since +v0.5+)</em>]
+    #       Prints a warning and returns the mutable responses hash.
+    #       <em>This is not thread-safe.</em>
+    #
+    #     [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
+    #       Returns a frozen copy of the unhandled responses hash, with frozen
+    #       array values.
+    #
+    #     [+:raise+]
+    #       Raise an +ArgumentError+ with the deprecation warning.
     #
     # For example:
     #
     #   imap.select("inbox")
-    #   p imap.responses("EXISTS", &:last)
+    #   p imap.responses("EXISTS").last
     #   #=> 2
+    #   p imap.responses("UIDNEXT", &:last)
+    #   #=> 123456
     #   p imap.responses("UIDVALIDITY", &:last)
     #   #=> 968263756
+    #   p imap.responses {|responses|
+    #     {
+    #       exists:      responses.delete("EXISTS").last,
+    #       uidnext:     responses.delete("UIDNEXT").last,
+    #       uidvalidity: responses.delete("UIDVALIDITY").last,
+    #     }
+    #   }
+    #   #=> {:exists=>2, :uidnext=>123456, :uidvalidity=>968263756}
+    #   # "EXISTS", "UIDNEXT", and "UIDVALIDITY" have been removed:
+    #   p imap.responses(&:keys)
+    #   #=> ["FLAGS", "OK", "PERMANENTFLAGS", "RECENT", "HIGHESTMODSEQ"]
     #
+    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
+    #
+    # ===== Thread safety
     # >>>
     #   *Note:* Access to the responses hash is synchronized for thread-safety.
     #   The receiver thread and response_handlers cannot process new responses
     #   until the block completes.  Accessing either the response hash or its
-    #   response type arrays outside of the block is unsafe.
+    #   response type arrays outside of the block is unsafe.  They can be safely
+    #   updated inside the block.  Consider using #clear_responses or
+    #   #extract_responses instead.
     #
-    #   Calling without a block is unsafe and deprecated.  Future releases will
-    #   raise ArgumentError unless a block is given.
-    #   See Config#responses_without_block.
+    #   Net::IMAP will add and remove responses from the responses hash and its
+    #   array values, in the calling threads for commands and in the receiver
+    #   thread, but will not modify any responses after adding them to the
+    #   responses hash.
+    #
+    # ===== Clearing responses
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
     # unhandled server responses, which must be pruned or they will continually
     # consume more memory.  Update or clear the responses hash or arrays inside
-    # the block, or use #clear_responses.
+    # the block, or remove responses with #extract_responses, #clear_responses,
+    # or #add_response_handler.
+    #
+    # ===== Missing responses
     #
     # Only non-+nil+ data is stored.  Many important response codes have no data
     # of their own, but are used as "tags" on the ResponseText object they are
@@ -2535,20 +2592,24 @@ module Net
     # ResponseCode#data on tagged responses.  Although some command methods do
     # return the TaggedResponse directly, #add_response_handler must be used to
     # handle all response codes.
-    #
-    # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
     def responses(type = nil)
       if block_given?
         synchronize { yield(type ? @responses[type.to_s.upcase] : @responses) }
       elsif type
-        raise ArgumentError, "Pass a block or use #clear_responses"
+        synchronize { @responses[type.to_s.upcase].dup.freeze }
       else
         case config.responses_without_block
         when :raise
-          raise ArgumentError, "Pass a block or use #clear_responses"
+          raise ArgumentError, RESPONSES_DEPRECATION_MSG
         when :warn
-          warn("DEPRECATED: pass a block or use #clear_responses",
-               uplevel: 1, category: :deprecated)
+          warn(RESPONSES_DEPRECATION_MSG, uplevel: 1, category: :deprecated)
+        when :frozen_dup
+          synchronize {
+            responses = @responses.transform_values(&:freeze)
+            responses.default_proc = nil
+            responses.default = [].freeze
+            return responses.freeze
+          }
         end
         @responses
       end

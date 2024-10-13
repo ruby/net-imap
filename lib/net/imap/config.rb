@@ -7,10 +7,10 @@ require_relative "config/attr_type_coercion"
 module Net
   class IMAP
 
-    # Net::IMAP::Config stores configuration options for Net::IMAP clients.
-    # The global configuration can be seen at either Net::IMAP.config or
-    # Net::IMAP::Config.global, and the client-specific configuration can be
-    # seen at Net::IMAP#config.
+    # Net::IMAP::Config <em>(available since +v0.4.13+)</em> stores
+    # configuration options for Net::IMAP clients.  The global configuration can
+    # be seen at either Net::IMAP.config or Net::IMAP::Config.global, and the
+    # client-specific configuration can be seen at Net::IMAP#config.
     #
     # When creating a new client, all unhandled keyword arguments to
     # Net::IMAP.new are delegated to Config.new.  Every client has its own
@@ -128,7 +128,7 @@ module Net
       # The global config object.  Also available from Net::IMAP.config.
       def self.global; @global if defined?(@global) end
 
-      # A hash of hard-coded configurations, indexed by version number.
+      # A hash of hard-coded configurations, indexed by version number or name.
       def self.version_defaults; @version_defaults end
       @version_defaults = {}
 
@@ -172,9 +172,16 @@ module Net
       include AttrInheritance
       include AttrTypeCoercion
 
-      # The debug mode (boolean)
+      # The debug mode (boolean).  The default value is +false+.
       #
-      # The default value is +false+.
+      # When #debug is +true+:
+      # * Data sent to and received from the server will be logged.
+      # * ResponseParser will print warnings with extra detail for parse
+      #   errors.  _This may include recoverable errors._
+      # * ResponseParser makes extra assertions.
+      #
+      # *NOTE:* Versioned default configs inherit #debug from Config.global, and
+      # #load_defaults will not override #debug.
       attr_accessor :debug, type: :boolean
 
       # method: debug?
@@ -200,59 +207,83 @@ module Net
       # The default value is +5+ seconds.
       attr_accessor :idle_response_timeout, type: Integer
 
-      # :markup: markdown
-      #
       # Whether to use the +SASL-IR+ extension when the server and \SASL
-      # mechanism both support it.
+      # mechanism both support it.  Can be overridden by the +sasl_ir+ keyword
+      # parameter to Net::IMAP#authenticate.
       #
-      # See Net::IMAP#authenticate.
+      # <em>(Support for +SASL-IR+ was added in +v0.4.0+.)</em>
       #
-      # | Starting with version | The default value is                     |
-      # |-----------------------|------------------------------------------|
-      # | _original_            | +false+ <em>(extension unsupported)</em> |
-      # | v0.4                  | +true+  <em>(support added)</em>         |
+      # ==== Valid options
+      #
+      # [+false+ <em>(original behavior, before support was added)</em>]
+      #   Do not use +SASL-IR+, even when it is supported by the server and the
+      #   mechanism.
+      #
+      # [+true+ <em>(default since +v0.4+)</em>]
+      #   Use +SASL-IR+ when it is supported by the server and the mechanism.
       attr_accessor :sasl_ir, type: :boolean
 
-      # :markup: markdown
-      #
-      # Controls the behavior of Net::IMAP#login when the `LOGINDISABLED`
+      # Controls the behavior of Net::IMAP#login when the +LOGINDISABLED+
       # capability is present.  When enforced, Net::IMAP will raise a
-      # LoginDisabledError when that capability is present.  Valid values are:
+      # LoginDisabledError when that capability is present.
       #
-      # [+false+]
+      # <em>(Support for +LOGINDISABLED+ was added in +v0.5.0+.)</em>
+      #
+      # ==== Valid options
+      #
+      # [+false+ <em>(original behavior, before support was added)</em>]
       #   Send the +LOGIN+ command without checking for +LOGINDISABLED+.
       #
       # [+:when_capabilities_cached+]
       #   Enforce the requirement when Net::IMAP#capabilities_cached? is true,
       #   but do not send a +CAPABILITY+ command to discover the capabilities.
       #
-      # [+true+]
+      # [+true+ <em>(default since +v0.5+)</em>]
       #   Only send the +LOGIN+ command if the +LOGINDISABLED+ capability is not
       #   present.  When capabilities are unknown, Net::IMAP will automatically
       #   send a +CAPABILITY+ command first before sending +LOGIN+.
       #
-      # | Starting with version   | The default value is           |
-      # |-------------------------|--------------------------------|
-      # | _original_              | `false`                        |
-      # | v0.5                    | `true`                         |
       attr_accessor :enforce_logindisabled, type: [
         false, :when_capabilities_cached, true
       ]
 
-      # :markup: markdown
+      # Controls the behavior of Net::IMAP#responses when called without any
+      # arguments (+type+ or +block+).
       #
-      # Controls the behavior of Net::IMAP#responses when called without a
-      # block.  Valid options are `:warn`, `:raise`, or
-      # `:silence_deprecation_warning`.
+      # ==== Valid options
       #
-      # | Starting with version   | The default value is           |
-      # |-------------------------|--------------------------------|
-      # | v0.4.13                 | +:silence_deprecation_warning+ |
-      # | v0.5                    | +:warn+                        |
-      # | _eventually_            | +:raise+                       |
+      # [+:silence_deprecation_warning+ <em>(original behavior)</em>]
+      #   Returns the mutable responses hash (without any warnings).
+      #   <em>This is not thread-safe.</em>
+      #
+      # [+:warn+ <em>(default since +v0.5+)</em>]
+      #   Prints a warning and returns the mutable responses hash.
+      #   <em>This is not thread-safe.</em>
+      #
+      # [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
+      #   Returns a frozen copy of the unhandled responses hash, with frozen
+      #   array values.
+      #
+      #   Note that calling IMAP#responses with a +type+ and without a block is
+      #   not configurable and always behaves like +:frozen_dup+.
+      #
+      #   <em>(+:frozen_dup+ config option was added in +v0.4.17+)</em>
+      #
+      # [+:raise+]
+      #   Raise an ArgumentError with the deprecation warning.
+      #
+      # Note: #responses_without_args is an alias for #responses_without_block.
       attr_accessor :responses_without_block, type: [
-        :silence_deprecation_warning, :warn, :raise,
+        :silence_deprecation_warning, :warn, :frozen_dup, :raise,
       ]
+
+      alias responses_without_args  responses_without_block  # :nodoc:
+      alias responses_without_args= responses_without_block= # :nodoc:
+
+      ##
+      # :attr_accessor: responses_without_args
+      #
+      # Alias for responses_without_block
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
@@ -357,12 +388,11 @@ module Net
 
       version_defaults[0.5] = Config[:current]
 
-      version_defaults[0.6] = Config[0.5]
-      version_defaults[:next] = Config[0.6]
-
-      version_defaults[:future]  = Config[0.6].dup.update(
-        responses_without_block: :raise,
+      version_defaults[0.6] = Config[0.5].dup.update(
+        responses_without_block: :frozen_dup,
       ).freeze
+      version_defaults[:next] = Config[0.6]
+      version_defaults[:future] = Config[:next]
 
       version_defaults.freeze
     end
