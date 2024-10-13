@@ -1107,7 +1107,7 @@ EOF
     end
   end
 
-  def test_responses
+  test "#responses" do
     with_fake_server do |server, imap|
       # responses available before SELECT/EXAMINE
       assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
@@ -1141,7 +1141,7 @@ EOF
     end
   end
 
-  def test_clear_responses
+  test "#clear_responses" do
     with_fake_server do |server, imap|
       resp = imap.select "INBOX"
       assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
@@ -1162,6 +1162,49 @@ EOF
       assert_equal(3, responses["PERMANENTFLAGS"].last&.size)
       assert_equal({}, imap.responses(&:itself))
       assert_equal({}, imap.clear_responses)
+    end
+  end
+
+  test "#extract_responses" do
+    with_fake_server do |server, imap|
+      resp = imap.select "INBOX"
+      assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
+                   [resp.class, resp.tag, resp.name])
+      # Need to send a string type and a block
+      assert_raise(ArgumentError) do imap.extract_responses { true } end
+      assert_raise(ArgumentError) do imap.extract_responses(nil) { true } end
+      assert_raise(ArgumentError) do imap.extract_responses("OK") end
+      # matching nothing
+      assert_equal([172], imap.responses("EXISTS", &:dup))
+      assert_equal([],    imap.extract_responses("EXISTS") { String === _1 })
+      assert_equal([172], imap.responses("EXISTS", &:dup))
+      # matching everything
+      assert_equal([172], imap.responses("EXISTS", &:dup))
+      assert_equal([172], imap.extract_responses("EXISTS", &:even?))
+      assert_equal([],    imap.responses("EXISTS", &:dup))
+      # matching some
+      server.unsolicited("101 FETCH (UID 1111 FLAGS (\\Seen))")
+      server.unsolicited("102 FETCH (UID 2222 FLAGS (\\Seen \\Flagged))")
+      server.unsolicited("103 FETCH (UID 3333 FLAGS (\\Deleted))")
+      wait_for_response_count(imap, type: "FETCH", count: 3)
+
+      result = imap.extract_responses("FETCH") { _1.flags.include?(:Flagged) }
+      assert_equal(
+        [
+          Net::IMAP::FetchData.new(
+            102, {"UID" => 2222, "FLAGS" => [:Seen, :Flagged]}
+          ),
+        ],
+        result,
+      )
+      assert_equal 2, imap.responses("FETCH", &:count)
+
+      result = imap.extract_responses("FETCH") { _1.flags.include?(:Deleted) }
+      assert_equal(
+        [Net::IMAP::FetchData.new(103, {"UID" => 3333, "FLAGS" => [:Deleted]})],
+        result
+      )
+      assert_equal 1, imap.responses("FETCH", &:count)
     end
   end
 
@@ -1420,4 +1463,16 @@ EOF
   def server_addr
     Addrinfo.tcp("localhost", 0).ip_address
   end
+
+  def wait_for_response_count(imap, type:, count:,
+                              timeout: 0.5, interval: 0.001)
+    deadline = Time.now + timeout
+    loop do
+      current_count = imap.responses(type, &:size)
+      break :count    if count <= current_count
+      break :deadline if deadline < Time.now
+      sleep interval
+    end
+  end
+
 end
