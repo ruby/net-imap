@@ -185,6 +185,11 @@ module Net
           @str[@pos, str.length] == str
         end
 
+        def peek_re?(re)
+          assert_no_lookahead if Net::IMAP.debug
+          re.match?(@str, @pos)
+        end
+
         def peek_re(re)
           assert_no_lookahead if config.debug?
           re.match(@str, @pos)
