@@ -968,6 +968,20 @@ module Net
     # Creates a new Net::IMAP object and connects it to the specified
     # +host+.
     #
+    # ==== Default port and SSL
+    #
+    # When both both +port+ and +ssl+ are unspecified or +nil+,
+    # +ssl+ is determined by {config.default_ssl}[rdoc-ref:Config#default_ssl]
+    # and +port+ is based on that implicit value for +ssl+.
+    #
+    # When only one of the two is specified:
+    # * When +ssl+ is truthy,  +port+ defaults to +993+.
+    # * When +ssl+ is +false+, +port+ defaults to +143+.
+    # * When +port+ is +993+, +ssl+ defaults to +true+.
+    # * When +port+ is +143+, +ssl+ defaults to +false+.
+    # * When +port+ is nonstandard, the default for +ssl+ is determined
+    #   by {config.default_ssl}[rdoc-ref:Config#default_ssl].
+    #
     # ==== Options
     #
     # Accepts the following options:
@@ -1081,7 +1095,7 @@ module Net
       # Config options
       @host = host
       @config = Config.new(config, **config_options)
-      @port = port || (ssl ? SSL_PORT : PORT)
+      ssl, @port = default_ssl_and_port(ssl, port)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
@@ -3342,6 +3356,27 @@ module Net
     CRLF = "\r\n"      # :nodoc:
     PORT = 143         # :nodoc:
     SSL_PORT = 993   # :nodoc:
+
+    def default_ssl_and_port(tls, port)
+      if tls.nil? && port
+        tls = true  if port == SSL_PORT || /\Aimaps\z/i === port
+        tls = false if port == PORT
+      elsif port.nil? && !tls.nil?
+        port = tls ? SSL_PORT : PORT
+      end
+      if tls.nil? && port.nil?
+        tls = config.default_tls.dup.freeze
+        port = tls ? SSL_PORT : PORT
+        if tls.nil?
+          warn "A future version of Net::IMAP::Config#default_tls " \
+               "will default to 'true', for secure connections by default.  " \
+               "Use 'Net::IMAP.new(host, ssl: false)' or " \
+               "Net::IMAP.config.default_tls = false' to silence this warning."
+        end
+      end
+      tls &&= tls.respond_to?(:to_hash) ? tls.to_hash : {}
+      [tls, port]
+    end
 
     def start_imap_connection
       @greeting        = get_server_greeting
