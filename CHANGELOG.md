@@ -1,0 +1,517 @@
+# Changelog
+
+## [Unreleased](https://github.com/ruby/net-imap/tree/HEAD)
+
+* ???
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.10...HEAD
+
+## [v0.4.10](https://github.com/ruby/net-imap/tree/v0.4.10) (2024-02-04)
+
+### What's Changed
+
+#### Fixes
+* 🐛 Do not automatically freeze SearchResult by @nevans in https://github.com/ruby/net-imap/pull/263
+  _This fixes a backwards incompatible change in `v0.4.8` that affected the `mail` gem.
+  See https://github.com/ruby/net-imap/issues/262, reported by @stanley90._
+
+#### Documentation
+* 📚 Workaround rdoc method visibility issue by @nevans in https://github.com/ruby/net-imap/pull/257
+* 📚 Workaround rdoc issue with `:yield:` and visibility by @nevans in https://github.com/ruby/net-imap/pull/258
+
+#### Miscellaneous
+* ⬆️ Bump actions/upload-pages-artifact from 2 to 3 by @dependabot in https://github.com/ruby/net-imap/pull/256
+* ⬆️ Bump actions/deploy-pages from 3 to 4 by @dependabot in https://github.com/ruby/net-imap/pull/255
+* Renew test certificates by @sorah in https://github.com/ruby/net-imap/pull/259
+* Add base64 dev dependency by @hsbt in https://github.com/ruby/net-imap/pull/261
+* Import sample code from ruby/ruby by @hsbt in https://github.com/ruby/net-imap/pull/260
+
+### New Contributors
+* @sorah made their first contribution in https://github.com/ruby/net-imap/pull/259
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.9...v0.4.10
+
+## [v0.4.9.1](https://github.com/ruby/net-imap/tree/v0.4.9.1) (2024-01-05)
+
+### What's Changed
+* Renew test certificates by @sorah in https://github.com/ruby/net-imap/pull/259
+
+### New Contributors
+* @sorah made their first contribution in https://github.com/ruby/net-imap/pull/259
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.9...v0.4.9.1
+
+## [v0.3.4.1](https://github.com/ruby/net-imap/tree/v0.3.4.1) (2024-01-05)
+
+### What's Changed
+* Renew test certificates by @sorah in https://github.com/ruby/net-imap/pull/259
+
+### New Contributors
+* @sorah made their first contribution in https://github.com/ruby/net-imap/pull/259
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.4...v0.3.4.1
+
+## [v0.2.4](https://github.com/ruby/net-imap/tree/v0.2.4) (2024-01-05)
+
+### What's Changed
+* Renew test certificates by @sorah in https://github.com/ruby/net-imap/pull/259
+
+### New Contributors
+* @sorah made their first contribution in https://github.com/ruby/net-imap/pull/259
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.2.3...v0.2.4
+
+## [v0.4.9](https://github.com/ruby/net-imap/tree/v0.4.9) (2023-12-24)
+
+### What's Changed
+
+#### Added
+* ✨ Add `SequenceSet#overlap?` alias for `intersect?` by @nevans in https://github.com/ruby/net-imap/pull/252
+* ✨ Preserving sequence set order by @nevans in https://github.com/ruby/net-imap/pull/254
+  * Add `SequenceSet#entries` and `#each_entry`, for unsorted iteration
+  * Add `SequenceSet#append`, to keep unsorted order when modifying the set
+
+#### Documentation
+* 📚 Fix "not not" in FetchData docs by @nevans in https://github.com/ruby/net-imap/pull/248
+* 📚 Document SequenceSet "Normalized form" by @nevans in https://github.com/ruby/net-imap/pull/254
+
+#### Other Changes
+* Remove redundant calls in sort_internal and thread_internal by @gobijan in https://github.com/ruby/net-imap/pull/251
+
+#### Miscellaneous
+* ✅ Document and test workaround for invalid "\*" in FLAGS by @nevans in https://github.com/ruby/net-imap/pull/249
+* ✅ Limit CI rubygems for 2.7 compatibility by @nevans in https://github.com/ruby/net-imap/pull/253
+
+### New Contributors
+* @gobijan made their first contribution in https://github.com/ruby/net-imap/pull/251
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.8...v0.4.9
+
+## [v0.4.8](https://github.com/ruby/net-imap/tree/v0.4.8) (2023-12-12)
+
+### What's Changed
+
+#### Added
+* ✨ Improve SequenceSet with Set, Range, Enumerable methods by @nevans in https://github.com/ruby/net-imap/pull/239
+* ✨ Add support for the `CONDSTORE` extension (RFC7162) by @nevans in https://github.com/ruby/net-imap/pull/236
+   _NOTE: `#search` and `#uid_search` have been updated to return `SearchResult` rather than `Array`. `SearchResult` inherits from `Array`, for backward compatibility._
+
+#### Fixed
+* 🩹 Workaround invalid Gmail FLAGS response by @nevans in https://github.com/ruby/net-imap/pull/246
+* 🐛 Fix broken `QUOTA`/`QUOTAROOT` response parsing by @nevans in https://github.com/ruby/net-imap/pull/247
+
+#### Documentation
+* 📚 Update extension docs for IMAP4rev2, STATUS=SIZE by @nevans in https://github.com/ruby/net-imap/pull/242
+* 📚 List all currently supported response codes by @nevans in https://github.com/ruby/net-imap/pull/243
+
+#### Miscellaneous
+* Bump actions/configure-pages from 3 to 4 by @dependabot in https://github.com/ruby/net-imap/pull/245
+* Bump actions/deploy-pages from 2 to 3 by @dependabot in https://github.com/ruby/net-imap/pull/244
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.7...v0.4.8
+
+## [v0.4.7](https://github.com/ruby/net-imap/tree/v0.4.7) (2023-11-29)
+
+### What's Changed
+* Provide a 'Changelog' link on rubygems.org/gems/net-imap by @mark-young-atg in https://github.com/ruby/net-imap/pull/235
+* ⚡️ Simplify and speed up `SEARCH` response parsing by @nevans in https://github.com/ruby/net-imap/pull/238
+* 🩹 Workaround buggy outlook.com address lists by @nevans in https://github.com/ruby/net-imap/pull/240
+
+### New Contributors
+* @mark-young-atg made their first contribution in https://github.com/ruby/net-imap/pull/235
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.6...v0.4.7
+
+## [v0.4.6](https://github.com/ruby/net-imap/tree/v0.4.6) (2023-11-21)
+
+### What's Changed
+
+#### Changed
+* 🩹 Workaround servers that don't send required `SP` when `resp-text` is empty by @nevans in https://github.com/ruby/net-imap/pull/230
+* ⚡️ Simplify and speed up `envelope` and `address` parsing by @nevans in https://github.com/ruby/net-imap/pull/232
+* ⚡️ Simplify and speed up `mailbox-list` parsing by @nevans in https://github.com/ruby/net-imap/pull/233
+* ⚡ Simplify and speed up `thread-data` response parsing by @nevans in https://github.com/ruby/net-imap/pull/234
+
+#### Documentation
+* 📚 Update `#status` docs for `DELETED` (IMAP4rev2) by @nevans in https://github.com/ruby/net-imap/pull/227
+
+#### Miscellaneous
+* 📈 Fix benchmark string encoding by @nevans in https://github.com/ruby/net-imap/pull/231
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.5...v0.4.6
+
+## [v0.4.5](https://github.com/ruby/net-imap/tree/v0.4.5) (2023-11-13)
+
+### What's Changed
+
+#### ✨ Added
+##### IMAP extension support
+* ✨ Add fetch support for `BINARY` and `BINARY.SIZE` by @nevans in https://github.com/ruby/net-imap/pull/207
+* ✨ Add fetch support for Gmail's `X-GM-EXT-1` extensions by @nevans in https://github.com/ruby/net-imap/pull/209
+* ✨ Add support for `OBJECTID` extension (RFC8474) by @nevans in https://github.com/ruby/net-imap/pull/226
+  * `MAILBOXID` ResponseCode
+  * `MAILBOXID` attribute for `Net::IMAP#status`
+  * `EMAILID` and `THREADID` message attributes to `Net::IMAP#fetch`/`#uid_fetch` and `FetchData#emailid`/`#threadid`
+
+##### Other API improvements
+* ✨ Allow `decode_datetime` to work without dquotes by @nevans in https://github.com/ruby/net-imap/pull/218
+* ✨ Add FetchData msg-att methods and update rdoc by @nevans in https://github.com/ruby/net-imap/pull/220
+
+#### ♻️ Changed
+* ⚡ Better Faster Cleaner `STATUS` parsing by @nevans in https://github.com/ruby/net-imap/pull/225
+
+#### 📚 Documentation
+* 📚 Add :nodoc: to internal parser utils by @nevans in https://github.com/ruby/net-imap/pull/221
+* 💄 Fix styles.css customization for RDoc 6.6 by @nevans in https://github.com/ruby/net-imap/pull/222
+* ✨ Add FetchData msg-att methods and update rdoc by @nevans in https://github.com/ruby/net-imap/pull/220
+* 📚 Improve `STATUS` attribute documentation by @nevans in https://github.com/ruby/net-imap/pull/225
+
+#### Miscellaneous
+* 🔎 Simplify parser test debugging by @nevans in https://github.com/ruby/net-imap/pull/223
+* 📈 Update parser benchmark comparison by @nevans in https://github.com/ruby/net-imap/pull/224
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.4...v0.4.5
+
+## [v0.4.4](https://github.com/ruby/net-imap/tree/v0.4.4) (2023-11-03)
+
+### What's Changed
+
+#### Performance
+* ⚡ Parse expected chars using `String#getbyte` by @nevans in https://github.com/ruby/net-imap/pull/215
+* ⚡ Simplify `header-fld-name` parser (backward compatible) by @nevans in https://github.com/ruby/net-imap/pull/217
+
+#### Error handling
+* 🥅 Return empty array for missing server response by @nevans in https://github.com/ruby/net-imap/pull/214
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.3...v0.4.4
+
+## [v0.4.3](https://github.com/ruby/net-imap/tree/v0.4.3) (2023-10-30)
+
+### What's Changed
+
+#### Fixes
+* 🐛 Fix unbalanced parens in `body-fld-lang` parsing by @nevans in https://github.com/ruby/net-imap/pull/204
+
+#### Error handling
+* 🥅 Validate `response-tagged` in the parser by @nevans in https://github.com/ruby/net-imap/pull/198
+* 🥅 Return `UnparsedData` for unhandled response-data by @nevans in https://github.com/ruby/net-imap/pull/200
+* 🥅 Update parsing of unknown numeric response types by @nevans in https://github.com/ruby/net-imap/pull/213
+
+#### Performance
+* ⚡ Simpler, faster `response-data` parser by @nevans in https://github.com/ruby/net-imap/pull/201
+* ⚡ Simpler, faster `msg-att` parser (for fetch responses) by @nevans in https://github.com/ruby/net-imap/pull/205
+* ⚡ Simpler, faster `resp-text-code` parser (for response codes) by @nevans in https://github.com/ruby/net-imap/pull/211
+* ⚡ Update flag parsing: FLAGS, LIST, PERMANENTFLAGS by @nevans in https://github.com/ruby/net-imap/pull/212
+
+#### Changes
+* ✨ Update `response-data` parser w/stubs for all extensions by @nevans in https://github.com/ruby/net-imap/pull/202
+* ♻️ Update `response` and `continue-req` to new parser style by @nevans in https://github.com/ruby/net-imap/pull/199
+* ♻️ Refactor `response-data` methods to match ABNF by @nevans in https://github.com/ruby/net-imap/pull/203
+
+#### Documentation
+* 📚 Fix `XOAuth2Authenticator` rdoc typo by @nevans in https://github.com/ruby/net-imap/pull/196
+* 📚 Fixing and formatting docs by @nevans in https://github.com/ruby/net-imap/pull/197
+
+#### Miscellaneous
+* 📈 Add benchmark rake task to compare gem versions by @nevans in https://github.com/ruby/net-imap/pull/208
+* Set utf-8 encoding when looking for VERSION in the file. by @debasishbsws in https://github.com/ruby/net-imap/pull/210
+
+### New Contributors
+* @debasishbsws made their first contribution in https://github.com/ruby/net-imap/pull/210
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.2...v0.4.3
+
+## [v0.4.2](https://github.com/ruby/net-imap/tree/v0.4.2) (2023-10-20)
+
+### What's Changed
+* 🔒 SASL: Clarify usage of username vs authcid vs authzid by @nevans in https://github.com/ruby/net-imap/pull/187
+  * Improved SASL authenticator parameter documentation.
+  * Aliases have been added from `username` to `authcid` or `authzid`—or in the other direction, from `authcid` or `authzd` to `username`.
+  * `OAuthBearerAuthenticator` may now receive two arguments, to match the common `authenticate(username, secret)` style.  `authzid` (i.e. `username`) is still optional for the mechanism (although in practice many servers do require it).
+  * Instead of raising an exception, conflicting arguments are silently ignored.  This allows more specific arguments (like `authcid` or a keyword argument) to override more generic terms (like `username` or a positional argument).  This improves compatibility with other projects, and can also simplify dynamic mechanism negotiation.
+  * Keyword argument support has been added to the deprecated `LOGIN` and `CRAM-MD5` mechanisms.  This is for consistency and compatibility with other projects.  These mechanisms _are obsolete and should be avoided_.
+* ✨ Add `secret` alias (for `password`, `oauth2_token`, etc) to relevant SASL mechanisms by @nevans in https://github.com/ruby/net-imap/pull/195
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.1...v0.4.2
+
+## [v0.4.1](https://github.com/ruby/net-imap/tree/v0.4.1) (2023-10-09)
+
+### What's Changed
+* 📚 Fix a few documentation mistakes by @nevans in https://github.com/ruby/net-imap/pull/193
+* 🔒⚗️ Add experimental SASL::ClientAdapter by @nevans in https://github.com/ruby/net-imap/pull/183
+  This code is not yet used by `Net::IMAP#authenticate` (see https://github.com/ruby/net-imap/pull/194).  It is released in experimental form in order to simplify using it from other projects, to facilitate collaborating and iterating on a broadly useful API.
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.4.0...v0.4.1
+
+## [v0.4.0](https://github.com/ruby/net-imap/tree/v0.4.0) (2023-10-04)
+
+### What's Changed
+
+Most notably, support has been added for the `SASL-IR`, `ENABLE`, and `UTF-8=ACCEPT` extensions, and for many SASL mechanisms: `EXTERNAL`, `ANONYMOUS`, `OAUTHBEARER`, `SCRAM-SHA-1`, and `SCRAM-SHA-256`.
+
+#### 💥 Breaking changes
+* 💥 ⬆️ Drop v2.6 support; Require v2.7.3; Use "..." arg by @nevans in https://github.com/ruby/net-imap/pull/89
+  The test suite passes under ruby 2.7, although it does print some warnings for experimental pattern matching.
+* 💥 Return an empty array (rather than nil) when the server doesn't send any responses, by @nevans in https://github.com/ruby/net-imap/pull/192
+  This can affect `list`, `xlist`, `getquota`, `lsub`, `expunge`, `uid_expunge`, `fetch`, `uid_fetch`, `store`, and `uid_store`.
+* 💥 The `#extension` attribute on BODYSTRUCTURE structs no longer starts with `location`.  The location is now parsed directly and available from the `BodyStructure#location` attribute.  by @nevans in https://github.com/ruby/net-imap/pull/113
+
+#### ✨ Added
+
+##### Improved IMAP4rev1 protocol and extension support
+* ✨ Add missing "location" BODYSTRUCTURE extension data by @nevans in https://github.com/ruby/net-imap/pull/113
+* ✨ Cache server capabilities and add `#capable?(name)` by @nevans in https://github.com/ruby/net-imap/pull/156
+* ✨ Add support for `ENABLE` (RFC 5161) by @arnt in https://github.com/ruby/net-imap/pull/98
+* ✨ Parse UTF-8 encoded strings, for `UTF8=ACCEPT` and `IMAP4rev2` by @nevans in https://github.com/ruby/net-imap/pull/111
+  * Minor bits for `UTF8=ACCEPT`  by @arnt in https://github.com/ruby/net-imap/pull/114
+* ✨🔒 Add `SASL-IR` support by @nevans in https://github.com/ruby/net-imap/pull/90
+  * 🐛 Fix empty `SASL-IR` to send "=" by @nevans in https://github.com/ruby/net-imap/pull/180
+
+##### Improved SASL support
+* 🔒 Add SASL OAUTHBEARER mechanism by @nevans in https://github.com/ruby/net-imap/pull/171
+* 🔒 Add SASL ANONYMOUS mechanism by @nevans in https://github.com/ruby/net-imap/pull/169
+* 🔒 Add SASL EXTERNAL mechanism by @nevans in https://github.com/ruby/net-imap/pull/170
+* ✨ Make SASL.authenticator case insensitive by @nevans in https://github.com/ruby/net-imap/pull/167
+  *  🐛 Fix authenticate using Symbol mechanism name by @nevans in https://github.com/ruby/net-imap/pull/186 
+* ✨ Add attr_readers to SASL mechanisms by @nevans in https://github.com/ruby/net-imap/pull/176
+* ✨ Allow keyword args on all SASL authenticators by @nevans in https://github.com/ruby/net-imap/pull/177
+* 🔒 Verify SASL authentication has completed by @nevans in https://github.com/ruby/net-imap/pull/179
+* 🔒 Add SASL SCRAM-SHA-* mechanisms by @nevans in https://github.com/ruby/net-imap/pull/172
+* 🔒 SASL PLAIN: Raise ArgumentError for conflicts by @nevans in https://github.com/ruby/net-imap/pull/181
+* ✨ Minor updates to SASL::Authenticators API by @nevans in https://github.com/ruby/net-imap/pull/184 
+
+##### Improved `Net::IMAP` client API
+* ✨ Add attr_readers for `host` and `port` by @nevans in https://github.com/ruby/net-imap/pull/92
+* 🧵 New thread-safe API for `#responses` and add `#clear_responses` by @nevans in https://github.com/ruby/net-imap/pull/93
+* ✨ Add greeting code data to `#responses` by @nevans in https://github.com/ruby/net-imap/pull/94
+* ✨ Add `#capable?(name)`, `#auth_capable?(name)`, `#auth_mechanisms`, `#capabilities`, etc by @nevans in https://github.com/ruby/net-imap/pull/156
+* 🔒 Add `#tls_verified?` by @nevans in https://github.com/ruby/net-imap/pull/91
+* 🔒 Add `ssl_ctx` and `ssl_ctx_params` attr readers by @nevans in https://github.com/ruby/net-imap/pull/174
+* ✨ Add `#logout!` to combine logout and disconnect  by @nevans in https://github.com/ruby/net-imap/pull/178
+
+##### StringPrep profiles
+* ✨ Add generic stringprep algorithm and the "trace" profile by @nevans in https://github.com/ruby/net-imap/pull/101
+* ✨ Add Nameprep stringprep profile by @nevans in https://github.com/ruby/net-imap/pull/83
+
+#### 🗑️ Deprecated
+* 🗑️ Deprecated `#client_thread` by @nevans in https://github.com/ruby/net-imap/pull/93
+* 🗑️🧵 Soft-deprecation of current `#responses` API by @nevans in https://github.com/ruby/net-imap/pull/93
+  _The current API is not thread-safe._  It is documented as deprecated, but no warning message is logged yet.
+* 🗑️ Deprecated `BodyTypeAttachment` and `BodyTypeExtension` structs @nevans in https://github.com/ruby/net-imap/pull/113
+* 🗑️ Deprecate backward compatible parameters to `new` and `starttls` by @nevans in https://github.com/ruby/net-imap/pull/175
+  `Net::IMAP.new` uses keyword parameters for its options now.
+  Sending a port or an options hash as the second argument is documented as obsolete, but doesn't print warnings yet.
+  _Any other positional parameters are deprecated and will print warnings._
+
+#### 🐛 Fixed
+* 🐛 Fix NAMESPACE parsing (and other ♻️ refactoring) by @nevans in https://github.com/ruby/net-imap/pull/112
+* 🐛 Fix BODYSTRUCTURE parser bugs by @nevans in https://github.com/ruby/net-imap/pull/113
+  * More strict about where NIL is not allowed, e.g: number, envelope, and body.  Ignoring these uncommon bugs made it difficult to workaround much more common server bugs elsewhere.
+  * BodyTypeAttachment and BodyTypeExtension won't be returned any more.
+  * Better workaround for multipart parts with... zero parts.
+  * 🐛 Fix typo in uncommon BODYSTRUCTURE parsing code by @nevans in https://github.com/ruby/net-imap/pull/185
+* 🧵 Synchronize `@responses` update in thread_internal by @nevans in https://github.com/ruby/net-imap/pull/116
+* 🐛 Add missing lookahead_case_insensitive_string by @nevans in https://github.com/ruby/net-imap/pull/144
+* Decode UTF-7 more strictly by @nobu in https://github.com/ruby/net-imap/pull/152
+* Fix for Digest MD5 bad challenges by @nobu in https://github.com/ruby/net-imap/pull/160
+* 🥅 Work around missing server responses by @nevans in https://github.com/ruby/net-imap/pull/192
+
+#### ♻️ Changed
+* 🔎 Improve parse error debugging by @nevans in https://github.com/ruby/net-imap/pull/105
+* 🚚 Move the StringPrep module out of SASL by @nevans in https://github.com/ruby/net-imap/pull/100
+* ✅ 📈 Move most parser tests to yaml, add more tests, and add parser benchmarks by @nevans in https://github.com/ruby/net-imap/pull/103
+* 🧪 Add Regexp.linear_time? tests; ⚡✅ Update BEG_REGEXP to pass by @nevans in https://github.com/ruby/net-imap/pull/145
+* ⚡✅  Update more regexps to run in linear time by @nevans in https://github.com/ruby/net-imap/pull/147
+* 🧪 Add experimental new FakeServer for tests by @nevans in https://github.com/ruby/net-imap/pull/157
+* ⏱️ Add Timeout to several existing SSL tests by @nevans in https://github.com/ruby/net-imap/pull/163
+* ♻️ Use Net::IMAP::FakeServer::TestHelper by @nevans in https://github.com/ruby/net-imap/pull/164
+* 🚚 Move and rename SASL authenticators by @nevans in https://github.com/ruby/net-imap/pull/165
+* ♻️ Simplify lazy-loaded SASL::{Name}Authenticator registration by @nevans in https://github.com/ruby/net-imap/pull/168
+
+#### 📚 Documentation
+* 📚 Add "rake ghpages" for publishing rdoc by @nevans in https://github.com/ruby/net-imap/pull/102
+* 📚 Auto-deploy GitHub Pages from an action by @nevans in https://github.com/ruby/net-imap/pull/135
+* 📚 More rdoc updates, all related to capabilities by @nevans in https://github.com/ruby/net-imap/pull/159
+* SASL doc updates by @nevans in https://github.com/ruby/net-imap/pull/166
+* 📚 Update SASL docs and add attr_readers by @nevans in https://github.com/ruby/net-imap/pull/176
+* 📚 Update examples with modern SASL mechanisms by @nevans in https://github.com/ruby/net-imap/pull/182
+
+
+#### Miscellaneous
+* Adds Ruby 3.2 to the CI matrix. by @petergoldstein in https://github.com/ruby/net-imap/pull/99
+* Bump ruby/setup-ruby from 1.143.0 to 1.144.0 by @dependabot in https://github.com/ruby/net-imap/pull/138
+* ✅ Add RFC3454 data, to support offline testing by @nevans in https://github.com/ruby/net-imap/pull/137
+* ⬆️ Bump actions/deploy-pages from 1 to 2 by @dependabot in https://github.com/ruby/net-imap/pull/140
+* ⬆️ Bump ruby/setup-ruby from 1.144.0 to 1.144.1 by @dependabot in https://github.com/ruby/net-imap/pull/139
+* ⬆️ Bump ruby/setup-ruby from 1.144.1 to 1.144.2 by @dependabot in https://github.com/ruby/net-imap/pull/141
+* Bump ruby/setup-ruby from 1.144.2 to 1.145.0 by @dependabot in https://github.com/ruby/net-imap/pull/142
+* Bump ruby/setup-ruby from 1.145.0 to 1.146.0 by @dependabot in https://github.com/ruby/net-imap/pull/143
+* Bump ruby/setup-ruby from 1.146.0 to 1.148.0 by @dependabot in https://github.com/ruby/net-imap/pull/148
+* Bump ruby/setup-ruby from 1.148.0 to 1.149.0 by @dependabot in https://github.com/ruby/net-imap/pull/149
+* Use test-unit-ruby-core from vendored code by @hsbt in https://github.com/ruby/net-imap/pull/151
+* Bump ruby/setup-ruby from 1.149.0 to 1.150.0 by @dependabot in https://github.com/ruby/net-imap/pull/150
+* Bump ruby/setup-ruby from 1.150.0 to 1.151.0 by @dependabot in https://github.com/ruby/net-imap/pull/153
+* ⬆️ Bump ruby/setup-ruby from 1.151.0 to 1.152.0 by @dependabot in https://github.com/ruby/net-imap/pull/155
+* Bump actions/upload-pages-artifact from 1 to 2 by @dependabot in https://github.com/ruby/net-imap/pull/158
+* Bump actions/checkout from 3 to 4 by @dependabot in https://github.com/ruby/net-imap/pull/173
+
+### New Contributors
+* @petergoldstein made their first contribution in https://github.com/ruby/net-imap/pull/99
+* @arnt made their first contribution in https://github.com/ruby/net-imap/pull/114
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.7...v0.4.0
+
+
+## [v0.3.7](https://github.com/ruby/net-imap/tree/v0.3.7) (2023-07-26)
+
+### What's Changed
+* 🔒️ Backport: Fix for Digest MD5 bad challenges by @nobu in https://github.com/ruby/net-imap/pull/160
+  * PR for backport is https://github.com/ruby/net-imap/pull/161
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.6...v0.3.7
+
+## [v0.3.6](https://github.com/ruby/net-imap/tree/v0.3.6) (2023-06-12)
+
+* 🐛 Fixes file permissions regression in [v0.3.5 release](https://github.com/ruby/net-imap/releases/tag/v0.3.5), reported by @aaronjensen in #154
+
+## [v0.3.5](https://github.com/ruby/net-imap/tree/v0.3.5) (2023-06-12)
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.4...v0.3.5
+    
+* 📚 Fix #response documentation error, by @nevans in https://github.com/ruby/net-imap/commit/87ba74ebc054b9e8f3d8f26843ce5b974dbfe5ca
+* ✅ Add RFC3454 data, to support offline testing, by @nevans in https://github.com/ruby/net-imap/pull/137
+* Adds Ruby 3.2 to the CI matrix, by @petergoldstein in https://github.com/ruby/net-imap/pull/99
+* Use reusing workflow, by @hsbt in https://github.com/ruby/net-imap/pull/151
+* Decode UTF-7 more strictly, by @nobu in https://github.com/ruby/net-imap/pull/152
+* ⬇️ Continue testing 0.3.x branch against ruby 2.6, by @nevans in https://github.com/ruby/net-imap/commit/115d19044e1c9ad1f834d0a4cecbc65d8faf9d00
+* ✅ Fix decode utf-7 test for ruby 2.6, by @nevans in https://github.com/ruby/net-imap/commit/7a60c8f905deeae8e64588f174f33ef875dfba53
+* 🐛 Fix XOAUTH2 authenticator for ruby 2.6, by @nevans in https://github.com/ruby/net-imap/commit/bd4faa03f87b64cab072e044834bfe5374fa4eb9
+
+
+## [v0.3.4](https://github.com/ruby/net-imap/tree/v0.3.4) (2022-12-23)
+
+### What's Changed
+* Net::IMAP Client docs by @nevans in https://github.com/ruby/net-imap/pull/74
+
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.3...v0.3.4
+
+## [v0.3.3](https://github.com/ruby/net-imap/tree/v0.3.3) (2022-12-21)
+
+### What's Changed
+* Revert "Fixes "bundle exec rake", clash with test/unit" by @znz in https://github.com/ruby/net-imap/pull/88
+
+### New Contributors
+* @znz made their first contribution in https://github.com/ruby/net-imap/pull/88
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.2...v0.3.3
+
+## [v0.3.2](https://github.com/ruby/net-imap/tree/v0.3.2) (2022-12-09)
+
+### What's Changed
+* Support `UIDPLUS` extension by @hoffi in https://github.com/ruby/net-imap/pull/65
+* Fixes "bundle exec rake" clash with test/unit by @nevans in https://github.com/ruby/net-imap/pull/67
+* Fix some UIDPLUS issues by @nevans in https://github.com/ruby/net-imap/pull/69
+* Fixes date-time format, and adds decode_datetime by @nevans in https://github.com/ruby/net-imap/pull/66
+* Add SASLprep. Code generated & tested with RFC3454 by @nevans in https://github.com/ruby/net-imap/pull/64
+* Add the UNSELECT command by @nevans in https://github.com/ruby/net-imap/pull/72
+* 🐛 Fix mailbox attrs by @nevans in https://github.com/ruby/net-imap/pull/73
+* RFCs and references by @nevans in https://github.com/ruby/net-imap/pull/71
+* Nodocs and remove warning by @nevans in https://github.com/ruby/net-imap/pull/70
+* ResponseParser docs by @nevans in https://github.com/ruby/net-imap/pull/76
+* Response Data docs by @nevans in https://github.com/ruby/net-imap/pull/75
+
+### New Contributors
+* @hoffi made their first contribution in https://github.com/ruby/net-imap/pull/65
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.1...v0.3.2
+
+## [v0.3.1](https://github.com/ruby/net-imap/tree/v0.3.1) (2022-09-29)
+
+### What's Changed
+* Add XOAUTH2 authenticator by @ssunday in https://github.com/ruby/net-imap/pull/63
+
+### New Contributors
+* @ssunday made their first contribution in https://github.com/ruby/net-imap/pull/63
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.3.0...v0.3.1
+
+## [v0.3.0](https://github.com/ruby/net-imap/tree/v0.3.0) (2022-09-28)
+
+### What's Changed
+* Added dependabot.yml for actions by @hsbt in https://github.com/ruby/net-imap/pull/59
+* Bump actions/checkout from 2 to 3 by @dependabot in https://github.com/ruby/net-imap/pull/60
+* Adding RFC licenses by @nevans in https://github.com/ruby/net-imap/pull/57
+* Warn when using deprecated SASL mechanisms by @nevans in https://github.com/ruby/net-imap/pull/62
+
+### New Contributors
+* @dependabot made their first contribution in https://github.com/ruby/net-imap/pull/60
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.2.3...v0.3.0
+
+## [v0.2.3](https://github.com/ruby/net-imap/tree/v0.2.3) (2022-01-06)
+
+### What's Changed
+* Update the required ruby version by @nobu in https://github.com/ruby/net-imap/pull/25
+* Move NumValidator and Errors to other files by @nevans in https://github.com/ruby/net-imap/pull/27
+* Remove max_flag_count. Ruby 2.2+ can GC symbols. by @nevans in https://github.com/ruby/net-imap/pull/26
+* Add and document flags from RFC9051 by @nevans in https://github.com/ruby/net-imap/pull/28
+* s/RubyVM::JIT/RubyVM::MJIT/g by @k0kubun in https://github.com/ruby/net-imap/pull/51
+* Don't install bin directory by @voxik in https://github.com/ruby/net-imap/pull/53
+
+### New Contributors
+* @nobu made their first contribution in https://github.com/ruby/net-imap/pull/25
+* @k0kubun made their first contribution in https://github.com/ruby/net-imap/pull/51
+* @voxik made their first contribution in https://github.com/ruby/net-imap/pull/53
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.2.2...v0.2.3
+
+## [v0.2.2](https://github.com/ruby/net-imap/tree/v0.2.2) (2021-07-07)
+
+### What's Changed
+* CI: Quote "3.0" in matrix by @olleolleolle in https://github.com/ruby/net-imap/pull/19
+* Fix typo intentionaly -> intentionally [ci skip] by @kamipo in https://github.com/ruby/net-imap/pull/20
+* Extract authenticators to their own files by @nevans in https://github.com/ruby/net-imap/pull/22
+
+### New Contributors
+* @olleolleolle made their first contribution in https://github.com/ruby/net-imap/pull/19
+* @kamipo made their first contribution in https://github.com/ruby/net-imap/pull/20
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.2.1...v0.2.2
+
+## [v0.2.1](https://github.com/ruby/net-imap/tree/v0.2.1) (2021-03-17)
+
+### What's Changed
+* Set timeout for IDLE responses by @shugo in https://github.com/ruby/net-imap/pull/15
+
+### New Contributors
+* @shugo made their first contribution in https://github.com/ruby/net-imap/pull/15
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.2.0...v0.2.1
+
+## [v0.2.0](https://github.com/ruby/net-imap/tree/v0.2.0) (2021-03-10)
+
+### What's Changed
+* Add Net::IMAP::IgnoredResponse by @c-leroy in https://github.com/ruby/net-imap/pull/3
+* Capability in response code by @nevans in https://github.com/ruby/net-imap/pull/6
+* Extract public Net::IMAP.authenticator by @nevans in https://github.com/ruby/net-imap/pull/7
+* Convert `send` to `__send__` by @nevans in https://github.com/ruby/net-imap/pull/13
+* add BADCHARSET support by @nevans in https://github.com/ruby/net-imap/pull/9
+
+### New Contributors
+* @c-leroy made their first contribution in https://github.com/ruby/net-imap/pull/3
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.1.1...v0.2.0
+
+## [v0.1.1](https://github.com/ruby/net-imap/tree/v0.1.1) (2020-12-22)
+
+**Full Changelog**: https://github.com/ruby/net-imap/compare/v0.1.0...v0.1.1
+
+## [v0.1.0](https://github.com/ruby/net-imap/tree/v0.1.0) (2020-03-26)
+
+### What's Changed
+* Use GitHub Actions instead of Travis CI by @hsbt in https://github.com/ruby/net-imap/pull/1
+
+
+**Full Changelog**: https://github.com/ruby/net-imap/commits/v0.1.0
+
