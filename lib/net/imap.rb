@@ -3358,24 +3358,73 @@ module Net
     SSL_PORT = 993   # :nodoc:
 
     def default_ssl_and_port(tls, port)
-      if tls.nil? && port
-        tls = true  if port == SSL_PORT || /\Aimaps\z/i === port
-        tls = false if port == PORT
-      elsif port.nil? && !tls.nil?
-        port = tls ? SSL_PORT : PORT
+      case [tls && true, classify_port(port)]
+      in true,  nil             then return tls,   SSL_PORT
+      in false, nil             then return tls,   PORT
+      in nil,   :tls            then return true,  port
+      in nil,   :plain          then return false, port
+      in nil,   nil             then return use_default_ssl
+      in true,  :tls   | :other then return tls,   port
+      in false, :plain | :other then return tls,   port
+      in true,  :plain          then return warn_mismatched_port tls, port
+      in false, :tls            then return warn_mismatched_port tls, port
+      in nil,   :other          then return warn_nonstandard_port port
       end
-      if tls.nil? && port.nil?
-        tls = config.default_tls.dup.freeze
-        port = tls ? SSL_PORT : PORT
-        if tls.nil?
-          warn "A future version of Net::IMAP::Config#default_tls " \
-               "will default to 'true', for secure connections by default.  " \
-               "Use 'Net::IMAP.new(host, ssl: false)' or " \
-               "Net::IMAP.config.default_tls = false' to silence this warning."
-        end
-      end
+      # TODO: move this wherever is appropriate
       tls &&= tls.respond_to?(:to_hash) ? tls.to_hash : {}
+    end
+
+    # classify_port(port) -> :tls | :plain | :other | nil
+    def classify_port(port)
+      case port
+      in (SSL_PORT | /\Aimaps\z/i) then :tls
+      in (PORT     | /\Aimap\z/i)  then :plain
+      in (Integer  | String)       then :other
+      in nil                       then nil
+      end
+    end
+
+    def warn_mismatched_port(tls, port)
+      if tls
+        warn "Using TLS on plaintext IMAP port"
+      else
+        warn "Using plaintext on TLS IMAP port"
+      end
       [tls, port]
+    end
+
+    def warn_nonstandard_port(port)
+      tls = !!config.default_ssl
+      if config.warn_nonstandard_port_without_ssl
+        warn "Using #{tls ? "TLS" : "plaintext"} on port #{port}.  " \
+          "Set ssl explicitly for non-standard IMAP ports."
+      end
+      # TODO: print default_ssl warning
+      [tls, port]
+    end
+
+    TLS_DEFAULT_WARNING =
+      "Net::IMAP.config.default_ssl will default to true in the future.  " \
+      "To silence this warning, " \
+      "set Net::IMAP.config.default_ssl = (true | false)' or " \
+      "use 'Net::IMAP.new(host, ssl: (true | false))'."
+    private_constant :TLS_DEFAULT_WARNING
+
+    def use_default_ssl
+      case config.default_ssl
+      when true  then [true,  SSL_PORT]
+      when false then [false, PORT]
+      when :warn
+        warn TLS_DEFAULT_WARNING unless port
+        port ||= SSL_PORT
+        warn "Using TLS on port #{port}."
+        [true, port]
+      when nil
+        warn TLS_DEFAULT_WARNING unless port
+        port ||= PORT
+        warn "Using plain-text on port #{port}."
+        [false, port]
+      end
     end
 
     def start_imap_connection
