@@ -257,6 +257,22 @@ module Net
       #   with no params.
       attr_accessor :default_ssl, type: Enum[false, nil, :warn, true]
 
+      # Whether to warn for using default_ssl when the port is non-standard.
+      #
+      # Although default_ssl is used for non-standard ports, this warning is
+      # different replaces the warning when default_ssl is +nil+ or +:warn+.
+      # When this option is false but default_ssl is +nil+ or +:warn+, that
+      # warning will be printed instead.
+      #
+      # ==== Valid options
+      #
+      # [+false+ <em>(original behavior)</em>]
+      #   Don't print a special warning for nonstandard ports without explicit
+      #   +ssl+.
+      # [+true+ <em>(eventual future default)</em>]
+      #   Print a special warning for nonstandard ports without explicit +ssl+.
+      attr_accessor :warn_nonstandard_port_without_ssl, type: :boolean
+
       # Whether to use the +SASL-IR+ extension when the server and \SASL
       # mechanism both support it.  Can be overridden by the +sasl_ir+ keyword
       # parameter to Net::IMAP#authenticate.
@@ -508,6 +524,7 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
         default_ssl: false,
+        warn_nonstandard_port_without_ssl: false,
         sasl_ir: true,
         enforce_logindisabled: true,
         max_response_size: 512 << 20, # 512 MiB
@@ -547,14 +564,15 @@ module Net
       ).freeze
 
       version_defaults[0.6r] = Config[0.5r].dup.update(
+        default_ssl: :warn,
         responses_without_block: :frozen_dup,
-        default_ssl:             nil,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
 
       version_defaults[0.7r] = Config[0.6r].dup.update(
-        default_ssl:             :warn,
+        default_ssl: true,
+        warn_nonstandard_port_without_ssl: true,
       ).freeze
 
       # Safe conversions one way only:
