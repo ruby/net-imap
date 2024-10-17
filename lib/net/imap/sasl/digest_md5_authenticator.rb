@@ -156,10 +156,6 @@ class Net::IMAP::SASL::DigestMD5Authenticator
                  authcid: nil, secret: nil,
                  realm: nil, service: "imap", host: nil, service_name: nil,
                  warn_deprecation: true, **)
-    username = authcid || username || user or
-      raise ArgumentError, "missing username (authcid)"
-    password ||= secret || pass or raise ArgumentError, "missing password"
-    authzid  ||= authz
     if warn_deprecation
       warn("WARNING: DIGEST-MD5 SASL mechanism was deprecated by RFC6331.",
            category: :deprecated)
@@ -168,11 +164,25 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     require "digest/md5"
     require "securerandom"
     require "strscan"
-    @username, @password, @authzid = username, password, authzid
+
+    [authcid, username, user].compact.count == 1 or
+      raise ArgumentError, "conflicting values for username"
+    [authzid, authz].compact.count <= 1 or
+      raise ArgumentError, "conflicting values for authzid"
+    [password, secret, pass].compact.count == 1 or
+      raise ArgumentError, "conflicting values for password"
+
+    @username     = authcid  || username || user
+    @password     = password || secret   || pass
+    @authzid      = authzid  || authz
     @realm        = realm
     @host         = host
     @service      = service
     @service_name = service_name
+
+    @username or raise ArgumentError, "missing username (authcid)"
+    @password or raise ArgumentError, "missing password"
+
     @nc, @stage = {}, STAGE_ONE
   end
 
@@ -198,42 +208,11 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     case @stage
     when STAGE_ONE
       @stage = STAGE_TWO
-      @sparams = parse_challenge(challenge)
-      @qop     = sparams.key?("qop") ? ["auth"] : sparams["qop"].flatten
-      @nonce   = sparams["nonce"]  &.first
-      @charset = sparams["charset"]&.first
-      @realm ||= sparams["realm"]  &.last
-      @host  ||= realm
-
-      if !qop.include?("auth")
-        raise DataFormatError, "Server does not support auth (qop = %p)" % [
-          sparams["qop"]
-        ]
-      elsif (emptykey = REQUIRED.find { sparams[_1].empty? })
-        raise DataFormatError, "Server didn't send %s (%p)" % [emptykey, challenge]
-      elsif (multikey = NO_MULTIPLES.find { sparams[_1].length > 1 })
-        raise DataFormatError, "Server sent multiple %s (%p)" % [multikey, challenge]
-      end
-
-      response = {
-        nonce:        nonce,
-        username:     username,
-        realm:        realm,
-        cnonce:       SecureRandom.base64(32),
-        "digest-uri": digest_uri,
-        qop:          "auth",
-        maxbuf:       65535,
-        nc:           "%08d" % nc(nonce),
-        charset:      charset,
-      }
-
-      response[:authzid] = @authzid unless @authzid.nil?
-
-      response[:response] = response_value(response)
-      format_response(response)
+      process_stage_one(challenge)
+      stage_one_response
     when STAGE_TWO
       @stage = STAGE_DONE
-      raise ResponseParseError, challenge unless challenge =~ /rspauth=/
+      process_stage_two(challenge)
       "" # if at the second stage, return an empty string
     else
       raise ResponseParseError, challenge
@@ -284,14 +263,59 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   end
 
   def nc(nonce)
-    if @nc.has_key? nonce
-      @nc[nonce] = @nc[nonce] + 1
-    else
-      @nc[nonce] = 1
+    @nc[nonce] = @nc.key?(nonce) ? @nc[nonce] + 1 : 1
+    @nc[nonce]
+  end
+
+  def process_stage_one(challenge)
+    @sparams = parse_challenge(challenge)
+    @qop = sparams.key?("qop") ? ["auth"] : sparams["qop"].flatten
+
+    guard_stage_one(challenge)
+
+    @nonce   = sparams["nonce"]  .first
+    @charset = sparams["charset"].first
+
+    @realm ||= sparams["realm"].last
+    @host  ||= realm
+  end
+
+  def guard_stage_one(challenge)
+    if !qop.include?("auth")
+      raise DataFormatError, "Server does not support auth (qop = %p)" % [
+        sparams["qop"]
+      ]
+    elsif (emptykey = REQUIRED.find { sparams[_1].empty? })
+      raise DataFormatError, "Server didn't send %s (%p)" % [emptykey, challenge]
+    elsif (multikey = NO_MULTIPLES.find { sparams[_1].length > 1 })
+      raise DataFormatError, "Server sent multiple %s (%p)" % [multikey, challenge]
     end
   end
 
-  def response_value(response)
+  def stage_one_response
+    response = {
+      nonce:        nonce,
+      username:     username,
+      realm:        realm,
+      cnonce:       SecureRandom.base64(32),
+      "digest-uri": digest_uri,
+      qop:          "auth",
+      maxbuf:       65535,
+      nc:           "%08d" % nc(nonce),
+      charset:      charset,
+    }
+
+    response[:authzid]  = authzid unless authzid.nil?
+    response[:response] = compute_digest(response)
+
+    format_response(response)
+  end
+
+  def process_stage_two(challenge)
+    raise ResponseParseError, challenge unless challenge =~ /rspauth=/
+  end
+
+  def compute_digest(response)
     a1 = compute_a1(response)
     a2 = compute_a2(response)
     Digest::MD5.hexdigest(
