@@ -2,7 +2,6 @@
 
 require "net/imap"
 require "test/unit"
-require "set"
 
 class IMAPSequenceSetTest < Test::Unit::TestCase
   # alias for convenience

@@ -3,7 +3,6 @@
 require "net/imap"
 require "test/unit"
 require "json"
-require "set"
 
 require_relative "../../../rakelib/string_prep_tables_generator"
 

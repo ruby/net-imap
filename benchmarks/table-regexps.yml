@@ -1,6 +1,6 @@
 prelude: |
   require "json"
-  require "set"
+  require "set" unless defined?(::Set)
 
   all_codepoints = (0..0x10ffff).map{_1.chr("UTF-8") rescue nil}.compact
 
