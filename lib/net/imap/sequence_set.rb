@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set" unless defined?(::Set)
+
 module Net
   class IMAP
 

@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require "set" unless defined?(::Set)
+
 # Generator for stringprep regexps.
 #
 # Combines Unicode character classes with generated tables.  Generated regexps
