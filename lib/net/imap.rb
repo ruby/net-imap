@@ -1929,15 +1929,34 @@ module Net
       end
     end
 
-    # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
-    # to search the mailbox for messages that match the given searching
-    # criteria, and returns message sequence numbers.  +keys+ can either be a
-    # string holding the entire search string, or a single-dimension array of
-    # search keywords and arguments.
+    # :call-seq:
+    #   search(criteria = nil, result: nil, charset: nil, **criteria) -> result
+    #   search(criteria, charset = nil) -> result
     #
-    # Returns a SearchResult object.  SearchResult inherits from Array (for
-    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
-    # capability has been enabled.
+    # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
+    # to search the mailbox for messages that match the given search +criteria+,
+    # and returns either a SearchResult or an ESearchResult.  SearchResult
+    # inherits from Array (for backward compatibility) but adds
+    # SearchResult#modseq when the +CONDSTORE+ capability has been enabled.
+    #
+    # +criteria+ is one or more search keys and their arguments.  Searching
+    # +criteria+ may be provided as an array, a hash, keyword arguments (besides
+    # +result+ and +charset+), or a string.  Keyword argument criteria may be
+    # combined with positional argument criteria.
+    #
+    # _WARNING:_ When +criteria+ is a string, it will be sent directly to the
+    # server _without any validation_.  This is vulnerable to an injection
+    # attack if external inputs are used.
+    #
+    # +result+ controls what kind of information is returned about messages
+    # matching the search +criteria+.  Specifying +result+ forces the server to
+    # return an ESearchResult instead of SearchResult.
+    #
+    # +charset+ is the name of the {registered character
+    # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
+    # used by strings in the search +criteria+.  When +charset+ isn't specified,
+    # either <tt>"US-ASCII"</tt> or <tt"UTF-8"</tt> is assumed, depending on the
+    # server's capabilities.
     #
     # Related: #uid_search
     #
@@ -1989,15 +2008,21 @@ module Net
     #
     # ===== Capabilities
     #
-    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # +result+ options can only be specified when the server supports +ESEARCH+
+    # or +IMAP4rev2+.
+    #
+    # When +IMAP4rev2+ is enabled, or when the server supports +IMAP4rev2+ but
+    # not +IMAP4rev1+, ESearchResult is always returned instead of SearchResult.
+    #
+    # If CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html] is supported
     # and enabled for the selected mailbox, a non-empty SearchResult will
     # include a +MODSEQ+ value.
     #   imap.select("mbox", condstore: true)
-    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new"])
     #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
     #   result.modseq # => 5594
-    def search(keys, charset = nil)
-      return search_internal("SEARCH", keys, charset)
+    def search(...)
+      search_internal("SEARCH", ...)
     end
 
     # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
@@ -2009,8 +2034,8 @@ module Net
     # capability has been enabled.
     #
     # See #search for documentation of search criteria.
-    def uid_search(keys, charset = nil)
-      return search_internal("UID SEARCH", keys, charset)
+    def uid_search(...)
+      search_internal("UID SEARCH", ...)
     end
 
     # :call-seq:
@@ -2899,14 +2924,13 @@ module Net
           @logout_command_tag = tag
         end
         if block
-          add_response_handler(&block)
+          handler = ->resp { block.call resp, tag }
+          add_response_handler(handler)
         end
         begin
           return get_tagged_response(tag, cmd)
         ensure
-          if block
-            remove_response_handler(block)
-          end
+          remove_response_handler(handler) if handler
         end
       end
     end
@@ -2939,19 +2963,24 @@ module Net
       end
     end
 
-    def search_internal(cmd, keys, charset)
-      if keys.instance_of?(String)
-        keys = [RawData.new(keys)]
-      else
-        normalize_searching_criteria(keys)
-      end
+    def search_internal(cmd, keys, charset = nil, esearch: false)
+      keys = normalize_searching_criteria(keys)
+      args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
-        if charset
-          send_command(cmd, "CHARSET", charset, *keys)
-        else
-          send_command(cmd, *keys)
+        clear_responses("SEARCH")
+        result = nil
+        send_command(cmd, *args) do |response, tag|
+          if response in data: ESearchResult(tag: ^tag) => result
+            responses("ESEARCH") { _1.delete(result) }
+          end
         end
-        clear_responses("SEARCH").last || []
+        if result
+          result
+        elsif esearch || keys in RawData[/\ARETURN /] | Array[/\ARETURN\z/i, *]
+          ESearchResult.new
+        else
+          clear_responses("SEARCH").last || []
+        end
       end
     end
 
@@ -2997,38 +3026,25 @@ module Net
     end
 
     def sort_internal(cmd, sort_keys, search_keys, charset)
-      if search_keys.instance_of?(String)
-        search_keys = [RawData.new(search_keys)]
-      else
-        normalize_searching_criteria(search_keys)
-      end
+      search_keys = normalize_searching_criteria(search_keys)
       synchronize do
+        # TODO: handle ESEARCH response (for ESORT extension)
         send_command(cmd, sort_keys, charset, *search_keys)
         clear_responses("SORT").last || []
       end
     end
 
     def thread_internal(cmd, algorithm, search_keys, charset)
-      if search_keys.instance_of?(String)
-        search_keys = [RawData.new(search_keys)]
-      else
-        normalize_searching_criteria(search_keys)
-      end
+      search_keys = normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
         clear_responses("THREAD").last || []
       end
     end
 
-    def normalize_searching_criteria(keys)
-      keys.collect! do |i|
-        case i
-        when -1, Range, Array
-          SequenceSet.new(i)
-        else
-          i
-        end
-      end
+    def normalize_searching_criteria(criteria)
+      return RawData.new(criteria) if criteria.is_a?(String)
+      criteria.map {|i| SequenceSet::Coercible[i] ? SequenceSet[i] : i }
     end
 
     def build_ssl_ctx(ssl)
@@ -3081,6 +3097,7 @@ require_relative "imap/errors"
 require_relative "imap/config"
 require_relative "imap/command_data"
 require_relative "imap/data_encoding"
+require_relative "imap/data_lite"
 require_relative "imap/flags"
 require_relative "imap/response_data"
 require_relative "imap/response_parser"
