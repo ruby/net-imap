@@ -103,6 +103,15 @@ module Net
     #   as <tt>BODY[#{specifier}]</tt> or <tt>BINARY[#{section}]</tt>.
     #
     class FetchStruct < Struct
+      ##
+      # method: attr
+      # :call-seq: attr -> hash
+      #
+      # Each key specifies a message attribute, and the value is the
+      # corresponding data item.  Standard data items have corresponding
+      # accessor methods.  The definitions of each attribute type is documented
+      # on its accessor.
+
       # :call-seq: attr_upcase -> hash
       #
       # A transformation of #attr, with all the keys converted to upper case.
