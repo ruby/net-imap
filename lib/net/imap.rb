@@ -3479,17 +3479,9 @@ module Net
         }
       end
 
-      synchronize do
-        clear_responses("FETCH")
-        clear_responses("UIDFETCH")
-        if mod
-          send_command(cmd, set, attr, mod)
-        else
-          send_command(cmd, set, attr)
-        end
-        uidfetches = clear_responses("UIDFETCH")
-        uidfetches.any? ? uidfetches : clear_responses("FETCH")
-      end
+      args = [cmd, set, attr]
+      args << mod if mod
+      send_command_returning_fetch_results(*args)
     end
 
     def store_internal(cmd, set, attr, flags, unchangedsince: nil)
@@ -3497,12 +3489,17 @@ module Net
       args = [SequenceSet.new(set)]
       args << ["UNCHANGEDSINCE", Integer(unchangedsince)] if unchangedsince
       args << attr << flags
+      send_command_returning_fetch_results(cmd, *args)
+    end
+
+    def send_command_returning_fetch_results(...)
       synchronize do
         clear_responses("FETCH")
         clear_responses("UIDFETCH")
-        send_command(cmd, *args)
+        send_command(...)
+        fetches    = clear_responses("FETCH")
         uidfetches = clear_responses("UIDFETCH")
-        uidfetches.any? ? uidfetches : clear_responses("FETCH")
+        uidfetches.any? ? uidfetches : fetches
       end
     end
 
