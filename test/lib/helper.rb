@@ -1,16 +1,11 @@
 require "simplecov"
 
 # Cannot use ".simplecov" file: simplecov-json triggers a circular require.
-begin
-  require "simplecov-json"
-  SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
-    SimpleCov::Formatter::HTMLFormatter,
-    SimpleCov::Formatter::JSONFormatter,
-  ])
-rescue LoadError
-  # for `make test-bundled-gems` in ruby-core repository.
-  # That task does not install C extension gem like json.
-end
+require "simplecov-json"
+SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
+  SimpleCov::Formatter::HTMLFormatter,
+  SimpleCov::Formatter::JSONFormatter,
+])
 
 SimpleCov.start do
   command_name "Net::IMAP tests"
