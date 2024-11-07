@@ -3119,12 +3119,9 @@ module Net
 
     def search_internal(cmd, keys, charset)
       keys = normalize_searching_criteria(keys)
+      args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
-        if charset
-          send_command(cmd, "CHARSET", charset, *keys)
-        else
-          send_command(cmd, *keys)
-        end
+        send_command(cmd, *args)
         clear_responses("SEARCH").last || []
       end
     end
