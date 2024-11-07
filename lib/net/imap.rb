@@ -1930,70 +1930,248 @@ module Net
     end
 
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
-    # to search the mailbox for messages that match the given searching
-    # criteria, and returns message sequence numbers.  +keys+ can either be a
-    # string holding the entire search string, or a single-dimension array of
-    # search keywords and arguments.
-    #
-    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # to search the mailbox for messages that match the given search +criteria+,
+    # and returns a SearchResult.  SearchResult inherits from Array (for
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
+    # +criteria+ is one or more search keys and their arguments, which may be
+    # provided as an array or a string.
+    # See {"Search criteria"}[rdoc-ref:#search@Search+criteria], below.
+    #
+    # * When +criteria+ is an array, each member is a +SEARCH+ command argument:
+    #   * Any SequenceSet sends SequenceSet#valid_string.
+    #     +Range+, <tt>-1</tt>, and nested +Array+ elements are converted to
+    #     SequenceSet.
+    #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
+    #     and encoded as an \IMAP quoted or literal string otherwise.
+    #   * Any other +Integer+ (besides <tt>-1</tt>) will be sent as +#to_s+.
+    #   * +Date+ objects will be encoded as an \IMAP date (see ::encode_date).
+    #
+    # * When +criteria+ is a string, it will be sent directly to the server
+    #   <em>without any validation or encoding</em>.  *WARNING:* This is
+    #   vulnerable to injection attacks when external inputs are used.
+    #
+    # +charset+ is the name of the {registered character
+    # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
+    # used by strings in the search +criteria+.  When +charset+ isn't specified,
+    # either <tt>"US-ASCII"</tt> or <tt>"UTF-8"</tt> is assumed, depending on
+    # the server's capabilities.  +charset+ may be sent inside +criteria+
+    # instead of as a separate argument.
+    #
     # Related: #uid_search
-    #
-    # ===== Search criteria
-    #
-    # For a full list of search criteria,
-    # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]],
-    # or  [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]],
-    # in addition to documentation for
-    # any [CAPABILITIES[https://www.iana.org/assignments/imap-capabilities/imap-capabilities.xhtml]]
-    # reported by #capabilities which may define additional search filters, e.g:
-    # +CONDSTORE+, +WITHIN+, +FILTERS+, <tt>SEARCH=FUZZY</tt>, +OBJECTID+, or
-    # +SAVEDATE+.  The following are some common search criteria:
-    #
-    # <message set>:: a set of message sequence numbers.  "<tt>,</tt>" indicates
-    #                 an interval, "+:+" indicates a range.  For instance,
-    #                 "<tt>2,10:12,15</tt>" means "<tt>2,10,11,12,15</tt>".
-    #
-    # BEFORE <date>:: messages with an internal date strictly before
-    #                 <b><date></b>.  The date argument has a format similar
-    #                 to <tt>8-Aug-2002</tt>, and can be formatted using
-    #                 Net::IMAP.format_date.
-    #
-    # BODY <string>:: messages that contain <string> within their body.
-    #
-    # CC <string>:: messages containing <string> in their CC field.
-    #
-    # FROM <string>:: messages that contain <string> in their FROM field.
-    #
-    # NEW:: messages with the \Recent, but not the \Seen, flag set.
-    #
-    # NOT <search-key>:: negate the following search key.
-    #
-    # OR <search-key> <search-key>:: "or" two search keys together.
-    #
-    # ON <date>:: messages with an internal date exactly equal to <date>,
-    #             which has a format similar to 8-Aug-2002.
-    #
-    # SINCE <date>:: messages with an internal date on or after <date>.
-    #
-    # SUBJECT <string>:: messages with <string> in their subject.
-    #
-    # TO <string>:: messages with <string> in their TO field.
     #
     # ===== For example:
     #
-    #   p imap.search(["SUBJECT", "hello", "NOT", "NEW"])
+    #   p imap.search(["SUBJECT", "hello", "NOT", "SEEN"])
     #   #=> [1, 6, 7, 8]
+    #
+    # The following searches send the exact same command to the server:
+    #
+    #    # criteria array, charset arg
+    #    imap.search(%w[OR UNSEEN FLAGGED SUBJECT foo], "UTF-8")
+    #    # criteria string, charset arg
+    #    imap.search("OR UNSEEN FLAGGED SUBJECT foo", "UTF-8")
+    #    # criteria array contains charset arg
+    #    imap.search(%w[CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo])
+    #    # criteria string contains charset arg
+    #    imap.search("CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo")
+    #
+    # ===== Search keys
+    #
+    # For full definitions of the standard search +criteria+,
+    # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]],
+    # or  [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]],
+    # in addition to documentation for
+    # any #capabilities which may define additional search filters, such as
+    # +CONDSTORE+, +WITHIN+, +FILTERS+, <tt>SEARCH=FUZZY</tt>, +OBJECTID+, or
+    # +SAVEDATE+.
+    #
+    # With the exception of <em>sequence-set</em> and <em>parenthesized
+    # list</em>, all search keys are composed of prefix label with zero or more
+    # arguments.  The number and type of arguments is specific to each search
+    # key.
+    #
+    # +ALL+::
+    #   Matches every message in the mailbox.
+    #
+    # (_search-key_ _search-key_...)::
+    #   Combines one or more _search-key_ arguments to match
+    #   messages which match all contained search keys.  Useful for +OR+, +NOT+,
+    #   and other search keys with _search-key_ arguments.
+    #
+    #   _Note:_ this search key has no label.
+    #
+    # +OR+ _search-key_ _search-key_::
+    #   Matches messages which match either _search-key_ argument.
+    #
+    # +NOT+ _search-key_::
+    #   Matches messages which do not match _search-key_.
+    #
+    # _sequence-set_::
+    #   Matches messages with message sequence numbers in _sequence-set_.
+    #
+    #   _Note:_ this search key has no label.
+    #
+    #   <em>+UIDONLY+ must *not* be enabled.</em>
+    #   {[RFC9586]}[https://www.rfc-editor.org/rfc/rfc9586.html]
+    #
+    # +UID+ _sequence-set_::
+    #   Matches messages with a UID in _sequence-set_.
+    #
+    # +ANSWERED+::
+    # +UNANSWERED+::
+    #   Matches messages with or without the <tt>\\Answered</tt> flag.
+    # +DELETED+::
+    # +UNDELETED+::
+    #   Matches messages with or without the <tt>\\Deleted</tt> flag.
+    # +DRAFT+::
+    # +UNDRAFT+::
+    #   Matches messages with or without the <tt>\\Draft</tt> flag.
+    # +FLAGGED+::
+    # +UNFLAGGED+::
+    #   Matches messages with or without the <tt>\\Flagged</tt> flag.
+    # +SEEN+::
+    # +UNSEEN+::
+    #   Matches messages with or without the <tt>\\Seen</tt> flag.
+    #
+    # +KEYWORD+ _keyword_::
+    # +UNKEYWORD+ _keyword_::
+    #   Matches messages with or without the specified _keyword_.
+    #
+    # +BCC+ _substring_::
+    #   Matches when _substring_ is in the envelope's BCC field.
+    # +CC+ _substring_::
+    #   Matches when _substring_ is in the envelope's CC field.
+    # +FROM+ _substring_::
+    #   Matches when _substring_ is in the envelope's FROM field.
+    # +SUBJECT+ _substring_::
+    #   Matches when _substring_ is in the envelope's SUBJECT field.
+    # +TO+ _substring_::
+    #   Matches when _substring_ is in the envelope's TO field.
+    #
+    # +HEADER+ _field_ _substring_::
+    #   Matches when _substring_ is in the specified header _field_.
+    #
+    # +BODY+ _string_::
+    #   Matches when _string_ is in the body of the message.
+    #   Does not match on header fields.
+    #
+    #   The server _may_ use flexible matching, rather than simple substring
+    #   matches.  For example, this may use stemming or match only full words.
+    #
+    # +TEXT+ _string_::
+    #   Matches when _string_ is in the header or body of the message.
+    #
+    #   The server _may_ use flexible matching, rather than simple substring
+    #   matches.  For example, this may use stemming or match only full words.
+    #
+    # +BEFORE+ _date_::
+    # +ON+ _date_::
+    # +SINCE+ _date_::
+    #   Matches when the +INTERNALDATE+ is earlier than, on, or later than
+    #   _date_.
+    #
+    # +SENTBEFORE+ _date_::
+    # +SENTON+ _date_::
+    # +SENTSINCE+ _date_::
+    #   Matches when the +Date+ header is earlier than, on, or later than _date_.
+    #
+    # +SMALLER+ _bytes_::
+    # +LARGER+ _bytes_::
+    #   Matches when +RFC822.SIZE+ is smaller/larger than _bytes_.
+    #
+    # ====== Removed from +IMAP4rev2+
+    #
+    # The <tt>\\Recent</tt> flag has been removed from +IMAP4rev2+.  So these
+    # search keys require the +IMAP4rev1+ capability.
+    #
+    # +RECENT+::
+    # +UNRECENT+::
+    #   Matches messages with or without the <tt>\\Recent</tt> flag.
+    #
+    # +NEW+::
+    #   Equivalent to <tt>(RECENT UNSEEN)</tt>.
+    #
+    # ====== Extension search keys
+    #
+    # The search keys described below are defined by standard \IMAP extensions.
+    #
+    # +OLDER+ _interval_::
+    # +YOUNGER+ _interval_::
+    #   Matches when +INTERNALDATE+ is more/less than _interval_ seconds ago.
+    #
+    #   <em>Requires the +WITHIN+ capability</em>.
+    #   {[RFC5032]}[https://www.rfc-editor.org/rfc/rfc5032.html]
+    #
+    # +ANNOTATION+ _entry_ _attr_ _value_::
+    #   Matches messages that have annotations with entries matching _entry_,
+    #   attributes matching _attr_, and _value_ in the attribute's values.
+    #
+    #   <em>Requires the +ANNOTATE-EXPERIMENT-1+ capability</em>.
+    #   {[RFC5257]}[https://www.rfc-editor.org/rfc/rfc5257.html].
+    #
+    # +FILTER+ _filter_::
+    #   References a _filter_ that is stored on the server and matches all
+    #   messages which would be matched by that filter's search criteria.
+    #
+    #   <em>Requires the +FILTERS+ capability</em>.
+    #   {[RFC5466]}[https://www.rfc-editor.org/rfc/rfc5466.html#section-3.1]
+    #
+    # +FUZZY+ _search-key_::
+    #   Uses fuzzy matching for the specified search key.
+    #
+    #   <em>Requires the <tt>SEARCH=FUZZY</tt> capability.</em>
+    #   {[RFC6203]}[https://www.rfc-editor.org/rfc/rfc6203.html#section-6].
+    #
+    # +MODSEQ+ _modseq_::
+    #   Matches when +MODSEQ+ is greater than or equal to _modseq_.
+    #
+    #   <em>Requires the +CONDSTORE+ capability</em>.
+    #   {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1.5].
+    #
+    # +MODSEQ+ _entry_ _entry-type_ _modseq_::
+    #   Matches when a specific metadata _entry_ has been updated since
+    #   _modseq_.
+    #
+    #   For flags, the corresponding _entry_ name is
+    #   <tt>"/flags/#{flag_name}"</tt>, where _flag_name_ includes the
+    #   <tt>\\</tt> prefix.  _entry-type_ can be one of <tt>"shared"</tt>,
+    #   <tt>"priv"</tt> (private), or <tt>"all"</tt>.
+    #
+    #   <em>Requires the +CONDSTORE+ capability</em>.
+    #   {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1.5].
+    #
+    # +EMAILID+ _objectid_::
+    # +THREADID+ _objectid_::
+    #   Matches when +EMAILID+/+THREADID+ is equal to _objectid_
+    #   (substring matches are not supported).
+    #
+    #   <em>Requires the +OBJECTID+ capability</em>.
+    #   {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-6]
+    #
+    # +SAVEDATESUPPORTED+::
+    #   Matches every message in the mailbox when the mailbox supports the save
+    #   date attribute.  Otherwise, it matches no messages.
+    #
+    #   <em>Requires the +SAVEDATE+ capability</em>.
+    #   {[RFC8514]}[https://www.rfc-editor.org/rfc/rfc8514.html#section-4.3]
+    #
+    # +SAVEDBEFORE+ _date_::
+    # +SAVEDON+ _date_::
+    # +SAVEDSINCE+ _date_::
+    #   Matches when the save date is earlier than, on, or later than _date_.
+    #
+    #   <em>Requires the +SAVEDATE+ capability.</em>
+    #   {[RFC8514]}[https://www.rfc-editor.org/rfc/rfc8514.html#section-4.3]
     #
     # ===== Capabilities
     #
-    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # If CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html] is supported
     # and enabled for the selected mailbox, a non-empty SearchResult will
     # include a +MODSEQ+ value.
     #   imap.select("mbox", condstore: true)
-    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new"])
     #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
     #   result.modseq # => 5594
     def search(keys, charset = nil)
@@ -2008,7 +2186,7 @@ module Net
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
-    # See #search for documentation of search criteria.
+    # See #search for documentation of parameters.
     def uid_search(keys, charset = nil)
       return search_internal("UID SEARCH", keys, charset)
     end
