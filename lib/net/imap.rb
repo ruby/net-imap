@@ -1930,16 +1930,52 @@ module Net
     end
 
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
-    # to search the mailbox for messages that match the given searching
-    # criteria, and returns message sequence numbers.  +keys+ can either be a
-    # string holding the entire search string, or a single-dimension array of
-    # search keywords and arguments.
-    #
-    # Returns a SearchResult object.  SearchResult inherits from Array (for
+    # to search the mailbox for messages that match the given search +criteria+,
+    # and returns a SearchResult.  SearchResult inherits from Array (for
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
+    # +criteria+ is one or more search keys and their arguments, which may be
+    # provided as an array or a string.
+    # See {"Search criteria"}[rdoc-ref:#search@Search+criteria], below.
+    #
+    # * When +criteria+ is an array, each member is a +SEARCH+ command argument:
+    #   * Any SequenceSet sends SequenceSet#valid_string.
+    #     +Range+, <tt>-1</tt>, and nested +Array+ elements are converted to
+    #     SequenceSet.
+    #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
+    #     and encoded as an \IMAP quoted or literal string otherwise.
+    #   * Any other +Integer+ (besides <tt>-1</tt>) will be sent as +#to_s+.
+    #   * +Date+ objects will be encoded as an \IMAP date (see ::encode_date).
+    #
+    # * When +criteria+ is a string, it will be sent directly to the server
+    #   <em>without any validation or encoding</em>.  *WARNING:* This is
+    #   vulnerable to injection attacks when external inputs are used.
+    #
+    # +charset+ is the name of the {registered character
+    # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
+    # used by strings in the search +criteria+.  When +charset+ isn't specified,
+    # either <tt>"US-ASCII"</tt> or <tt>"UTF-8"</tt> is assumed, depending on
+    # the server's capabilities.  +charset+ may be sent inside +criteria+
+    # instead of as a separate argument.
+    #
     # Related: #uid_search
+    #
+    # ===== For example:
+    #
+    #   p imap.search(["SUBJECT", "hello", "NOT", "SEEN"])
+    #   #=> [1, 6, 7, 8]
+    #
+    # The following searches send the exact same command to the server:
+    #
+    #    # criteria array, charset arg
+    #    imap.search(%w[OR UNSEEN FLAGGED SUBJECT foo], "UTF-8")
+    #    # criteria string, charset arg
+    #    imap.search("OR UNSEEN FLAGGED SUBJECT foo", "UTF-8")
+    #    # criteria array contains charset arg
+    #    imap.search(%w[CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo])
+    #    # criteria string contains charset arg
+    #    imap.search("CHARSET UTF-8 OR UNSEEN FLAGGED SUBJECT foo")
     #
     # ===== Search criteria
     #
@@ -1982,18 +2018,13 @@ module Net
     #
     # TO <string>:: messages with <string> in their TO field.
     #
-    # ===== For example:
-    #
-    #   p imap.search(["SUBJECT", "hello", "NOT", "NEW"])
-    #   #=> [1, 6, 7, 8]
-    #
     # ===== Capabilities
     #
-    # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported
+    # If CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html] is supported
     # and enabled for the selected mailbox, a non-empty SearchResult will
     # include a +MODSEQ+ value.
     #   imap.select("mbox", condstore: true)
-    #   result = imap.search(["SUBJECT", "hi there", "not", "new")
+    #   result = imap.search(["SUBJECT", "hi there", "not", "new"])
     #   #=> Net::IMAP::SearchResult[1, 6, 7, 8, modseq: 5594]
     #   result.modseq # => 5594
     def search(keys, charset = nil)
@@ -2008,7 +2039,7 @@ module Net
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
-    # See #search for documentation of search criteria.
+    # See #search for documentation of parameters.
     def uid_search(keys, charset = nil)
       return search_internal("UID SEARCH", keys, charset)
     end
