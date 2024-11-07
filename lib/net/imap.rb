@@ -3118,11 +3118,7 @@ module Net
     end
 
     def search_internal(cmd, keys, charset)
-      if keys.instance_of?(String)
-        keys = [RawData.new(keys)]
-      else
-        normalize_searching_criteria(keys)
-      end
+      keys = normalize_searching_criteria(keys)
       synchronize do
         if charset
           send_command(cmd, "CHARSET", charset, *keys)
@@ -3175,11 +3171,7 @@ module Net
     end
 
     def sort_internal(cmd, sort_keys, search_keys, charset)
-      if search_keys.instance_of?(String)
-        search_keys = [RawData.new(search_keys)]
-      else
-        normalize_searching_criteria(search_keys)
-      end
+      search_keys = normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, sort_keys, charset, *search_keys)
         clear_responses("SORT").last || []
@@ -3187,19 +3179,16 @@ module Net
     end
 
     def thread_internal(cmd, algorithm, search_keys, charset)
-      if search_keys.instance_of?(String)
-        search_keys = [RawData.new(search_keys)]
-      else
-        normalize_searching_criteria(search_keys)
-      end
+      search_keys = normalize_searching_criteria(search_keys)
       synchronize do
         send_command(cmd, algorithm, charset, *search_keys)
         clear_responses("THREAD").last || []
       end
     end
 
-    def normalize_searching_criteria(keys)
-      keys.collect! do |i|
+    def normalize_searching_criteria(criteria)
+      return RawData.new(criteria) if criteria.is_a?(String)
+      criteria.map do |i|
         case i
         when -1, Range, Array
           SequenceSet.new(i)
