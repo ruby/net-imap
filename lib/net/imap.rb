@@ -1945,6 +1945,7 @@ module Net
     # * When +criteria+ is an array, each member is a +SEARCH+ command argument:
     #   * Any SequenceSet sends SequenceSet#valid_string.
     #     These types are converted to SequenceSet for validation and encoding:
+    #     * +Set+
     #     * +Range+
     #     * <tt>-1</tt> translates to <tt>*</tt>
     #     * nested +Array+
@@ -3204,7 +3205,7 @@ module Net
 
     def coerce_search_arg_to_seqset?(obj)
       case obj
-      when -1          then true
+      when Set, -1     then true
       when Range       then true
       when Array       then true
       else                  false
