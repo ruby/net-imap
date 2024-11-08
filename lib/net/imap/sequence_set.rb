@@ -282,10 +282,7 @@ module Net
 
       # valid inputs for "*"
       STARS     = [:*, ?*, -1].freeze
-      private_constant :STAR_INT, :STARS
-
-      COERCIBLE = ->{ _1.respond_to? :to_sequence_set }
-      private_constant :COERCIBLE
+      private_constant :STARS
 
       class << self
 
