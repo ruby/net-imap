@@ -3195,7 +3195,7 @@ module Net
       return RawData.new(criteria) if criteria.is_a?(String)
       criteria.map {|i|
         if coerce_search_arg_to_seqset?(i)
-          SequenceSet.new(i)
+          SequenceSet[i]
         else
           i
         end
