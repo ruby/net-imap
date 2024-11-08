@@ -3193,13 +3193,21 @@ module Net
 
     def normalize_searching_criteria(criteria)
       return RawData.new(criteria) if criteria.is_a?(String)
-      criteria.map do |i|
-        case i
-        when -1, Range, Array
+      criteria.map {|i|
+        if coerce_search_arg_to_seqset?(i)
           SequenceSet.new(i)
         else
           i
         end
+      }
+    end
+
+    def coerce_search_arg_to_seqset?(obj)
+      case obj
+      when -1          then true
+      when Range       then true
+      when Array       then true
+      else                  false
       end
     end
 
