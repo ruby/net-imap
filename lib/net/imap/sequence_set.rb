@@ -325,7 +325,7 @@ module Net
         # raised.
         def try_convert(obj)
           return obj if obj.is_a?(SequenceSet)
-          return nil unless respond_to?(:to_sequence_set)
+          return nil unless obj.respond_to?(:to_sequence_set)
           obj = obj.to_sequence_set
           return obj if obj.is_a?(SequenceSet)
           raise DataFormatError, "invalid object returned from to_sequence_set"
