@@ -1206,10 +1206,23 @@ EOF
       end
 
       server.on "SEARCH", &search_resp
-      assert_equal search_result, imap.search(["subject", "hello",
+      assert_equal search_result, imap.search(["subject", "hello world",
                                                [1..5, 8, 10..-1]])
       cmd = server.commands.pop
-      assert_equal ["SEARCH", "subject hello 1:5,8,10:*"], [cmd.name, cmd.args]
+      assert_equal(
+        ["SEARCH",'subject "hello world" 1:5,8,10:*'],
+        [cmd.name, cmd.args]
+      )
+
+      imap.search(["OR", 1..1000, -1, "UID", 12345..-1])
+      assert_equal "OR 1:1000 * UID 12345:*", server.commands.pop.args
+
+      imap.search([1..1000, "UID", 12345..])
+      assert_equal "1:1000 UID 12345:*", server.commands.pop.args
+
+      # Unfortunately, we can't send every sequence-set string directly
+      imap.search(["SUBJECT", "1,*"])
+      assert_equal 'SUBJECT "1,*"', server.commands.pop.args
 
       server.on "UID SEARCH", &search_resp
       assert_equal search_result, imap.uid_search(["subject", "hello",
