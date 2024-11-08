@@ -148,6 +148,22 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet[""]   end
   end
 
+  test ".try_convert" do
+    assert_nil SequenceSet.try_convert(nil)
+    assert_nil SequenceSet.try_convert(123)
+    assert_nil SequenceSet.try_convert(12..34)
+    assert_nil SequenceSet.try_convert("12:34")
+    assert_nil SequenceSet.try_convert(Object.new)
+
+    obj = Object.new
+    def obj.to_sequence_set; SequenceSet[192, 168, 1, 255] end
+    assert_equal SequenceSet[192, 168, 1, 255], SequenceSet.try_convert(obj)
+
+    obj = Object.new
+    def obj.to_sequence_set; 192_168.001_255 end
+    assert_raise DataFormatError do SequenceSet.try_convert(obj) end
+  end
+
   test "#[non-negative index]" do
     assert_nil        SequenceSet.empty[0]
     assert_equal   1, SequenceSet[1..][0]
