@@ -1944,8 +1944,12 @@ module Net
     #
     # * When +criteria+ is an array, each member is a +SEARCH+ command argument:
     #   * Any SequenceSet sends SequenceSet#valid_string.
-    #     +Range+, <tt>-1</tt>, and nested +Array+ elements are converted to
-    #     SequenceSet.
+    #     These types are converted to SequenceSet for validation and encoding:
+    #     * +Set+
+    #     * +Range+
+    #     * <tt>-1</tt> and +:*+ -- both translate to <tt>*</tt>
+    #     * responds to +#to_sequence_set+
+    #     * nested +Array+
     #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
     #     and encoded as an \IMAP quoted or literal string otherwise.
     #   * Any other +Integer+ (besides <tt>-1</tt>) will be sent as +#to_s+.
@@ -3191,13 +3195,21 @@ module Net
 
     def normalize_searching_criteria(criteria)
       return RawData.new(criteria) if criteria.is_a?(String)
-      criteria.map do |i|
-        case i
-        when -1, Range, Array
-          SequenceSet.new(i)
+      criteria.map {|i|
+        if coerce_search_arg_to_seqset?(i)
+          SequenceSet[i]
         else
           i
         end
+      }
+    end
+
+    def coerce_search_arg_to_seqset?(obj)
+      case obj
+      when Set, -1, :* then true
+      when Range       then true
+      when Array       then true
+      else                  obj.respond_to?(:to_sequence_set)
       end
     end
 
