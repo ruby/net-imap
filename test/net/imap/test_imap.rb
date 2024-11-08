@@ -1227,6 +1227,9 @@ EOF
       imap.search(["subject", "hello", Set[1, 2, 3, 4, 5, 8, *(10..100)]])
       assert_equal "subject hello 1:5,8,10:100", server.commands.pop.args
 
+      imap.search([:*])
+      assert_equal "*", server.commands.pop.args
+
       server.on "UID SEARCH", &search_resp
       assert_equal search_result, imap.uid_search(["subject", "hello",
                                                    [1..22, 30..-1]])

@@ -1947,7 +1947,7 @@ module Net
     #     These types are converted to SequenceSet for validation and encoding:
     #     * +Set+
     #     * +Range+
-    #     * <tt>-1</tt> translates to <tt>*</tt>
+    #     * <tt>-1</tt> and +:*+ -- both translate to <tt>*</tt>
     #     * nested +Array+
     #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
     #     and encoded as an \IMAP quoted or literal string otherwise.
@@ -3205,7 +3205,7 @@ module Net
 
     def coerce_search_arg_to_seqset?(obj)
       case obj
-      when Set, -1     then true
+      when Set, -1, :* then true
       when Range       then true
       when Array       then true
       else                  false
