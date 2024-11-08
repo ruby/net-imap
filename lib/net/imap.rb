@@ -1944,8 +1944,10 @@ module Net
     #
     # * When +criteria+ is an array, each member is a +SEARCH+ command argument:
     #   * Any SequenceSet sends SequenceSet#valid_string.
-    #     +Range+, <tt>-1</tt>, and nested +Array+ elements are converted to
-    #     SequenceSet.
+    #     These types are converted to SequenceSet for validation and encoding:
+    #     * +Range+
+    #     * <tt>-1</tt> translates to <tt>*</tt>
+    #     * nested +Array+
     #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
     #     and encoded as an \IMAP quoted or literal string otherwise.
     #   * Any other +Integer+ (besides <tt>-1</tt>) will be sent as +#to_s+.
