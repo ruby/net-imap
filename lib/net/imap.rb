@@ -1948,6 +1948,7 @@ module Net
     #     * +Set+
     #     * +Range+
     #     * <tt>-1</tt> and +:*+ -- both translate to <tt>*</tt>
+    #     * responds to +#to_sequence_set+
     #     * nested +Array+
     #   * Any +String+ is sent verbatim when it is a valid \IMAP atom,
     #     and encoded as an \IMAP quoted or literal string otherwise.
@@ -3208,7 +3209,7 @@ module Net
       when Set, -1, :* then true
       when Range       then true
       when Array       then true
-      else                  false
+      else                  obj.respond_to?(:to_sequence_set)
       end
     end
 

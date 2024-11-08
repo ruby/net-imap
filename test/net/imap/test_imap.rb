@@ -1230,6 +1230,13 @@ EOF
       imap.search([:*])
       assert_equal "*", server.commands.pop.args
 
+      seqset_coercible = Object.new
+      def seqset_coercible.to_sequence_set
+        Net::IMAP::SequenceSet[1..9]
+      end
+      imap.search([seqset_coercible])
+      assert_equal "1:9", server.commands.pop.args
+
       server.on "UID SEARCH", &search_resp
       assert_equal search_result, imap.uid_search(["subject", "hello",
                                                    [1..22, 30..-1]])
