@@ -6,7 +6,7 @@ jobs:
   ruby-versions:
     uses: ruby/actions/.github/workflows/ruby_versions.yml@master
     with:
-      engine: cruby
+      engine: all
       min_version: 3.1
 
   build:
@@ -20,6 +20,9 @@ jobs:
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         os: [ ubuntu-latest, macos-latest ]
         experimental: [false]
+        exclude:
+          - { ruby: "jruby",      os: "macos-latest" }
+          - { ruby: "jruby-head", os: "macos-latest" }
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     steps:
