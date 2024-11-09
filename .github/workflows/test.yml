@@ -20,6 +20,10 @@ jobs:
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         os: [ ubuntu-latest, macos-latest, windows-latest ]
         experimental: [false]
+        exclude:
+          - { ruby: head, os: windows-latest }
+        include:
+          - { ruby: head, os: windows-latest, experimental: true }
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     steps:
