@@ -14,4 +14,16 @@ class Test::Unit::TestCase
       sleep interval
     end
   end
+
+  # Copied from minitest
+  def assert_pattern
+    flunk "assert_pattern requires a block to capture errors." unless block_given?
+    assert_block do
+      yield
+      true
+    rescue NoMatchingPatternError => e
+      flunk e.message
+    end
+  end
+
 end
