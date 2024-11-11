@@ -4,16 +4,6 @@ require "net/imap"
 require "test/unit"
 require "yaml"
 
-# Compatibility with older versions, e.g. the version comes with ruby 2.7
-module YAMLPolyfill
-  unless YAML.respond_to? :unsafe_load_file
-    refine YAML.singleton_class do
-      def unsafe_load_file(...) load_file(...) end
-    end
-  end
-end
-using YAMLPolyfill
-
 module NetIMAPTestHelpers
   module TestFixtureGenerators
 
