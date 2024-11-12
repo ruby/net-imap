@@ -54,8 +54,12 @@ if imap.list('Mail/', 'sent-apr03').empty?
   imap.create('Mail/sent-apr03')
 end
 imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
-  imap.copy(message_id, "Mail/sent-apr03")
-  imap.store(message_id, "+FLAGS", [:Deleted])
+  if imap.capable?(:move) || imap.capable?(:IMAP4rev2)
+    imap.move(message_id, "Mail/sent-apr03")
+  else
+    imap.copy(message_id, "Mail/sent-apr03")
+    imap.store(message_id, "+FLAGS", [:Deleted])
+  end
 end
 imap.expunge
 ```
