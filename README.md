@@ -50,7 +50,7 @@ end
 
 ```ruby
 imap.select('Mail/sent-mail')
-if not imap.list('Mail/', 'sent-apr03')
+if imap.list('Mail/', 'sent-apr03').empty?
   imap.create('Mail/sent-apr03')
 end
 imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
