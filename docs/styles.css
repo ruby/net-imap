@@ -1,24 +1,80 @@
 /* this is a work in progress. :) */
 
-main .method-header {
-  background: rgba(27,31,35,0.05);
-  border: 1px solid #6C8C22;
+/***********************************************
+ * Method descriptions
+ ***********************************************/
+
+main .method-detail {
+  display: grid;
+  grid-template-areas:   "header         controls"
+                         "description description";
+  grid-template-columns: 1fr           min-content;
+  justify-content: space-between;
+}
+
+main .method-header, main .method-controls {
   padding: 0.5em;
-  border-radius: 4px;
-  /* padding: 0 0.5em; */
-  /* border-width: 0 1px; */
-  /* border-color: #6C8C22; */
-  /* border-style: solid; */
+  /* border: 1px solid var(--highlight-color); */
+  background: var(--table-header-background-color);
+  line-height: 1.6;
+}
+
+main .method-header {
+  grid-area: "header";
+  border-right: none;
+  border-radius: 4px 0 0 4px;
+}
+
+main .method-controls {
+  grid-area: "controls";
+  border-left: none;
+  border-radius: 0 4px 4px 0;
 }
 
 main .method-description, main .aliases {
+  grid-area: "description";
+  grid-column: 1 / span 2;
   padding-left: 1em;
 }
 
-body {
-  /*
-   * The default (300) can be too low contrast.  Also, many fonts don't
-   * distinguish between 300->400, so <em>...</em> had no effect.
-   */
-  font-weight: 400;
+@media (max-width: 700px) {
+  main .method-header, main .method-controls, main .method-description {
+    grid-column: 1 / span 2;
+    margin: 0;
+  }
+  main .method-controls {
+    background: none;
+  }
+}
+
+/***********************************************
+ * Description lists
+ ***********************************************/
+
+main dt {
+  margin-bottom: 0; /* override rdoc 6.8 */
+  float: unset;     /* override rdoc 6.8 */
+  line-height: 1.5; /* matches `main p` */
+}
+
+main dl.note-list dt {
+  margin-right: 1em;
+  float: left;
+}
+
+main dl.note-list dt:has(+ dt) {
+  margin-right: 0.25em;
+}
+
+main dl.note-list dt:has(+ dt)::after {
+  content: ', ';
+  font-weight: normal;
+}
+
+main dd {
+  margin: 0 0 1em 1em;
+}
+
+main dd p:first-child {
+  margin-top: 0;
 }
