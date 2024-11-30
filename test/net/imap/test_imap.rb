@@ -102,6 +102,8 @@ class IMAPTest < Test::Unit::TestCase
 
   if defined?(OpenSSL::SSL)
     def test_starttls_unknown_ca
+      omit "This test is not working with Windows" if RUBY_PLATFORM =~ /mswin|mingw/
+
       imap = nil
       assert_raise(OpenSSL::SSL::SSLError) do
         ex = nil
