@@ -770,7 +770,6 @@ module Net
       alias response_data__noop     response_data__ignored
 
       alias esearch_response        response_data__unhandled
-      alias expunged_resp           response_data__unhandled
       alias uidfetch_resp           response_data__unhandled
       alias listrights_data         response_data__unhandled
       alias myrights_data           response_data__unhandled
@@ -841,6 +840,20 @@ module Net
       alias message_data__expunge response_data__simple_numeric
       alias mailbox_data__exists  response_data__simple_numeric
       alias mailbox_data__recent  response_data__simple_numeric
+
+      # The name for this is confusing, because it *replaces* EXPUNGE
+      # >>>
+      #   expunged-resp       =  "VANISHED" [SP "(EARLIER)"] SP known-uids
+      def expunged_resp
+        name    = label "VANISHED"; SP!
+        earlier = if lpar? then label("EARLIER"); rpar; SP!; true else false end
+        uids    = known_uids
+        data    = VanishedData[uids, earlier]
+        UntaggedResponse.new name, data, @str
+      end
+
+      # TODO: replace with uid_set
+      alias known_uids sequence_set
 
       # RFC3501 & RFC9051:
       #   msg-att         = "(" (msg-att-dynamic / msg-att-static)
