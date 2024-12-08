@@ -10,9 +10,15 @@ module Net
     #   The server must support a search extension which allows
     #   RFC4466[https://www.rfc-editor.org/rfc/rfc4466.html] +return+ options,
     #   such as +ESEARCH+, +PARTIAL+, or +IMAP4rev2+.
+    #
+    #   *TODO:* Add +return+ kwarg to IMAP#search and IMAP#uid_search.
     # * +return+ options were specified for IMAP#sort or IMAP#uid_sort.  The
     #   server must support the +ESORT+ extension
     #   {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html#section-3]
+    #
+    #   *TODO:* Handle +ESEARCH+ response to IMAP#search and IMAP#uid_search.
+    #
+    #   *TODO:* Add +return+ kwarg to IMAP#search and IMAP#uid_search.
     # * The server supports +IMAP4rev2+ but _not_ +IMAP4rev1+, or +IMAP4rev2+
     #   has been enabled.  +IMAP4rev2+ requires +ESEARCH+ results.
     #
