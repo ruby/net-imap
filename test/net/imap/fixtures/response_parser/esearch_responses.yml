@@ -1,0 +1,331 @@
+---
+:tests:
+  rfc9051_6.4.4_ESEARCH_example_1:
+    :response: "* ESEARCH (TAG \"A282\") MIN 2 COUNT 3\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A282
+        uid: false
+        data:
+        - - MIN
+          - 2
+        - - COUNT
+          - 3
+      raw_data: "* ESEARCH (TAG \"A282\") MIN 2 COUNT 3\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_2:
+    :response: "* ESEARCH (TAG \"A283\") ALL 2,10:11\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A283
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 2,10:11
+            tuples:
+            - - 2
+              - 2
+            - - 10
+              - 11
+      raw_data: "* ESEARCH (TAG \"A283\") ALL 2,10:11\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_3:
+    :response: "* ESEARCH (TAG \"A284\")\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A284
+        uid: false
+        data: []
+      raw_data: "* ESEARCH (TAG \"A284\")\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_4:
+    :response: "* ESEARCH (TAG \"A285\") ALL 43\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A285
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: '43'
+            tuples:
+            - - 43
+              - 43
+      raw_data: "* ESEARCH (TAG \"A285\") ALL 43\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_5:
+    :response: "* ESEARCH (TAG \"A284\") MIN 4\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A284
+        uid: false
+        data:
+        - - MIN
+          - 4
+      raw_data: "* ESEARCH (TAG \"A284\") MIN 4\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_6:
+    :response: "* ESEARCH (TAG \"A285\") UID MIN 7 MAX 3800\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A285
+        uid: true
+        data:
+        - - MIN
+          - 7
+        - - MAX
+          - 3800
+      raw_data: "* ESEARCH (TAG \"A285\") UID MIN 7 MAX 3800\r\n"
+
+  rfc9051_6.4.4_ESEARCH_example_7:
+    :response: "* ESEARCH (TAG \"A286\") COUNT 15\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A286
+        uid: false
+        data:
+        - - COUNT
+          - 15
+      raw_data: "* ESEARCH (TAG \"A286\") COUNT 15\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_1:
+    :response: "* ESEARCH (TAG \"A301\") UID ALL 17,900,901\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A301
+        uid: true
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: '17,900,901'
+            tuples:
+            - - 17
+              - 17
+            - - 900
+              - 901
+      raw_data: "* ESEARCH (TAG \"A301\") UID ALL 17,900,901\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_2:
+    :response: "* ESEARCH (TAG \"P283\") ALL 882,1102,3003,3005:3006\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: P283
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 882,1102,3003,3005:3006
+            tuples:
+            - - 882
+              - 882
+            - - 1102
+              - 1102
+            - - 3003
+              - 3003
+            - - 3005
+              - 3006
+      raw_data: "* ESEARCH (TAG \"P283\") ALL 882,1102,3003,3005:3006\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_3:
+    :response: "* ESEARCH (TAG \"G283\") ALL 3:15,27,29:103\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: G283
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 3:15,27,29:103
+            tuples:
+            - - 3
+              - 15
+            - - 27
+              - 27
+            - - 29
+              - 103
+      raw_data: "* ESEARCH (TAG \"G283\") ALL 3:15,27,29:103\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_4:
+    :response: "* ESEARCH (TAG \"C283\") ALL 2,10:15,21\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C283
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 2,10:15,21
+            tuples:
+            - - 2
+              - 2
+            - - 10
+              - 15
+            - - 21
+              - 21
+      raw_data: "* ESEARCH (TAG \"C283\") ALL 2,10:15,21\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_5:
+    :response: "* ESEARCH (TAG \"C284\") MIN 2\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C284
+        uid: false
+        data:
+        - - MIN
+          - 2
+      raw_data: "* ESEARCH (TAG \"C284\") MIN 2\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_6:
+    :response: "* ESEARCH (TAG \"C285\") MIN 2 MAX 21\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C285
+        uid: false
+        data:
+        - - MIN
+          - 2
+        - - MAX
+          - 21
+      raw_data: "* ESEARCH (TAG \"C285\") MIN 2 MAX 21\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_7:
+    :response: "* ESEARCH (TAG \"C286\") MIN 2 MAX 21 COUNT 8\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C286
+        uid: false
+        data:
+        - - MIN
+          - 2
+        - - MAX
+          - 21
+        - - COUNT
+          - 8
+      raw_data: "* ESEARCH (TAG \"C286\") MIN 2 MAX 21 COUNT 8\r\n"
+
+  rfc9051_6.4.4.4_ESEARCH_example_8:
+    :response: "* ESEARCH (TAG \"C286\") MIN 2 ALL 2,10:15,21\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: C286
+        uid: false
+        data:
+        - - MIN
+          - 2
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 2,10:15,21
+            tuples:
+            - - 2
+              - 2
+            - - 10
+              - 15
+            - - 21
+              - 21
+      raw_data: "* ESEARCH (TAG \"C286\") MIN 2 ALL 2,10:15,21\r\n"
+
+  rfc9051_7.1_ESEARCH_example_1:
+    :response: "* ESEARCH (TAG \"h\") ALL 1:3,5,8,13,21,42\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: h
+        uid: false
+        data:
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 1:3,5,8,13,21,42
+            tuples:
+            - - 1
+              - 3
+            - - 5
+              - 5
+            - - 8
+              - 8
+            - - 13
+              - 13
+            - - 21
+              - 21
+            - - 42
+              - 42
+      raw_data: "* ESEARCH (TAG \"h\") ALL 1:3,5,8,13,21,42\r\n"
+
+  rfc9051_7.3.4_ESEARCH_example_1:
+    :response: "* ESEARCH UID COUNT 17 ALL 4:18,21,28\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag:
+        uid: true
+        data:
+        - - COUNT
+          - 17
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 4:18,21,28
+            tuples:
+            - - 4
+              - 18
+            - - 21
+              - 21
+            - - 28
+              - 28
+      raw_data: "* ESEARCH UID COUNT 17 ALL 4:18,21,28\r\n"
+
+  rfc9051_7.3.4_ESEARCH_example_2:
+    :response: "* ESEARCH (TAG \"a567\") UID COUNT 17 ALL 4:18,21,28\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: a567
+        uid: true
+        data:
+        - - COUNT
+          - 17
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 4:18,21,28
+            tuples:
+            - - 4
+              - 18
+            - - 21
+              - 21
+            - - 28
+              - 28
+      raw_data: "* ESEARCH (TAG \"a567\") UID COUNT 17 ALL 4:18,21,28\r\n"
+
+  rfc9051_7.3.4_ESEARCH_example_3:
+    :response: "* ESEARCH COUNT 18 ALL 1:17,21\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag:
+        uid: false
+        data:
+        - - COUNT
+          - 18
+        - - ALL
+          - !ruby/object:Net::IMAP::SequenceSet
+            string: 1:17,21
+            tuples:
+            - - 1
+              - 17
+            - - 21
+              - 21
+      raw_data: "* ESEARCH COUNT 18 ALL 1:17,21\r\n"
