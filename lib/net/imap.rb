@@ -1123,7 +1123,7 @@ module Net
     #
     # See [ID[https://tools.ietf.org/html/rfc2971]] for field definitions.
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +ID+
     # [RFC2971[https://tools.ietf.org/html/rfc2971]].
@@ -1205,7 +1205,7 @@ module Net
     #
     # Related: Net::IMAP.new, #login, #authenticate
     #
-    # ===== Capability
+    # ==== Capability
     # Clients should not call #starttls unless the server advertises the
     # +STARTTLS+ capability.
     #
@@ -1352,7 +1352,7 @@ module Net
     #
     # Related: #authenticate, #starttls
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # An IMAP client MUST NOT call #login when the server advertises the
     # +LOGINDISABLED+ capability.  By default, Net::IMAP will raise a
@@ -1393,7 +1393,7 @@ module Net
     #
     # Related: #examine
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # If [UIDPLUS[https://www.rfc-editor.org/rfc/rfc4315.html]] is supported,
     # the server may return an untagged "NO" response with a "UIDNOTSTICKY"
@@ -1511,7 +1511,7 @@ module Net
     #
     # Related: #lsub, MailboxList
     #
-    # ===== For example:
+    # ==== For example:
     #
     #   imap.create("foo/bar")
     #   imap.create("foo/baz")
@@ -1562,7 +1562,7 @@ module Net
     #
     # Related: #list, Namespaces, Namespace
     #
-    # ===== For example:
+    # ==== For example:
     #
     #    if capable?("NAMESPACE")
     #      namespaces = imap.namespace
@@ -1576,7 +1576,7 @@ module Net
     #      end
     #    end
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +NAMESPACE+
     # [RFC2342[https://tools.ietf.org/html/rfc2342]].
@@ -1615,7 +1615,7 @@ module Net
     #
     # Related: #list, MailboxList
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +XLIST+,
     # a deprecated Gmail extension (replaced by +SPECIAL-USE+).
@@ -1638,7 +1638,7 @@ module Net
     #
     # Related: #getquota, #setquota, MailboxQuotaRoot, MailboxQuota
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +QUOTA+
     # [RFC2087[https://tools.ietf.org/html/rfc2087]].
@@ -1659,7 +1659,7 @@ module Net
     #
     # Related: #getquotaroot, #setquota, MailboxQuota
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +QUOTA+
     # [RFC2087[https://tools.ietf.org/html/rfc2087]].
@@ -1677,7 +1677,7 @@ module Net
     #
     # Related: #getquota, #getquotaroot
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +QUOTA+
     # [RFC2087[https://tools.ietf.org/html/rfc2087]].
@@ -1697,7 +1697,7 @@ module Net
     #
     # Related: #getacl
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +ACL+
     # [RFC4314[https://tools.ietf.org/html/rfc4314]].
@@ -1715,7 +1715,7 @@ module Net
     #
     # Related: #setacl, MailboxACLItem
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +ACL+
     # [RFC4314[https://tools.ietf.org/html/rfc4314]].
@@ -1752,7 +1752,7 @@ module Net
     # for +mailbox+ cannot be returned; for instance, because it
     # does not exist.
     #
-    # ===== Supported attributes
+    # ==== Supported attributes
     #
     # +MESSAGES+::    The number of messages in the mailbox.
     #
@@ -1783,12 +1783,12 @@ module Net
     # Unsupported attributes may be requested.  The attribute value will be
     # either an Integer or an ExtensionData object.
     #
-    # ===== For example:
+    # ==== For example:
     #
     #   p imap.status("inbox", ["MESSAGES", "RECENT"])
     #   #=> {"RECENT"=>0, "MESSAGES"=>44}
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # +SIZE+ requires the server's capabilities to include either +IMAP4rev2+ or
     # <tt>STATUS=SIZE</tt>
@@ -1828,7 +1828,7 @@ module Net
     # not exist (it is not created automatically), or if the flags,
     # date_time, or message arguments contain errors.
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported and the destination supports persistent UIDs, the server's
@@ -1877,7 +1877,7 @@ module Net
     #
     # Related: #close
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +UNSELECT+
     # [RFC3691[https://tools.ietf.org/html/rfc3691]].
@@ -1918,7 +1918,7 @@ module Net
     #
     # Related: #expunge
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +UIDPLUS+
     # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
@@ -2249,7 +2249,7 @@ module Net
     #
     # Related: #uid_search, FetchData
     #
-    # ===== For example:
+    # ==== For example:
     #
     #   p imap.fetch(6..8, "UID")
     #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"UID"=>98}>, \\
@@ -2267,7 +2267,7 @@ module Net
     #   p data.attr["UID"]
     #   #=> 98
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # Many extensions define new message +attr+ names.  See FetchData for a list
     # of supported extension fields.
@@ -2296,7 +2296,7 @@ module Net
     #
     # Related: #fetch, FetchData
     #
-    # ===== Capabilities
+    # ==== Capabilities
     # Same as #fetch.
     def uid_fetch(set, attr, mod = nil, changedsince: nil)
       fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
@@ -2330,14 +2330,14 @@ module Net
     #
     # Related: #uid_store
     #
-    # ===== For example:
+    # ==== For example:
     #
     #   p imap.store(6..8, "+FLAGS", [:Deleted])
     #   #=> [#<Net::IMAP::FetchData seqno=6, attr={"FLAGS"=>[:Seen, :Deleted]}>,
     #        #<Net::IMAP::FetchData seqno=7, attr={"FLAGS"=>[:Seen, :Deleted]}>,
     #        #<Net::IMAP::FetchData seqno=8, attr={"FLAGS"=>[:Seen, :Deleted]}>]
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # Extensions may define new data items to be used with #store.
     #
@@ -2361,7 +2361,7 @@ module Net
     #
     # Related: #store
     #
-    # ===== Capabilities
+    # ==== Capabilities
     # Same as #store.
     def uid_store(set, attr, flags, unchangedsince: nil)
       store_internal("UID STORE", set, attr, flags, unchangedsince: unchangedsince)
@@ -2374,7 +2374,7 @@ module Net
     #
     # Related: #uid_copy
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +COPYUID+ response code
@@ -2391,7 +2391,7 @@ module Net
     #
     # Similar to #copy, but +set+ contains unique identifiers.
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # +UIDPLUS+ affects #uid_copy the same way it affects #copy.
     def uid_copy(set, mailbox)
@@ -2406,7 +2406,7 @@ module Net
     #
     # Related: #uid_move
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +MOVE+
     # [RFC6851[https://tools.ietf.org/html/rfc6851]].
@@ -2430,7 +2430,7 @@ module Net
     #
     # Related: #move
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # Same as #move: The server's capabilities must include +MOVE+
     # [RFC6851[https://tools.ietf.org/html/rfc6851]].  +UIDPLUS+ also affects
@@ -2450,14 +2450,14 @@ module Net
     #
     # Related: #uid_sort, #search, #uid_search, #thread, #uid_thread
     #
-    # ===== For example:
+    # ==== For example:
     #
     #   p imap.sort(["FROM"], ["ALL"], "US-ASCII")
     #   #=> [1, 2, 3, 5, 6, 7, 8, 4, 9]
     #   p imap.sort(["DATE"], ["SUBJECT", "hello"], "US-ASCII")
     #   #=> [6, 7, 8, 1]
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +SORT+
     # [RFC5256[https://tools.ietf.org/html/rfc5256]].
@@ -2472,7 +2472,7 @@ module Net
     #
     # Related: #sort, #search, #uid_search, #thread, #uid_thread
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +SORT+
     # [RFC5256[https://tools.ietf.org/html/rfc5256]].
@@ -2497,7 +2497,7 @@ module Net
     #
     # Related: #uid_thread, #search, #uid_search, #sort, #uid_sort
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +THREAD+
     # [RFC5256[https://tools.ietf.org/html/rfc5256]].
@@ -2511,7 +2511,7 @@ module Net
     #
     # Related: #thread, #search, #uid_search, #sort, #uid_sort
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +THREAD+
     # [RFC5256[https://tools.ietf.org/html/rfc5256]].
@@ -2530,7 +2530,7 @@ module Net
     #
     # Related: #capable?, #capabilities, #capability
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include
     # +ENABLE+ [RFC5161[https://tools.ietf.org/html/rfc5161]]
@@ -2632,7 +2632,7 @@ module Net
     #
     # Related: #idle_done, #noop, #check
     #
-    # ===== Capabilities
+    # ==== Capabilities
     #
     # The server's capabilities must include +IDLE+
     # [RFC2177[https://tools.ietf.org/html/rfc2177]].
@@ -2749,7 +2749,7 @@ module Net
     #
     # Related: #extract_responses, #clear_responses, #response_handlers, #greeting
     #
-    # ===== Thread safety
+    # ==== Thread safety
     # >>>
     #   *Note:* Access to the responses hash is synchronized for thread-safety.
     #   The receiver thread and response_handlers cannot process new responses
@@ -2763,7 +2763,7 @@ module Net
     #   thread, but will not modify any responses after adding them to the
     #   responses hash.
     #
-    # ===== Clearing responses
+    # ==== Clearing responses
     #
     # Previously unhandled responses are automatically cleared before entering a
     # mailbox with #select or #examine.  Long-lived connections can receive many
@@ -2772,7 +2772,7 @@ module Net
     # the block, or remove responses with #extract_responses, #clear_responses,
     # or #add_response_handler.
     #
-    # ===== Missing responses
+    # ==== Missing responses
     #
     # Only non-+nil+ data is stored.  Many important response codes have no data
     # of their own, but are used as "tags" on the ResponseText object they are
