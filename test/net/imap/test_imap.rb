@@ -1264,9 +1264,11 @@ EOF
       server.on "SEARCH",     &:done_ok
       server.on "UID SEARCH", &:done_ok
       found = imap.search ["subject", "hello"]
-      assert_equal [], found
+      assert_instance_of Net::IMAP::SearchResult, found
+      assert_empty found
       found = imap.uid_search ["subject", "hello"]
-      assert_equal [], found
+      assert_instance_of Net::IMAP::SearchResult, found
+      assert_empty found
     end
   end
 
