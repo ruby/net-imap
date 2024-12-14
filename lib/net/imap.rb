@@ -3155,7 +3155,13 @@ module Net
       args = charset ? ["CHARSET", charset, *keys] : keys
       synchronize do
         send_command(cmd, *args)
-        clear_responses("SEARCH").last || []
+        search_result = clear_responses("SEARCH").last
+        if search_result
+          search_result
+        else
+          # warn NO_SEARCH_RESPONSE
+          SearchResult[]
+        end
       end
     end
 
