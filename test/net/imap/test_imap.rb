@@ -1229,6 +1229,12 @@ EOF
       imap.search(["subject", "hello", Set[1, 2, 3, 4, 5, 8, *(10..100)]])
       assert_equal "subject hello 1:5,8,10:100", server.commands.pop.args
 
+      imap.search('SUBJECT "Hello world"', "UTF-8")
+      assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
+
+      imap.search('CHARSET UTF-8 SUBJECT "Hello world"')
+      assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
+
       imap.search([:*])
       assert_equal "*", server.commands.pop.args
 
@@ -1256,6 +1262,24 @@ EOF
       ])
       cmd = server.commands.pop
       assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+    end
+  end
+
+  test("#search/#uid_search with invalid arguments") do
+    with_fake_server do |server, imap|
+      server.on "SEARCH"     do |cmd| cmd.fail_no "should fail before this" end
+      server.on "UID SEARCH" do |cmd| cmd.fail_no "should fail before this" end
+
+      assert_raise(ArgumentError) do
+        imap.search(["charset", "foo", "ALL"], "bar")
+      end
+      assert_raise(ArgumentError) do
+        imap.search("charset foo ALL", "bar")
+      end
+      # Parsing return opts is too complicated, for now.
+      # assert_raise(ArgumentError) do
+      #   imap.search("return () charset foo ALL", "bar")
+      # end
     end
   end
 

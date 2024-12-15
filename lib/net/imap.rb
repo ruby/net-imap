@@ -3150,9 +3150,18 @@ module Net
       end
     end
 
-    def search_internal(cmd, keys, charset = nil)
-      keys = normalize_searching_criteria(keys)
-      args = charset ? ["CHARSET", charset, *keys] : keys
+    def search_args(keys, charset = nil)
+      # NOTE: not handling combined RETURN and CHARSET for raw strings
+      if charset && keys in /\ACHARSET\b/i | Array[/\ACHARSET\z/i, *]
+        raise ArgumentError, "multiple charset arguments"
+      end
+      args = normalize_searching_criteria(keys)
+      args.prepend("CHARSET", charset)     if charset
+      args
+    end
+
+    def search_internal(cmd, ...)
+      args = search_args(...)
       synchronize do
         send_command(cmd, *args)
         search_result = clear_responses("SEARCH").last
@@ -3223,7 +3232,7 @@ module Net
     end
 
     def normalize_searching_criteria(criteria)
-      return RawData.new(criteria) if criteria.is_a?(String)
+      return [RawData.new(criteria)] if criteria.is_a?(String)
       criteria.map {|i|
         if coerce_search_arg_to_seqset?(i)
           SequenceSet[i]
