@@ -1265,6 +1265,24 @@ EOF
     end
   end
 
+  test("#search/#uid_search with invalid arguments") do
+    with_fake_server do |server, imap|
+      server.on "SEARCH"     do |cmd| cmd.fail_no "should fail before this" end
+      server.on "UID SEARCH" do |cmd| cmd.fail_no "should fail before this" end
+
+      assert_raise(ArgumentError) do
+        imap.search(["charset", "foo", "ALL"], "bar")
+      end
+      assert_raise(ArgumentError) do
+        imap.search("charset foo ALL", "bar")
+      end
+      # Parsing return opts is too complicated, for now.
+      # assert_raise(ArgumentError) do
+      #   imap.search("return () charset foo ALL", "bar")
+      # end
+    end
+  end
+
   test("missing server SEARCH response") do
     with_fake_server do |server, imap|
       server.on "SEARCH",     &:done_ok

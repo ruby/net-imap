@@ -3151,6 +3151,10 @@ module Net
     end
 
     def search_args(keys, charset = nil)
+      # NOTE: not handling combined RETURN and CHARSET for raw strings
+      if charset && keys in /\ACHARSET\b/i | Array[/\ACHARSET\z/i, *]
+        raise ArgumentError, "multiple charset arguments"
+      end
       args = normalize_searching_criteria(keys)
       args.prepend("CHARSET", charset)     if charset
       args
