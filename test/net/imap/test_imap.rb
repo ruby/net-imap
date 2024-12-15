@@ -1277,6 +1277,18 @@ EOF
       )
       cmd = server.commands.pop
       assert_equal "RETURN (PARTIAL -500:-1) UID 1234:*", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: [:PARTIAL, "-500:-1"]
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1) UID 1234:*", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: [:PARTIAL, -500..-1, :FOO, 1..]
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1 FOO 1:*) UID 1234:*", cmd.args
     end
   end
 

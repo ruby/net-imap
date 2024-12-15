@@ -2020,7 +2020,9 @@ module Net
     # ==== Argument translation
     #
     # [+return+ options]
-    #   Must be an Array.  Return option names are strings.
+    #   Must be an Array.  Return option names may be either strings or symbols.
+    #   +Range+ elements which begin and end with negative integers are encoded
+    #   for use with +PARTIAL+--any other ranges are converted to SequenceSet.
     #   Unlike +criteria+, other return option arguments are not automatically
     #   converted to SequenceSet.
     #
@@ -3294,10 +3296,28 @@ module Net
     end
 
     def convert_return_opts(unconverted)
-      Array.try_convert(unconverted) or
+      return_opts = Array.try_convert(unconverted) or
         raise TypeError, "expected return options to be Array, got %s" % [
           unconverted.class
         ]
+      return_opts.map {|opt|
+        case opt
+        when Symbol then opt.to_s
+        when Range  then partial_range_last_or_seqset(opt)
+        else             opt
+        end
+      }
+    end
+
+    def partial_range_last_or_seqset(range)
+      case [range.begin, range.end]
+      in [Integer => first, Integer => last] if first.negative? && last.negative?
+        # partial-range-last [RFC9394]
+        first <= last or raise DataFormatError, "empty range: %p" % [range]
+        "#{first}:#{last}"
+      else
+        SequenceSet[range]
+      end
     end
 
     def search_internal(cmd, ...)
