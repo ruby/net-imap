@@ -1931,6 +1931,7 @@ module Net
 
     # :call-seq:
     #   search(criteria, charset = nil) -> result
+    #   search(criteria, charset: nil) -> result
     #
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
     # to search the mailbox for messages that match the given search +criteria+,
@@ -2210,6 +2211,7 @@ module Net
 
     # :call-seq:
     #   uid_search(criteria, charset = nil) -> result
+    #   uid_search(criteria, charset: nil) -> result
     #
     # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to search the mailbox for messages that match the given searching
@@ -3150,7 +3152,11 @@ module Net
       end
     end
 
-    def search_args(keys, charset = nil)
+    def search_args(keys, charset_arg = nil, charset: nil)
+      if charset && charset_arg
+        raise ArgumentError, "multiple charset arguments"
+      end
+      charset ||= charset_arg
       # NOTE: not handling combined RETURN and CHARSET for raw strings
       if charset && keys in /\ACHARSET\b/i | Array[/\ACHARSET\z/i, *]
         raise ArgumentError, "multiple charset arguments"
