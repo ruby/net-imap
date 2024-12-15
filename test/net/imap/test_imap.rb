@@ -1229,6 +1229,12 @@ EOF
       imap.search(["subject", "hello", Set[1, 2, 3, 4, 5, 8, *(10..100)]])
       assert_equal "subject hello 1:5,8,10:100", server.commands.pop.args
 
+      imap.search('SUBJECT "Hello world"', "UTF-8")
+      assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
+
+      imap.search('CHARSET UTF-8 SUBJECT "Hello world"')
+      assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
+
       imap.search([:*])
       assert_equal "*", server.commands.pop.args
 
