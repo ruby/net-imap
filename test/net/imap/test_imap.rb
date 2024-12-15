@@ -1235,6 +1235,9 @@ EOF
       imap.search('CHARSET UTF-8 SUBJECT "Hello world"')
       assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
 
+      imap.search('SUBJECT "Hello world"', charset: "UTF-8")
+      assert_equal 'CHARSET UTF-8 SUBJECT "Hello world"', server.commands.pop.args
+
       imap.search([:*])
       assert_equal "*", server.commands.pop.args
 
@@ -1275,6 +1278,15 @@ EOF
       end
       assert_raise(ArgumentError) do
         imap.search("charset foo ALL", "bar")
+      end
+      assert_raise(ArgumentError) do
+        imap.search(["ALL"], "foo", charset: "bar")
+      end
+      assert_raise(ArgumentError) do
+        imap.search(["charset", "foo", "ALL"], charset: "bar")
+      end
+      assert_raise(ArgumentError) do
+        imap.search("charset foo ALL", charset: "bar")
       end
       # Parsing return opts is too complicated, for now.
       # assert_raise(ArgumentError) do
