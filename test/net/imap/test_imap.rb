@@ -1295,6 +1295,54 @@ EOF
     end
   end
 
+  test("#search/#uid_search with ESEARCH or IMAP4rev2") do
+    with_fake_server do |server, imap|
+      # Example from RFC9051, 6.4.4:
+      #   C: A282 SEARCH RETURN (MIN COUNT) FLAGGED
+      #       SINCE 1-Feb-1994 NOT FROM "Smith"
+      #   S: * ESEARCH (TAG "A282") MIN 2 COUNT 3
+      #   S: A282 OK SEARCH completed
+      server.on "SEARCH" do |cmd|
+        cmd.untagged "ESEARCH", "(TAG \"unrelated1\") MIN 1 COUNT 2"
+        cmd.untagged "ESEARCH", "(TAG %p) MIN 2 COUNT 3" % [cmd.tag]
+        cmd.untagged "ESEARCH", "(TAG \"unrelated2\") MIN 222 COUNT 333"
+        cmd.done_ok
+      end
+      result = imap.search(
+        'RETURN (MIN COUNT) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      cmd = server.commands.pop
+      assert_equal Net::IMAP::ESearchResult.new(
+        cmd.tag, false, [["MIN", 2], ["COUNT", 3]]
+      ), result
+      esearch_responses = imap.clear_responses("ESEARCH")
+      assert_equal 2, esearch_responses.count
+      refute esearch_responses.include?(result)
+    end
+  end
+
+  test("missing server ESEARCH response") do
+    with_fake_server do |server, imap|
+      # Example from RFC9051, 6.4.4:
+      #   C: A282 SEARCH RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"
+      #   S: A282 OK SEARCH completed, result saved
+      server.on "SEARCH"     do |cmd| cmd.done_ok "result saved" end
+      server.on "UID SEARCH" do |cmd| cmd.done_ok "result saved" end
+      result = imap.search(
+        'RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      assert_pattern do
+        result => Net::IMAP::ESearchResult[uid: false, tag: /^RUBY\d+/, data: []]
+      end
+      result = imap.uid_search(
+        'RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      assert_pattern do
+        result => Net::IMAP::ESearchResult[uid: true, tag: /^RUBY\d+/, data: []]
+      end
+    end
+  end
+
   test("missing server SEARCH response") do
     with_fake_server do |server, imap|
       server.on "SEARCH",     &:done_ok

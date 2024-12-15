@@ -414,7 +414,7 @@ module Net
   # >>>
   #   <em>The following are folded into +IMAP4rev2+ but are currently
   #   unsupported or incompletely supported by</em> Net::IMAP<em>: RFC4466
-  #   extensions, +ESEARCH+, +SEARCHRES+, +LIST-EXTENDED+, +LIST-STATUS+,
+  #   extensions, +SEARCHRES+, +LIST-EXTENDED+, +LIST-STATUS+,
   #   +LITERAL-+, and +SPECIAL-USE+.</em>
   #
   # ==== RFC2087: +QUOTA+
@@ -465,6 +465,10 @@ module Net
   # - Updates #select, #examine with the +UIDNOTSTICKY+ ResponseCode
   # - Updates #append with the +APPENDUID+ ResponseCode
   # - Updates #copy, #move with the +COPYUID+ ResponseCode
+  #
+  # ==== RFC4731: +ESEARCH+
+  # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
+  # - Updates #search, #uid_search with +return+ options and ESearchResult.
   #
   # ==== RFC4959: +SASL-IR+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051].
@@ -1935,9 +1939,11 @@ module Net
     #
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
     # to search the mailbox for messages that match the given search +criteria+,
-    # and returns a SearchResult.  SearchResult inherits from Array (for
-    # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
-    # capability has been enabled.
+    # and returns either a SearchResult or an ESearchResult.  SearchResult
+    # inherits from Array (for backward compatibility) but adds
+    # SearchResult#modseq when the +CONDSTORE+ capability has been enabled.
+    # ESearchResult also implements to_a{rdoc-ref:ESearchResult#to_a}, for
+    # compatibility with SearchResult.
     #
     # +criteria+ is one or more search keys and their arguments, which may be
     # provided as an array or a string.
@@ -1948,8 +1954,11 @@ module Net
     # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
     # used by strings in the search +criteria+.  When +charset+ isn't specified,
     # either <tt>"US-ASCII"</tt> or <tt>"UTF-8"</tt> is assumed, depending on
-    # the server's capabilities.  +charset+ may be sent inside +criteria+
-    # instead of as a separate argument.
+    # the server's capabilities.
+    #
+    # _NOTE:_ Return options and charset may be sent as part of +criteria+.  Do
+    # not use the +charset+ argument when either return options or charset are
+    # embedded in +criteria+.
     #
     # Related: #uid_search
     #
@@ -1968,6 +1977,12 @@ module Net
     #    imap.search([*%w[CHARSET UTF-8], "OR", "UNSEEN", %w(FLAGGED SUBJECT foo)])
     #    # criteria string contains charset arg
     #    imap.search("CHARSET UTF-8 OR UNSEEN (FLAGGED SUBJECT foo)")
+    #
+    # Sending return options and charset embedded in the +criteria+ arg:
+    #    imap.search("RETURN (MIN MAX) CHARSET UTF-8 (OR UNSEEN FLAGGED)")
+    #    imap.search(["RETURN", %w(MIN MAX),
+    #                 "CHARSET", "UTF-8",
+    #                 %w(OR UNSEEN FLAGGED)])
     #
     # ==== Argument translation
     #
@@ -2006,6 +2021,49 @@ module Net
     #
     #   <em>*WARNING:* This is vulnerable to injection attacks when external
     #   inputs are used.</em>
+    #
+    # ==== Return options
+    #
+    # For full definitions of the standard return options and return data, see
+    # the relevant RFCs.
+    #
+    # ===== +ESEARCH+ or +IMAP4rev2+
+    #
+    # The following return options require either +ESEARCH+ or +IMAP4rev2+.
+    # See [{RFC4731 §3.1}[https://rfc-editor.org/rfc/rfc4731#section-3.1]] or
+    # [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]].
+    #
+    # [+ALL+]
+    #    Returns ESearchResult#all with a SequenceSet of all matching sequence
+    #    numbers or UIDs.  This is the default, when return options are empty.
+    #
+    #    For compatibility with SearchResult, ESearchResult#to_a returns an
+    #    Array of message sequence numbers or UIDs.
+    # [+COUNT+]
+    #    Returns ESearchResult#count with the number of matching messages.
+    # [+MAX+]
+    #    Returns ESearchResult#max with the highest matching sequence number or
+    #    UID.
+    # [+MIN+]
+    #    Returns ESearchResult#min with the lowest matching sequence number or
+    #    UID.
+    #
+    # ===== +CONDSTORE+
+    #
+    # ESearchResult#modseq return data does not have a corresponding return
+    # option.  Instead, it is returned if the +MODSEQ+ search key is used or
+    # when the +CONDSTORE+ extension is enabled for the selected mailbox.
+    # See [{RFC4731 §3.2}[https://www.rfc-editor.org/rfc/rfc4731#section-3.2]]
+    # or [{RFC7162 §2.1.5}[https://www.rfc-editor.org/rfc/rfc7162#section-3.1.5]].
+    #
+    # ===== +RFC4466+ compatible extensions
+    #
+    # {RFC4466 §2.6}[https://www.rfc-editor.org/rfc/rfc4466.html#section-2.6]
+    # defines standard syntax for search extensions.  Net::IMAP allows sending
+    # unknown search return options and will parse unknown search extensions'
+    # return values into ExtensionData.  Please note that this is an
+    # intentionally _unstable_ API.  Future releases may return different
+    # (incompatible) objects, <em>without deprecation or warning</em>.
     #
     # ==== Search keys
     #
@@ -2197,6 +2255,13 @@ module Net
     #   {[RFC8474]}[https://www.rfc-editor.org/rfc/rfc8474.html#section-6]
     #
     # ==== Capabilities
+    #
+    # Return options should only be specified when the server supports
+    # +IMAP4rev2+ or an extension that allows them, such as +ESEARCH+
+    # [RFC4731[https://rfc-editor.org/rfc/rfc4731#section-3.1]].
+    #
+    # When +IMAP4rev2+ is enabled, or when the server supports +IMAP4rev2+ but
+    # not +IMAP4rev1+, ESearchResult is always returned instead of SearchResult.
     #
     # If CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html] is supported
     # and enabled for the selected mailbox, a non-empty SearchResult will
@@ -3153,6 +3218,7 @@ module Net
     end
 
     def search_args(keys, charset_arg = nil, charset: nil)
+      esearch = (keys in /\ARETURN\b/i | Array[/\ARETURN\z/i, *])
       if charset && charset_arg
         raise ArgumentError, "multiple charset arguments"
       end
@@ -3163,16 +3229,28 @@ module Net
       end
       args = normalize_searching_criteria(keys)
       args.prepend("CHARSET", charset)     if charset
-      args
+      return args, esearch
     end
 
     def search_internal(cmd, ...)
-      args = search_args(...)
+      args, esearch = search_args(...)
       synchronize do
-        send_command(cmd, *args)
+        tagged = send_command(cmd, *args)
+        tag    = tagged.tag
+        # Only the last ESEARCH or SEARCH is used.  Excess results are ignored.
+        esearch_result = extract_responses("ESEARCH") {|response|
+          response in ESearchResult(tag: ^tag)
+        }.last
         search_result = clear_responses("SEARCH").last
-        if search_result
+        if esearch_result
+          # silently ignore SEARCH results, if any
+          esearch_result
+        elsif search_result
+          # warn EXPECTED_ESEARCH_RESULT if esearch
           search_result
+        elsif esearch
+          # warn NO_SEARCH_RESPONSE
+          ESearchResult[tag:, uid: cmd.start_with?("UID ")]
         else
           # warn NO_SEARCH_RESPONSE
           SearchResult[]
