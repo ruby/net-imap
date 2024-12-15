@@ -3277,6 +3277,10 @@ module Net
         esearch = false
       in [_, Array[RETURN_WHOLE, _, *] | RETURN_START]
         raise ArgumentError, "conflicting return options"
+      in [_, Array[RETURN_WHOLE, _, *]] # workaround for https://bugs.ruby-lang.org/issues/20956
+        raise ArgumentError, "conflicting return options"
+      in [_, RETURN_START]              # workaround for https://bugs.ruby-lang.org/issues/20956
+        raise ArgumentError, "conflicting return options"
       in [return_opts, keys]
         return_opts = convert_return_opts(return_opts)
         esearch = true
