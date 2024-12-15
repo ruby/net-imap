@@ -1265,6 +1265,18 @@ EOF
       ])
       cmd = server.commands.pop
       assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["NOT", ["FLAGGED", %w(OR SEEN ANSWERED)]], return: %w(MIN MAX COUNT)
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: %w(PARTIAL -500:-1)
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1) UID 1234:*", cmd.args
     end
   end
 
@@ -1292,6 +1304,19 @@ EOF
       # assert_raise(ArgumentError) do
       #   imap.search("return () charset foo ALL", "bar")
       # end
+
+      assert_raise(ArgumentError) do
+        imap.search(["retURN", %w(foo bar), "ALL"], return: %w[foo bar])
+      end
+      assert_raise(ArgumentError) do
+        imap.search("RETURN (foo bar) ALL", return: %w[foo bar])
+      end
+      assert_raise(TypeError) do
+        imap.search("ALL", return: "foo bar")
+      end
+      assert_raise(TypeError) do
+        imap.search(["retURN", "foo bar", "ALL"])
+      end
     end
   end
 

@@ -1935,7 +1935,7 @@ module Net
 
     # :call-seq:
     #   search(criteria, charset = nil) -> result
-    #   search(criteria, charset: nil) -> result
+    #   search(criteria, charset: nil, return: nil) -> result
     #
     # Sends a {SEARCH command [IMAP4rev1 §6.4.4]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.4]
     # to search the mailbox for messages that match the given search +criteria+,
@@ -1950,6 +1950,14 @@ module Net
     # See {"Argument translation"}[rdoc-ref:#search@Argument+translation]
     # and {"Search criteria"}[rdoc-ref:#search@Search+criteria], below.
     #
+    # +return+ options control what kind of information is returned about
+    # messages matching the search +criteria+.  Specifying +return+ should force
+    # the server to return an ESearchResult instead of a SearchResult, but some
+    # servers disobey this requirement.  <em>Requires an extended search
+    # capability, such as +ESEARCH+ or +IMAP4rev2+.</em>
+    # See {"Argument translation"}[rdoc-ref:#search@Argument+translation]
+    # and {"Return options"}[rdoc-ref:#search@Return+options], below.
+    #
     # +charset+ is the name of the {registered character
     # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
     # used by strings in the search +criteria+.  When +charset+ isn't specified,
@@ -1957,37 +1965,71 @@ module Net
     # the server's capabilities.
     #
     # _NOTE:_ Return options and charset may be sent as part of +criteria+.  Do
-    # not use the +charset+ argument when either return options or charset are
-    # embedded in +criteria+.
+    # not use the +return+ or +charset+ arguments when either return options or
+    # charset are embedded in +criteria+.
     #
     # Related: #uid_search
     #
     # ==== For example:
     #
-    #   p imap.search(["SUBJECT", "hello", "NOT", "SEEN"])
+    #   imap.search(["SUBJECT", "hello", "NOT", "SEEN"])
     #   #=> [1, 6, 7, 8]
     #
-    # The following searches send the exact same command to the server:
+    # The following assumes the server supports +ESEARCH+ and +CONDSTORE+:
     #
-    #    # criteria array, charset arg
-    #    imap.search(["OR", "UNSEEN", %w(FLAGGED SUBJECT foo)], "UTF-8")
-    #    # criteria string, charset arg
-    #    imap.search("OR UNSEEN (FLAGGED SUBJECT foo)", "UTF-8")
-    #    # criteria array contains charset arg
-    #    imap.search([*%w[CHARSET UTF-8], "OR", "UNSEEN", %w(FLAGGED SUBJECT foo)])
-    #    # criteria string contains charset arg
-    #    imap.search("CHARSET UTF-8 OR UNSEEN (FLAGGED SUBJECT foo)")
+    #   result = imap.uid_search(["UID", 12345.., "MODSEQ", 620_162_338],
+    #                            return: %w(all count min max))
+    #   # => #<data Net::IMAP::ESearchResult tag="RUBY0123", uid=true,
+    #   #       data=[["ALL", Net::IMAP::SequenceSet["12346:12349,22222:22230"]],
+    #   #             ["COUNT", 13], ["MIN", 12346], ["MAX", 22230],
+    #   #             ["MODSEQ", 917162488]]>
+    #   result.to_a   # => [12346, 12347, 12348, 12349, 22222, 22223, 22224,
+    #                 #     22225, 22226, 22227, 22228, 22229, 22230]
+    #   result.uid?   # => true
+    #   result.count  # => 13
+    #   result.min    # => 12346
+    #   result.max    # => 22230
+    #   result.modseq # => 917162488
     #
-    # Sending return options and charset embedded in the +criteria+ arg:
-    #    imap.search("RETURN (MIN MAX) CHARSET UTF-8 (OR UNSEEN FLAGGED)")
-    #    imap.search(["RETURN", %w(MIN MAX),
-    #                 "CHARSET", "UTF-8",
-    #                 %w(OR UNSEEN FLAGGED)])
+    # Using +return+ options to limit the result to only min, max, and count:
+    #
+    #   result = imap.uid_search(["UID", 12345..,], return: %w(count min max))
+    #   # => #<data Net::IMAP::ESearchResult tag="RUBY0124", uid=true,
+    #   #       data=[["COUNT", 13], ["MIN", 12346], ["MAX", 22230]]>
+    #   result.to_a   # => []
+    #   result.count  # => 13
+    #   result.min    # => 12346
+    #   result.max    # => 22230
+    #
+    # Return options and charset may be sent as keyword args or embedded in the
+    # +criteria+ arg, but they must be in the correct order: <tt>"RETURN (...)
+    # CHARSET ... criteria..."</tt>.  The following searches
+    # send the exact same command to the server:
+    #
+    #    # Return options and charset as keyword arguments (preferred)
+    #    imap.search(%w(OR UNSEEN FLAGGED), return: %w(MIN MAX), charset: "UTF-8")
+    #    # Embedding return and charset in the criteria array
+    #    imap.search(["RETURN", %w(MIN MAX), "CHARSET", "UTF-8", *%w(OR UNSEEN FLAGGED)])
+    #    # Embedding return and charset in the criteria string
+    #    imap.search("RETURN (MIN MAX) CHARSET UTF-8 OR UNSEEN FLAGGED")
+    #
+    # Sending charset as the second positional argument is supported for
+    # backward compatibility.  Future versions may print a deprecation warning:
+    #    imap.search(%w(OR UNSEEN FLAGGED), "UTF-8", return: %w(MIN MAX))
     #
     # ==== Argument translation
     #
+    # [+return+ options]
+    #   Must be an Array.  Return option names are strings.
+    #   Unlike +criteria+, other return option arguments are not automatically
+    #   converted to SequenceSet.
+    #
     # [When +criteria+ is an Array]
-    #   Each member is a +SEARCH+ command argument:
+    #   When the array begins with <tt>"RETURN"</tt> (case insensitive), the
+    #   second array element is translated like the +return+ parameter (as
+    #   described above).
+    #
+    #   Every other member is a +SEARCH+ command argument:
     #   [SequenceSet]
     #     Encoded as an \IMAP +sequence-set+ with SequenceSet#valid_string.
     #   [Set, Range, <tt>-1</tt>, +:*+, responds to +#to_sequence_set+]
@@ -2276,7 +2318,7 @@ module Net
 
     # :call-seq:
     #   uid_search(criteria, charset = nil) -> result
-    #   uid_search(criteria, charset: nil) -> result
+    #   uid_search(criteria, charset: nil, return: nil) -> result
     #
     # Sends a {UID SEARCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to search the mailbox for messages that match the given searching
@@ -3217,8 +3259,26 @@ module Net
       end
     end
 
-    def search_args(keys, charset_arg = nil, charset: nil)
-      esearch = (keys in /\ARETURN\b/i | Array[/\ARETURN\z/i, *])
+    RETURN_WHOLE = /\ARETURN\z/i
+    RETURN_START = /\ARETURN\b/i
+    private_constant :RETURN_WHOLE, :RETURN_START
+
+    def search_args(keys, charset_arg = nil, return: nil, charset: nil)
+      {return:} => {return: return_kw}
+      case [return_kw, keys]
+      in [nil, Array[RETURN_WHOLE, return_opts, *keys]]
+        return_opts = convert_return_opts(return_opts)
+        esearch = true
+      in [nil => return_opts, RETURN_START]
+        esearch = true
+      in [nil => return_opts, keys]
+        esearch = false
+      in [_, Array[RETURN_WHOLE, _, *] | RETURN_START]
+        raise ArgumentError, "conflicting return options"
+      in [return_opts, keys]
+        return_opts = convert_return_opts(return_opts)
+        esearch = true
+      end
       if charset && charset_arg
         raise ArgumentError, "multiple charset arguments"
       end
@@ -3229,7 +3289,15 @@ module Net
       end
       args = normalize_searching_criteria(keys)
       args.prepend("CHARSET", charset)     if charset
+      args.prepend("RETURN",  return_opts) if return_opts
       return args, esearch
+    end
+
+    def convert_return_opts(unconverted)
+      Array.try_convert(unconverted) or
+        raise TypeError, "expected return options to be Array, got %s" % [
+          unconverted.class
+        ]
     end
 
     def search_internal(cmd, ...)
