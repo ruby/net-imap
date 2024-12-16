@@ -1265,6 +1265,30 @@ EOF
       ])
       cmd = server.commands.pop
       assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["NOT", ["FLAGGED", %w(OR SEEN ANSWERED)]], return: %w(MIN MAX COUNT)
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (MIN MAX COUNT) NOT (FLAGGED (OR SEEN ANSWERED))", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: %w(PARTIAL -500:-1)
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1) UID 1234:*", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: [:PARTIAL, "-500:-1"]
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1) UID 1234:*", cmd.args
+
+      assert_equal search_result, imap.search(
+        ["UID", 1234..], return: [:PARTIAL, -500..-1, :FOO, 1..]
+      )
+      cmd = server.commands.pop
+      assert_equal "RETURN (PARTIAL -500:-1 FOO 1:*) UID 1234:*", cmd.args
     end
   end
 
@@ -1292,6 +1316,67 @@ EOF
       # assert_raise(ArgumentError) do
       #   imap.search("return () charset foo ALL", "bar")
       # end
+
+      assert_raise(ArgumentError) do
+        imap.search(["retURN", %w(foo bar), "ALL"], return: %w[foo bar])
+      end
+      assert_raise(ArgumentError) do
+        imap.search("RETURN (foo bar) ALL", return: %w[foo bar])
+      end
+      assert_raise(TypeError) do
+        imap.search("ALL", return: "foo bar")
+      end
+      assert_raise(TypeError) do
+        imap.search(["retURN", "foo bar", "ALL"])
+      end
+    end
+  end
+
+  test("#search/#uid_search with ESEARCH or IMAP4rev2") do
+    with_fake_server do |server, imap|
+      # Example from RFC9051, 6.4.4:
+      #   C: A282 SEARCH RETURN (MIN COUNT) FLAGGED
+      #       SINCE 1-Feb-1994 NOT FROM "Smith"
+      #   S: * ESEARCH (TAG "A282") MIN 2 COUNT 3
+      #   S: A282 OK SEARCH completed
+      server.on "SEARCH" do |cmd|
+        cmd.untagged "ESEARCH", "(TAG \"unrelated1\") MIN 1 COUNT 2"
+        cmd.untagged "ESEARCH", "(TAG %p) MIN 2 COUNT 3" % [cmd.tag]
+        cmd.untagged "ESEARCH", "(TAG \"unrelated2\") MIN 222 COUNT 333"
+        cmd.done_ok
+      end
+      result = imap.search(
+        'RETURN (MIN COUNT) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      cmd = server.commands.pop
+      assert_equal Net::IMAP::ESearchResult.new(
+        cmd.tag, false, [["MIN", 2], ["COUNT", 3]]
+      ), result
+      esearch_responses = imap.clear_responses("ESEARCH")
+      assert_equal 2, esearch_responses.count
+      refute esearch_responses.include?(result)
+    end
+  end
+
+  test("missing server ESEARCH response") do
+    with_fake_server do |server, imap|
+      # Example from RFC9051, 6.4.4:
+      #   C: A282 SEARCH RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"
+      #   S: A282 OK SEARCH completed, result saved
+      server.on "SEARCH"     do |cmd| cmd.done_ok "result saved" end
+      server.on "UID SEARCH" do |cmd| cmd.done_ok "result saved" end
+      result = imap.search(
+        'RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      assert_pattern do
+        result => Net::IMAP::ESearchResult[uid: false, tag: /^RUBY\d+/, data: []]
+      end
+      result = imap.uid_search(
+        'RETURN (SAVE) FLAGGED SINCE 1-Feb-1994 NOT FROM "Smith"'
+      )
+      assert_pattern do
+        result => Net::IMAP::ESearchResult[uid: true, tag: /^RUBY\d+/, data: []]
+      end
     end
   end
 

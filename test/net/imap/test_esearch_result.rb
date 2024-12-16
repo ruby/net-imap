@@ -1,0 +1,83 @@
+# frozen_string_literal: true
+
+require "net/imap"
+require "test/unit"
+
+class ESearchResultTest < Test::Unit::TestCase
+  ESearchResult = Net::IMAP::ESearchResult
+  SequenceSet   = Net::IMAP::SequenceSet
+  ExtensionData = Net::IMAP::ExtensionData
+
+  test "#to_a" do
+    esearch = ESearchResult.new(nil, true, [])
+    assert_equal [], esearch.to_a
+    esearch = ESearchResult.new(nil, false, [])
+    assert_equal [], esearch.to_a
+    esearch = ESearchResult.new(nil, false, [["ALL", SequenceSet["1,5:8"]]])
+    assert_equal [1, 5, 6, 7, 8], esearch.to_a
+  end
+
+  test "#tag" do
+    esearch = ESearchResult.new("A0001", false, [["count", 0]])
+    assert_equal "A0001", esearch.tag
+    esearch = ESearchResult.new("A0002", false, [["count", 0]])
+    assert_equal "A0002", esearch.tag
+  end
+
+  test "#uid" do
+    esearch = ESearchResult.new("A0003", true, [["count", 0]])
+    assert_equal true, esearch.uid
+    assert_equal true, esearch.uid?
+    esearch = ESearchResult.new("A0004", false, [["count", 0]])
+    assert_equal false, esearch.uid
+    assert_equal false, esearch.uid?
+  end
+
+  test "#data.assoc('UNKNOWN') returns ExtensionData value" do
+    result = Net::IMAP::ResponseParser.new.parse(
+      "* ESEARCH (TAG \"A0006\") UID UNKNOWN 1\r\n"
+    ).data
+    result => ESearchResult[data:]
+    assert_equal(["UNKNOWN", ExtensionData[1]],
+                 data.assoc("UNKNOWN"))
+    result = Net::IMAP::ResponseParser.new.parse(
+      "* ESEARCH (TAG \"A0006\") UID UNKNOWN 1:2\r\n"
+    ).data
+    result => ESearchResult[data:]
+    assert_equal(["UNKNOWN", ExtensionData[SequenceSet[1..2]]],
+                 data.assoc("UNKNOWN"))
+    result = Net::IMAP::ResponseParser.new.parse(
+      "* ESEARCH (TAG \"A0006\") UID UNKNOWN (-1:-100 200:250,252:300)\r\n"
+    ).data
+    result => ESearchResult[data:]
+    assert_equal(
+      [
+        "UNKNOWN",
+        ExtensionData.new(["-1:-100", "200:250,252:300"]),
+      ],
+      data.assoc("UNKNOWN")
+    )
+  end
+
+  # "simple" result da¨a return exactly what is in the data.assoc
+  test "simple RFC4731 and RFC9051 return data accessors" do
+    seqset  = SequenceSet["5:9,101:105,151:152"]
+    esearch = ESearchResult.new(
+      "A0005",
+      true,
+      [
+        ["MIN",        5],
+        ["MAX",      152],
+        ["COUNT",     12],
+        ["ALL",   seqset],
+        ["MODSEQ", 12345],
+      ]
+    )
+    assert_equal      5, esearch.min
+    assert_equal    152, esearch.max
+    assert_equal     12, esearch.count
+    assert_equal seqset, esearch.all
+    assert_equal  12345, esearch.modseq
+  end
+
+end
