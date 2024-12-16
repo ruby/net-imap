@@ -1942,7 +1942,7 @@ module Net
     # and returns either a SearchResult or an ESearchResult.  SearchResult
     # inherits from Array (for backward compatibility) but adds
     # SearchResult#modseq when the +CONDSTORE+ capability has been enabled.
-    # ESearchResult also implements to_a{rdoc-ref:ESearchResult#to_a}, for
+    # ESearchResult also implements {#to_a}[rdoc-ref:ESearchResult#to_a], for
     # compatibility with SearchResult.
     #
     # +criteria+ is one or more search keys and their arguments, which may be
