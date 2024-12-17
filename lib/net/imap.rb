@@ -1889,22 +1889,46 @@ module Net
       send_command("UNSELECT")
     end
 
+    # call-seq:
+    #   expunge -> array of message sequence numbers
+    #   expunge -> VanishedData of UIDs
+    #
     # Sends an {EXPUNGE command [IMAP4rev1 §6.4.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.3]
-    # Sends a EXPUNGE command to permanently remove from the currently
-    # selected mailbox all messages that have the \Deleted flag set.
+    # to permanently remove all messages with the +\Deleted+ flag from the
+    # currently selected mailbox.
+    #
+    # Returns either an array of expunged message <em>sequence numbers</em> or
+    # (when the appropriate capability is enabled) VanishedData of expunged
+    # UIDs.  Previously unhandled +EXPUNGE+ or +VANISHED+ responses are merged
+    # with the direct response to this command.  <tt>VANISHED (EARLIER)</tt>
+    # responses will _not_ be merged.
+    #
+    # When no messages have been expunged, an empty array is returned,
+    # regardless of which extensions are enabled.  In a future release, an empty
+    # VanishedData may be returned, based on the currently enabled extensions.
     #
     # Related: #uid_expunge
+    #
+    # ==== Capabilities
+    #
+    # When either QRESYNC[https://tools.ietf.org/html/rfc7162] or
+    # UIDONLY[https://tools.ietf.org/html/rfc9586] are enabled, #expunge
+    # returns VanishedData, which contains UIDs---<em>not message sequence
+    # numbers</em>.
     def expunge
-      synchronize do
-        send_command("EXPUNGE")
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("EXPUNGE")
     end
 
+    # call-seq:
+    #   uid_expunge{uid_set) -> array of message sequence numbers
+    #   uid_expunge{uid_set) -> VanishedData of UIDs
+    #
     # Sends a {UID EXPUNGE command [RFC4315 §2.1]}[https://www.rfc-editor.org/rfc/rfc4315#section-2.1]
     # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
     # to permanently remove all messages that have both the <tt>\\Deleted</tt>
     # flag set and a UID that is included in +uid_set+.
+    #
+    # Returns the same result type as #expunge.
     #
     # By using #uid_expunge instead of #expunge when resynchronizing with
     # the server, the client can ensure that it does not inadvertantly
@@ -1912,25 +1936,17 @@ module Net
     # clients between the time that the client was last connected and
     # the time the client resynchronizes.
     #
-    # *Note:*
-    # >>>
-    #        Although the command takes a set of UIDs for its argument, the
-    #        server still returns regular EXPUNGE responses, which contain
-    #        a <em>sequence number</em>. These will be deleted from
-    #        #responses and this method returns them as an array of
-    #        <em>sequence number</em> integers.
-    #
     # Related: #expunge
     #
     # ==== Capabilities
     #
-    # The server's capabilities must include +UIDPLUS+
+    # The server's capabilities must include either +IMAP4rev2+ or +UIDPLUS+
     # [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]].
+    #
+    # Otherwise, #uid_expunge is updated by extensions in the same way as
+    # #expunge.
     def uid_expunge(uid_set)
-      synchronize do
-        send_command("UID EXPUNGE", SequenceSet.new(uid_set))
-        clear_responses("EXPUNGE")
-      end
+      expunge_internal("UID EXPUNGE", SequenceSet.new(uid_set))
     end
 
     # :call-seq:
@@ -3258,6 +3274,22 @@ module Net
         capabilities_cached?
       else
         config.enforce_logindisabled
+      end
+    end
+
+    def expunge_internal(...)
+      synchronize do
+        send_command(...)
+        expunged_array = clear_responses("EXPUNGE")
+        vanished_array = extract_responses("VANISHED") { !_1.earlier? }
+        if vanished_array.empty?
+          expunged_array
+        elsif vanished_array.length == 1
+          vanished_array.first
+        else
+          merged_uids = SequenceSet[*vanished_array.map(&:uids)]
+          VanishedData[uids: merged_uids, earlier: false]
+        end
       end
     end
 
