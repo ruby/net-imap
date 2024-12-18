@@ -1,0 +1,66 @@
+---
+:tests:
+
+  "RFC9394 PARTIAL 3.1. example 1":
+    comment: |
+      Neither RFC9394 nor RFC5267 contain any examples of a normal unelided
+      sequence-set result.  I've edited it to include a sequence-set here.
+    :response: "* ESEARCH (TAG \"A01\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A01
+        uid: true
+        data:
+        - - PARTIAL
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+            range: !ruby/range
+              begin: -100
+              end: -1
+              excl: false
+            results: !ruby/object:Net::IMAP::SequenceSet
+              string: 200:250,252:300
+              tuples:
+              - - 200
+                - 250
+              - - 252
+                - 300
+      raw_data: "* ESEARCH (TAG \"A01\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
+
+  "RFC9394 PARTIAL 3.1. example 2":
+    :response: "* ESEARCH (TAG \"A02\") UID PARTIAL (23500:24000 55500:56000)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A02
+        uid: true
+        data:
+        - - PARTIAL
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+            range: !ruby/range
+              begin: 23500
+              end: 24000
+              excl: false
+            results: !ruby/object:Net::IMAP::SequenceSet
+              string: 55500:56000
+              tuples:
+              - - 55500
+                - 56000
+      raw_data: "* ESEARCH (TAG \"A02\") UID PARTIAL (23500:24000 55500:56000)\r\n"
+
+  "RFC9394 PARTIAL 3.1. example 3":
+    :response: "* ESEARCH (TAG \"A04\") UID PARTIAL (24000:24500 NIL)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: ESEARCH
+      data: !ruby/object:Net::IMAP::ESearchResult
+        tag: A04
+        uid: true
+        data:
+        - - PARTIAL
+          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+            range: !ruby/range
+              begin: 24000
+              end: 24500
+              excl: false
+            results:
+      raw_data: "* ESEARCH (TAG \"A04\") UID PARTIAL (24000:24500 NIL)\r\n"

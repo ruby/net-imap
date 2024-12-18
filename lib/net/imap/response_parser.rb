@@ -321,6 +321,20 @@ module Net
         SEQUENCE_SET      = /#{SEQUENCE_SET_ITEM}(?:,#{SEQUENCE_SET_ITEM})*/n
         SEQUENCE_SET_STR  = /\A#{SEQUENCE_SET}\z/n
 
+        # partial-range-first = nz-number ":" nz-number
+        #     ;; Request to search from oldest (lowest UIDs) to
+        #     ;; more recent messages.
+        #     ;; A range 500:400 is the same as 400:500.
+        #     ;; This is similar to <seq-range> from [RFC3501]
+        #     ;; but cannot contain "*".
+        PARTIAL_RANGE_FIRST = /\A(#{NZ_NUMBER}):(#{NZ_NUMBER})\z/n
+
+        # partial-range-last  = MINUS nz-number ":" MINUS nz-number
+        #     ;; Request to search from newest (highest UIDs) to
+        #     ;; oldest messages.
+        #     ;; A range -500:-400 is the same as -400:-500.
+        PARTIAL_RANGE_LAST  = /\A(-#{NZ_NUMBER}):(-#{NZ_NUMBER})\z/n
+
         # RFC3501:
         #   literal          = "{" number "}" CRLF *CHAR8
         #                        ; Number represents the number of CHAR8s
@@ -1517,6 +1531,9 @@ module Net
       # From RFC4731 (ESEARCH):
       #   search-return-data    =/ "MODSEQ" SP mod-sequence-value
       #
+      # From RFC9394 (PARTIAL):
+      #   search-return-data  =/ ret-data-partial
+      #
       def search_return_data
         label = search_modifier_name; SP!
         value =
@@ -1526,10 +1543,40 @@ module Net
           when "ALL"        then sequence_set
           when "COUNT"      then number
           when "MODSEQ"     then mod_sequence_value         # RFC7162: CONDSTORE
+          when "PARTIAL"    then ret_data_partial__value    # RFC9394: PARTIAL
           else search_return_value
           end
         [label, value]
       end
+
+      # From RFC5267 (CONTEXT=SEARCH, CONTEXT=SORT) and RFC9394 (PARTIAL):
+      #   ret-data-partial    = "PARTIAL"
+      #                         SP "(" partial-range SP partial-results ")"
+      def ret_data_partial__value
+        lpar
+        range   = partial_range;   SP!
+        results = partial_results
+        rpar
+        ESearchResult::PartialResult.new(range, results)
+      end
+
+      # partial-range       = partial-range-first / partial-range-last
+      # tagged-ext-simple   =/ partial-range-last
+      def partial_range
+        case (str = atom)
+        when Patterns::PARTIAL_RANGE_FIRST, Patterns::PARTIAL_RANGE_LAST
+          min, max = [Integer($1), Integer($2)].minmax
+          min..max
+        else
+          parse_error("unexpected atom %p, expected partial-range", str)
+        end
+      end
+
+      # partial-results     = sequence-set / "NIL"
+      #     ;; <sequence-set> from [RFC3501].
+      #     ;; NIL indicates that no results correspond to
+      #     ;; the requested range.
+      def partial_results; NIL? ? nil : sequence_set end
 
       # search-modifier-name = tagged-ext-label
       alias search_modifier_name tagged_ext_label

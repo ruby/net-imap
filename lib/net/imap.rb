@@ -534,6 +534,11 @@ module Net
   #   See FetchData#emailid and FetchData#emailid.
   # - Updates #status with support for the +MAILBOXID+ status attribute.
   #
+  # ==== RFC9394: +PARTIAL+
+  # - Updates #search, #uid_search with the +PARTIAL+ return option which adds
+  #   ESearchResult#partial return data.
+  # - TODO: Updates #uid_fetch with the +partial+ modifier.
+  #
   # == References
   #
   # [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501.html]]::
@@ -701,6 +706,11 @@ module Net
   #   Gondwana, B., Ed., "IMAP Extension for Object Identifiers",
   #   RFC 8474, DOI 10.17487/RFC8474, September 2018,
   #   <https://www.rfc-editor.org/info/rfc8474>.
+  # [PARTIAL[https://www.rfc-editor.org/info/rfc9394]]:
+  #   Melnikov, A., Achuthan, A., Nagulakonda, V., and L. Alves,
+  #   "IMAP PARTIAL Extension for Paged SEARCH and FETCH", RFC 9394,
+  #   DOI 10.17487/RFC9394, June 2023,
+  #   <https://www.rfc-editor.org/info/rfc9394>.
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
@@ -1971,8 +1981,9 @@ module Net
     # the server to return an ESearchResult instead of a SearchResult, but some
     # servers disobey this requirement.  <em>Requires an extended search
     # capability, such as +ESEARCH+ or +IMAP4rev2+.</em>
-    # See {"Argument translation"}[rdoc-ref:#search@Argument+translation]
-    # and {"Return options"}[rdoc-ref:#search@Return+options], below.
+    # See {"Argument translation"}[rdoc-ref:#search@Argument+translation] and
+    # {"Supported return options"}[rdoc-ref:#search@Supported+return+options],
+    # below.
     #
     # +charset+ is the name of the {registered character
     # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
@@ -2082,16 +2093,10 @@ module Net
     #   <em>*WARNING:* This is vulnerable to injection attacks when external
     #   inputs are used.</em>
     #
-    # ==== Return options
+    # ==== Supported return options
     #
     # For full definitions of the standard return options and return data, see
     # the relevant RFCs.
-    #
-    # ===== +ESEARCH+ or +IMAP4rev2+
-    #
-    # The following return options require either +ESEARCH+ or +IMAP4rev2+.
-    # See [{RFC4731 §3.1}[https://rfc-editor.org/rfc/rfc4731#section-3.1]] or
-    # [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]].
     #
     # [+ALL+]
     #    Returns ESearchResult#all with a SequenceSet of all matching sequence
@@ -2099,22 +2104,45 @@ module Net
     #
     #    For compatibility with SearchResult, ESearchResult#to_a returns an
     #    Array of message sequence numbers or UIDs.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+COUNT+]
     #    Returns ESearchResult#count with the number of matching messages.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+MAX+]
     #    Returns ESearchResult#max with the highest matching sequence number or
     #    UID.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+MIN+]
     #    Returns ESearchResult#min with the lowest matching sequence number or
     #    UID.
     #
-    # ===== +CONDSTORE+
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
     #
-    # ESearchResult#modseq return data does not have a corresponding return
-    # option.  Instead, it is returned if the +MODSEQ+ search key is used or
-    # when the +CONDSTORE+ extension is enabled for the selected mailbox.
-    # See [{RFC4731 §3.2}[https://www.rfc-editor.org/rfc/rfc4731#section-3.2]]
-    # or [{RFC7162 §2.1.5}[https://www.rfc-editor.org/rfc/rfc7162#section-3.1.5]].
+    # [+PARTIAL+ _range_]
+    #    Returns ESearchResult#partial with a SequenceSet of a subset of
+    #    matching sequence numbers or UIDs, as selected by _range_.  As with
+    #    sequence numbers, the first result is +1+: <tt>1..500</tt> selects the
+    #    first 500 search results (in mailbox order), <tt>501..1000</tt> the
+    #    second 500, and so on.  _range_ may also be negative: <tt>-500..-1</tt>
+    #    selects the last 500 search results.
+    #
+    #    <em>Requires either the <tt>CONTEXT=SEARCH</tt> or +PARTIAL+ capabability.</em>
+    #    {[RFC5267]}[https://rfc-editor.org/rfc/rfc5267]
+    #    {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394]
     #
     # ===== +RFC4466+ compatible extensions
     #
@@ -2124,6 +2152,14 @@ module Net
     # return values into ExtensionData.  Please note that this is an
     # intentionally _unstable_ API.  Future releases may return different
     # (incompatible) objects, <em>without deprecation or warning</em>.
+    #
+    # ===== +MODSEQ+ return data
+    #
+    # ESearchResult#modseq return data does not have a corresponding return
+    # option.  Instead, it is returned if the +MODSEQ+ search key is used or
+    # when the +CONDSTORE+ extension is enabled for the selected mailbox.
+    # See [{RFC4731 §3.2}[https://www.rfc-editor.org/rfc/rfc4731#section-3.2]]
+    # or [{RFC7162 §2.1.5}[https://www.rfc-editor.org/rfc/rfc7162#section-3.1.5]].
     #
     # ==== Search keys
     #
@@ -2396,8 +2432,8 @@ module Net
     # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
     # +changedsince+ argument.  Using +changedsince+ implicitly enables the
     # +CONDSTORE+ extension.
-    def fetch(set, attr, mod = nil, changedsince: nil)
-      fetch_internal("FETCH", set, attr, mod, changedsince: changedsince)
+    def fetch(...)
+      fetch_internal("FETCH", ...)
     end
 
     # :call-seq:
@@ -2419,8 +2455,8 @@ module Net
     # ==== Capabilities
     #
     # Same as #fetch.
-    def uid_fetch(set, attr, mod = nil, changedsince: nil)
-      fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
+    def uid_fetch(...)
+      fetch_internal("UID FETCH", ...)
     end
 
     # :call-seq:
