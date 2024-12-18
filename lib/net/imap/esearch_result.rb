@@ -175,6 +175,16 @@ module Net
       # See also: #to_a
       def partial;    data.assoc("PARTIAL")&.last    end
 
+      # :call-seq: relevancy -> array of integers
+      #
+      # Return an array of relevancy scores for each message that satisfies the
+      # SEARCH criteria.  Scores are given in the range 1-100, where 100 is the
+      # highest relevancy.
+      #
+      # Requires <tt>SEARCH=FUZZY</tt>
+      # {[RFC6203]}[https://www.rfc-editor.org/rfc/rfc6203.html]
+      def relevancy;  data.assoc("RELEVANCY")&.last  end
+
     end
   end
 end

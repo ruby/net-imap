@@ -93,4 +93,11 @@ class ESearchResultTest < Test::Unit::TestCase
     )
   end
 
+  test "#relevancy returns RELEVANCY value (RFC6203: SEARCH=FUZZY)" do
+    esearch = ESearchResult.new("A0007", true, [["RELEVANCY", [1, 99]]])
+    assert_equal [1, 99], esearch.relevancy
+    esearch = ESearchResult.new("A0008", true, [["RELEVANCY", [3, 12, 23]]])
+    assert_equal [3, 12, 23], esearch.relevancy
+  end
+
 end
