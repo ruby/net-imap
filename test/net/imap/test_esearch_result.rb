@@ -80,4 +80,17 @@ class ESearchResultTest < Test::Unit::TestCase
     assert_equal  12345, esearch.modseq
   end
 
+  test "#partial returns PARTIAL value (RFC9394: PARTIAL)" do
+    result = Net::IMAP::ResponseParser.new.parse(
+      "* ESEARCH (TAG \"A0006\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
+    ).data
+    assert_equal(ESearchResult, result.class)
+    assert_equal(
+      ESearchResult::PartialResult.new(
+        -100..-1, SequenceSet[200..250, 252..300]
+      ),
+      result.partial
+    )
+  end
+
 end
