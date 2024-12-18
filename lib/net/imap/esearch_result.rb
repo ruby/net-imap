@@ -135,6 +135,112 @@ module Net
       # and +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.2].
       def modseq;     data.assoc("MODSEQ")&.last     end
 
+      # Superclass for AddToContext and RemoveFromContext, returned by
+      # ESearchResult#addto, ESearchResult#removefrom, and
+      # ESearchResult#updates.
+      #
+      # Use the +UPDATE+ search +return+ option to request update notifications.
+      # Update notifications are sent after the searching command completes, as
+      # and when the search results change.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      class ContextUpdate < Data.define(:position, :set)
+        def initialize(position:, set:)
+          position = NumValidator.ensure_number(position)
+          set = SequenceSet[set]
+          super
+        end
+
+        ##
+        # attr_reader: position
+        #
+        # The position in the updated search context where results will be
+        # inserted or removed, where the first position is one.
+        #
+        # When +position+ is zero, the results may be inserted or removed into
+        # the result list in mailbox order.
+
+        ##
+        # attr_reader: set
+        #
+        # A SequenceSet of updates to the search context.
+
+        ##
+        # Returns #set
+        def to_sequence_set; set end
+
+        # Converts #set to an array of numbers (UIDs or sequence numbers).
+        def to_a; set.numbers end
+
+        # :call-seq: update(context) -> updated context
+        #
+        # Given a SequenceSet +context+, returns a new SequenceSet, updated by
+        # +self+.
+        def update(context) update! context.dup end
+
+        # :call-seq: update!(context) -> updated context
+        #
+        # Modifies a SequenceSet +context+ by the updates in +self+.
+        # Implemented by subclasses.
+        def update!(context) raise "implemented by subclasses" end
+      end
+
+      # Returned by ESearchResult#addto and ESearchResult#updates.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      class AddToContext < ContextUpdate
+        alias additions set
+
+        # Updates context by adding #additions.
+        #
+        # *NOTE:* positions other than zero are not currently supported.
+        def update!(context)
+          if position.zero?
+            context.merge additions
+          else
+            raise "Positions other than zero are not currently supported."
+            # TODO: context.insert additions
+          end
+        end
+      end
+
+      # Returned by ESearchResult#removefrom and ESearchResult#updates.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      class RemoveFromContext < ContextUpdate
+        alias removals set
+
+        # Updates context by subtracting #additions.
+        #
+        # *NOTE:* positions other than zero are not currently supported.
+        def update!(context)
+          if position.zero?
+            context.subtract removals
+          else
+            raise "Positions other than zero are not currently supported."
+            # TODO: context.remove removals
+          end
+        end
+      end
+
+      # :call-seq: updates -> array of context updates, or nil
+      #
+      # Returns an array of ContextUpdate updates, which indicate additions to
+      # or removals from the result list for the command issued with #tag.
+      #
+      # Use the +UPDATE+ search +return+ option to request update notifications.
+      # Update notifications are sent after the searching command completes, as
+      # and when the search results change.
+      #
+      # Requires <tt>CONTEXT=SEARCH</tt> or <tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      def updates
+        data.flat_map { %w[ADDTO REMOVEFROM].include?(_1) ? _2 : [] }
+      end
+
       # Returned by ESearchResult#partial.
       #
       # Requires +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]

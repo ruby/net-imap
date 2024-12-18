@@ -100,4 +100,16 @@ class ESearchResultTest < Test::Unit::TestCase
     assert_equal [3, 12, 23], esearch.relevancy
   end
 
+  test "#updates returns both ADDTO and REMOVEFROM values (RFC5267: CONTEXT)" do
+    parser = Net::IMAP::ResponseParser.new
+    expected = [
+      ESearchResult::AddToContext.new(1, SequenceSet[2733]),
+      ESearchResult::RemoveFromContext.new(1, SequenceSet[2732]),
+      ESearchResult::AddToContext.new(1, SequenceSet[2731]),
+    ]
+    assert_equal expected, parser.parse(
+      "* ESEARCH (TAG \"C01\") UID ADDTO (1 2733) REMOVEFROM (1 2732) ADDTO (1 2731)\r\n"
+    ).data.updates
+  end
+
 end
