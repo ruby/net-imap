@@ -2122,6 +2122,18 @@ module Net
     #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
     #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
     #
+    # [+PARTIAL+ _range_]
+    #    Returns ESearchResult#partial with a SequenceSet of a subset of
+    #    matching sequence numbers or UIDs, as selected by _range_.  As with
+    #    sequence numbers, the first result is +1+: <tt>1..500</tt> selects the
+    #    first 500 search results (in mailbox order), <tt>501..1000</tt> the
+    #    second 500, and so on.  _range_ may also be negative: <tt>-500..-1</tt>
+    #    selects the last 500 search results.
+    #
+    #    <em>Requires either the <tt>CONTEXT=SEARCH</tt> or +PARTIAL+ capabability.</em>
+    #    {[RFC5267]}[https://rfc-editor.org/rfc/rfc5267]
+    #    {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394]
+    #
     # ===== +MODSEQ+ return data
     #
     # ESearchResult#modseq return data does not have a corresponding return
