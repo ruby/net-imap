@@ -723,7 +723,7 @@ module Net
   # * {IMAP URLAUTH Authorization Mechanism Registry}[https://www.iana.org/assignments/urlauth-authorization-mechanism-registry/urlauth-authorization-mechanism-registry.xhtml]
   #
   class IMAP < Protocol
-    VERSION = "0.5.2"
+    VERSION = "0.5.3"
 
     # Aliases for supported capabilities, to be used with the #enable command.
     ENABLE_ALIASES = {
