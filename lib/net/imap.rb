@@ -2357,14 +2357,7 @@ module Net
     # Sends a {FETCH command [IMAP4rev1 §6.4.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.5]
     # to retrieve data associated with a message in the mailbox.
     #
-    # The +set+ parameter is a number or a range between two numbers,
-    # or an array of those.  The number is a message sequence number,
-    # where -1 represents a '*' for use in range notation like 100..-1
-    # being interpreted as '100:*'.  Beware that the +exclude_end?+
-    # property of a Range object is ignored, and the contents of a
-    # range are independent of the order of the range endpoints as per
-    # the protocol specification, so 1...5, 5..1 and 5...1 are all
-    # equivalent to 1..5.
+    # The +set+ parameter must be a valid input to SequenceSet::[].
     #
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
@@ -2424,6 +2417,7 @@ module Net
     # Related: #fetch, FetchData
     #
     # ==== Capabilities
+    #
     # Same as #fetch.
     def uid_fetch(set, attr, mod = nil, changedsince: nil)
       fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
@@ -3383,6 +3377,7 @@ module Net
     end
 
     def fetch_internal(cmd, set, attr, mod = nil, changedsince: nil)
+      set = SequenceSet[set]
       if changedsince
         mod ||= []
         mod << "CHANGEDSINCE" << Integer(changedsince)
@@ -3399,9 +3394,9 @@ module Net
       synchronize do
         clear_responses("FETCH")
         if mod
-          send_command(cmd, SequenceSet.new(set), attr, mod)
+          send_command(cmd, set, attr, mod)
         else
-          send_command(cmd, SequenceSet.new(set), attr)
+          send_command(cmd, set, attr)
         end
         clear_responses("FETCH")
       end
