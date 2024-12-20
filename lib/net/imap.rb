@@ -2357,14 +2357,9 @@ module Net
     # Sends a {FETCH command [IMAP4rev1 §6.4.5]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.5]
     # to retrieve data associated with a message in the mailbox.
     #
-    # The +set+ parameter is a number or a range between two numbers,
-    # or an array of those.  The number is a message sequence number,
-    # where -1 represents a '*' for use in range notation like 100..-1
-    # being interpreted as '100:*'.  Beware that the +exclude_end?+
-    # property of a Range object is ignored, and the contents of a
-    # range are independent of the order of the range endpoints as per
-    # the protocol specification, so 1...5, 5..1 and 5...1 are all
-    # equivalent to 1..5.
+    # +set+ is the message sequence numbers to fetch, and may be any valid input
+    # to {SequenceSet[...]}[rdoc-ref:SequenceSet@Creating+sequence+sets].
+    # (For UIDs, use #uid_fetch instead.)
     #
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
@@ -2374,7 +2369,7 @@ module Net
     #
     # The return value is an array of FetchData.
     #
-    # Related: #uid_search, FetchData
+    # Related: #uid_fetch, FetchData
     #
     # ==== For example:
     #
@@ -2413,17 +2408,22 @@ module Net
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
     #
-    # Similar to #fetch, but the +set+ parameter contains unique identifiers
-    # instead of message sequence numbers.
+    # +set+ is the message UIDs to fetch, and may be any valid input to
+    # {SequenceSet[...]}[rdoc-ref:SequenceSet@Creating+sequence+sets].
+    # (For message sequence numbers, use #fetch instead.)
     #
+    # +attr+ behaves the same as with #fetch.
     # >>>
     #   *Note:* Servers _MUST_ implicitly include the +UID+ message data item as
     #   part of any +FETCH+ response caused by a +UID+ command, regardless of
     #   whether a +UID+ was specified as a message data item to the +FETCH+.
     #
+    # +changedsince+ (optional) behaves the same as with #fetch.
+    #
     # Related: #fetch, FetchData
     #
     # ==== Capabilities
+    #
     # Same as #fetch.
     def uid_fetch(set, attr, mod = nil, changedsince: nil)
       fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
