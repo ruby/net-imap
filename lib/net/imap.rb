@@ -537,7 +537,7 @@ module Net
   # ==== RFC9394: +PARTIAL+
   # - Updates #search, #uid_search with the +PARTIAL+ return option which adds
   #   ESearchResult#partial return data.
-  # - TODO: Updates #uid_fetch with the +partial+ modifier.
+  # - Updates #uid_fetch with the +partial+ modifier.
   #
   # == References
   #
@@ -2437,13 +2437,36 @@ module Net
     end
 
     # :call-seq:
-    #   uid_fetch(set, attr, changedsince: nil) -> array of FetchData
+    #   uid_fetch(set, attr, changedsince: nil, partial: nil) -> array of FetchData
     #
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
     #
     # Similar to #fetch, but the +set+ parameter contains unique identifiers
     # instead of message sequence numbers.
+    #
+    # When #uid_fetch may also be given a +partial+ range, which can be used to
+    # limit the number of results.  <em>Requires the +PARTIAL+
+    # capabability.</em> {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394]
+    #
+    # For example:
+    #
+    #   # Without partial, the size of the results may be unknown beforehand:
+    #   results = imap.uid_fetch(next_uid_to_fetch.., %w(UID FLAGS))
+    #   # ... maybe wait for a long time ... and allocate a lot of memory ...
+    #   results.size # => 0..2**32-1
+    #   process results # may also take a long time and use a lot of memory...
+    #
+    #   # Using partial, the results may be paginated:
+    #   loop do
+    #     results = imap.uid_fetch(next_uid_to_fetch.., %w(UID FLAGS),
+    #                              partial: 1..500)
+    #     # fetch should return quickly and allocate little memory
+    #     results.size # => 0..500
+    #     break if results.empty?
+    #     next_uid_to_fetch = results.last.uid + 1
+    #     process results
+    #   end
     #
     # >>>
     #   *Note:* Servers _MUST_ implicitly include the +UID+ message data item as
@@ -3412,8 +3435,26 @@ module Net
       end
     end
 
-    def fetch_internal(cmd, set, attr, mod = nil, changedsince: nil)
+    def partial_range(range)
+      case range
+      in /\a(?:\d+:\d+|-\d+:-\d+)\z/
+        range
+      in Range
+        minmax = range.minmax.map { Integer _1 }
+        if minmax.all?(1..2**32-1) || minmax.all?(-2**32..-1)
+          minmax.join(":")
+        else
+          raise ArgumentError, "invalid partial-range"
+        end
+      end
+    end
+
+    def fetch_internal(cmd, set, attr, mod = nil, partial: nil, changedsince: nil)
       set = SequenceSet[set]
+      if partial
+        mod ||= []
+        mod << "PARTIAL" << partial_range(partial)
+      end
       if changedsince
         mod ||= []
         mod << "CHANGEDSINCE" << Integer(changedsince)
