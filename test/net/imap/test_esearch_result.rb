@@ -15,6 +15,10 @@ class ESearchResultTest < Test::Unit::TestCase
     assert_equal [], esearch.to_a
     esearch = ESearchResult.new(nil, false, [["ALL", SequenceSet["1,5:8"]]])
     assert_equal [1, 5, 6, 7, 8], esearch.to_a
+    esearch = ESearchResult.new(nil, false, [
+      ["PARTIAL", ESearchResult::PartialResult[1..5, "1,5:8"]]
+    ])
+    assert_equal [1, 5, 6, 7, 8], esearch.to_a
   end
 
   test "#tag" do
@@ -78,6 +82,19 @@ class ESearchResultTest < Test::Unit::TestCase
     assert_equal     12, esearch.count
     assert_equal seqset, esearch.all
     assert_equal  12345, esearch.modseq
+  end
+
+  test "#partial returns PARTIAL value (RFC9394: PARTIAL)" do
+    result = Net::IMAP::ResponseParser.new.parse(
+      "* ESEARCH (TAG \"A0006\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
+    ).data
+    assert_equal(ESearchResult, result.class)
+    assert_equal(
+      ESearchResult::PartialResult.new(
+        -100..-1, SequenceSet[200..250, 252..300]
+      ),
+      result.partial
+    )
   end
 
 end
