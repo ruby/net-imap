@@ -2424,12 +2424,12 @@ module Net
     # {[RFC7162]}[https://tools.ietf.org/html/rfc7162] in order to use the
     # +changedsince+ argument.  Using +changedsince+ implicitly enables the
     # +CONDSTORE+ extension.
-    def fetch(set, attr, mod = nil, changedsince: nil)
-      fetch_internal("FETCH", set, attr, mod, changedsince: changedsince)
+    def fetch(...)
+      fetch_internal("FETCH", ...)
     end
 
     # :call-seq:
-    #   uid_fetch(set, attr, changedsince: nil) -> array of FetchData
+    #   uid_fetch(set, attr, changedsince: nil, partial: nil) -> array of FetchData
     #
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
@@ -2446,13 +2446,44 @@ module Net
     #
     # +changedsince+ (optional) behaves the same as with #fetch.
     #
+    # +partial+ is an optional range to limit the number of results returned.
+    # It's useful when +set+ contains an unknown number of messages.
+    # <tt>1..500</tt> returns the first 500 messages in +set+ (in mailbox
+    # order), <tt>501..1000</tt> the second 500, and so on.  +partial+ may also
+    # be negative: <tt>-500..-1</tt> selects the last 500 messages in +set+.
+    # <em>Requires the +PARTIAL+ capabability.</em>
+    # {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394]
+    #
+    # For example:
+    #
+    #   # Without partial, the size of the results may be unknown beforehand:
+    #   results = imap.uid_fetch(next_uid_to_fetch.., %w(UID FLAGS))
+    #   # ... maybe wait for a long time ... and allocate a lot of memory ...
+    #   results.size # => 0..2**32-1
+    #   process results # may also take a long time and use a lot of memory...
+    #
+    #   # Using partial, the results may be paginated:
+    #   loop do
+    #     results = imap.uid_fetch(next_uid_to_fetch.., %w(UID FLAGS),
+    #                              partial: 1..500)
+    #     # fetch should return quickly and allocate little memory
+    #     results.size # => 0..500
+    #     break if results.empty?
+    #     next_uid_to_fetch = results.last.uid + 1
+    #     process results
+    #   end
+    #
     # Related: #fetch, FetchData
     #
     # ==== Capabilities
     #
-    # Same as #fetch.
-    def uid_fetch(set, attr, mod = nil, changedsince: nil)
-      fetch_internal("UID FETCH", set, attr, mod, changedsince: changedsince)
+    # The server's capabilities must include +PARTIAL+
+    # {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394] in order to use the
+    # +partial+ argument.
+    #
+    # Otherwise, the same as #fetch.
+    def uid_fetch(...)
+      fetch_internal("UID FETCH", ...)
     end
 
     # :call-seq:
@@ -3398,7 +3429,12 @@ module Net
       end
     end
 
-    def fetch_internal(cmd, set, attr, mod = nil, changedsince: nil)
+    def fetch_internal(cmd, set, attr, mod = nil, partial: nil, changedsince: nil)
+      set = SequenceSet[set]
+      if partial
+        mod ||= []
+        mod << "PARTIAL" << PartialRange[partial]
+      end
       if changedsince
         mod ||= []
         mod << "CHANGEDSINCE" << Integer(changedsince)
@@ -3415,9 +3451,9 @@ module Net
       synchronize do
         clear_responses("FETCH")
         if mod
-          send_command(cmd, SequenceSet.new(set), attr, mod)
+          send_command(cmd, set, attr, mod)
         else
-          send_command(cmd, SequenceSet.new(set), attr)
+          send_command(cmd, set, attr)
         end
         clear_responses("FETCH")
       end
