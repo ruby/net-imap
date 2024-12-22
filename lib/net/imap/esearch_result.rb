@@ -35,16 +35,16 @@ module Net
 
       # :call-seq: to_a -> Array of integers
       #
-      # When #all contains a SequenceSet of message sequence
+      # When either #all or #partial contains a SequenceSet of message sequence
       # numbers or UIDs, +to_a+ returns that set as an array of integers.
       #
-      # When #all is +nil+, either because the server
-      # returned no results or because +ALL+ was not included in
+      # When both #all and #partial are +nil+, either because the server
+      # returned no results or because +ALL+ and +PARTIAL+ were not included in
       # the IMAP#search +RETURN+ options, #to_a returns an empty array.
       #
       # Note that SearchResult also implements +to_a+, so it can be used without
       # checking if the server returned +SEARCH+ or +ESEARCH+ data.
-      def to_a; all&.numbers || [] end
+      def to_a; all&.numbers || partial&.to_a || [] end
 
       ##
       # attr_reader: tag
@@ -134,6 +134,46 @@ module Net
       # Requires +CONDSTORE+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]
       # and +ESEARCH+ {[RFC4731]}[https://www.rfc-editor.org/rfc/rfc4731.html#section-3.2].
       def modseq;     data.assoc("MODSEQ")&.last     end
+
+      # Returned by ESearchResult#partial.
+      #
+      # Requires +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      #
+      # See also: #to_a
+      class PartialResult < Data.define(:range, :results)
+        def initialize(range:, results:)
+          range   => Range
+          results = SequenceSet[results] unless results.nil?
+          super
+        end
+
+        ##
+        # method: range
+        # :call-seq: range -> range
+
+        ##
+        # method: results
+        # :call-seq: results -> sequence set or nil
+
+        # Converts #results to an array of integers.
+        #
+        # See also: ESearchResult#to_a.
+        def to_a; results&.numbers || [] end
+      end
+
+      # :call-seq: partial -> PartialResult or nil
+      #
+      # A PartialResult containing a subset of the message sequence numbers or
+      # UIDs that satisfy the SEARCH criteria.
+      #
+      # Requires +PARTIAL+ {[RFC9394]}[https://www.rfc-editor.org/rfc/rfc9394.html]
+      # or <tt>CONTEXT=SEARCH</tt>/<tt>CONTEXT=SORT</tt>
+      # {[RFC5267]}[https://www.rfc-editor.org/rfc/rfc5267.html]
+      #
+      # See also: #to_a
+      def partial;    data.assoc("PARTIAL")&.last    end
 
     end
   end
