@@ -153,6 +153,38 @@ module Net
       end
     end
 
+    class PartialRange < CommandData # :nodoc:
+      uint32_max = 2**32 - 1
+      POS_RANGE = 1..uint32_max
+      NEG_RANGE = -uint32_max..-1
+      Positive = ->{ (_1 in Range) and POS_RANGE.cover?(_1) }
+      Negative = ->{ (_1 in Range) and NEG_RANGE.cover?(_1) }
+
+      def initialize(data:)
+        min, max = case data
+        in Range
+          data.minmax.map { Integer _1 }
+        in ResponseParser::Patterns::PARTIAL_RANGE
+          data.split(":").map { Integer _1 }.minmax
+        else
+          raise ArgumentError, "invalid partial range input: %p" % [data]
+        end
+        data = min..max
+        unless data in Positive | Negative
+          raise ArgumentError, "invalid partial-range: %p" % [data]
+        end
+        super
+      rescue TypeError, RangeError
+        raise ArgumentError, "expected range min/max to be Integers"
+      end
+
+      def formatted = "%d:%d" % data.minmax
+
+      def send_data(imap, tag)
+        imap.__send__(:put_string, formatted)
+      end
+    end
+
     # *DEPRECATED*.  Replaced by SequenceSet.
     class MessageSet < CommandData # :nodoc:
       def send_data(imap, tag)

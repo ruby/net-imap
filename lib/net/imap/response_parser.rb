@@ -321,6 +321,24 @@ module Net
         SEQUENCE_SET      = /#{SEQUENCE_SET_ITEM}(?:,#{SEQUENCE_SET_ITEM})*/n
         SEQUENCE_SET_STR  = /\A#{SEQUENCE_SET}\z/n
 
+        # partial-range-first = nz-number ":" nz-number
+        #     ;; Request to search from oldest (lowest UIDs) to
+        #     ;; more recent messages.
+        #     ;; A range 500:400 is the same as 400:500.
+        #     ;; This is similar to <seq-range> from [RFC3501]
+        #     ;; but cannot contain "*".
+        PARTIAL_RANGE_FIRST = /\A(#{NZ_NUMBER}):(#{NZ_NUMBER})\z/n
+
+        # partial-range-last  = MINUS nz-number ":" MINUS nz-number
+        #     ;; Request to search from newest (highest UIDs) to
+        #     ;; oldest messages.
+        #     ;; A range -500:-400 is the same as -400:-500.
+        PARTIAL_RANGE_LAST  = /\A(-#{NZ_NUMBER}):(-#{NZ_NUMBER})\z/n
+
+        # partial-range     = partial-range-first / partial-range-last
+        PARTIAL_RANGE       = Regexp.union(PARTIAL_RANGE_FIRST,
+                                           PARTIAL_RANGE_LAST)
+
         # RFC3501:
         #   literal          = "{" number "}" CRLF *CHAR8
         #                        ; Number represents the number of CHAR8s
