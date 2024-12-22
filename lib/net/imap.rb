@@ -1971,8 +1971,9 @@ module Net
     # the server to return an ESearchResult instead of a SearchResult, but some
     # servers disobey this requirement.  <em>Requires an extended search
     # capability, such as +ESEARCH+ or +IMAP4rev2+.</em>
-    # See {"Argument translation"}[rdoc-ref:#search@Argument+translation]
-    # and {"Return options"}[rdoc-ref:#search@Return+options], below.
+    # See {"Argument translation"}[rdoc-ref:#search@Argument+translation] and
+    # {"Supported return options"}[rdoc-ref:#search@Supported+return+options],
+    # below.
     #
     # +charset+ is the name of the {registered character
     # set}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
@@ -2082,16 +2083,10 @@ module Net
     #   <em>*WARNING:* This is vulnerable to injection attacks when external
     #   inputs are used.</em>
     #
-    # ==== Return options
+    # ==== Supported return options
     #
     # For full definitions of the standard return options and return data, see
     # the relevant RFCs.
-    #
-    # ===== +ESEARCH+ or +IMAP4rev2+
-    #
-    # The following return options require either +ESEARCH+ or +IMAP4rev2+.
-    # See [{RFC4731 §3.1}[https://rfc-editor.org/rfc/rfc4731#section-3.1]] or
-    # [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]].
     #
     # [+ALL+]
     #    Returns ESearchResult#all with a SequenceSet of all matching sequence
@@ -2099,16 +2094,35 @@ module Net
     #
     #    For compatibility with SearchResult, ESearchResult#to_a returns an
     #    Array of message sequence numbers or UIDs.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+COUNT+]
     #    Returns ESearchResult#count with the number of matching messages.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+MAX+]
     #    Returns ESearchResult#max with the highest matching sequence number or
     #    UID.
+    #
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
     # [+MIN+]
     #    Returns ESearchResult#min with the lowest matching sequence number or
     #    UID.
     #
-    # ===== +CONDSTORE+
+    #    <em>Requires either the +ESEARCH+ or +IMAP4rev2+ capabability.</em>
+    #    {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731]
+    #    {[RFC9051]}[https://rfc-editor.org/rfc/rfc9051]
+    #
+    # ===== +MODSEQ+ return data
     #
     # ESearchResult#modseq return data does not have a corresponding return
     # option.  Instead, it is returned if the +MODSEQ+ search key is used or
@@ -2120,8 +2134,8 @@ module Net
     #
     # {RFC4466 §2.6}[https://www.rfc-editor.org/rfc/rfc4466.html#section-2.6]
     # defines standard syntax for search extensions.  Net::IMAP allows sending
-    # unknown search return options and will parse unknown search extensions'
-    # return values into ExtensionData.  Please note that this is an
+    # unsupported search return options and will parse unsupported search
+    # extensions' return values into ExtensionData.  Please note that this is an
     # intentionally _unstable_ API.  Future releases may return different
     # (incompatible) objects, <em>without deprecation or warning</em>.
     #
