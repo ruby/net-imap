@@ -658,6 +658,56 @@ class IMAPTest < Test::Unit::TestCase
     end
   end
 
+  test("send PartialRange args") do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      send_partial_ranges = ->(*args) do
+        args.map! { Net::IMAP::PartialRange[_1] }
+        imap.__send__(:send_command, "TEST", *args)
+      end
+      # simple strings
+      send_partial_ranges.call "1:5", "-5:-1"
+      assert_equal "1:5 -5:-1", server.commands.pop.args
+      # backwards strings are reversed
+      send_partial_ranges.call "5:1", "-1:-5"
+      assert_equal "1:5 -5:-1", server.commands.pop.args
+      # simple ranges
+      send_partial_ranges.call 1..5, -5..-1
+      assert_equal "1:5 -5:-1", server.commands.pop.args
+      # exclusive ranges drop end
+      send_partial_ranges.call 1...5, -5...-1
+      assert_equal "1:4 -5:-2", server.commands.pop.args
+
+      # backwards ranges are invalid
+      assert_raise(ArgumentError) do send_partial_ranges.call( 5.. 1) end
+      assert_raise(ArgumentError) do send_partial_ranges.call(-1..-5) end
+
+      # bounds checks
+      uint32_max = 2**32 - 1
+      not_uint32 = 2**32
+      send_partial_ranges.call 500..uint32_max
+      assert_equal "500:#{uint32_max}", server.commands.pop.args
+      send_partial_ranges.call 500...not_uint32
+      assert_equal "500:#{uint32_max}", server.commands.pop.args
+      send_partial_ranges.call "#{uint32_max}:500"
+      assert_equal "500:#{uint32_max}", server.commands.pop.args
+
+      send_partial_ranges.call(-uint32_max..-500)
+      assert_equal "-#{uint32_max}:-500", server.commands.pop.args
+      send_partial_ranges.call "-500:-#{uint32_max}"
+      assert_equal "-#{uint32_max}:-500", server.commands.pop.args
+
+      assert_raise(ArgumentError) do send_partial_ranges.call("foo") end
+      assert_raise(ArgumentError) do send_partial_ranges.call("foo:bar") end
+      assert_raise(ArgumentError) do send_partial_ranges.call("1.2:3.5") end
+      assert_raise(ArgumentError) do send_partial_ranges.call("1:*") end
+      assert_raise(ArgumentError) do send_partial_ranges.call("1:#{not_uint32}") end
+      assert_raise(ArgumentError) do send_partial_ranges.call(1..) end
+      assert_raise(ArgumentError) do send_partial_ranges.call(1..not_uint32) end
+      assert_raise(ArgumentError) do send_partial_ranges.call(..1) end
+    end
+  end
+
   def test_send_literal
     server = create_tcp_server
     port = server.addr[1]

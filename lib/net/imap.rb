@@ -3338,22 +3338,12 @@ module Net
         ]
       return_opts.map {|opt|
         case opt
-        when Symbol then opt.to_s
-        when Range  then partial_range_last_or_seqset(opt)
-        else             opt
+        when Symbol                 then opt.to_s
+        when PartialRange::Negative then PartialRange[opt]
+        when Range                  then SequenceSet[opt]
+        else                             opt
         end
       }
-    end
-
-    def partial_range_last_or_seqset(range)
-      case [range.begin, range.end]
-      in [Integer => first, Integer => last] if first.negative? && last.negative?
-        # partial-range-last [RFC9394]
-        first <= last or raise DataFormatError, "empty range: %p" % [range]
-        "#{first}:#{last}"
-      else
-        SequenceSet[range]
-      end
     end
 
     def search_internal(cmd, ...)
