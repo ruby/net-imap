@@ -534,6 +534,11 @@ module Net
   #   See FetchData#emailid and FetchData#emailid.
   # - Updates #status with support for the +MAILBOXID+ status attribute.
   #
+  # ==== RFC9394: +PARTIAL+
+  # - Updates #search, #uid_search with the +PARTIAL+ return option which adds
+  #   ESearchResult#partial return data.
+  # - Updates #uid_fetch with the +partial+ modifier.
+  #
   # == References
   #
   # [{IMAP4rev1}[https://www.rfc-editor.org/rfc/rfc3501.html]]::
@@ -701,6 +706,11 @@ module Net
   #   Gondwana, B., Ed., "IMAP Extension for Object Identifiers",
   #   RFC 8474, DOI 10.17487/RFC8474, September 2018,
   #   <https://www.rfc-editor.org/info/rfc8474>.
+  # [PARTIAL[https://www.rfc-editor.org/info/rfc9394]]::
+  #   Melnikov, A., Achuthan, A., Nagulakonda, V., and L. Alves,
+  #   "IMAP PARTIAL Extension for Paged SEARCH and FETCH", RFC 9394,
+  #   DOI 10.17487/RFC9394, June 2023,
+  #   <https://www.rfc-editor.org/info/rfc9394>.
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
