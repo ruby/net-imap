@@ -29,7 +29,7 @@ module Net
   class IMAP
     data_or_object = RUBY_VERSION >= "3.2.0" ? ::Data : Object
     class DataLite < data_or_object
-      def encode_with(coder) coder.map = attributes.transform_keys(&:to_s) end
+      def encode_with(coder) coder.map = to_h.transform_keys(&:to_s)        end
       def init_with(coder) initialize(**coder.map.transform_keys(&:to_sym)) end
     end
 
@@ -159,28 +159,27 @@ module Net
 
       ##
       def members;     self.class.members                              end
-      def attributes;  Hash[members.map {|m| [m, send(m)] }]           end
-      def to_h(&block) attributes.to_h(&block)                         end
-      def hash;        [self.class, attributes].hash                   end
+      def to_h(&block) block ? __to_h__.to_h(&block) : __to_h__        end
+      def hash;        [self.class, __to_h__].hash                     end
       def ==(other)    self.class == other.class && to_h == other.to_h end
       def eql?(other)  self.class == other.class && hash == other.hash end
-      def deconstruct; attributes.values                               end
+      def deconstruct; __to_h__.values                                 end
 
       def deconstruct_keys(keys)
         raise TypeError unless keys.is_a?(Array) || keys.nil?
-        return attributes if keys&.first.nil?
-        attributes.slice(*keys)
+        return __to_h__ if keys&.first.nil?
+        __to_h__.slice(*keys)
       end
 
       def with(**kwargs)
         return self if kwargs.empty?
-        self.class.new(**attributes.merge(kwargs))
+        self.class.new(**__to_h__.merge(kwargs))
       end
 
       def inspect
         __inspect_guard__(self) do |seen|
           return "#<data #{self.class}:...>" if seen
-          attrs = attributes.map {|kv| "%s=%p" % kv }.join(", ")
+          attrs = __to_h__.map {|kv| "%s=%p" % kv }.join(", ")
           display = ["data", self.class.name, attrs].compact.join(" ")
           "#<#{display}>"
         end
@@ -190,7 +189,9 @@ module Net
       private
 
       def initialize_copy(source) super.freeze end
-      def marshal_dump; attributes end
+      def marshal_dump; __to_h__ end
+
+      def __to_h__; Hash[members.map {|m| [m, send(m)] }] end
 
       # Yields +true+ if +obj+ has been seen already, +false+ if it hasn't.
       # Marks +obj+ as seen inside the block, so circuler references don't
