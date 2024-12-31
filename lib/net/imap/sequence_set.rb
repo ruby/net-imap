@@ -426,7 +426,7 @@ module Net
       # the set is updated the string will be normalized.
       #
       # Related: #valid_string, #normalized_string, #to_s
-      def string; @string ||= normalized_string if valid? end
+      def string; @string || normalized_string if valid? end
 
       # Returns an array with #normalized_string when valid and an empty array
       # otherwise.
@@ -446,8 +446,9 @@ module Net
           modifying! # redundant check, to normalize the error message for JRuby
           str = String.try_convert(str) or raise ArgumentError, "not a string"
           tuples = str_to_tuples str
-          @tuples, @string = [], -str
+          clear
           tuples_add tuples
+          @string = -str if normalized_string != str
         end
         str
       end
@@ -462,7 +463,6 @@ module Net
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
       def freeze
         return self if frozen?
-        string
         @tuples.each(&:freeze).freeze
         super
       end
@@ -800,7 +800,7 @@ module Net
         modifying! # short-circuit before input_to_tuple
         tuple = input_to_tuple entry
         entry = tuple_to_str tuple
-        string unless empty? # write @string before tuple_add
+        @string ||= string unless empty?
         tuple_add tuple
         @string = -(@string ? "#{@string},#{entry}" : entry)
         self
@@ -1466,9 +1466,8 @@ module Net
       #
       # Related: #normalize!, #normalized_string
       def normalize
-        str = normalized_string
-        return self if frozen? && str == string
-        remain_frozen dup.instance_exec { @string = str&.-@; self }
+        return self if frozen? && normalized?
+        remain_frozen dup.normalize!
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
