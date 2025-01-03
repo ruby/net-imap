@@ -734,7 +734,7 @@ module Net
         when "EXISTS"     then mailbox_data__exists      # RFC3501, RFC9051
         when "ESEARCH"    then esearch_response          # RFC4731, RFC9051, etc
         when "VANISHED"   then expunged_resp             # RFC7162
-        when "UIDFETCH"   then uidfetch_resp             # (draft) UIDONLY
+        when "UIDFETCH"   then uidfetch_resp             # RFC9586
         when "SEARCH"     then mailbox_data__search      # RFC3501 (obsolete)
         when "CAPABILITY" then capability_data__untagged # RFC3501, RFC9051
         when "FLAGS"      then mailbox_data__flags       # RFC3501, RFC9051
@@ -787,7 +787,6 @@ module Net
       def response_data__ignored; response_data__unhandled(IgnoredResponse) end
       alias response_data__noop     response_data__ignored
 
-      alias uidfetch_resp           response_data__unhandled
       alias listrights_data         response_data__unhandled
       alias myrights_data           response_data__unhandled
       alias metadata_resp           response_data__unhandled
@@ -845,6 +844,14 @@ module Net
         seq  = nz_number;     SP!
         name = label "FETCH"; SP!
         data = FetchData.new(seq, msg_att(seq))
+        UntaggedResponse.new(name, data, @str)
+      end
+
+      #   uidfetch-resp = uniqueid SP "UIDFETCH" SP msg-att
+      def uidfetch_resp
+        uid  = uniqueid;         SP!
+        name = label "UIDFETCH"; SP!
+        data = UIDFetchData.new(uid, msg_att(uid))
         UntaggedResponse.new(name, data, @str)
       end
 
@@ -1935,6 +1942,9 @@ module Net
       #
       # RFC8474: OBJECTID
       #   resp-text-code   =/ "MAILBOXID" SP "(" objectid ")"
+      #
+      # RFC9586: UIDONLY
+      #   resp-text-code   =/ "UIDREQUIRED"
       def resp_text_code
         name = resp_text_code__name
         data =
@@ -1957,6 +1967,7 @@ module Net
           when "HIGHESTMODSEQ"      then SP!; mod_sequence_value   # CONDSTORE
           when "MODIFIED"           then SP!; sequence_set         # CONDSTORE
           when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
+          when "UIDREQUIRED"        then                           # RFC9586: UIDONLY
           else
             SP? and text_chars_except_rbra
           end

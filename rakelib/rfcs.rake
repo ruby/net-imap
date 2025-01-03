@@ -146,6 +146,7 @@ RFCS = {
   8970 => "IMAP PREVIEW",
   9208 => "IMAP QUOTA, QUOTA=, QUOTASET",
   9394 => "IMAP PARTIAL",
+  9586 => "IMAP UIDONLY",
 
   # etc...
   3629 => "UTF8",

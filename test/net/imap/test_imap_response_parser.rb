@@ -106,6 +106,9 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # RFC 9394: PARTIAL extension
   generate_tests_from fixture_file: "rfc9394_partial.yml"
 
+  # RFC 9586: UIDONLY extension
+  generate_tests_from fixture_file: "rfc9586_uidonly_responses.yml"
+
   ############################################################################
   # Workarounds or unspecified extensions:
   generate_tests_from fixture_file: "quirky_behaviors.yml"
