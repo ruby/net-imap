@@ -45,9 +45,11 @@ class UIDFetchDataTest < Test::Unit::TestCase
   end
 
   test "#deconstruct_keys" do
-    Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321) => {
-      uid: 22222
-    }
+    assert_warn(/UIDs do not match/i) do
+      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321) => {
+        uid: 22222
+      }
+    end
   end
 end
 
@@ -102,7 +104,7 @@ DEFINE_FETCH_DATA_SHARED_TESTS = proc do
   end
 
   test "#internaldate parses a datetime value" do
-    assert_nil fetch_data_class.new(123, { "UID" => 456 }).internaldate
+    assert_nil fetch_data_class.new(123, { "UID" => 123 }).internaldate
     data = fetch_data_class.new(1, { "INTERNALDATE" => "17-Jul-1996 02:44:25 -0700" })
     time = Time.parse("1996-07-17T02:44:25-0700")
     assert_equal time, data.internaldate
