@@ -735,7 +735,7 @@ module Net
   # * {GSSAPI/Kerberos/SASL Service Names}[https://www.iana.org/assignments/gssapi-service-names/gssapi-service-names.xhtml]:
   #   +imap+
   # * {Character sets}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
-  # ===== For currently unsupported features:
+  # ==== For currently unsupported features:
   # * {IMAP Quota Resource Types}[http://www.iana.org/assignments/imap4-capabilities#imap-capabilities-2]
   # * {LIST-EXTENDED options and responses}[https://www.iana.org/assignments/imap-list-extended/imap-list-extended.xhtml]
   # * {IMAP METADATA Server Entry and Mailbox Entry Registries}[https://www.iana.org/assignments/imap-metadata/imap-metadata.xhtml]
