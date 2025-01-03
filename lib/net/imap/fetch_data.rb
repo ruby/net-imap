@@ -92,7 +92,7 @@ module Net
     #
     # === Implicitly setting <tt>\Seen</tt> and using +PEEK+
     #
-    # Unless the mailbox is has been opened as read-only, fetching
+    # Unless the mailbox has been opened as read-only, fetching
     # <tt>BODY[#{section}]</tt> or <tt>BINARY[#{section}]</tt>
     # will implicitly set the <tt>\Seen</tt> flag.  To avoid this, fetch using
     # <tt>BODY.PEEK[#{section}]</tt> or <tt>BINARY.PEEK[#{section}]</tt>
