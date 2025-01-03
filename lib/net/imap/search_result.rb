@@ -100,10 +100,10 @@ module Net
       #    data.to_s("SORT")   # => "* SORT 2 8 32 128 256 512"
       #    data.to_s(nil)      # => "2 8 32 128 256 512"
       #
-      #    data = Net::IMAP::SearchResult[1, 3, 16, 1024, modseq: 2048].to_s
+      #    data = Net::IMAP::SearchResult[1, 3, 16, 1024, modseq: 2048]
       #    data.to_s           # => "* SEARCH 1 3 16 1024 (MODSEQ 2048)"
       #    data.to_s("SORT")   # => "* SORT 1 3 16 1024 (MODSEQ 2048)"
-      #    data.to_s           # => "1 3 16 1024 (MODSEQ 2048)"
+      #    data.to_s(nil)      # => "1 3 16 1024 (MODSEQ 2048)"
       #
       def to_s(type = "SEARCH")
         str = +""
