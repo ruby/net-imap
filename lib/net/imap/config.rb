@@ -75,7 +75,7 @@ module Net
     #
     #   client = Net::IMAP.new(hostname, config: :future)
     #   client.config.sasl_ir                  # => true
-    #   client.config.responses_without_block  # => :raise
+    #   client.config.responses_without_block  # => :frozen_dup
     #
     # The versioned default configs inherit certain specific config options from
     # Config.global, for example #debug:
@@ -109,9 +109,11 @@ module Net
     # [+:future+]
     #   The _planned_ eventual config for some future +x.y+ version.
     #
-    # For example, to raise exceptions for all current deprecations:
+    # For example, to disable all currently deprecated behavior:
     #   client = Net::IMAP.new(hostname, config: :future)
-    #   client.responses  # raises an ArgumentError
+    #   client.config.response_without_args     # => :frozen_dup
+    #   client.responses.frozen?                # => true
+    #   client.responses.values.all?(&:frozen?) # => true
     #
     # == Thread Safety
     #
