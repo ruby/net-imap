@@ -712,7 +712,7 @@ module Net
     # parsed into its component parts by the server.  Address objects are
     # returned within Envelope fields.
     #
-    # === Group syntax
+    # == Group syntax
     #
     # When the #host field is +nil+, this is a special form of address structure
     # that indicates the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] group
@@ -819,7 +819,7 @@ module Net
     # for full description of all +BODYSTRUCTURE+ fields, and also
     # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
-    # === Classes that include BodyStructure
+    # == Classes that include BodyStructure
     # BodyTypeBasic:: Represents any message parts that are not handled by
     #                 BodyTypeText, BodyTypeMessage, or BodyTypeMultipart.
     # BodyTypeText:: Used by <tt>text/*</tt> parts.  Contains all of the
