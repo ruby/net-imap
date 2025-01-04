@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 # Authenticator for the "+PLAIN+" SASL mechanism, specified in
-# RFC-4616[https://tools.ietf.org/html/rfc4616].  See Net::IMAP#authenticate.
+# RFC-4616[https://www.rfc-editor.org/rfc/rfc4616].  See Net::IMAP#authenticate.
 #
 # +PLAIN+ authentication sends the password in cleartext.
-# RFC-3501[https://tools.ietf.org/html/rfc3501] encourages servers to disable
+# RFC-3501[https://www.rfc-editor.org/rfc/rfc3501] encourages servers to disable
 # cleartext authentication until after TLS has been negotiated.
-# RFC-8314[https://tools.ietf.org/html/rfc8314] recommends TLS version 1.2 or
+# RFC-8314[https://www.rfc-editor.org/rfc/rfc8314] recommends TLS version 1.2 or
 # greater be used for all traffic, and deprecate cleartext access ASAP.  +PLAIN+
 # can be secured by TLS encryption.
 class Net::IMAP::SASL::PlainAuthenticator
@@ -16,11 +16,11 @@ class Net::IMAP::SASL::PlainAuthenticator
 
   # Authentication identity: the identity that matches the #password.
   #
-  # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+  # RFC-2831[https://www.rfc-editor.org/rfc/rfc2831] uses the term +username+.
   # "Authentication identity" is the generic term used by
-  # RFC-4422[https://tools.ietf.org/html/rfc4422].
-  # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
-  # this to +authcid+.
+  # RFC-4422[https://www.rfc-editor.org/rfc/rfc4422].
+  # RFC-4616[https://www.rfc-editor.org/rfc/rfc4616] and many later RFCs
+  # abbreviate this to +authcid+.
   attr_reader :username
   alias authcid username
 

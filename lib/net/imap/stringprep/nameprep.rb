@@ -4,7 +4,7 @@ module Net
   class IMAP
     module StringPrep
 
-      # Defined in RFC3491[https://tools.ietf.org/html/rfc3491], the +nameprep+
+      # Defined in RFC3491[https://www.rfc-editor.org/rfc/rfc3491], the +nameprep+
       # profile of "Stringprep" is:
       # >>>
       #   used by the IDNA protocol for preparing domain names; it is not

@@ -313,7 +313,7 @@ module Net
       # :call-seq: internaldate -> Time or nil
       #
       # The internal date and time of the message on the server.  This is not
-      # the date and time in the [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      # the date and time in the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       # header, but rather a date and time which reflects when the message was
       # received.
       #
@@ -341,7 +341,7 @@ module Net
 
       # :call-seq: rfc822_size -> Integer or nil
       #
-      # A number expressing the [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      # A number expressing the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       # size of the message.
       #
       # This is the same as getting the value for <tt>"RFC822.SIZE"</tt> from

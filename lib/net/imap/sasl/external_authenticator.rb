@@ -5,7 +5,7 @@ module Net
     module SASL
 
       # Authenticator for the "+EXTERNAL+" SASL mechanism, as specified by
-      # RFC-4422[https://tools.ietf.org/html/rfc4422].  See
+      # RFC-4422[https://www.rfc-editor.org/rfc/rfc4422].  See
       # Net::IMAP#authenticate.
       #
       # The EXTERNAL mechanism requests that the server use client credentials
@@ -33,7 +33,7 @@ module Net
         #   new(username = nil, **) -> authenticator
         #
         # Creates an Authenticator for the "+EXTERNAL+" SASL mechanism, as
-        # specified in RFC-4422[https://tools.ietf.org/html/rfc4422].  To use
+        # specified in RFC-4422[https://www.rfc-editor.org/rfc/rfc4422].  To use
         # this, see Net::IMAP#authenticate or your client's authentication
         # method.
         #

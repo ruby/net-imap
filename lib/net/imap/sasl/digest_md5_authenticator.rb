@@ -1,12 +1,12 @@
 # frozen_string_literal: true
 
 # Net::IMAP authenticator for the +DIGEST-MD5+ SASL mechanism type, specified
-# in RFC-2831[https://tools.ietf.org/html/rfc2831].  See Net::IMAP#authenticate.
+# in RFC-2831[https://www.rfc-editor.org/rfc/rfc2831].  See Net::IMAP#authenticate.
 #
 # == Deprecated
 #
 # "+DIGEST-MD5+" has been deprecated by
-# RFC-6331[https://tools.ietf.org/html/rfc6331] and should not be relied on for
+# RFC-6331[https://www.rfc-editor.org/rfc/rfc6331] and should not be relied on for
 # security.  It is included for compatibility with existing servers.
 class Net::IMAP::SASL::DigestMD5Authenticator
   DataFormatError    = Net::IMAP::DataFormatError
@@ -37,10 +37,10 @@ class Net::IMAP::SASL::DigestMD5Authenticator
 
   # Authentication identity: the identity that matches the #password.
   #
-  # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
+  # RFC-2831[https://www.rfc-editor.org/rfc/rfc2831] uses the term +username+.
   # "Authentication identity" is the generic term used by
-  # RFC-4422[https://tools.ietf.org/html/rfc4422].
-  # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
+  # RFC-4422[https://www.rfc-editor.org/rfc/rfc4422].
+  # RFC-4616[https://www.rfc-editor.org/rfc/rfc4616] and many later RFCs abbreviate
   # this to +authcid+.
   attr_reader :username
   alias authcid username
@@ -85,7 +85,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   # must be set appropriately to use authenticators in other protocols.
   #
   # If an IANA-registered name isn't available, GSS-API
-  # (RFC-2743[https://tools.ietf.org/html/rfc2743]) allows the generic name
+  # (RFC-2743[https://www.rfc-editor.org/rfc/rfc2743]) allows the generic name
   # "host".
   attr_reader :service
 
@@ -93,7 +93,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
   #
   # +service_name+ will be ignored when it is +nil+ or identical to +host+.
   #
-  # From RFC-2831[https://tools.ietf.org/html/rfc2831]:
+  # From RFC-2831[https://www.rfc-editor.org/rfc/rfc2831]:
   # >>>
   #     The service is considered to be replicated if the client's
   #     service-location process involves resolution using standard DNS lookup
@@ -176,7 +176,7 @@ class Net::IMAP::SASL::DigestMD5Authenticator
     @nc, @stage = {}, STAGE_ONE
   end
 
-  # From RFC-2831[https://tools.ietf.org/html/rfc2831]:
+  # From RFC-2831[https://www.rfc-editor.org/rfc/rfc2831]:
   # >>>
   #     Indicates the principal name of the service with which the client wishes
   #     to connect, formed from the serv-type, host, and serv-name.  For

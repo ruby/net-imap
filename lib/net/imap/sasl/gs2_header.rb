@@ -5,15 +5,15 @@ module Net
     module SASL
 
       # Originally defined for the GS2 mechanism family in
-      # RFC5801[https://tools.ietf.org/html/rfc5801],
+      # RFC5801[https://www.rfc-editor.org/rfc/rfc5801],
       # several different mechanisms start with a GS2 header:
-      # * +GS2-*+       --- RFC5801[https://tools.ietf.org/html/rfc5801]
-      # * +SCRAM-*+     --- RFC5802[https://tools.ietf.org/html/rfc5802]
+      # * +GS2-*+       --- RFC5801[https://www.rfc-editor.org/rfc/rfc5801]
+      # * +SCRAM-*+     --- RFC5802[https://www.rfc-editor.org/rfc/rfc5802]
       #   (ScramAuthenticator)
-      # * +SAML20+      --- RFC6595[https://tools.ietf.org/html/rfc6595]
-      # * +OPENID20+    --- RFC6616[https://tools.ietf.org/html/rfc6616]
-      # * +OAUTH10A+    --- RFC7628[https://tools.ietf.org/html/rfc7628]
-      # * +OAUTHBEARER+ --- RFC7628[https://tools.ietf.org/html/rfc7628]
+      # * +SAML20+      --- RFC6595[https://www.rfc-editor.org/rfc/rfc6595]
+      # * +OPENID20+    --- RFC6616[https://www.rfc-editor.org/rfc/rfc6616]
+      # * +OAUTH10A+    --- RFC7628[https://www.rfc-editor.org/rfc/rfc7628]
+      # * +OAUTHBEARER+ --- RFC7628[https://www.rfc-editor.org/rfc/rfc7628]
       #   (OAuthBearerAuthenticator)
       #
       # Classes that include this module must implement +#authzid+.

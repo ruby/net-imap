@@ -7,7 +7,7 @@ module Net
     module SASL
 
       # Abstract base class for the SASL mechanisms defined in
-      # RFC7628[https://tools.ietf.org/html/rfc7628]:
+      # RFC7628[https://www.rfc-editor.org/rfc/rfc7628]:
       # * OAUTHBEARER[rdoc-ref:OAuthBearerAuthenticator]
       #   (OAuthBearerAuthenticator)
       # * OAUTH10A
@@ -52,7 +52,7 @@ module Net
         # this may hold information about the failure reason, as JSON.
         attr_reader :last_server_response
 
-        # Creates an RFC7628[https://tools.ietf.org/html/rfc7628] OAuth
+        # Creates an RFC7628[https://www.rfc-editor.org/rfc/rfc7628] OAuth
         # authenticator.
         #
         # ==== Parameters
@@ -126,12 +126,12 @@ module Net
       end
 
       # Authenticator for the "+OAUTHBEARER+" SASL mechanism, specified in
-      # RFC7628[https://tools.ietf.org/html/rfc7628].  Authenticates using OAuth
-      # 2.0 bearer tokens, as described in
-      # RFC6750[https://tools.ietf.org/html/rfc6750].  Use via
+      # RFC7628[https://www.rfc-editor.org/rfc/rfc7628].  Authenticates using
+      # OAuth 2.0 bearer tokens, as described in
+      # RFC6750[https://www.rfc-editor.org/rfc/rfc6750].  Use via
       # Net::IMAP#authenticate.
       #
-      # RFC6750[https://tools.ietf.org/html/rfc6750] requires Transport Layer
+      # RFC6750[https://www.rfc-editor.org/rfc/rfc6750] requires Transport Layer
       # Security (TLS) to secure the protocol interaction between the client and
       # the resource server.  TLS _MUST_ be used for +OAUTHBEARER+ to protect
       # the bearer token.
