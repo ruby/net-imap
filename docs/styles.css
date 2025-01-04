@@ -10,16 +10,26 @@ main .method-detail {
   justify-content: space-between;
 }
 
-main .method-header, main .method-controls {
+main .method-header,
+main .method-controls,
+.attribute-method-heading {
   padding: 0.5em;
   /* border: 1px solid var(--highlight-color); */
   background: var(--table-header-background-color);
   line-height: 1.6;
 }
 
+.attribute-method-heading .attribute-access-type {
+  float: right;
+}
+
 main .method-header {
   border-right: none;
   border-radius: 4px 0 0 4px;
+}
+
+main .method-heading :any-link {
+  text-decoration: none;
 }
 
 main .method-controls {
