@@ -11,7 +11,7 @@ module Net
     module SASL
 
       # Abstract base class for the "+SCRAM-*+" family of SASL mechanisms,
-      # defined in RFC5802[https://tools.ietf.org/html/rfc5802].  Use via
+      # defined in RFC5802[https://www.rfc-editor.org/rfc/rfc5802].  Use via
       # Net::IMAP#authenticate.
       #
       # Directly supported:
@@ -99,11 +99,11 @@ module Net
 
         # Authentication identity: the identity that matches the #password.
         #
-        # RFC-2831[https://tools.ietf.org/html/rfc2831] uses the term +username+.
-        # "Authentication identity" is the generic term used by
-        # RFC-4422[https://tools.ietf.org/html/rfc4422].
-        # RFC-4616[https://tools.ietf.org/html/rfc4616] and many later RFCs abbreviate
-        # this to +authcid+.
+        # RFC-2831[https://www.rfc-editor.org/rfc/rfc2831] uses the term
+        # +username+.  "Authentication identity" is the generic term used by
+        # RFC-4422[https://www.rfc-editor.org/rfc/rfc4422].
+        # RFC-4616[https://www.rfc-editor.org/rfc/rfc4616] and many later RFCs
+        # abbreviate this to +authcid+.
         attr_reader :username
         alias authcid username
 
@@ -263,7 +263,7 @@ module Net
       end
 
       # Authenticator for the "+SCRAM-SHA-1+" SASL mechanism, defined in
-      # RFC5802[https://tools.ietf.org/html/rfc5802].
+      # RFC5802[https://www.rfc-editor.org/rfc/rfc5802].
       #
       # Uses the "SHA-1" digest algorithm from OpenSSL::Digest.
       #
@@ -273,7 +273,7 @@ module Net
       end
 
       # Authenticator for the "+SCRAM-SHA-256+" SASL mechanism, defined in
-      # RFC7677[https://tools.ietf.org/html/rfc7677].
+      # RFC7677[https://www.rfc-editor.org/rfc/rfc7677].
       #
       # Uses the "SHA-256" digest algorithm from OpenSSL::Digest.
       #

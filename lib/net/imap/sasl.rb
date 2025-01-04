@@ -5,7 +5,7 @@ module Net
 
     # Pluggable authentication mechanisms for protocols which support SASL
     # (Simple Authentication and Security Layer), such as IMAP4, SMTP, LDAP, and
-    # XMPP.  {RFC-4422}[https://tools.ietf.org/html/rfc4422] specifies the
+    # XMPP.  {RFC-4422}[https://www.rfc-editor.org/rfc/rfc4422] specifies the
     # common \SASL framework:
     # >>>
     #   SASL is conceptually a framework that provides an abstraction layer

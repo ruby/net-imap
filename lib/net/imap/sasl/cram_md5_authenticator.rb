@@ -1,16 +1,16 @@
 # frozen_string_literal: true
 
 # Authenticator for the "+CRAM-MD5+" SASL mechanism, specified in
-# RFC2195[https://tools.ietf.org/html/rfc2195].  See Net::IMAP#authenticate.
+# RFC2195[https://www.rfc-editor.org/rfc/rfc2195].  See Net::IMAP#authenticate.
 #
 # == Deprecated
 #
 # +CRAM-MD5+ is obsolete and insecure.  It is included for compatibility with
 # existing servers.
-# {draft-ietf-sasl-crammd5-to-historic}[https://tools.ietf.org/html/draft-ietf-sasl-crammd5-to-historic-00.html]
+# {draft-ietf-sasl-crammd5-to-historic}[https://www.rfc-editor.org/rfc/draft-ietf-sasl-crammd5-to-historic-00.html]
 # recommends using +SCRAM-*+ or +PLAIN+ protected by TLS instead.
 #
-# Additionally, RFC8314[https://tools.ietf.org/html/rfc8314] discourage the use
+# Additionally, RFC8314[https://www.rfc-editor.org/rfc/rfc8314] discourage the use
 # of cleartext and recommends TLS version 1.2 or greater be used for all
 # traffic.  With TLS +CRAM-MD5+ is okay, but so is +PLAIN+
 class Net::IMAP::SASL::CramMD5Authenticator

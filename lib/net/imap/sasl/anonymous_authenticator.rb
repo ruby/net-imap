@@ -5,7 +5,7 @@ module Net
     module SASL
 
       # Authenticator for the "+ANONYMOUS+" SASL mechanism, as specified by
-      # RFC-4505[https://tools.ietf.org/html/rfc4505].  See
+      # RFC-4505[https://www.rfc-editor.org/rfc/rfc4505].  See
       # Net::IMAP#authenticate.
       class AnonymousAuthenticator
 
@@ -13,7 +13,7 @@ module Net
         # characters in length.
         #
         # If it contains an "@" sign, the message must be a valid email address
-        # (+addr-spec+ from RFC-2822[https://tools.ietf.org/html/rfc2822]).
+        # (+addr-spec+ from RFC-2822[https://www.rfc-editor.org/rfc/rfc2822]).
         # Email syntax is _not_ validated by AnonymousAuthenticator.
         #
         # Otherwise, it can be any UTF8 string which is permitted by the
@@ -25,7 +25,7 @@ module Net
         #   new(anonymous_message:  "", **) -> authenticator
         #
         # Creates an Authenticator for the "+ANONYMOUS+" SASL mechanism, as
-        # specified in RFC-4505[https://tools.ietf.org/html/rfc4505].  To use
+        # specified in RFC-4505[https://www.rfc-editor.org/rfc/rfc4505].  To use
         # this, see Net::IMAP#authenticate or your client's authentication
         # method.
         #

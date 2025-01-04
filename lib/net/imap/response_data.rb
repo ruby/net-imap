@@ -469,7 +469,7 @@ module Net
     # Net::IMAP#getacl returns an array of MailboxACLItem objects.
     #
     # ==== Required capability
-    # +ACL+ - described in [ACL[https://tools.ietf.org/html/rfc4314]]
+    # +ACL+ - described in [ACL[https://www.rfc-editor.org/rfc/rfc4314]]
     class MailboxACLItem < Struct.new(:user, :rights, :mailbox)
       ##
       # method: mailbox
@@ -565,11 +565,11 @@ module Net
     # [Note]
     #   When the #sender and #reply_to fields are absent or empty, they will
     #   return the same value as #from.  Also, fields may return values that are
-    #   invalid for well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+    #   invalid for well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
     #   messages when the message is malformed or a draft message.
     #
-    # See [{IMAP4rev1 §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]]
-    # and [{IMAP4rev2 §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2]]
+    # See [{IMAP4rev1 §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501#section-7.4.2]]
+    # and [{IMAP4rev2 §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051#section-7.5.2]]
     # for full description of the envelope fields, and
     # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
@@ -583,7 +583,7 @@ module Net
       # Returns a string that represents the +Date+ header.
       #
       # [Note]
-      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   For a well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       #   message, the #date field must not be +nil+.  However it can be +nil+
       #   for a malformed or draft message.
 
@@ -609,7 +609,7 @@ module Net
       # returns +nil+ for this envelope field.
       #
       # [Note]
-      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   For a well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       #   message, the #from field must not be +nil+.  However it can be +nil+
       #   for a malformed or draft message.
 
@@ -622,7 +622,7 @@ module Net
       # [Note]
       #   If the <tt>Sender</tt> header is absent, or is present but empty, the
       #   server sets this field to be the same value as #from.  Therefore, in a
-      #   well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]] message,
+      #   well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] message,
       #   the #sender envelope field must not be +nil+.  However it can be
       #   +nil+ for a malformed or draft message.
 
@@ -636,7 +636,7 @@ module Net
       # [Note]
       #   If the <tt>Reply-To</tt> header is absent, or is present but empty,
       #   the server sets this field to be the same value as #from.  Therefore,
-      #   in a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   in a well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       #   message, the #reply_to envelope field must not be +nil+.  However it
       #   can be +nil+ for a malformed or draft message.
 
@@ -665,7 +665,7 @@ module Net
       # Returns a string that represents the <tt>In-Reply-To</tt> header.
       #
       # [Note]
-      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   For a well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       #   message, the #in_reply_to field, if present, must not be empty.  But
       #   it can still return an empty string for malformed messages.
       #
@@ -681,7 +681,7 @@ module Net
       # Returns a string that represents the <tt>Message-ID</tt>.
       #
       # [Note]
-      #   For a well-formed [RFC5322[https://tools.ietf.org/html/rfc5322]]
+      #   For a well-formed [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]]
       #   message, the #message_id field, if present, must not be empty.  But it
       #   can still return an empty string for malformed messages.
       #
@@ -698,7 +698,7 @@ module Net
     # === Group syntax
     #
     # When the #host field is +nil+, this is a special form of address structure
-    # that indicates the [RFC5322[https://tools.ietf.org/html/rfc5322]] group
+    # that indicates the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] group
     # syntax.  If the #mailbox name field is also +nil+, this is an end-of-group
     # marker (semicolon in RFC-822 syntax).  If the #mailbox name field is
     # non-+NIL+, this is the start of a group marker, and the mailbox #name
@@ -708,7 +708,7 @@ module Net
       # method: name
       # :call-seq: name -> string or nil
       #
-      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] address
+      # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] address
       # +display-name+ (or the mailbox +phrase+ in the RFC-822 grammar).
 
       ##
@@ -718,28 +718,28 @@ module Net
       # Returns the route from RFC-822 route-addr.
       #
       # Note:: Generating this obsolete route addressing syntax is not allowed
-      #        by [RFC5322[https://tools.ietf.org/html/rfc5322]].  However,
+      #        by [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]].  However,
       #        addresses with this syntax must still be accepted and parsed.
 
       ##
       # method: mailbox
       # :call-seq: mailbox -> string or nil
       #
-      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] address
+      # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] address
       # +local-part+, if #host is not +nil+.
       #
       # When #host is +nil+, this returns
-      # an [RFC5322[https://tools.ietf.org/html/rfc5322]] group name and a +nil+
+      # an [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] group name and a +nil+
       # mailbox indicates the end of a group.
 
       ##
       # method: host
       # :call-seq: host -> string or nil
       #
-      # Returns the [RFC5322[https://tools.ietf.org/html/rfc5322]] addr-spec
+      # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] addr-spec
       # +domain+ name.
       #
-      # +nil+ indicates [RFC5322[https://tools.ietf.org/html/rfc5322]] group
+      # +nil+ indicates [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] group
       # syntax.
     end
 
@@ -751,14 +751,14 @@ module Net
       # :call-seq: dsp_type -> string
       #
       # Returns the content disposition type, as defined by
-      # [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+      # [DISPOSITION[https://www.rfc-editor.org/rfc/rfc2183]].
 
       ##
       # method: param
       # :call-seq: param -> hash
       #
       # Returns a hash representing parameters of the Content-Disposition
-      # field, as defined by [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+      # field, as defined by [DISPOSITION[https://www.rfc-editor.org/rfc/rfc2183]].
     end
 
     # Net::IMAP::ThreadMember represents a thread-node returned
@@ -797,8 +797,8 @@ module Net
     # FetchData#attr value.  Although these classes don't share a base class,
     # this module can be used to pattern match all of them.
     #
-    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
-    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2-4.9]
+    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501#section-7.4.2]
+    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051#section-7.5.2-4.9]
     # for full description of all +BODYSTRUCTURE+ fields, and also
     # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
@@ -820,8 +820,8 @@ module Net
     # message parts, unless they have a <tt>Content-Type</tt> that is handled by
     # BodyTypeText, BodyTypeMessage, or BodyTypeMultipart.
     #
-    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501.html#section-7.4.2]
-    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051.html#section-7.5.2-4.9]
+    # See {[IMAP4rev1] §7.4.2}[https://www.rfc-editor.org/rfc/rfc3501#section-7.4.2]
+    # and {[IMAP4rev2] §7.5.2}[https://www.rfc-editor.org/rfc/rfc9051#section-7.5.2-4.9]
     # for full description of all +BODYSTRUCTURE+ fields, and also
     # Net::IMAP@Message+envelope+and+body+structure for other relevant RFCs.
     #
@@ -838,45 +838,45 @@ module Net
       # :call-seq: media_type -> string
       #
       # The top-level media type as defined in
-      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+      # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
       # method: subtype
       # :call-seq: subtype -> string
       #
       # The media subtype name as defined in
-      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+      # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
       # method: param
       # :call-seq: param -> string
       #
       # Returns a hash that represents parameters as defined in
-      # [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+      # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
       # method: content_id
       # :call-seq: content_id -> string
       #
       # Returns a string giving the content id as defined
-      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
-      # {§7}[https://tools.ietf.org/html/rfc2045#section-7].
+      # in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]]
+      # {§7}[https://www.rfc-editor.org/rfc/rfc2045#section-7].
 
       ##
       # method: description
       # :call-seq: description -> string
       #
       # Returns a string giving the content description as defined
-      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
-      # {§8}[https://tools.ietf.org/html/rfc2045#section-8].
+      # in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]]
+      # {§8}[https://www.rfc-editor.org/rfc/rfc2045#section-8].
 
       ##
       # method: encoding
       # :call-seq: encoding -> string
       #
       # Returns a string giving the content transfer encoding as defined
-      # in [MIME-IMB[https://tools.ietf.org/html/rfc2045]]
-      # {§6}[https://tools.ietf.org/html/rfc2045#section-6].
+      # in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]]
+      # {§6}[https://www.rfc-editor.org/rfc/rfc2045#section-6].
 
       ##
       # method: size
@@ -889,7 +889,7 @@ module Net
       # :call-seq: md5 -> string
       #
       # Returns a string giving the body MD5 value as defined in
-      # [MD5[https://tools.ietf.org/html/rfc1864]].
+      # [MD5[https://www.rfc-editor.org/rfc/rfc1864]].
 
       ##
       # method: disposition
@@ -897,7 +897,7 @@ module Net
       #
       # Returns a ContentDisposition object giving the content
       # disposition, as defined by
-      # [DISPOSITION[https://tools.ietf.org/html/rfc2183]].
+      # [DISPOSITION[https://www.rfc-editor.org/rfc/rfc2183]].
 
       ##
       # method: language
@@ -1065,7 +1065,7 @@ module Net
       # call-seq: subtype -> string
       #
       # Returns the content subtype name
-      # as defined in [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+      # as defined in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
       # method: parts
@@ -1079,7 +1079,7 @@ module Net
       # call-seq: param -> hash
       #
       # Returns a hash that represents parameters
-      # as defined in [MIME-IMB[https://tools.ietf.org/html/rfc2045]].
+      # as defined in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
       # method: disposition

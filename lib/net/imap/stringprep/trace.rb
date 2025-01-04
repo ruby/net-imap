@@ -4,11 +4,11 @@ module Net
   class IMAP
     module StringPrep
 
-      # Defined in RFC-4505[https://tools.ietf.org/html/rfc4505] §3, The +trace+
+      # Defined in RFC-4505[https://www.rfc-editor.org/rfc/rfc4505] §3, The +trace+
       # profile of \StringPrep is used by the +ANONYMOUS+ \SASL mechanism.
       module Trace
 
-        # Defined in RFC-4505[https://tools.ietf.org/html/rfc4505] §3.
+        # Defined in RFC-4505[https://www.rfc-editor.org/rfc/rfc4505] §3.
         STRINGPREP_PROFILE = "trace"
 
         # >>>
@@ -23,7 +23,7 @@ module Net
         #   No Unicode normalization is required by this profile.
         NORMALIZATION = nil
 
-        # From RFC-4505[https://tools.ietf.org/html/rfc4505] §3, The "trace"
+        # From RFC-4505[https://www.rfc-editor.org/rfc/rfc4505] §3, The "trace"
         # Profile of "Stringprep":
         # >>>
         #   Characters from the following tables of [StringPrep] are prohibited:
@@ -47,7 +47,7 @@ module Net
 
         module_function
 
-        # From RFC-4505[https://tools.ietf.org/html/rfc4505] §3, The "trace"
+        # From RFC-4505[https://www.rfc-editor.org/rfc/rfc4505] §3, The "trace"
         # Profile of "Stringprep":
         # >>>
         #   The character repertoire of this profile is Unicode 3.2 [Unicode].
