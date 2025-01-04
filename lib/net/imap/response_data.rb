@@ -559,9 +559,9 @@ module Net
       # Returns an array of Shared Namespace objects.
     end
 
-    # Net::IMAP::StatusData represents the contents of the STATUS response.
+    # StatusData represents the contents of an untagged +STATUS+ response.
     #
-    # Net::IMAP#status returns the contents of #attr.
+    # IMAP#status returns the contents of #attr.
     class StatusData < Struct.new(:mailbox, :attr)
       ##
       # method: mailbox
