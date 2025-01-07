@@ -163,7 +163,7 @@ module Net
         # number          = 1*DIGIT
         #                    ; Unsigned 32-bit integer
         #                    ; (0 <= n < 4,294,967,296)
-        num >= 0 && num < 4294967296
+        0 <= num && num <= 0xffff_ffff
       end
 
       # Check is passed argument valid 'nz_number' in RFC 3501 terminology
@@ -172,7 +172,7 @@ module Net
         # nz-number       = digit-nz *DIGIT
         #                    ; Non-zero unsigned 32-bit integer
         #                    ; (0 < n < 4,294,967,296)
-        num != 0 && valid_number?(num)
+        0 < num && num <= 0xffff_ffff
       end
 
       # Check is passed argument valid 'mod_sequence_value' in RFC 4551 terminology
@@ -181,7 +181,7 @@ module Net
         #                        ; Positive unsigned 64-bit integer
         #                        ; (mod-sequence)
         #                        ; (1 <= n < 18,446,744,073,709,551,615)
-        num >= 1 && num < 18446744073709551615
+        1 <= num && num < 0xffff_ffff_ffff_ffff
       end
 
       # Ensure argument is 'number' or raise DataFormatError
