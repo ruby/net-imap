@@ -710,6 +710,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     to_s:       "1:5,3:7,10:9,10:11",
     normalize:  "1:7,9:11",
     count:      10,
+    count_dups:  4,
     complement: "8,12:*",
   }, keep: true
 
@@ -722,6 +723,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     to_s:       "1:5,3:4,9:11,10",
     normalize:  "1:5,9:11",
     count:      8,
+    count_dups: 3,
     complement: "6:8,12:*",
   }, keep: true
 
@@ -876,6 +878,25 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
 
   test "#count" do |data|
     assert_equal data[:count], SequenceSet.new(data[:input]).count
+  end
+
+  test "#count_with_duplicates" do |data|
+    dups = data[:count_dups] || 0
+    count = data[:count] + dups
+    seqset = SequenceSet.new(data[:input])
+    assert_equal count, seqset.count_with_duplicates
+  end
+
+  test "#count_duplicates" do |data|
+    dups = data[:count_dups] || 0
+    seqset = SequenceSet.new(data[:input])
+    assert_equal dups, seqset.count_duplicates
+  end
+
+  test "#has_duplicates?" do |data|
+    has_dups = !(data[:count_dups] || 0).zero?
+    seqset = SequenceSet.new(data[:input])
+    assert_equal has_dups, seqset.has_duplicates?
   end
 
   test "#valid_string" do |data|
