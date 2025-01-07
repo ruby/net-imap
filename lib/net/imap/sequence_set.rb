@@ -202,6 +202,14 @@ module Net
     # - #full?: Returns whether the set contains every possible value, including
     #   <tt>*</tt>.
     #
+    # <i>Denormalized properties:</i>
+    # - #has_duplicates?: Returns whether the ordered entries repeat any
+    #   numbers.
+    # - #count_duplicates: Returns the count of repeated numbers in the ordered
+    #   entries.
+    # - #count_with_duplicates: Returns the count of numbers in the ordered
+    #   entries, including any repeated numbers.
+    #
     # === Methods for Iterating
     #
     # <i>Normalized (sorted and coalesced):</i>
@@ -927,9 +935,7 @@ module Net
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        return each_element(&block) unless @string
-        @string.split(",").each do yield tuple_to_entry str_to_tuple _1 end
-        self
+        each_entry_tuple do yield tuple_to_entry _1 end
       end
 
       # Yields each number or range (or <tt>:*</tt>) in #elements to the block
@@ -946,6 +952,16 @@ module Net
       end
 
       private
+
+      def each_entry_tuple(&block)
+        return to_enum(__method__) unless block_given?
+        if @string
+          @string.split(",") do block.call str_to_tuple _1 end
+        else
+          @tuples.each(&block)
+        end
+        self
+      end
 
       def tuple_to_entry((min, max))
         if    min == STAR_INT then :*
@@ -1005,11 +1021,48 @@ module Net
       # If <tt>*</tt> and <tt>2**32 - 1</tt> (the maximum 32-bit unsigned
       # integer value) are both in the set, they will only be counted once.
       def count
-        @tuples.sum(@tuples.count) { _2 - _1 } +
-          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+        count_numbers_in_tuples(@tuples)
       end
 
       alias size count
+
+      # Returns the count of numbers in the ordered #entries, including any
+      # repeated numbers.
+      #
+      # When #string is normalized, this behaves the same as #count.
+      #
+      # Related: #entries, #count_duplicates, #has_duplicates?
+      def count_with_duplicates
+        return count unless @string
+        count_numbers_in_tuples(each_entry_tuple)
+      end
+
+      # Returns the count of repeated numbers in the ordered #entries.
+      #
+      # When #string is normalized, this is zero.
+      #
+      # Related: #entries, #count_with_duplicates, #has_duplicates?
+      def count_duplicates
+        return 0 unless @string
+        count_with_duplicates - count
+      end
+
+      # :call-seq: has_duplicates? -> true | false
+      #
+      # Returns whether or not the ordered #entries repeat any numbers.
+      #
+      # Always returns +false+ when #string is normalized.
+      #
+      # Related: #entries, #count_with_duplicates, #count_duplicates?
+      def has_duplicates?
+        return false unless @string
+        count_with_duplicates != count
+      end
+
+      private def count_numbers_in_tuples(tuples)
+        tuples.sum(tuples.count) { _2 - _1 } +
+          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+      end
 
       # Returns the index of +number+ in the set, or +nil+ if +number+ isn't in
       # the set.
