@@ -206,6 +206,11 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     parser = Net::IMAP::ResponseParser.new(config: {
       parser_use_deprecated_uidplus_data:      true,
     })
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
+      parser.parse(
+        "A004 OK [APPENDUID 1 10000:20000,1] Done\r\n"
+      )
+    end
     response = parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
     uidplus  = response.data.code.data
     assert_instance_of Net::IMAP::UIDPlusData, uidplus
@@ -254,6 +259,11 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     parser = Net::IMAP::ResponseParser.new(config: {
       parser_use_deprecated_uidplus_data:      true,
     })
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
+      parser.parse(
+        "A004 OK [copyUID 1 10000:20000,1 1:10001] Done\r\n"
+      )
+    end
     response = parser.parse("A004 OK [copyUID 1 101:200 1:100] Done\r\n")
     uidplus  = response.data.code.data
     assert_instance_of Net::IMAP::UIDPlusData, uidplus
