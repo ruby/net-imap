@@ -1,0 +1,77 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("SEQSET_LHS_SIZE", 1000)
+  MAX_INPUT   = Integer ENV.fetch("SEQSET_LHS_MAX",  1400)
+
+  SETS = Array.new(1000) {
+    Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
+  }
+
+  def sets
+    l, r = SETS.sample(2)
+    [l.dup, r]
+  end
+
+  class Net::IMAP
+    class SequenceSet
+      def and0(other) remain_frozen dup.and0! other end
+      def and1(other) remain_frozen dup.and1! other end
+      def and2(other) remain_frozen dup.and2! other end
+
+      # L - ~R
+      def and0!(other)
+        modifying!
+        subtract SequenceSet.new(other).complement!
+      end
+
+      # L - (L - R)
+      def and1!(other)
+        modifying!
+        subtract dup.subtract(SequenceSet.new(other))
+      end
+
+      # TODO: add this as a public method
+      def xor!(other) # :nodoc:
+        modifying!
+        copy  = dup
+        other = SequenceSet.new(other)
+        merge(other).subtract(other.subtract(copy.complement!))
+      end
+
+      # L - (L ^ R)
+      def and2!(other)
+        modifying!
+        subtract SequenceSet.new(other).xor! self
+      end
+    end
+  end
+
+  # warmup for YJIT
+  if RubyVM::YJIT.enabled?
+    300.times do
+      lhs, rhs = sets
+      lhs | rhs
+      lhs & rhs
+      lhs - rhs
+      lhs ^ rhs
+      ~lhs
+      lhs.and0 rhs
+      lhs.and1 rhs
+      lhs.and2 rhs
+    end
+  end
+
+benchmark:
+  "      L & R":       l, r = sets; l & r
+  "      L - ~R":      l, r = sets; l - ~r
+  "and0  L - ~R":      l, r = sets; l.and0  r
+  "and0! L - ~R":      l, r = sets; l.and0! r
+  "      L - (L - R)": l, r = sets; l - (l - r)
+  "and1  L - (L - R)": l, r = sets; l.and1  r
+  "and1! L - (L - R)": l, r = sets; l.and1! r
+  "      L - (L ^ R)": l, r = sets; l - (l ^ r)
+  "and2  L - (L ^ R)": l, r = sets; l.and2  r
+  "and2! L - (L ^ R)": l, r = sets; l.and2! r

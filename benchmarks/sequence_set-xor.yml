@@ -1,0 +1,83 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("SEQSET_LHS_SIZE", 1000)
+  MAX_INPUT  = Integer ENV.fetch("SEQSET_LHS_MAX",  1400)
+
+  SETS = Array.new(1000) {
+    Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
+  }
+
+  def sets
+    l, r = SETS.sample(2)
+    [l.dup, r]
+  end
+
+  class Net::IMAP
+    class SequenceSet
+      def xor0(other) remain_frozen (dup | other) - (self & other) end
+      def xor1(other) remain_frozen dup.xor1! other end
+      def xor2(other) remain_frozen dup.xor2! other end
+      def xor3(other) remain_frozen dup.xor3! other end
+
+      # (L | R) - (L & R)
+      def xor1!(other)
+        modifying!
+        copy  = dup
+        other = SequenceSet.new(other)
+        merge(other).subtract(other.subtract(copy.complement!))
+      end
+
+      # TODO: add this as a public method
+      def intersect!(other) # :nodoc:
+        modifying!
+        subtract SequenceSet.new(other).complement!
+      end
+
+      # (L | R) - (L & R)
+      def xor2!(other)
+        modifying!
+        copy  = dup
+        other = SequenceSet.new(other)
+        merge(other).subtract(copy.intersect!(other))
+      end
+
+      # (L - R) | (R - L)
+      def xor3!(other)
+        modifying!
+        copy  = dup
+        other = SequenceSet.new(other)
+        subtract(other).merge(other.subtract(copy))
+      end
+    end
+  end
+
+  # warmup for YJIT
+  if RubyVM::YJIT.enabled?
+    300.times do
+      lhs, rhs = sets
+      lhs | rhs
+      lhs & rhs
+      lhs - rhs
+      lhs ^ rhs
+      ~lhs
+      lhs.xor0 rhs
+      lhs.xor1 rhs
+      lhs.xor2 rhs
+      lhs.xor3 rhs
+    end
+  end
+
+benchmark:
+  "      L ^ R":             l, r = sets; l ^ r
+  "      (L | R) - (R & L)": l, r = sets; (l | r) - (r & l)
+  "0.5.8 (L | R) - (R & L)": l, r = sets; l.xor0  r
+  "dup1  (L | R) - (R & L)": l, r = sets; l.xor1  r
+  "mut1  (L | R) - (R & L)": l, r = sets; l.xor1! r
+  "dup2  (L | R) - (R & L)": l, r = sets; l.xor2  r
+  "mut2  (L | R) - (R & L)": l, r = sets; l.xor2! r
+  "      (L - R) | (R - L)": l, r = sets; (l - r) | (r - l)
+  "dup3  (L - R) | (R - L)": l, r = sets; l.xor3  r
+  "mut3  (L - R) | (R - L)": l, r = sets; l.xor3! r
