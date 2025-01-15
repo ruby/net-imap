@@ -1,0 +1,97 @@
+---
+prelude: |
+  require "net/imap"
+  SeqSet = Net::IMAP::SequenceSet
+
+  N_RAND = 100
+
+  def rand_nums(n, min: 1, max: (n * 1.25).to_i) = Array.new(n) { rand(1..max) }
+  def rand_entries(...) = SeqSet[rand_nums(...)].elements.shuffle
+  def rand_string(...)  = SeqSet[rand_nums(...)].string.split(?,).shuffle.join(?,)
+
+  def build_string_inputs(n, n_rand, **)
+    Array.new(n_rand) { rand_string(n, **) }
+  end
+
+  def build_int_inputs(n, n_rand, **)
+    Array.new(n_rand) { rand_entries(n, **) }
+  end
+
+  inputs = nil
+  i = 0
+
+  # warm up, especially for YJIT
+  1000.times do
+    ints   = rand_nums(1000)
+    seqset = SeqSet[ints]
+    string = seqset.string.split(?,).shuffle.join(?,)
+    SeqSet[string]
+  end
+
+benchmark:
+
+  - name:    n=10 ints
+    prelude: inputs = build_int_inputs 10, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=10 string
+    prelude: inputs = build_string_inputs 10, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=100 ints
+    prelude: inputs = build_int_inputs 100, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=100 string
+    prelude: inputs = build_string_inputs 100, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=1000 ints
+    prelude: inputs = build_int_inputs 1000, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=1000 string
+    prelude: inputs = build_string_inputs 1000, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=10,000 ints
+    prelude: inputs = build_int_inputs 10_000, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=10,000 string
+    prelude: inputs = build_string_inputs 10_000, N_RAND
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=100,000 ints
+    prelude: inputs = build_int_inputs 100_000, N_RAND / 2
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=100,000 string
+    prelude: inputs = build_string_inputs 100_000, N_RAND / 2
+    script:  SeqSet[inputs[i = (i+1) % (N_RAND / 2)]]
+
+#   - name:    n=1,000,000 ints
+#     prelude: inputs = build_int_inputs 1_000_000
+#     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+#   - name:    n=10,000,000 ints
+#     prelude: inputs = build_int_inputs 10_000_000
+#     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+contexts:
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+    require: false
+  - name: v0.5.9
+    gems:
+      net-imap: 0.5.9
+    require: false
+  - name: v0.5.0
+    gems:
+      net-imap: 0.5.0
+    require: false
+  - name: v0.4.21
+    gems:
+      net-imap: 0.4.21
+    require: false

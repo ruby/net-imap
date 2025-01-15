@@ -1,0 +1,91 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+
+  def init_sets(count: 100, set_size: INPUT_COUNT, max: MAX_INPUT)
+    Array.new(count) {
+      Net::IMAP::SequenceSet.new(Array.new(set_size) { rand(1..max) })
+    }
+  end
+
+  def init_normal_sets(...)
+    init_sets(...)
+  end
+
+  def init_frozen_normal_sets(...)
+    init_sets(...)
+      .map(&:freeze)
+  end
+
+  def init_unsorted_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = seqset.entries.shuffle
+        seqset.clear
+        entries.each do |entry|
+          seqset.append entry
+        end
+      end
+  end
+
+  def init_abnormal_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = seqset.entries.shuffle
+        seqset.clear
+        entries.each do |entry|
+          if [true, false].sample
+            seqset.append entry
+          elsif entry.is_a? Range
+            seqset.append "#{entry.end || "*"}:#{entry.begin}"
+          else
+            seqset.append "#{entry}:#{entry}"
+          end
+        end
+      end
+  end
+
+  # warmup (esp. for JIT)
+  WARMUP_RUNS.times do
+    init_sets(count: 20, set_size: 100, max: 120).each do |set|
+      set.normalize
+    end
+  end
+
+benchmark:
+  - name: "normal"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.normalize
+  - name: "frozen and normal"
+    prelude: $sets = init_frozen_normal_sets
+    script:  $sets.sample.normalize
+  - name: "unsorted"
+    prelude: $sets = init_unsorted_sets
+    script:  $sets.sample.normalize
+  - name: "abnormal"
+    prelude: $sets = init_abnormal_sets
+    script:  $sets.sample.normalize
+
+contexts:
+  # n.b: can't use anything newer as the baseline: it's over 500x faster!
+  - name: v0.5.9
+    gems:
+      net-imap: 0.5.9
+    require: false
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+    require: false
+  - name: v0.5.0
+    gems:
+      net-imap: 0.5.0
+    require: false
+  - name: v0.4.21
+    gems:
+      net-imap: 0.4.21
+    require: false
