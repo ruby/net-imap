@@ -1,0 +1,34 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("PROFILE_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("PROFILE_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("PROFILE_WARMUP_RUNS",  200)
+
+  SETS = Array.new(1000) {
+    Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
+  }
+
+  def sets
+    l, r = SETS.sample(2)
+    [l.dup, r]
+  end
+
+  # warmup (esp. for JIT)
+  200.times do
+    lhs, rhs = sets
+    lhs | rhs
+    lhs & rhs
+    lhs - rhs
+    lhs ^ rhs
+    ~lhs
+  end
+
+benchmark:
+  union:        l, r = sets; l | r
+  intersection: l, r = sets; l & r
+  difference:   l, r = sets; l - r
+  xor:          l, r = sets; l ^ r
+  complement:   l, _ = sets; ~l
