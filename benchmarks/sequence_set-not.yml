@@ -1,0 +1,103 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+
+  SETS = Array.new(1000) {
+    Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
+  }
+
+  class Net::IMAP
+    class SequenceSet
+      def orig_not
+        remain_frozen dup.orig_not!
+      end
+
+      # 0.5.8 implementation
+      def orig_not!
+        return replace(self.class.full) if empty?
+        return clear                    if full?
+        flat = @tuples.flat_map { [_1 - 1, _2 + 1] }
+        if flat.first < 1         then flat.shift else flat.unshift 1        end
+        if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
+        @tuples = flat.each_slice(2).to_a
+        normalize!
+      end
+
+      # enumerator based
+      def enum_not
+        result = SequenceSet.new
+        each_tuple_complement do |min, max| result.tuples << [min, max] end
+        remain_frozen result
+      end
+
+      # enumerator based
+      def enum_not_2
+        remain_frozen dup.enum_not!
+      end
+
+      def enum_not!
+        last = -1
+        each_tuple_complement.with_index do |minmax, idx|
+          last = idx
+          @tuples[idx] = minmax
+        end
+        @tuples.delete_at(last + 1)
+        self
+      end
+
+      private
+
+      def each_tuple_complement
+        return to_enum(__method__) unless block_given?
+        if    full?  then # no yield
+        elsif empty? then yield 1, STAR_INT
+        else
+          yield 1, min - 1 unless min <= 1
+          tuples.each_cons(2) do |(_, a), (b,_)| yield a+1, b-1 end
+          yield max + 1, STAR_INT unless max == STAR_INT
+        end
+        nil
+      end
+
+    end
+  end
+
+  # warmup (esp. for JIT)
+  WARMUP_RUNS.times do
+    ~SETS.sample
+    SETS.sample.orig_not
+    SETS.sample.enum_not
+    SETS.sample.dup.orig_not!
+    SETS.sample.dup.enum_not!
+  end
+
+benchmark:
+  "      ~set":        ~SETS.sample
+  "0.5.8 ~set":         SETS.sample.orig_not
+  "enum  ~set":         SETS.sample.enum_not
+  "enum2 ~set":         SETS.sample.enum_not_2
+  "0.5.8 ~dup":         SETS.sample.dup.orig_not!
+  "enum  ~dup":         SETS.sample.dup.enum_not!
+
+contexts:
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+    require: false
+  - name: v0.5.9
+    gems:
+      net-imap: 0.5.9
+    require: false
+  - name: v0.5.0
+    gems:
+      net-imap: 0.5.0
+    require: false
+  - name: v0.4.21
+    gems:
+      net-imap: 0.4.21
+    require: false
