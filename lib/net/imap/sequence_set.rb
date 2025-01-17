@@ -684,8 +684,9 @@ module Net
         modifying!
         tuple = input_to_tuple object
         entry = tuple_to_str tuple
+        string unless empty? # write @string before tuple_add
         tuple_add tuple
-        @string = -(string ? "#{@string},#{entry}" : entry)
+        @string = -(@string ? "#{@string},#{entry}" : entry)
         self
       end
 
