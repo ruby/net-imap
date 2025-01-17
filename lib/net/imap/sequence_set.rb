@@ -56,18 +56,20 @@ module Net
     #     set = Net::IMAP::SequenceSet[1, 2, [3..7, 5], 6..10, 2048, 1024]
     #     set.valid_string  #=> "1:10,55,1024:2048"
     #
-    # == Normalized form
+    # == Ordered and Normalized sets
     #
-    # When a sequence set is created with a single String value, that #string
-    # representation is preserved.  SequenceSet's internal representation
-    # implicitly sorts all entries, de-duplicates numbers, and coalesces
-    # adjacent or overlapping ranges.  Most enumeration methods and offset-based
-    # methods use this normalized representation.  Most modification methods
-    # will convert #string to its normalized form.
+    # Sometimes the order of the set's members is significant, such as with the
+    # +ESORT+, <tt>CONTEXT=SORT</tt>, and +UIDPLUS+ extensions.  So, when a
+    # sequence set is created by the parser or with a single string value, that
+    # #string representation is preserved.
     #
-    # In some cases the order of the string representation is significant, such
-    # as the +ESORT+, <tt>CONTEXT=SORT</tt>, and +UIDPLUS+ extensions.  Use
-    # #entries or #each_entry to enumerate the set in its original order.  To
+    # Internally, SequenceSet stores a normalized representation which sorts all
+    # entries, de-duplicates numbers, and coalesces adjacent or overlapping
+    # ranges.  Most methods use this normalized representation to achieve
+    # <tt>O(lg n)</tt> porformance.  Use #entries or #each_entry to enumerate
+    # the set in its original order.
+    #
+    # Most modification methods convert #string to its normalized form.  To
     # preserve #string order while modifying a set, use #append, #string=, or
     # #replace.
     #
@@ -181,7 +183,7 @@ module Net
     # - #max: Returns the maximum number in the set.
     # - #minmax: Returns the minimum and maximum numbers in the set.
     #
-    # <i>Accessing value by offset:</i>
+    # <i>Accessing value by (normalized) offset:</i>
     # - #[] (aliased as #slice): Returns the number or consecutive subset at a
     #   given offset or range of offsets.
     # - #at: Returns the number at a given offset.
@@ -189,6 +191,7 @@ module Net
     #
     # <i>Set cardinality:</i>
     # - #count (aliased as #size): Returns the count of numbers in the set.
+    #   Duplicated numbers are not counted.
     # - #empty?: Returns whether the set has no members.  \IMAP syntax does not
     #   allow empty sequence sets.
     # - #valid?: Returns whether the set has any members.
@@ -681,8 +684,9 @@ module Net
         modifying!
         tuple = input_to_tuple object
         entry = tuple_to_str tuple
+        string unless empty? # write @string before tuple_add
         tuple_add tuple
-        @string = -(string ? "#{@string},#{entry}" : entry)
+        @string = -(@string ? "#{@string},#{entry}" : entry)
         self
       end
 
@@ -838,8 +842,8 @@ module Net
       # <tt>*</tt> translates to an endless range.  Use #limit to translate both
       # cases to a maximum value.
       #
-      # If the original input was unordered or contains overlapping ranges, the
-      # returned ranges will be ordered and coalesced.
+      # The returned elements will be sorted and coalesced, even when the input
+      # #string is not.  <tt>*</tt> will sort last.  See #normalize.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,*,12:11"].elements
       #   #=> [2, 5..9, 11..12, :*]
@@ -857,7 +861,7 @@ module Net
       # translates to <tt>:*..</tt>.  Use #limit to set <tt>*</tt> to a maximum
       # value.
       #
-      # The returned ranges will be ordered and coalesced, even when the input
+      # The returned ranges will be sorted and coalesced, even when the input
       # #string is not.  <tt>*</tt> will sort last.  See #normalize.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,*,12:11"].ranges
