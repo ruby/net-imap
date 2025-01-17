@@ -162,7 +162,7 @@ module Net
     # - #===:
     #   Returns whether a given object is fully contained within +self+, or
     #   +nil+ if the object cannot be converted to a compatible type.
-    # - #cover? (aliased as #===):
+    # - #cover?:
     #   Returns whether a given object is fully contained within +self+.
     # - #intersect? (aliased as #overlap?):
     #   Returns whether +self+ and a given object have any common elements.
