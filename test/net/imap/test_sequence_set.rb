@@ -359,6 +359,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal seqset["1:3,5,7:9"], seqset["1,3,5,7:8"].merge(seqset["2,8:9"])
     assert_equal seqset["1:*"],       seqset["5:*"].merge(1..4)
     assert_equal seqset["1:5"],       seqset["1,3,5"].merge(seqset["2,4"])
+    # when merging frozen SequenceSet
+    set = SequenceSet.new
+    set.merge SequenceSet[1, 3, 5]
+    set.merge SequenceSet[2..33]
+    assert_equal seqset[1..33], set
   end
 
   test "set - other" do

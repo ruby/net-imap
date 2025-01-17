@@ -1342,8 +1342,8 @@ module Net
         modifying!
         min, max = tuple
         lower, lower_idx = tuple_gte_with_index(min - 1)
-        if    lower.nil?              then tuples << tuple
-        elsif (max + 1) < lower.first then tuples.insert(lower_idx, tuple)
+        if    lower.nil?              then tuples << [min, max]
+        elsif (max + 1) < lower.first then tuples.insert(lower_idx, [min, max])
         else  tuple_coalesce(lower, lower_idx, min, max)
         end
       end
