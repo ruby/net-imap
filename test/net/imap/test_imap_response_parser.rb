@@ -202,6 +202,15 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     Net::IMAP.debug = debug
   end
 
+  test "APPENDUID with '*'" do
+    parser = Net::IMAP::ResponseParser.new
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set cannot contain '\*'/ do
+      parser.parse(
+        "A004 OK [appendUID 1 1:*] Done\r\n"
+      )
+    end
+  end
+
   test "COPYUID with backwards ranges" do
     parser = Net::IMAP::ResponseParser.new
     response = parser.parse(
@@ -221,6 +230,15 @@ class IMAPResponseParserTest < Test::Unit::TestCase
       },
       code.data.uid_mapping
     )
+  end
+
+  test "COPYUID with '*'" do
+    parser = Net::IMAP::ResponseParser.new
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set cannot contain '\*'/ do
+      parser.parse(
+        "A004 OK [copyUID 1 1:* 1:*] Done\r\n"
+      )
+    end
   end
 
 end
