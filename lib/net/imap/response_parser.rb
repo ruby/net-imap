@@ -1871,7 +1871,7 @@ module Net
       def resp_code_apnd__data
         validity = number; SP!
         dst_uids = uid_set # uniqueid ⊂ uid-set
-        UIDPlusData.new(validity, nil, dst_uids)
+        UIDPlus(validity, nil, dst_uids)
       end
 
       # already matched:  "COPYUID"
@@ -1881,6 +1881,12 @@ module Net
         validity = number;  SP!
         src_uids = uid_set; SP!
         dst_uids = uid_set
+        UIDPlus(validity, src_uids, dst_uids)
+      end
+
+      def UIDPlus(validity, src_uids, dst_uids)
+        src_uids &&= src_uids.each_ordered_number.to_a
+        dst_uids   = dst_uids.each_ordered_number.to_a
         UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
@@ -2007,15 +2013,9 @@ module Net
       #      uniqueid        = nz-number
       #                          ; Strictly ascending
       def uid_set
-        token = match(T_NUMBER, T_ATOM)
-        case token.symbol
-        when T_NUMBER then [Integer(token.value)]
-        when T_ATOM
-          token.value.split(",").flat_map {|range|
-            range = range.split(":").map {|uniqueid| Integer(uniqueid) }
-            range.size == 1 ? range : Range.new(range.min, range.max).to_a
-          }
-        end
+        set = sequence_set
+        parse_error("uid-set cannot contain '*'") if set.include_star?
+        set
       end
 
       def nil_atom
