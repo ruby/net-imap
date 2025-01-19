@@ -8,8 +8,6 @@ module Net
 
     # Parses an \IMAP server response.
     class ResponseParser
-      MAX_UID_SET_SIZE = 10_000
-
       include ParserUtils
       extend  ParserUtils::Generator
 
@@ -2027,7 +2025,7 @@ module Net
         return unless config.parser_use_deprecated_uidplus_data
         compact_uid_sets = [src_uids, dst_uids].compact
         count = compact_uid_sets.map { _1.count_with_duplicates }.max
-        max   = MAX_UID_SET_SIZE
+        max   = config.parser_max_deprecated_uidplus_data_size
         if count <= max
           src_uids &&= src_uids.each_ordered_number.to_a
           dst_uids   = dst_uids.each_ordered_number.to_a
