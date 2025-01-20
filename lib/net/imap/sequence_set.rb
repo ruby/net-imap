@@ -231,6 +231,8 @@ module Net
     #   without deduplicating numbers or coalescing ranges, and returns +self+.
     # - #entries: Returns an Array of every number and range in the set,
     #   unsorted and without deduplicating numbers or coalescing ranges.
+    # - #each_ordered_number: Yields each number in the ordered entries and
+    #   returns +self+.
     #
     # === Methods for \Set Operations
     # These methods do not modify +self+.
@@ -994,17 +996,34 @@ module Net
       # Returns an enumerator when called without a block (even if the set
       # contains <tt>*</tt>).
       #
-      # Related: #numbers
+      # Related: #numbers, #each_ordered_number
       def each_number(&block) # :yields: integer
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
-        each_element do |elem|
-          case elem
-          when Range   then elem.each(&block)
-          when Integer then block.(elem)
-          end
-        end
+        @tuples.each do each_number_in_tuple _1, _2, &block end
         self
+      end
+
+      # Yields each number in #entries to the block and returns self.
+      # If the set contains a <tt>*</tt>, RangeError will be raised.
+      #
+      # Returns an enumerator when called without a block (even if the set
+      # contains <tt>*</tt>).
+      #
+      # Related: #entries, #each_number
+      def each_ordered_number(&block)
+        return to_enum(__method__) unless block_given?
+        raise RangeError, '%s contains "*"' % [self.class] if include_star?
+        each_entry_tuple do each_number_in_tuple _1, _2, &block end
+      end
+
+      private def each_number_in_tuple(min, max, &block)
+        if    min == STAR_INT then yield :*
+        elsif min == max      then yield min
+        elsif max != STAR_INT then (min..max).each(&block)
+        else
+          raise RangeError, "#{SequenceSet} cannot enumerate range with '*'"
+        end
       end
 
       # Returns a Set with all of the #numbers in the sequence set.

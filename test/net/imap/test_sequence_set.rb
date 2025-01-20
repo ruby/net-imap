@@ -680,6 +680,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [46, 6..7, 15, 1..3],
     ranges:     [1..3, 6..7, 15..15, 46..46],
     numbers:    [1, 2, 3, 6, 7, 15, 46],
+    ordered:    [46, 6, 7, 15, 1, 2, 3],
     to_s:       "46,7:6,15,3:1",
     normalize:  "1:3,6:7,15,46",
     count:      7,
@@ -704,6 +705,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [1..5, 3..7, 9..10, 10..11],
     ranges:     [1..7, 9..11],
     numbers:    [1, 2, 3, 4, 5, 6, 7,  9, 10, 11],
+    ordered:    [1,2,3,4,5,  3,4,5,6,7,  9,10,  10,11],
     to_s:       "1:5,3:7,10:9,10:11",
     normalize:  "1:7,9:11",
     count:      10,
@@ -717,6 +719,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [1..5, 3..4, 9..11, 10],
     ranges:     [1..5, 9..11],
     numbers:    [1, 2, 3, 4, 5, 9, 10, 11],
+    ordered:    [1,2,3,4,5,  3,4,  9,10,11,  10],
     to_s:       "1:5,3:4,9:11,10",
     normalize:  "1:5,9:11",
     count:      8,
@@ -814,6 +817,21 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
       assert_raise expected do enum.each do fail "shouldn't get here" end end
     else
       assert_seqset_enum expected, seqset, :each_number
+    end
+  end
+
+  test "#each_ordered_number" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:ordered] || data[:numbers]
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do
+        seqset.each_ordered_number do fail "shouldn't get here" end
+      end
+      enum = seqset.each_ordered_number
+      assert_raise expected do enum.to_a end
+      assert_raise expected do enum.each do fail "shouldn't get here" end end
+    else
+      assert_seqset_enum expected, seqset, :each_ordered_number
     end
   end
 
