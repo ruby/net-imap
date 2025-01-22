@@ -227,6 +227,17 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     assert_equal 100, uidplus.assigned_uids.size
   end
 
+  test "APPENDUID with parser_use_deprecated_uidplus_data = :up_to_max_size" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      :up_to_max_size,
+      parser_max_deprecated_uidplus_data_size: 100
+    })
+    response = parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
+    assert_instance_of Net::IMAP::UIDPlusData, response.data.code.data
+    response = parser.parse("A004 OK [APPENDUID 1 100:200] Done\r\n")
+    assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
+  end
+
   test "APPENDUID with parser_use_deprecated_uidplus_data = false" do
     parser = Net::IMAP::ResponseParser.new(config: {
       parser_use_deprecated_uidplus_data:      false,
@@ -291,6 +302,19 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     assert_instance_of Net::IMAP::UIDPlusData, uidplus
     assert_equal 100, uidplus.assigned_uids.size
     assert_equal 100, uidplus.source_uids.size
+  end
+
+  test "COPYUID with parser_use_deprecated_uidplus_data = :up_to_max_size" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      :up_to_max_size,
+      parser_max_deprecated_uidplus_data_size: 100
+    })
+    response = parser.parse("A004 OK [COPYUID 1 101:200 1:100] Done\r\n")
+    copyuid = response.data.code.data
+    assert_instance_of Net::IMAP::UIDPlusData, copyuid
+    response = parser.parse("A004 OK [COPYUID 1 100:200 1:101] Done\r\n")
+    copyuid = response.data.code.data
+    assert_instance_of Net::IMAP::CopyUIDData, copyuid
   end
 
   test "COPYUID with parser_use_deprecated_uidplus_data = false" do

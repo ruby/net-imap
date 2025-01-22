@@ -1896,7 +1896,7 @@ module Net
           src_uids &&= src_uids.each_ordered_number.to_a
           dst_uids   = dst_uids.each_ordered_number.to_a
           UIDPlusData.new(validity, src_uids, dst_uids)
-        else
+        elsif config.parser_use_deprecated_uidplus_data != :up_to_max_size
           parse_error("uid-set is too large: %d > %d", count, max)
         end
       end
