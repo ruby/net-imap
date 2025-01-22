@@ -13,13 +13,17 @@ module Net
 
       attr_reader :config
 
-      # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
+      # Creates a new ResponseParser.
+      #
+      # When +config+ is frozen or global, the parser #config inherits from it.
+      # Otherwise, +config+ will be used directly.
       def initialize(config: Config.global)
         @str = nil
         @pos = nil
         @lex_state = nil
         @token = nil
         @config = Config[config]
+        @config = @config.new if @config == Config.global || @config.frozen?
       end
 
       # :call-seq:
