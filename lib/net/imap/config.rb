@@ -313,10 +313,15 @@ module Net
       # [+true+ <em>(original default)</em>]
       #    ResponseParser only uses UIDPlusData.
       #
+      # [+:up_to_max_size+ <em>(default since +v0.5.6+)</em>]
+      #    ResponseParser uses UIDPlusData when the +uid-set+ size is below
+      #    parser_max_deprecated_uidplus_data_size.  Above that size,
+      #    ResponseParser uses AppendUIDData or CopyUIDData.
+      #
       # [+false+ <em>(planned default for +v0.6+)</em>]
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
       attr_accessor :parser_use_deprecated_uidplus_data, type: [
-        true, false
+        true, :up_to_max_size, false
       ]
 
       # The maximum +uid-set+ size that ResponseParser will parse into
@@ -423,7 +428,7 @@ module Net
         sasl_ir: true,
         enforce_logindisabled: true,
         responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: true,
+        parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,
       ).freeze
 
