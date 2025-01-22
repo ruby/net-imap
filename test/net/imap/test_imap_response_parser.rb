@@ -118,6 +118,41 @@ class IMAPResponseParserTest < Test::Unit::TestCase
   # response data, should still use normal tests, below
   ############################################################################
 
+  test "default config inherits from Config.global" do
+    parser = Net::IMAP::ResponseParser.new
+    refute parser.config.frozen?
+    refute_equal Net::IMAP::Config.global, parser.config
+    assert_same  Net::IMAP::Config.global, parser.config.parent
+  end
+
+  test "config can be passed in to #initialize" do
+    config = Net::IMAP::Config.global.new
+    parser = Net::IMAP::ResponseParser.new config: config
+    assert_same config, parser.config
+  end
+
+  test "passing in global config inherits from Config.global" do
+    parser = Net::IMAP::ResponseParser.new config: Net::IMAP::Config.global
+    refute parser.config.frozen?
+    refute_equal Net::IMAP::Config.global, parser.config
+    assert_same  Net::IMAP::Config.global, parser.config.parent
+  end
+
+  test "config will inherits from passed in frozen config" do
+    parser = Net::IMAP::ResponseParser.new config: {debug: true}
+    refute_equal Net::IMAP::Config.global, parser.config.parent
+    refute parser.config.frozen?
+
+    assert parser.config.parent.frozen?
+    assert parser.config.debug?
+    assert parser.config.inherited?(:debug)
+
+    config = Net::IMAP::Config[debug: true]
+    parser = Net::IMAP::ResponseParser.new(config:)
+    refute_equal Net::IMAP::Config.global, parser.config.parent
+    assert_same  config, parser.config.parent
+  end
+
   # Strangly, there are no example responses for BINARY[section] in either
   # RFC3516 or RFC9051!  The closest I found was RFC5259, and those examples
   # aren't FETCH responses.
