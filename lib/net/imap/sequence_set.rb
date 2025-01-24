@@ -204,14 +204,11 @@ module Net
     #
     # === Methods for Iterating
     #
+    # <i>Normalized (sorted and coalesced):</i>
     # - #each_element: Yields each number and range in the set, sorted and
     #   coalesced, and returns +self+.
     # - #elements (aliased as #to_a): Returns an Array of every number and range
     #   in the set, sorted and coalesced.
-    # - #each_entry: Yields each number and range in the set, unsorted and
-    #   without deduplicating numbers or coalescing ranges, and returns +self+.
-    # - #entries: Returns an Array of every number and range in the set,
-    #   unsorted and without deduplicating numbers or coalescing ranges.
     # - #each_range:
     #   Yields each element in the set as a Range and returns +self+.
     # - #ranges: Returns an Array of every element in the set, converting
@@ -220,6 +217,12 @@ module Net
     # - #numbers: Returns an Array with every number in the set, expanding
     #   ranges into all of their contained numbers.
     # - #to_set: Returns a Set containing all of the #numbers in the set.
+    #
+    # <i>Order preserving:</i>
+    # - #each_entry: Yields each number and range in the set, unsorted and
+    #   without deduplicating numbers or coalescing ranges, and returns +self+.
+    # - #entries: Returns an Array of every number and range in the set,
+    #   unsorted and without deduplicating numbers or coalescing ranges.
     #
     # === Methods for \Set Operations
     # These methods do not modify +self+.
@@ -240,19 +243,29 @@ module Net
     # === Methods for Assigning
     # These methods add or replace elements in +self+.
     #
+    # <i>Normalized (sorted and coalesced):</i>
+    #
+    # These methods always update #string to be fully sorted and coalesced.
+    #
     # - #add (aliased as #<<): Adds a given object to the set; returns +self+.
     # - #add?: If the given object is not an element in the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
     # - #merge: Merges multiple elements into the set; returns +self+.
+    # - #complement!: Replaces the contents of the set with its own #complement.
+    #
+    # <i>Order preserving:</i>
+    #
+    # These methods _may_ cause #string to not be sorted or coalesced.
+    #
     # - #append: Adds a given object to the set, appending it to the existing
     #   string, and returns +self+.
     # - #string=: Assigns a new #string value and replaces #elements to match.
     # - #replace: Replaces the contents of the set with the contents
     #   of a given object.
-    # - #complement!: Replaces the contents of the set with its own #complement.
     #
     # === Methods for Deleting
-    # These methods remove elements from +self+.
+    # These methods remove elements from +self+, and update #string to be fully
+    # sorted and coalesced.
     #
     # - #clear: Removes all elements in the set; returns +self+.
     # - #delete: Removes a given object from the set; returns +self+.
