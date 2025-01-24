@@ -764,12 +764,22 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal data[:elements], SequenceSet.new(data[:input]).elements
   end
 
-  test "#each_element" do |data|
-    seqset = SequenceSet.new(data[:input])
+  def assert_seqset_enum(expected, seqset, enum)
     array = []
-    assert_equal seqset, seqset.each_element { array << _1 }
-    assert_equal data[:elements], array
-    assert_equal data[:elements], seqset.each_element.to_a
+    assert_equal seqset, seqset.send(enum) { array << _1 }
+    assert_equal expected, array
+
+    array = []
+    assert_equal seqset, seqset.send(enum).each { array << _1 }
+    assert_equal expected, array
+
+    assert_equal expected, seqset.send(enum).to_a
+  end
+
+  test "#each_element" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:elements]
+    assert_seqset_enum expected, seqset, :each_element
   end
 
   test "#entries" do |data|
@@ -777,19 +787,15 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   end
 
   test "#each_entry" do |data|
-    seqset = SequenceSet.new(data[:input])
-    array = []
-    assert_equal seqset, seqset.each_entry { array << _1 }
-    assert_equal data[:entries], array
-    assert_equal data[:entries], seqset.each_entry.to_a
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:entries]
+    assert_seqset_enum expected, seqset, :each_entry
   end
 
   test "#each_range" do |data|
-    seqset = SequenceSet.new(data[:input])
-    array = []
-    assert_equal seqset, seqset.each_range { array << _1 }
-    assert_equal data[:ranges], array
-    assert_equal data[:ranges], seqset.each_range.to_a
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:ranges]
+    assert_seqset_enum expected, seqset, :each_range
   end
 
   test "#ranges" do |data|
@@ -799,15 +805,15 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   test "#each_number" do |data|
     seqset   = SequenceSet.new(data[:input])
     expected = data[:numbers]
-    enum     = seqset.each_number
     if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do
+        seqset.each_number do fail "shouldn't get here" end
+      end
+      enum = seqset.each_number
       assert_raise expected do enum.to_a end
       assert_raise expected do enum.each do fail "shouldn't get here" end end
     else
-      array = []
-      assert_equal seqset, seqset.each_number { array << _1 }
-      assert_equal expected, array
-      assert_equal expected, seqset.each_number.to_a
+      assert_seqset_enum expected, seqset, :each_number
     end
   end
 
