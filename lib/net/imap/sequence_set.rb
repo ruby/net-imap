@@ -198,16 +198,21 @@ module Net
     # - #full?: Returns whether the set contains every possible value, including
     #   <tt>*</tt>.
     #
+    # <i>Denormalized properties:</i>
+    # - #has_duplicates?: Returns whether the ordered entries repeat any
+    #   numbers.
+    # - #count_duplicates: Returns the count of repeated numbers in the ordered
+    #   entries.
+    # - #count_with_duplicates: Returns the count of numbers in the ordered
+    #   entries, including any repeated numbers.
+    #
     # === Methods for Iterating
     #
+    # <i>Normalized (sorted and coalesced):</i>
     # - #each_element: Yields each number and range in the set, sorted and
     #   coalesced, and returns +self+.
     # - #elements (aliased as #to_a): Returns an Array of every number and range
     #   in the set, sorted and coalesced.
-    # - #each_entry: Yields each number and range in the set, unsorted and
-    #   without deduplicating numbers or coalescing ranges, and returns +self+.
-    # - #entries: Returns an Array of every number and range in the set,
-    #   unsorted and without deduplicating numbers or coalescing ranges.
     # - #each_range:
     #   Yields each element in the set as a Range and returns +self+.
     # - #ranges: Returns an Array of every element in the set, converting
@@ -216,6 +221,12 @@ module Net
     # - #numbers: Returns an Array with every number in the set, expanding
     #   ranges into all of their contained numbers.
     # - #to_set: Returns a Set containing all of the #numbers in the set.
+    #
+    # <i>Order preserving:</i>
+    # - #each_entry: Yields each number and range in the set, unsorted and
+    #   without deduplicating numbers or coalescing ranges, and returns +self+.
+    # - #entries: Returns an Array of every number and range in the set,
+    #   unsorted and without deduplicating numbers or coalescing ranges.
     #
     # === Methods for \Set Operations
     # These methods do not modify +self+.
@@ -236,19 +247,29 @@ module Net
     # === Methods for Assigning
     # These methods add or replace elements in +self+.
     #
+    # <i>Normalized (sorted and coalesced):</i>
+    #
+    # These methods always update #string to be fully sorted and coalesced.
+    #
     # - #add (aliased as #<<): Adds a given object to the set; returns +self+.
     # - #add?: If the given object is not an element in the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
     # - #merge: Merges multiple elements into the set; returns +self+.
+    # - #complement!: Replaces the contents of the set with its own #complement.
+    #
+    # <i>Order preserving:</i>
+    #
+    # These methods _may_ cause #string to not be sorted or coalesced.
+    #
     # - #append: Adds a given object to the set, appending it to the existing
     #   string, and returns +self+.
     # - #string=: Assigns a new #string value and replaces #elements to match.
     # - #replace: Replaces the contents of the set with the contents
     #   of a given object.
-    # - #complement!: Replaces the contents of the set with its own #complement.
     #
     # === Methods for Deleting
-    # These methods remove elements from +self+.
+    # These methods remove elements from +self+, and update #string to be fully
+    # sorted and coalesced.
     #
     # - #clear: Removes all elements in the set; returns +self+.
     # - #delete: Removes a given object from the set; returns +self+.
@@ -910,9 +931,7 @@ module Net
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        return each_element(&block) unless @string
-        @string.split(",").each do yield tuple_to_entry str_to_tuple _1 end
-        self
+        each_entry_tuple do yield tuple_to_entry _1 end
       end
 
       # Yields each number or range (or <tt>:*</tt>) in #elements to the block
@@ -929,6 +948,16 @@ module Net
       end
 
       private
+
+      def each_entry_tuple(&block)
+        return to_enum(__method__) unless block_given?
+        if @string
+          @string.split(",") do block.call str_to_tuple _1 end
+        else
+          @tuples.each(&block)
+        end
+        self
+      end
 
       def tuple_to_entry((min, max))
         if    min == STAR_INT then :*
@@ -988,11 +1017,48 @@ module Net
       # If <tt>*</tt> and <tt>2**32 - 1</tt> (the maximum 32-bit unsigned
       # integer value) are both in the set, they will only be counted once.
       def count
-        @tuples.sum(@tuples.count) { _2 - _1 } +
-          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+        count_numbers_in_tuples(@tuples)
       end
 
       alias size count
+
+      # Returns the count of numbers in the ordered #entries, including any
+      # repeated numbers.
+      #
+      # When #string is normalized, this behaves the same as #count.
+      #
+      # Related: #entries, #count_duplicates, #has_duplicates?
+      def count_with_duplicates
+        return count unless @string
+        count_numbers_in_tuples(each_entry_tuple)
+      end
+
+      # Returns the count of repeated numbers in the ordered #entries.
+      #
+      # When #string is normalized, this is zero.
+      #
+      # Related: #entries, #count_with_duplicates, #has_duplicates?
+      def count_duplicates
+        return 0 unless @string
+        count_with_duplicates - count
+      end
+
+      # :call-seq: has_duplicates? -> true | false
+      #
+      # Returns whether or not the ordered #entries repeat any numbers.
+      #
+      # Always returns +false+ when #string is normalized.
+      #
+      # Related: #entries, #count_with_duplicates, #count_duplicates?
+      def has_duplicates?
+        return false unless @string
+        count_with_duplicates != count
+      end
+
+      private def count_numbers_in_tuples(tuples)
+        tuples.sum(tuples.count) { _2 - _1 } +
+          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+      end
 
       # Returns the index of +number+ in the set, or +nil+ if +number+ isn't in
       # the set.
