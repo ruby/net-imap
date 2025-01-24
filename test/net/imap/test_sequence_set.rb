@@ -782,8 +782,40 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal data[:entries], seqset.each_entry.to_a
   end
 
+  test "#each_range" do |data|
+    seqset = SequenceSet.new(data[:input])
+    array = []
+    assert_equal seqset, seqset.each_range { array << _1 }
+    assert_equal data[:ranges], array
+    assert_equal data[:ranges], seqset.each_range.to_a
+  end
+
   test "#ranges" do |data|
     assert_equal data[:ranges], SequenceSet.new(data[:input]).ranges
+  end
+
+  test "#each_number" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:numbers]
+    enum     = seqset.each_number
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do enum.to_a end
+      assert_raise expected do enum.each do fail "shouldn't get here" end end
+    else
+      array = []
+      assert_equal seqset, seqset.each_number { array << _1 }
+      assert_equal expected, array
+      assert_equal expected, seqset.each_number.to_a
+    end
+  end
+
+  test "#numbers" do |data|
+    expected = data[:numbers]
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do SequenceSet.new(data[:input]).numbers end
+    else
+      assert_equal expected, SequenceSet.new(data[:input]).numbers
+    end
   end
 
   test "#string" do |data|
@@ -833,15 +865,6 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     set = SequenceSet.new(data[:input])
     assert_equal(data[:complement], set.complement.to_s)
     assert_equal(data[:complement], (~set).to_s)
-  end
-
-  test "#numbers" do |data|
-    expected = data[:numbers]
-    if expected.is_a?(Class) && expected < Exception
-      assert_raise expected do SequenceSet.new(data[:input]).numbers end
-    else
-      assert_equal expected, SequenceSet.new(data[:input]).numbers
-    end
   end
 
   test "SequenceSet[input]" do |input|
