@@ -727,6 +727,19 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     complement: "6:8,12:*",
   }, keep: true
 
+  data "multiple *", {
+    input:      "2:*,3:*,*",
+    elements:   [2..],
+    entries:    [2.., 3.., :*],
+    ranges:     [2..],
+    numbers:    RangeError,
+    to_s:       "2:*,3:*,*",
+    normalize:  "2:*",
+    count:      2**32 - 2,
+    count_dups: 2**32 - 2,
+    complement: "1",
+  }, keep: true
+
   data "array", {
     input:      ["1:5,3:4", 9..11, "10", 99, :*],
     elements:   [1..5, 9..11, 99, :*],

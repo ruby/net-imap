@@ -1037,10 +1037,13 @@ module Net
 
       # Returns the count of #numbers in the set.
       #
-      # If <tt>*</tt> and <tt>2**32 - 1</tt> (the maximum 32-bit unsigned
-      # integer value) are both in the set, they will only be counted once.
+      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
+      # unsigned integer value).
+      #
+      # Related: #count_with_duplicates
       def count
-        count_numbers_in_tuples(@tuples)
+        @tuples.sum(@tuples.count) { _2 - _1 } +
+          (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
       alias size count
@@ -1048,15 +1051,21 @@ module Net
       # Returns the count of numbers in the ordered #entries, including any
       # repeated numbers.
       #
+      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
+      # unsigned integer value).
+      #
       # When #string is normalized, this behaves the same as #count.
       #
       # Related: #entries, #count_duplicates, #has_duplicates?
       def count_with_duplicates
         return count unless @string
-        count_numbers_in_tuples(each_entry_tuple)
+        each_entry_tuple.sum {|min, max|
+          max - min + ((max == STAR_INT && min != STAR_INT) ? 0 : 1)
+        }
       end
 
-      # Returns the count of repeated numbers in the ordered #entries.
+      # Returns the count of repeated numbers in the ordered #entries, the
+      # difference between #count_with_duplicates and #count.
       #
       # When #string is normalized, this is zero.
       #
@@ -1076,11 +1085,6 @@ module Net
       def has_duplicates?
         return false unless @string
         count_with_duplicates != count
-      end
-
-      private def count_numbers_in_tuples(tuples)
-        tuples.sum(tuples.count) { _2 - _1 } +
-          (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
       # Returns the index of +number+ in the set, or +nil+ if +number+ isn't in
