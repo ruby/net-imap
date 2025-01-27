@@ -8,6 +8,7 @@ gem "digest"
 gem "strscan"
 gem "base64"
 
+gem "irb"
 gem "rake"
 gem "rdoc"
 gem "test-unit"
