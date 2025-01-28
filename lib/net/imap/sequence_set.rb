@@ -1455,6 +1455,13 @@ module Net
         normalize!
       end
 
+      # TODO: document this
+      # TODO: test this
+      # TODO: faster implementation using `each_entry.each_cons(2)`
+      def normalized?
+        @string.nil? || @string == normalized_string
+      end
+
       # Returns a new SequenceSet with a normalized string representation.
       #
       # The returned set's #string is sorted and deduplicated.  Adjacent or
