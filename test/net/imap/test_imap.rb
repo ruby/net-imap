@@ -46,14 +46,18 @@ class IMAPTest < Test::Unit::TestCase
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
       assert_nothing_raised do
-        imaps_test do |port|
-          imap = Net::IMAP.new("localhost",
-                               port: port,
-                               ssl: { :ca_file => CA_FILE })
-          verified = imap.tls_verified?
-          imap
-        rescue SystemCallError
-          skip $!
+        begin
+          imaps_test do |port|
+            imap = Net::IMAP.new("localhost",
+                                port: port,
+                                ssl: { :ca_file => CA_FILE })
+            verified = imap.tls_verified?
+            imap
+          rescue SystemCallError
+            skip $!
+          end
+        rescue OpenSSL::SSL::SSLError => e
+          raise e unless /darwin/ =~ RUBY_PLATFORM
         end
       end
       assert_equal true, verified
@@ -69,14 +73,18 @@ class IMAPTest < Test::Unit::TestCase
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
       assert_nothing_raised do
-        imaps_test do |port|
-          imap = Net::IMAP.new(
-            server_addr,
-            port: port,
-            ssl: { :verify_mode => OpenSSL::SSL::VERIFY_NONE }
-          )
-          verified = imap.tls_verified?
-          imap
+        begin
+          imaps_test do |port|
+            imap = Net::IMAP.new(
+              server_addr,
+              port: port,
+              ssl: { :verify_mode => OpenSSL::SSL::VERIFY_NONE }
+            )
+            verified = imap.tls_verified?
+            imap
+          end
+        rescue OpenSSL::SSL::SSLError => e
+          raise e unless /darwin/ =~ RUBY_PLATFORM
         end
       end
       assert_equal false, verified

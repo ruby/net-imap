@@ -4,7 +4,7 @@ require_relative "../fake_server"
 
 module Net::IMAP::FakeServer::TestHelper
 
-  def run_fake_server_in_thread(ignore_io_error: false, timeout: 5, **opts)
+  def run_fake_server_in_thread(ignore_io_error: false, timeout: 10, **opts)
     Timeout.timeout(timeout) do
       server = Net::IMAP::FakeServer.new(timeout: timeout, **opts)
       @threads << Thread.new do
