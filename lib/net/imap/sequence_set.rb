@@ -183,11 +183,11 @@ module Net
     # - #max: Returns the maximum number in the set.
     # - #minmax: Returns the minimum and maximum numbers in the set.
     #
-    # <i>Accessing value by (normalized) offset:</i>
+    # <i>Accessing value by offset in sorted set:</i>
     # - #[] (aliased as #slice): Returns the number or consecutive subset at a
-    #   given offset or range of offsets.
-    # - #at: Returns the number at a given offset.
-    # - #find_index: Returns the given number's offset in the set
+    #   given offset or range of offsets in the sorted set.
+    # - #at: Returns the number at a given offset in the sorted set.
+    # - #find_index: Returns the given number's offset in the sorted set.
     #
     # <i>Set cardinality:</i>
     # - #count (aliased as #size): Returns the count of numbers in the set.
@@ -1083,10 +1083,10 @@ module Net
         count_with_duplicates != count
       end
 
-      # Returns the index of +number+ in the set, or +nil+ if +number+ isn't in
-      # the set.
+      # Returns the (sorted and deduplicated) index of +number+ in the set, or
+      # +nil+ if +number+ isn't in the set.
       #
-      # Related: #[]
+      # Related: #[], #at
       def find_index(number)
         number = to_tuple_int number
         each_tuple_with_index do |min, max, idx_min|
@@ -1120,8 +1120,11 @@ module Net
 
       # :call-seq: at(index) -> integer or nil
       #
-      # Returns a number from +self+, without modifying the set.  Behaves the
-      # same as #[], except that #at only allows a single integer argument.
+      # Returns the number at the given +index+ in the sorted set, without
+      # modifying the set.
+      #
+      # +index+ is interpreted the same as in #[], except that #at only allows a
+      # single integer argument.
       #
       # Related: #[], #slice
       def at(index)
@@ -1146,17 +1149,18 @@ module Net
       #    seqset[range]         -> sequence set or nil
       #    slice(range)          -> sequence set or nil
       #
-      # Returns a number or a subset from +self+, without modifying the set.
+      # Returns a number or a subset from the _sorted_ set, without modifying
+      # the set.
       #
       # When an Integer argument +index+ is given, the number at offset +index+
-      # is returned:
+      # in the sorted set is returned:
       #
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[0]   #=> 10
       #     set[5]   #=> 15
       #     set[10]  #=> 26
       #
-      # If +index+ is negative, it counts relative to the end of +self+:
+      # If +index+ is negative, it counts relative to the end of the sorted set:
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[-1]  #=> 26
       #     set[-3]  #=> 22
@@ -1168,13 +1172,14 @@ module Net
       #     set[11]  #=> nil
       #     set[-12] #=> nil
       #
-      # The result is based on the normalized set—sorted and de-duplicated—not
-      # on the assigned value of #string.
+      # The result is based on the sorted and de-duplicated set, not on the
+      # ordered #entries in #string.
       #
       #     set = Net::IMAP::SequenceSet["12,20:23,11:16,21"]
       #     set[0]   #=> 11
       #     set[-1]  #=> 23
       #
+      # Related: #at
       def [](index, length = nil)
         if    length              then slice_length(index, length)
         elsif index.is_a?(Range)  then slice_range(index)
