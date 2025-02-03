@@ -113,17 +113,16 @@ class IMAPTest < Test::Unit::TestCase
       omit "This test is not working with Windows" if RUBY_PLATFORM =~ /mswin|mingw/
 
       imap = nil
-      assert_raise(OpenSSL::SSL::SSLError) do
-        ex = nil
-        starttls_test do |port|
-          imap = Net::IMAP.new("localhost", port: port)
+      ex = nil
+      starttls_test do |port|
+        imap = Net::IMAP.new("localhost", port: port)
+        begin
           imap.starttls
-          imap
         rescue => ex
-          imap
         end
-        raise ex if ex
+        imap
       end
+      assert_kind_of(OpenSSL::SSL::SSLError, ex)
       assert_equal false, imap.tls_verified?
       assert_equal({}, imap.ssl_ctx_params)
       assert_equal(nil, imap.ssl_ctx.ca_file)
