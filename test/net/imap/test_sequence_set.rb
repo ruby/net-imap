@@ -164,6 +164,21 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet.try_convert(obj) end
   end
 
+  test "#at(non-negative index)" do
+    assert_nil        SequenceSet.empty.at(0)
+    assert_equal   1, SequenceSet[1..].at(0)
+    assert_equal   1, SequenceSet.full.at(0)
+    assert_equal 111, SequenceSet.full.at(110)
+    assert_equal   4, SequenceSet[2,4,6,8].at(1)
+    assert_equal   8, SequenceSet[2,4,6,8].at(3)
+    assert_equal   6, SequenceSet[4..6].at(2)
+    assert_nil        SequenceSet[4..6].at(3)
+    assert_equal 205, SequenceSet["101:110,201:210,301:310"].at(14)
+    assert_equal 310, SequenceSet["101:110,201:210,301:310"].at(29)
+    assert_nil        SequenceSet["101:110,201:210,301:310"].at(44)
+    assert_equal  :*, SequenceSet["1:10,*"].at(10)
+  end
+
   test "#[non-negative index]" do
     assert_nil        SequenceSet.empty[0]
     assert_equal   1, SequenceSet[1..][0]
@@ -179,18 +194,32 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal  :*, SequenceSet["1:10,*"][10]
   end
 
+  test "#at(negative index)" do
+    assert_nil        SequenceSet.empty.at(-1)
+    assert_equal  :*, SequenceSet[1..].at(-1)
+    assert_equal   1, SequenceSet.full.at(-(2**32))
+    assert_equal 111, SequenceSet[1..111].at(-1)
+    assert_equal   6, SequenceSet[2,4,6,8].at(-2)
+    assert_equal   2, SequenceSet[2,4,6,8].at(-4)
+    assert_equal   4, SequenceSet[4..6].at(-3)
+    assert_nil        SequenceSet[4..6].at(-4)
+    assert_equal 207, SequenceSet["101:110,201:210,301:310"].at(-14)
+    assert_equal 102, SequenceSet["101:110,201:210,301:310"].at(-29)
+    assert_nil        SequenceSet["101:110,201:210,301:310"].at(-44)
+  end
+
   test "#[negative index]" do
-    assert_nil        SequenceSet.empty[0]
+    assert_nil        SequenceSet.empty[-1]
     assert_equal  :*, SequenceSet[1..][-1]
     assert_equal   1, SequenceSet.full[-(2**32)]
     assert_equal 111, SequenceSet[1..111][-1]
-    assert_equal   4, SequenceSet[2,4,6,8][1]
-    assert_equal   8, SequenceSet[2,4,6,8][3]
-    assert_equal   6, SequenceSet[4..6][2]
-    assert_nil        SequenceSet[4..6][3]
-    assert_equal 205, SequenceSet["101:110,201:210,301:310"][14]
-    assert_equal 310, SequenceSet["101:110,201:210,301:310"][29]
-    assert_nil        SequenceSet["101:110,201:210,301:310"][44]
+    assert_equal   6, SequenceSet[2,4,6,8][-2]
+    assert_equal   2, SequenceSet[2,4,6,8][-4]
+    assert_equal   4, SequenceSet[4..6][-3]
+    assert_nil        SequenceSet[4..6][-4]
+    assert_equal 207, SequenceSet["101:110,201:210,301:310"][-14]
+    assert_equal 102, SequenceSet["101:110,201:210,301:310"][-29]
+    assert_nil        SequenceSet["101:110,201:210,301:310"][-44]
   end
 
   test "#[start, length]" do
