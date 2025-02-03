@@ -1222,13 +1222,21 @@ module Net
     #
     def starttls(**options)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options)
-      send_command("STARTTLS") do |resp|
+      error = nil
+      ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
           clear_cached_capabilities
           clear_responses
           start_tls_session
         end
+      rescue Exception => error
+        raise # note that the error backtrace is in the receiver_thread
       end
+      if error
+        disconnect
+        raise error
+      end
+      ok
     end
 
     # :call-seq:
