@@ -193,6 +193,10 @@ module Net
     # - #at: Returns the number at a given offset in the sorted set.
     # - #find_index: Returns the given number's offset in the sorted set.
     #
+    # <i>Accessing value by offset in ordered entries</i>
+    # - #find_ordered_index: Returns the index of the given number's first
+    #   occurrence in entries.
+    #
     # <i>Set cardinality:</i>
     # - #count (aliased as #size): Returns the count of numbers in the set.
     #   Duplicated numbers are not counted.
@@ -1090,30 +1094,45 @@ module Net
       # Returns the (sorted and deduplicated) index of +number+ in the set, or
       # +nil+ if +number+ isn't in the set.
       #
-      # Related: #[], #at
+      # Related: #[], #at, #find_ordered_index
       def find_index(number)
         number = to_tuple_int number
-        each_tuple_with_index do |min, max, idx_min|
+        each_tuple_with_index(@tuples) do |min, max, idx_min|
           number <  min and return nil
           number <= max and return from_tuple_int(idx_min + (number - min))
         end
         nil
       end
 
+      # Returns the first index of +number+ in the ordered #entries, or
+      # +nil+ if +number+ isn't in the set.
+      #
+      # Related: #find_index
+      def find_ordered_index(number)
+        number = to_tuple_int number
+        each_tuple_with_index(each_entry_tuple) do |min, max, idx_min|
+          if min <= number && number <= max
+            return from_tuple_int(idx_min + (number - min))
+          end
+        end
+        nil
+      end
+
       private
 
-      def each_tuple_with_index
+      def each_tuple_with_index(tuples)
         idx_min = 0
-        @tuples.each do |min, max|
-          yield min, max, idx_min, (idx_max = idx_min + (max - min))
+        tuples.each do |min, max|
+          idx_max = idx_min + (max - min)
+          yield min, max, idx_min, idx_max
           idx_min = idx_max + 1
         end
         idx_min
       end
 
-      def reverse_each_tuple_with_index
+      def reverse_each_tuple_with_index(tuples)
         idx_max = -1
-        @tuples.reverse_each do |min, max|
+        tuples.reverse_each do |min, max|
           yield min, max, (idx_min = idx_max - (max - min)), idx_max
           idx_max = idx_min - 1
         end
@@ -1134,11 +1153,11 @@ module Net
       def at(index)
         index = Integer(index.to_int)
         if index.negative?
-          reverse_each_tuple_with_index do |min, max, idx_min, idx_max|
+          reverse_each_tuple_with_index(@tuples) do |min, max, idx_min, idx_max|
             idx_min <= index and return from_tuple_int(min + (index - idx_min))
           end
         else
-          each_tuple_with_index do |min, _, idx_min, idx_max|
+          each_tuple_with_index(@tuples) do |min, _, idx_min, idx_max|
             index <= idx_max and return from_tuple_int(min + (index - idx_min))
           end
         end

@@ -248,6 +248,44 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal 2**32 - 1, SequenceSet.full.find_index(:*)
   end
 
+  test "#find_ordered_index" do
+    assert_equal         9, SequenceSet.full.find_ordered_index(10)
+    assert_equal        99, SequenceSet.full.find_ordered_index(100)
+    assert_equal 2**32 - 1, SequenceSet.full.find_ordered_index(:*)
+    assert_nil SequenceSet.empty.find_index(1)
+    set = SequenceSet["9,8,7,6,5,4,3,2,1"]
+    assert_equal 0, set.find_ordered_index(9)
+    assert_equal 1, set.find_ordered_index(8)
+    assert_equal 2, set.find_ordered_index(7)
+    assert_equal 3, set.find_ordered_index(6)
+    assert_equal 4, set.find_ordered_index(5)
+    assert_equal 5, set.find_ordered_index(4)
+    assert_equal 6, set.find_ordered_index(3)
+    assert_equal 7, set.find_ordered_index(2)
+    assert_equal 8, set.find_ordered_index(1)
+    assert_nil      set.find_ordered_index(10)
+    set = SequenceSet["7:9,5:6"]
+    assert_equal 0, set.find_ordered_index(7)
+    assert_equal 1, set.find_ordered_index(8)
+    assert_equal 2, set.find_ordered_index(9)
+    assert_equal 3, set.find_ordered_index(5)
+    assert_equal 4, set.find_ordered_index(6)
+    assert_nil   set.find_ordered_index(4)
+    set = SequenceSet["1000:1111,1:100"]
+    assert_equal   0, set.find_ordered_index(1000)
+    assert_equal 100, set.find_ordered_index(1100)
+    assert_equal 112, set.find_ordered_index(1)
+    assert_equal 121, set.find_ordered_index(10)
+    set = SequenceSet["1,1,1,1,51,50,4,11"]
+    assert_equal   0, set.find_ordered_index(1)
+    assert_equal   4, set.find_ordered_index(51)
+    assert_equal   5, set.find_ordered_index(50)
+    assert_equal   6, set.find_ordered_index(4)
+    assert_equal   7, set.find_ordered_index(11)
+    assert_equal   1, SequenceSet["1,*"].find_ordered_index(-1)
+    assert_equal   0, SequenceSet["*,1"].find_ordered_index(-1)
+  end
+
   test "#limit" do
     set = SequenceSet["1:100,500"]
     assert_equal [1..99],               set.limit(max: 99).ranges
