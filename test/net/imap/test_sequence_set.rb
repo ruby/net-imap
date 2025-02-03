@@ -222,6 +222,38 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_nil        SequenceSet["101:110,201:210,301:310"][-44]
   end
 
+  test "#ordered_at(non-negative index)" do
+    assert_nil        SequenceSet.empty.ordered_at(0)
+    assert_equal   1, SequenceSet.full.ordered_at(0)
+    assert_equal 111, SequenceSet.full.ordered_at(110)
+    assert_equal   1, SequenceSet["1:*"].ordered_at(0)
+    assert_equal  :*, SequenceSet["*,1"].ordered_at(0)
+    assert_equal   4, SequenceSet["6,4,8,2"].ordered_at(1)
+    assert_equal   2, SequenceSet["6,4,8,2"].ordered_at(3)
+    assert_equal   6, SequenceSet["9:11,4:6,1:3"].ordered_at(5)
+    assert_nil        SequenceSet["9:11,4:6,1:3"].ordered_at(9)
+    assert_equal 105, SequenceSet["201:210,101:110,301:310"].ordered_at(14)
+    assert_equal 310, SequenceSet["201:210,101:110,301:310"].ordered_at(29)
+    assert_nil        SequenceSet["201:210,101:110,301:310"].ordered_at(30)
+    assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
+  end
+
+  test "#ordered_at(negative index)" do
+    assert_nil        SequenceSet.empty.ordered_at(-1)
+    assert_equal  :*, SequenceSet["1:*"].ordered_at(-1)
+    assert_equal   1, SequenceSet.full.ordered_at(-(2**32))
+    assert_equal  :*, SequenceSet["*,1"].ordered_at(0)
+    assert_equal   8, SequenceSet["6,4,8,2"].ordered_at(-2)
+    assert_equal   6, SequenceSet["6,4,8,2"].ordered_at(-4)
+    assert_equal   4, SequenceSet["9:11,4:6,1:3"].ordered_at(-6)
+    assert_equal  10, SequenceSet["9:11,4:6,1:3"].ordered_at(-8)
+    assert_nil        SequenceSet["9:11,4:6,1:3"].ordered_at(-12)
+    assert_equal 107, SequenceSet["201:210,101:110,301:310"].ordered_at(-14)
+    assert_equal 201, SequenceSet["201:210,101:110,301:310"].ordered_at(-30)
+    assert_nil        SequenceSet["201:210,101:110,301:310"].ordered_at(-31)
+    assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
+  end
+
   test "#[start, length]" do
     assert_equal SequenceSet[10..99], SequenceSet.full[9, 90]
     assert_equal 90, SequenceSet.full[9, 90].count
