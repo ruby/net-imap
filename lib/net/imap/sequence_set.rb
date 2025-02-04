@@ -190,6 +190,7 @@ module Net
     # - #find_index: Returns the given number's offset in the sorted set.
     #
     # <i>Accessing value by offset in ordered entries</i>
+    # - #ordered_at: Returns the number at a given offset in the ordered entries.
     # - #find_ordered_index: Returns the index of the given number's first
     #   occurrence in entries.
     #
@@ -1145,15 +1146,32 @@ module Net
       # +index+ is interpreted the same as in #[], except that #at only allows a
       # single integer argument.
       #
-      # Related: #[], #slice
+      # Related: #[], #slice, #ordered_at
       def at(index)
+        lookup_number_by_tuple_index(tuples, index)
+      end
+
+      # :call-seq: ordered_at(index) -> integer or nil
+      #
+      # Returns the number at the given +index+ in the ordered #entries, without
+      # modifying the set.
+      #
+      # +index+ is interpreted the same as in #at (and #[]), except that
+      # #ordered_at applies to the ordered #entries, not the sorted set.
+      #
+      # Related: #[], #slice, #ordered_at
+      def ordered_at(index)
+        lookup_number_by_tuple_index(each_entry_tuple, index)
+      end
+
+      private def lookup_number_by_tuple_index(tuples, index)
         index = Integer(index.to_int)
         if index.negative?
-          reverse_each_tuple_with_index(@tuples) do |min, max, idx_min, idx_max|
+          reverse_each_tuple_with_index(tuples) do |min, max, idx_min, idx_max|
             idx_min <= index and return from_tuple_int(min + (index - idx_min))
           end
         else
-          each_tuple_with_index(@tuples) do |min, _, idx_min, idx_max|
+          each_tuple_with_index(tuples) do |min, _, idx_min, idx_max|
             index <= idx_max and return from_tuple_int(min + (index - idx_min))
           end
         end
