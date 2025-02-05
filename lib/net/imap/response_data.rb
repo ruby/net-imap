@@ -7,6 +7,7 @@ module Net
     autoload :SequenceSet,      "#{__dir__}/sequence_set"
     autoload :UIDPlusData,      "#{__dir__}/uidplus_data"
     autoload :AppendUIDData,    "#{__dir__}/uidplus_data"
+    autoload :CopyUIDData,      "#{__dir__}/uidplus_data"
 
     # Net::IMAP::ContinuationRequest represents command continuation requests.
     #
