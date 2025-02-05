@@ -6,12 +6,20 @@ module Net
     # UIDPlusData represents the ResponseCode#data that accompanies the
     # +APPENDUID+ and +COPYUID+ {response codes}[rdoc-ref:ResponseCode].
     #
-    # A server that supports +UIDPLUS+ should send a UIDPlusData object inside
-    # every TaggedResponse returned by the append[rdoc-ref:Net::IMAP#append],
-    # copy[rdoc-ref:Net::IMAP#copy], move[rdoc-ref:Net::IMAP#move], {uid
-    # copy}[rdoc-ref:Net::IMAP#uid_copy], and {uid
-    # move}[rdoc-ref:Net::IMAP#uid_move] commands---unless the destination
-    # mailbox reports +UIDNOTSTICKY+.
+    # A server that supports +UIDPLUS+ should send UIDPlusData in response to
+    # the append[rdoc-ref:Net::IMAP#append], copy[rdoc-ref:Net::IMAP#copy],
+    # move[rdoc-ref:Net::IMAP#move], {uid copy}[rdoc-ref:Net::IMAP#uid_copy],
+    # and {uid move}[rdoc-ref:Net::IMAP#uid_move] commands---unless the
+    # destination mailbox reports +UIDNOTSTICKY+.
+    #
+    # Note that append[rdoc-ref:Net::IMAP#append], copy[rdoc-ref:Net::IMAP#copy]
+    # and {uid_copy}[rdoc-ref:Net::IMAP#uid_copy] return UIDPlusData in their
+    # TaggedResponse.  But move[rdoc-ref:Net::IMAP#copy] and
+    # {uid_move}[rdoc-ref:Net::IMAP#uid_move] _should_ send UIDPlusData in an
+    # UntaggedResponse response before sending their TaggedResponse.  However
+    # some servers do send UIDPlusData in the TaggedResponse for +MOVE+
+    # commands---this complies with the older +UIDPLUS+ specification but is
+    # discouraged by the +MOVE+ extension and disallowed by +IMAP4rev2+.
     #
     # == Required capability
     # Requires either +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315]]
