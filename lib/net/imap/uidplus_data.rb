@@ -3,6 +3,10 @@
 module Net
   class IMAP < Protocol
 
+    # *NOTE:* <em>UIDPlusData is deprecated and will be removed in the +0.6.0+
+    # release.</em>  To use AppendUIDData and CopyUIDData before +0.6.0+, set
+    # Config#parser_use_deprecated_uidplus_data to +false+.
+    #
     # UIDPlusData represents the ResponseCode#data that accompanies the
     # +APPENDUID+ and +COPYUID+ {response codes}[rdoc-ref:ResponseCode].
     #
@@ -60,6 +64,11 @@ module Net
       end
     end
 
+    # >>>
+    #   *NOTE:* <em>AppendUIDData will replace UIDPlusData for +APPENDUID+ in the
+    #   +0.6.0+ release.</em>  To use AppendUIDData before +0.6.0+, set
+    #   Config#parser_use_deprecated_uidplus_data to +false+.
+    #
     # AppendUIDData represents the ResponseCode#data that accompanies the
     # +APPENDUID+ {response code}[rdoc-ref:ResponseCode].
     #
@@ -99,6 +108,11 @@ module Net
       end
     end
 
+    # >>>
+    #   *NOTE:* <em>CopyUIDData will replace UIDPlusData for +COPYUID+ in the
+    #   +0.6.0+ release.</em>  To use CopyUIDData before +0.6.0+, set
+    #   Config#parser_use_deprecated_uidplus_data to +false+.
+    #
     # CopyUIDData represents the ResponseCode#data that accompanies the
     # +COPYUID+ {response code}[rdoc-ref:ResponseCode].
     #
