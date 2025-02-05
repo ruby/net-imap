@@ -60,5 +60,44 @@ module Net
       end
     end
 
+    # AppendUIDData represents the ResponseCode#data that accompanies the
+    # +APPENDUID+ {response code}[rdoc-ref:ResponseCode].
+    #
+    # A server that supports +UIDPLUS+ (or +IMAP4rev2+) should send
+    # AppendUIDData inside every TaggedResponse returned by the
+    # append[rdoc-ref:Net::IMAP#append] command---unless the target mailbox
+    # reports +UIDNOTSTICKY+.
+    #
+    # == Required capability
+    # Requires either +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315]]
+    # or +IMAP4rev2+ capability.
+    class AppendUIDData < Data.define(:uidvalidity, :assigned_uids)
+      def initialize(uidvalidity:, assigned_uids:)
+        uidvalidity   = Integer(uidvalidity)
+        assigned_uids = SequenceSet[assigned_uids]
+        NumValidator.ensure_nz_number(uidvalidity)
+        if assigned_uids.include_star?
+          raise DataFormatError, "uid-set cannot contain '*'"
+        end
+        super
+      end
+
+      ##
+      # attr_reader: uidvalidity
+      # :call-seq: uidvalidity -> nonzero uint32
+      #
+      # The UIDVALIDITY of the destination mailbox.
+
+      ##
+      # attr_reader: assigned_uids
+      #
+      # A SequenceSet with the newly assigned UIDs of the appended messages.
+
+      # Returns the number of messages that have been appended.
+      def size
+        assigned_uids.count_with_duplicates
+      end
+    end
+
   end
 end
