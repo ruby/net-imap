@@ -1867,11 +1867,10 @@ module Net
       #
       # n.b, uniqueid ⊂ uid-set.  To avoid inconsistent return types, we always
       # match uid_set even if that returns a single-member array.
-      #
       def resp_code_apnd__data
         validity = number; SP!
         dst_uids = uid_set # uniqueid ⊂ uid-set
-        UIDPlus(validity, nil, dst_uids)
+        AppendUID(validity, dst_uids)
       end
 
       # already matched:  "COPYUID"
@@ -1881,10 +1880,15 @@ module Net
         validity = number;  SP!
         src_uids = uid_set; SP!
         dst_uids = uid_set
-        UIDPlus(validity, src_uids, dst_uids)
+        CopyUID(validity, src_uids, dst_uids)
       end
 
-      def UIDPlus(validity, src_uids, dst_uids)
+      def AppendUID(...) DeprecatedUIDPlus(...) || AppendUIDData.new(...) end
+      def CopyUID(...)   DeprecatedUIDPlus(...) || CopyUIDData.new(...)   end
+
+      # TODO: remove this code in the v0.6.0 release
+      def DeprecatedUIDPlus(validity, src_uids = nil, dst_uids)
+        return unless config.parser_use_deprecated_uidplus_data
         src_uids &&= src_uids.each_ordered_number.to_a
         dst_uids   = dst_uids.each_ordered_number.to_a
         UIDPlusData.new(validity, src_uids, dst_uids)
