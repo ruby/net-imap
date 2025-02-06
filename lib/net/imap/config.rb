@@ -209,6 +209,51 @@ module Net
       # The default value is +5+ seconds.
       attr_accessor :idle_response_timeout, type: Integer
 
+      # The default value for the +ssl+ option of Net::IMAP.new, when +port+ is
+      # unspecified or non-standard and +ssl+ is unspecified.  default_ssl is
+      # ignored when Net::IMAP.new is called with any value for +ssl+ besides
+      # +nil+,
+      #
+      # *Note*: A future release of Net::IMAP will set the default to +true+, as
+      # per RFC7525[https://tools.ietf.org/html/rfc7525],
+      # RFC7817[https://tools.ietf.org/html/rfc7817], and
+      # RFC8314[https://tools.ietf.org/html/rfc8314].
+      #
+      # <em>(The default_ssl config attribute was added in +v0.5.?+.)</em>
+      #
+      # ==== Valid options
+      #
+      # [+false+ <em>(original behavior)</em>]
+      #   Plaintext by default, with no warnings.
+      # [+nil+ <em>(planned default for +v0.6+)</em>]
+      #   Plaintext by default, and prints a warning.
+      #
+      #   <em>This option will be removed in +v0.7+, when +:warn+ becomes the
+      #   default.</em>
+      # [+:warn+ <em>(planned default for +v0.7+)</em>]
+      #   A warning will be printed, and behave as if the default were +true+.
+      # [+true+ <em>(planned future default)</em>]
+      #   Use TLS by default, with the default SSL context params set by calling
+      #   {OpenSSL::SSL::SSLContext#set_params}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params]
+      #   with no params.
+      attr_accessor :default_ssl, type: [false, nil, :warn, true]
+
+      # Whether to warn for using default_ssl when the port is non-standard.
+      #
+      # Although default_ssl is used for non-standard ports, this warning is
+      # different replaces the warning when default_ssl is +nil+ or +:warn+.
+      # When this option is false but default_ssl is +nil+ or +:warn+, that
+      # warning will be printed instead.
+      #
+      # ==== Valid options
+      #
+      # [+false+ <em>(original behavior)</em>]
+      #   Don't print a special warning for nonstandard ports without explicit
+      #   +ssl+.
+      # [+true+ <em>(eventual future default)</em>]
+      #   Print a special warning for nonstandard ports without explicit +ssl+.
+      attr_accessor :warn_nonstandard_port_without_ssl, type: :boolean
+
       # Whether to use the +SASL-IR+ extension when the server and \SASL
       # mechanism both support it.  Can be overridden by the +sasl_ir+ keyword
       # parameter to Net::IMAP#authenticate.
@@ -364,6 +409,8 @@ module Net
         debug: false,
         open_timeout: 30,
         idle_response_timeout: 5,
+        default_ssl: false,
+        warn_nonstandard_port_without_ssl: false,
         sasl_ir: true,
         enforce_logindisabled: true,
         responses_without_block: :warn,
@@ -392,9 +439,18 @@ module Net
 
       version_defaults[0.6] = Config[0.5].dup.update(
         responses_without_block: :frozen_dup,
+        default_ssl:             nil,
       ).freeze
       version_defaults[:next] = Config[0.6]
-      version_defaults[:future] = Config[:next]
+
+      version_defaults[0.7] = Config[0.6].dup.update(
+        default_ssl:             :warn,
+      ).freeze
+
+      version_defaults[:future] = Config[0.7].dup.update(
+        default_ssl:             true,
+        warn_nonstandard_port_without_ssl: true,
+      ).freeze
 
       version_defaults.freeze
     end
