@@ -193,4 +193,80 @@ class IMAPResponseParserTest < Test::Unit::TestCase
     Net::IMAP.debug = debug
   end
 
+  test "APPENDUID with '*'" do
+    parser = Net::IMAP::ResponseParser.new
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set cannot contain '\*'/ do
+      parser.parse(
+        "A004 OK [appendUID 1 1:*] Done\r\n"
+      )
+    end
+  end
+
+  test "APPENDUID with parser_use_deprecated_uidplus_data = true" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      true,
+    })
+    response = parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
+    uidplus  = response.data.code.data
+    assert_instance_of Net::IMAP::UIDPlusData, uidplus
+    assert_equal 100, uidplus.assigned_uids.size
+  end
+
+  test "APPENDUID with parser_use_deprecated_uidplus_data = false" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      false,
+    })
+    response = parser.parse("A004 OK [APPENDUID 1 10] Done\r\n")
+    assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
+  end
+
+  test "COPYUID with backwards ranges" do
+    parser = Net::IMAP::ResponseParser.new
+    response = parser.parse(
+      "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
+    )
+    code = response.data.code
+    assert_equal(
+      {
+         19 =>  92,
+         20 =>  93,
+        495 =>  94,
+        496 =>  95,
+        497 =>  96,
+        498 =>  97,
+        499 => 100,
+        500 => 101,
+      },
+      code.data.uid_mapping
+    )
+  end
+
+  test "COPYUID with '*'" do
+    parser = Net::IMAP::ResponseParser.new
+    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set cannot contain '\*'/ do
+      parser.parse(
+        "A004 OK [copyUID 1 1:* 1:*] Done\r\n"
+      )
+    end
+  end
+
+  test "COPYUID with parser_use_deprecated_uidplus_data = true" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      true,
+    })
+    response = parser.parse("A004 OK [copyUID 1 101:200 1:100] Done\r\n")
+    uidplus  = response.data.code.data
+    assert_instance_of Net::IMAP::UIDPlusData, uidplus
+    assert_equal 100, uidplus.assigned_uids.size
+    assert_equal 100, uidplus.source_uids.size
+  end
+
+  test "COPYUID with parser_use_deprecated_uidplus_data = false" do
+    parser = Net::IMAP::ResponseParser.new(config: {
+      parser_use_deprecated_uidplus_data:      false,
+    })
+    response = parser.parse("A004 OK [COPYUID 1 101 1] Done\r\n")
+    assert_instance_of Net::IMAP::CopyUIDData, response.data.code.data
+  end
+
 end

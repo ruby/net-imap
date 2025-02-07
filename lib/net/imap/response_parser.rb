@@ -1867,11 +1867,10 @@ module Net
       #
       # n.b, uniqueid ⊂ uid-set.  To avoid inconsistent return types, we always
       # match uid_set even if that returns a single-member array.
-      #
       def resp_code_apnd__data
         validity = number; SP!
         dst_uids = uid_set # uniqueid ⊂ uid-set
-        UIDPlusData.new(validity, nil, dst_uids)
+        AppendUID(validity, dst_uids)
       end
 
       # already matched:  "COPYUID"
@@ -1881,6 +1880,17 @@ module Net
         validity = number;  SP!
         src_uids = uid_set; SP!
         dst_uids = uid_set
+        CopyUID(validity, src_uids, dst_uids)
+      end
+
+      def AppendUID(...) DeprecatedUIDPlus(...) || AppendUIDData.new(...) end
+      def CopyUID(...)   DeprecatedUIDPlus(...) || CopyUIDData.new(...)   end
+
+      # TODO: remove this code in the v0.6.0 release
+      def DeprecatedUIDPlus(validity, src_uids = nil, dst_uids)
+        return unless config.parser_use_deprecated_uidplus_data
+        src_uids &&= src_uids.each_ordered_number.to_a
+        dst_uids   = dst_uids.each_ordered_number.to_a
         UIDPlusData.new(validity, src_uids, dst_uids)
       end
 
@@ -2007,15 +2017,9 @@ module Net
       #      uniqueid        = nz-number
       #                          ; Strictly ascending
       def uid_set
-        token = match(T_NUMBER, T_ATOM)
-        case token.symbol
-        when T_NUMBER then [Integer(token.value)]
-        when T_ATOM
-          token.value.split(",").flat_map {|range|
-            range = range.split(":").map {|uniqueid| Integer(uniqueid) }
-            range.size == 1 ? range : Range.new(range.min, range.max).to_a
-          }
-        end
+        set = sequence_set
+        parse_error("uid-set cannot contain '*'") if set.include_star?
+        set
       end
 
       def nil_atom

@@ -262,6 +262,32 @@ module Net
       #
       # Alias for responses_without_block
 
+      # Whether ResponseParser should use the deprecated UIDPlusData or
+      # CopyUIDData for +COPYUID+ response codes, and UIDPlusData or
+      # AppendUIDData for +APPENDUID+ response codes.
+      #
+      # AppendUIDData and CopyUIDData are _mostly_ backward-compatible with
+      # UIDPlusData.  Most applications should be able to upgrade with little
+      # or no changes.
+      #
+      # <em>(Parser support for +UIDPLUS+ added in +v0.3.2+.)</em>
+      #
+      # <em>(Config option added in +v0.4.19+ and +v0.5.6+.)</em>
+      #
+      # <em>UIDPlusData will be removed in +v0.6+ and this config setting will
+      # be ignored.</em>
+      #
+      # ==== Valid options
+      #
+      # [+true+ <em>(original default)</em>]
+      #    ResponseParser only uses UIDPlusData.
+      #
+      # [+false+ <em>(planned default for +v0.6+)</em>]
+      #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
+      attr_accessor :parser_use_deprecated_uidplus_data, type: [
+        true, false
+      ]
+
       # Creates a new config object and initialize its attribute with +attrs+.
       #
       # If +parent+ is not given, the global config is used by default.
@@ -341,6 +367,7 @@ module Net
         idle_response_timeout: 5,
         sasl_ir: true,
         responses_without_block: :silence_deprecation_warning,
+        parser_use_deprecated_uidplus_data: true,
       ).freeze
 
       @global = default.new
@@ -349,6 +376,7 @@ module Net
 
       version_defaults[0] = Config[0.4].dup.update(
         sasl_ir: false,
+        parser_use_deprecated_uidplus_data: true,
       ).freeze
       version_defaults[0.0] = Config[0]
       version_defaults[0.1] = Config[0]
@@ -365,6 +393,7 @@ module Net
 
       version_defaults[0.6]      = Config[0.5].dup.update(
         responses_without_block: :frozen_dup,
+        parser_use_deprecated_uidplus_data: false,
       ).freeze
       version_defaults[:future]  = Config[0.6]
 
