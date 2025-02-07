@@ -164,6 +164,21 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet.try_convert(obj) end
   end
 
+  test "#at(non-negative index)" do
+    assert_nil        SequenceSet.empty.at(0)
+    assert_equal   1, SequenceSet[1..].at(0)
+    assert_equal   1, SequenceSet.full.at(0)
+    assert_equal 111, SequenceSet.full.at(110)
+    assert_equal   4, SequenceSet[2,4,6,8].at(1)
+    assert_equal   8, SequenceSet[2,4,6,8].at(3)
+    assert_equal   6, SequenceSet[4..6].at(2)
+    assert_nil        SequenceSet[4..6].at(3)
+    assert_equal 205, SequenceSet["101:110,201:210,301:310"].at(14)
+    assert_equal 310, SequenceSet["101:110,201:210,301:310"].at(29)
+    assert_nil        SequenceSet["101:110,201:210,301:310"].at(44)
+    assert_equal  :*, SequenceSet["1:10,*"].at(10)
+  end
+
   test "#[non-negative index]" do
     assert_nil        SequenceSet.empty[0]
     assert_equal   1, SequenceSet[1..][0]
@@ -179,18 +194,64 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal  :*, SequenceSet["1:10,*"][10]
   end
 
+  test "#at(negative index)" do
+    assert_nil        SequenceSet.empty.at(-1)
+    assert_equal  :*, SequenceSet[1..].at(-1)
+    assert_equal   1, SequenceSet.full.at(-(2**32))
+    assert_equal 111, SequenceSet[1..111].at(-1)
+    assert_equal   6, SequenceSet[2,4,6,8].at(-2)
+    assert_equal   2, SequenceSet[2,4,6,8].at(-4)
+    assert_equal   4, SequenceSet[4..6].at(-3)
+    assert_nil        SequenceSet[4..6].at(-4)
+    assert_equal 207, SequenceSet["101:110,201:210,301:310"].at(-14)
+    assert_equal 102, SequenceSet["101:110,201:210,301:310"].at(-29)
+    assert_nil        SequenceSet["101:110,201:210,301:310"].at(-44)
+  end
+
   test "#[negative index]" do
-    assert_nil        SequenceSet.empty[0]
+    assert_nil        SequenceSet.empty[-1]
     assert_equal  :*, SequenceSet[1..][-1]
     assert_equal   1, SequenceSet.full[-(2**32)]
     assert_equal 111, SequenceSet[1..111][-1]
-    assert_equal   4, SequenceSet[2,4,6,8][1]
-    assert_equal   8, SequenceSet[2,4,6,8][3]
-    assert_equal   6, SequenceSet[4..6][2]
-    assert_nil        SequenceSet[4..6][3]
-    assert_equal 205, SequenceSet["101:110,201:210,301:310"][14]
-    assert_equal 310, SequenceSet["101:110,201:210,301:310"][29]
-    assert_nil        SequenceSet["101:110,201:210,301:310"][44]
+    assert_equal   6, SequenceSet[2,4,6,8][-2]
+    assert_equal   2, SequenceSet[2,4,6,8][-4]
+    assert_equal   4, SequenceSet[4..6][-3]
+    assert_nil        SequenceSet[4..6][-4]
+    assert_equal 207, SequenceSet["101:110,201:210,301:310"][-14]
+    assert_equal 102, SequenceSet["101:110,201:210,301:310"][-29]
+    assert_nil        SequenceSet["101:110,201:210,301:310"][-44]
+  end
+
+  test "#ordered_at(non-negative index)" do
+    assert_nil        SequenceSet.empty.ordered_at(0)
+    assert_equal   1, SequenceSet.full.ordered_at(0)
+    assert_equal 111, SequenceSet.full.ordered_at(110)
+    assert_equal   1, SequenceSet["1:*"].ordered_at(0)
+    assert_equal  :*, SequenceSet["*,1"].ordered_at(0)
+    assert_equal   4, SequenceSet["6,4,8,2"].ordered_at(1)
+    assert_equal   2, SequenceSet["6,4,8,2"].ordered_at(3)
+    assert_equal   6, SequenceSet["9:11,4:6,1:3"].ordered_at(5)
+    assert_nil        SequenceSet["9:11,4:6,1:3"].ordered_at(9)
+    assert_equal 105, SequenceSet["201:210,101:110,301:310"].ordered_at(14)
+    assert_equal 310, SequenceSet["201:210,101:110,301:310"].ordered_at(29)
+    assert_nil        SequenceSet["201:210,101:110,301:310"].ordered_at(30)
+    assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
+  end
+
+  test "#ordered_at(negative index)" do
+    assert_nil        SequenceSet.empty.ordered_at(-1)
+    assert_equal  :*, SequenceSet["1:*"].ordered_at(-1)
+    assert_equal   1, SequenceSet.full.ordered_at(-(2**32))
+    assert_equal  :*, SequenceSet["*,1"].ordered_at(0)
+    assert_equal   8, SequenceSet["6,4,8,2"].ordered_at(-2)
+    assert_equal   6, SequenceSet["6,4,8,2"].ordered_at(-4)
+    assert_equal   4, SequenceSet["9:11,4:6,1:3"].ordered_at(-6)
+    assert_equal  10, SequenceSet["9:11,4:6,1:3"].ordered_at(-8)
+    assert_nil        SequenceSet["9:11,4:6,1:3"].ordered_at(-12)
+    assert_equal 107, SequenceSet["201:210,101:110,301:310"].ordered_at(-14)
+    assert_equal 201, SequenceSet["201:210,101:110,301:310"].ordered_at(-30)
+    assert_nil        SequenceSet["201:210,101:110,301:310"].ordered_at(-31)
+    assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
   end
 
   test "#[start, length]" do
@@ -246,6 +307,44 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_nil SequenceSet[5..9,12..24].find_index(11)
     assert_equal         1, SequenceSet[1, :*].find_index(-1)
     assert_equal 2**32 - 1, SequenceSet.full.find_index(:*)
+  end
+
+  test "#find_ordered_index" do
+    assert_equal         9, SequenceSet.full.find_ordered_index(10)
+    assert_equal        99, SequenceSet.full.find_ordered_index(100)
+    assert_equal 2**32 - 1, SequenceSet.full.find_ordered_index(:*)
+    assert_nil SequenceSet.empty.find_index(1)
+    set = SequenceSet["9,8,7,6,5,4,3,2,1"]
+    assert_equal 0, set.find_ordered_index(9)
+    assert_equal 1, set.find_ordered_index(8)
+    assert_equal 2, set.find_ordered_index(7)
+    assert_equal 3, set.find_ordered_index(6)
+    assert_equal 4, set.find_ordered_index(5)
+    assert_equal 5, set.find_ordered_index(4)
+    assert_equal 6, set.find_ordered_index(3)
+    assert_equal 7, set.find_ordered_index(2)
+    assert_equal 8, set.find_ordered_index(1)
+    assert_nil      set.find_ordered_index(10)
+    set = SequenceSet["7:9,5:6"]
+    assert_equal 0, set.find_ordered_index(7)
+    assert_equal 1, set.find_ordered_index(8)
+    assert_equal 2, set.find_ordered_index(9)
+    assert_equal 3, set.find_ordered_index(5)
+    assert_equal 4, set.find_ordered_index(6)
+    assert_nil   set.find_ordered_index(4)
+    set = SequenceSet["1000:1111,1:100"]
+    assert_equal   0, set.find_ordered_index(1000)
+    assert_equal 100, set.find_ordered_index(1100)
+    assert_equal 112, set.find_ordered_index(1)
+    assert_equal 121, set.find_ordered_index(10)
+    set = SequenceSet["1,1,1,1,51,50,4,11"]
+    assert_equal   0, set.find_ordered_index(1)
+    assert_equal   4, set.find_ordered_index(51)
+    assert_equal   5, set.find_ordered_index(50)
+    assert_equal   6, set.find_ordered_index(4)
+    assert_equal   7, set.find_ordered_index(11)
+    assert_equal   1, SequenceSet["1,*"].find_ordered_index(-1)
+    assert_equal   0, SequenceSet["*,1"].find_ordered_index(-1)
   end
 
   test "#limit" do
@@ -680,6 +779,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [46, 6..7, 15, 1..3],
     ranges:     [1..3, 6..7, 15..15, 46..46],
     numbers:    [1, 2, 3, 6, 7, 15, 46],
+    ordered:    [46, 6, 7, 15, 1, 2, 3],
     to_s:       "46,7:6,15,3:1",
     normalize:  "1:3,6:7,15,46",
     count:      7,
@@ -704,9 +804,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [1..5, 3..7, 9..10, 10..11],
     ranges:     [1..7, 9..11],
     numbers:    [1, 2, 3, 4, 5, 6, 7,  9, 10, 11],
+    ordered:    [1,2,3,4,5,  3,4,5,6,7,  9,10,  10,11],
     to_s:       "1:5,3:7,10:9,10:11",
     normalize:  "1:7,9:11",
     count:      10,
+    count_dups:  4,
     complement: "8,12:*",
   }, keep: true
 
@@ -716,10 +818,25 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     entries:    [1..5, 3..4, 9..11, 10],
     ranges:     [1..5, 9..11],
     numbers:    [1, 2, 3, 4, 5, 9, 10, 11],
+    ordered:    [1,2,3,4,5,  3,4,  9,10,11,  10],
     to_s:       "1:5,3:4,9:11,10",
     normalize:  "1:5,9:11",
     count:      8,
+    count_dups: 3,
     complement: "6:8,12:*",
+  }, keep: true
+
+  data "multiple *", {
+    input:      "2:*,3:*,*",
+    elements:   [2..],
+    entries:    [2.., 3.., :*],
+    ranges:     [2..],
+    numbers:    RangeError,
+    to_s:       "2:*,3:*,*",
+    normalize:  "2:*",
+    count:      2**32 - 2,
+    count_dups: 2**32 - 2,
+    complement: "1",
   }, keep: true
 
   data "array", {
@@ -762,12 +879,22 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal data[:elements], SequenceSet.new(data[:input]).elements
   end
 
-  test "#each_element" do |data|
-    seqset = SequenceSet.new(data[:input])
+  def assert_seqset_enum(expected, seqset, enum)
     array = []
-    assert_equal seqset, seqset.each_element { array << _1 }
-    assert_equal data[:elements], array
-    assert_equal data[:elements], seqset.each_element.to_a
+    assert_equal seqset, seqset.send(enum) { array << _1 }
+    assert_equal expected, array
+
+    array = []
+    assert_equal seqset, seqset.send(enum).each { array << _1 }
+    assert_equal expected, array
+
+    assert_equal expected, seqset.send(enum).to_a
+  end
+
+  test "#each_element" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:elements]
+    assert_seqset_enum expected, seqset, :each_element
   end
 
   test "#entries" do |data|
@@ -775,15 +902,58 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   end
 
   test "#each_entry" do |data|
-    seqset = SequenceSet.new(data[:input])
-    array = []
-    assert_equal seqset, seqset.each_entry { array << _1 }
-    assert_equal data[:entries], array
-    assert_equal data[:entries], seqset.each_entry.to_a
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:entries]
+    assert_seqset_enum expected, seqset, :each_entry
+  end
+
+  test "#each_range" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:ranges]
+    assert_seqset_enum expected, seqset, :each_range
   end
 
   test "#ranges" do |data|
     assert_equal data[:ranges], SequenceSet.new(data[:input]).ranges
+  end
+
+  test "#each_number" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:numbers]
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do
+        seqset.each_number do fail "shouldn't get here" end
+      end
+      enum = seqset.each_number
+      assert_raise expected do enum.to_a end
+      assert_raise expected do enum.each do fail "shouldn't get here" end end
+    else
+      assert_seqset_enum expected, seqset, :each_number
+    end
+  end
+
+  test "#each_ordered_number" do |data|
+    seqset   = SequenceSet.new(data[:input])
+    expected = data[:ordered] || data[:numbers]
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do
+        seqset.each_ordered_number do fail "shouldn't get here" end
+      end
+      enum = seqset.each_ordered_number
+      assert_raise expected do enum.to_a end
+      assert_raise expected do enum.each do fail "shouldn't get here" end end
+    else
+      assert_seqset_enum expected, seqset, :each_ordered_number
+    end
+  end
+
+  test "#numbers" do |data|
+    expected = data[:numbers]
+    if expected.is_a?(Class) && expected < Exception
+      assert_raise expected do SequenceSet.new(data[:input]).numbers end
+    else
+      assert_equal expected, SequenceSet.new(data[:input]).numbers
+    end
   end
 
   test "#string" do |data|
@@ -819,6 +989,25 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal data[:count], SequenceSet.new(data[:input]).count
   end
 
+  test "#count_with_duplicates" do |data|
+    dups = data[:count_dups] || 0
+    count = data[:count] + dups
+    seqset = SequenceSet.new(data[:input])
+    assert_equal count, seqset.count_with_duplicates
+  end
+
+  test "#count_duplicates" do |data|
+    dups = data[:count_dups] || 0
+    seqset = SequenceSet.new(data[:input])
+    assert_equal dups, seqset.count_duplicates
+  end
+
+  test "#has_duplicates?" do |data|
+    has_dups = !(data[:count_dups] || 0).zero?
+    seqset = SequenceSet.new(data[:input])
+    assert_equal has_dups, seqset.has_duplicates?
+  end
+
   test "#valid_string" do |data|
     if (expected = data[:to_s]).empty?
       assert_raise DataFormatError do
@@ -833,15 +1022,6 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     set = SequenceSet.new(data[:input])
     assert_equal(data[:complement], set.complement.to_s)
     assert_equal(data[:complement], (~set).to_s)
-  end
-
-  test "#numbers" do |data|
-    expected = data[:numbers]
-    if expected.is_a?(Class) && expected < Exception
-      assert_raise expected do SequenceSet.new(data[:input]).numbers end
-    else
-      assert_equal expected, SequenceSet.new(data[:input]).numbers
-    end
   end
 
   test "SequenceSet[input]" do |input|
