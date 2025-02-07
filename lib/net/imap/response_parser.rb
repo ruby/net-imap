@@ -1889,9 +1889,16 @@ module Net
       # TODO: remove this code in the v0.6.0 release
       def DeprecatedUIDPlus(validity, src_uids = nil, dst_uids)
         return unless config.parser_use_deprecated_uidplus_data
-        src_uids &&= src_uids.each_ordered_number.to_a
-        dst_uids   = dst_uids.each_ordered_number.to_a
-        UIDPlusData.new(validity, src_uids, dst_uids)
+        compact_uid_sets = [src_uids, dst_uids].compact
+        count = compact_uid_sets.map { _1.count_with_duplicates }.max
+        max   = config.parser_max_deprecated_uidplus_data_size
+        if count <= max
+          src_uids &&= src_uids.each_ordered_number.to_a
+          dst_uids   = dst_uids.each_ordered_number.to_a
+          UIDPlusData.new(validity, src_uids, dst_uids)
+        elsif config.parser_use_deprecated_uidplus_data != :up_to_max_size
+          parse_error("uid-set is too large: %d > %d", count, max)
+        end
       end
 
       ADDRESS_REGEXP = /\G
