@@ -291,6 +291,12 @@ module Net
       # CopyUIDData for +COPYUID+ response codes, and UIDPlusData or
       # AppendUIDData for +APPENDUID+ response codes.
       #
+      # UIDPlusData stores its data in arrays of numbers, which is vulnerable to
+      # a memory exhaustion denial of service attack from an untrusted or
+      # compromised server.  Set this option to +false+ to completely block this
+      # vulnerability.  Otherwise, parser_max_deprecated_uidplus_data_size
+      # mitigates this vulnerability.
+      #
       # AppendUIDData and CopyUIDData are _mostly_ backward-compatible with
       # UIDPlusData.  Most applications should be able to upgrade with little
       # or no changes.
@@ -307,11 +313,40 @@ module Net
       # [+true+ <em>(original default)</em>]
       #    ResponseParser only uses UIDPlusData.
       #
+      # [+:up_to_max_size+ <em>(default since +v0.5.6+)</em>]
+      #    ResponseParser uses UIDPlusData when the +uid-set+ size is below
+      #    parser_max_deprecated_uidplus_data_size.  Above that size,
+      #    ResponseParser uses AppendUIDData or CopyUIDData.
+      #
       # [+false+ <em>(planned default for +v0.6+)</em>]
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
       attr_accessor :parser_use_deprecated_uidplus_data, type: [
-        true, false
+        true, :up_to_max_size, false
       ]
+
+      # The maximum +uid-set+ size that ResponseParser will parse into
+      # deprecated UIDPlusData.  This limit only applies when
+      # parser_use_deprecated_uidplus_data is not +false+.
+      #
+      # <em>(Parser support for +UIDPLUS+ added in +v0.3.2+.)</em>
+      #
+      # <em>Support for limiting UIDPlusData to a maximum size was added in
+      # +v0.3.8+, +v0.4.19+, and +v0.5.6+.</em>
+      #
+      # <em>UIDPlusData will be removed in +v0.6+.</em>
+      #
+      # ==== Versioned Defaults
+      #
+      # Because this limit guards against a remote server causing catastrophic
+      # memory exhaustion, the versioned default (used by #load_defaults) also
+      # applies to versions without the feature.
+      #
+      # * +0.3+ and prior: <tt>10,000</tt>
+      # * +0.4+: <tt>1,000</tt>
+      # * +0.5+: <tt>100</tt>
+      # * +0.6+: <tt>0</tt>
+      #
+      attr_accessor :parser_max_deprecated_uidplus_data_size, type: Integer
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
@@ -393,7 +428,8 @@ module Net
         sasl_ir: true,
         enforce_logindisabled: true,
         responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: true,
+        parser_use_deprecated_uidplus_data: :up_to_max_size,
+        parser_max_deprecated_uidplus_data_size: 100,
       ).freeze
 
       @global = default.new
@@ -406,6 +442,7 @@ module Net
         responses_without_block: :silence_deprecation_warning,
         enforce_logindisabled: false,
         parser_use_deprecated_uidplus_data: true,
+        parser_max_deprecated_uidplus_data_size: 10_000,
       ).freeze
       version_defaults[0.0] = Config[0]
       version_defaults[0.1] = Config[0]
@@ -414,6 +451,7 @@ module Net
 
       version_defaults[0.4] = Config[0.3].dup.update(
         sasl_ir: true,
+        parser_max_deprecated_uidplus_data_size: 1000,
       ).freeze
 
       version_defaults[0.5] = Config[:current]
@@ -421,6 +459,7 @@ module Net
       version_defaults[0.6] = Config[0.5].dup.update(
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
+        parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
       version_defaults[:next] = Config[0.6]
       version_defaults[:future] = Config[:next]
