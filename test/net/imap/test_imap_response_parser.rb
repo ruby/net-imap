@@ -438,4 +438,13 @@ EOF
     )
   end
 
+  def test_uidplus_copyuid__too_large
+    parser = Net::IMAP::ResponseParser.new
+    assert_raise Net::IMAP::ResponseParseError, /uid-set is too large/ do
+      parser.parse(
+        "A004 OK [copyUID 1 10000:20000,1 1:10001] Done\r\n"
+      )
+    end
+  end
+
 end

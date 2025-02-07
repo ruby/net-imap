@@ -7,6 +7,8 @@ module Net
 
     # Parses an \IMAP server response.
     class ResponseParser
+      MAX_UID_SET_SIZE = 10_000
+
       # :call-seq: Net::IMAP::ResponseParser.new -> Net::IMAP::ResponseParser
       def initialize
         @str = nil
@@ -1379,11 +1381,29 @@ module Net
         case token.symbol
         when T_NUMBER then [Integer(token.value)]
         when T_ATOM
-          token.value.split(",").flat_map {|range|
-            range = range.split(":").map {|uniqueid| Integer(uniqueid) }
-            range.size == 1 ? range : Range.new(range.min, range.max).to_a
-          }
+          entries = uid_set__ranges(token.value)
+          if (count = entries.sum(&:count)) > MAX_UID_SET_SIZE
+            parse_error("uid-set is too large: %d > 10k", count)
+          end
+          entries.flat_map(&:to_a)
         end
+      end
+
+      # returns an array of ranges
+      def uid_set__ranges(uidset)
+        entries = []
+        uidset.split(",") do |entry|
+          uids = entry.split(":", 2).map {|uid|
+            unless uid =~ /\A[1-9][0-9]*\z/
+              parse_error("invalid uid-set uid: %p", uid)
+            end
+            uid = Integer(uid)
+            NumValidator.ensure_nz_number(uid)
+            uid
+          }
+          entries << Range.new(*uids.minmax)
+        end
+        entries
       end
 
       def nil_atom
