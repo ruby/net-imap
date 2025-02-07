@@ -64,6 +64,44 @@ module Net
       end
     end
 
+    # This replaces the `Data.define` polyfill that's used by net-imap 0.5.
+    class Data_define__uidvalidity___assigned_uids_ # :no-doc:
+      attr_reader :uidvalidity, :assigned_uids
+
+      def self.[](...) new(...) end
+      def self.new(uidvalidity   = (args = false; nil),
+              assigned_uids = nil,
+              **kwargs)
+        if kwargs.empty?
+          super(uidvalidity: uidvalidity, assigned_uids: assigned_uids)
+        elsif !args
+          super
+        else
+          raise ArgumentError, "sent both positional and keyword args"
+        end
+      end
+
+      def ==(other)
+        self.class == other.class &&
+          self.uidvalidity   == other.uidvalidity &&
+          self.assigned_uids == other.assigned_uids
+      end
+
+      def eql?(other)
+        self.class.eql?(other.class) &&
+          self.uidvalidity.eql?(other.uidvalidity) &&
+          self.assigned_uids.eql?(other.assigned_uids)
+      end
+
+      def hash; [self.class, uidvalidity, assigned_uids].hash end
+
+      def initialize(uidvalidity:, assigned_uids:)
+        @uidvalidity   = uidvalidity
+        @assigned_uids = assigned_uids
+        freeze
+      end
+    end
+
     # >>>
     #   *NOTE:* <em>AppendUIDData will replace UIDPlusData for +APPENDUID+ in the
     #   +0.6.0+ release.</em>  To use AppendUIDData before +0.6.0+, set
@@ -80,7 +118,7 @@ module Net
     # == Required capability
     # Requires either +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315]]
     # or +IMAP4rev2+ capability.
-    class AppendUIDData < Data.define(:uidvalidity, :assigned_uids)
+    class AppendUIDData < Data_define__uidvalidity___assigned_uids_
       def initialize(uidvalidity:, assigned_uids:)
         uidvalidity   = Integer(uidvalidity)
         assigned_uids = SequenceSet[assigned_uids]
@@ -106,6 +144,50 @@ module Net
       def size
         assigned_uids.count_with_duplicates
       end
+    end
+
+    # This replaces the `Data.define` polyfill that's used by net-imap 0.5.
+    class Data_define__uidvalidity___source_uids___assigned_uids_ # :no-doc:
+      attr_reader :uidvalidity, :source_uids, :assigned_uids
+
+      def self.[](...) new(...) end
+      def self.new(uidvalidity   = (args = false; nil),
+                   source_uids   = nil,
+                   assigned_uids = nil,
+                   **kwargs)
+        if kwargs.empty?
+          super(uidvalidity:   uidvalidity,
+                source_uids:   source_uids,
+                assigned_uids: assigned_uids)
+        elsif !args
+          super(**kwargs)
+        else
+          raise ArgumentError, "sent both positional and keyword args"
+        end
+      end
+
+      def initialize(uidvalidity:, source_uids:, assigned_uids:)
+        @uidvalidity   = uidvalidity
+        @source_uids   = source_uids
+        @assigned_uids = assigned_uids
+        freeze
+      end
+
+      def ==(other)
+        self.class == other.class &&
+          self.uidvalidity   == other.uidvalidity &&
+          self.source_uids   == other.source_uids
+        self.assigned_uids == other.assigned_uids
+      end
+
+      def eql?(other)
+        self.class.eql?(other.class) &&
+          self.uidvalidity.eql?(other.uidvalidity) &&
+          self.source_uids.eql?(other.source_uids)
+        self.assigned_uids.eql?(other.assigned_uids)
+      end
+
+      def hash; [self.class, uidvalidity, source_uids, assigned_uids].hash end
     end
 
     # >>>
@@ -134,7 +216,7 @@ module Net
     # == Required capability
     # Requires either +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315]]
     # or +IMAP4rev2+ capability.
-    class CopyUIDData < Data.define(:uidvalidity, :source_uids, :assigned_uids)
+    class CopyUIDData < Data_define__uidvalidity___source_uids___assigned_uids_
       def initialize(uidvalidity:, source_uids:, assigned_uids:)
         uidvalidity   = Integer(uidvalidity)
         source_uids   = SequenceSet[source_uids]
