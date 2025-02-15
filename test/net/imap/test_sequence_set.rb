@@ -8,6 +8,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   SequenceSet     = Net::IMAP::SequenceSet
   DataFormatError = Net::IMAP::DataFormatError
 
+  if ProfilingHelper.profile?
+    def self.startup  = ProfilingHelper.start_profiler("seqset-tests")
+    def self.shutdown = ProfilingHelper.stop_profiler
+  end
+
   def compare_to_reference_set(nums, set, seqset)
     set.merge nums
     seqset.merge nums

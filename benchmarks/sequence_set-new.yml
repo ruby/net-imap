@@ -4,6 +4,8 @@ prelude: |
   require "net/imap"
   SeqSet = Net::IMAP::SequenceSet
 
+  require "./test/lib/profiling_helper"
+  include ProfilingHelper
 
   N_RAND = 100
 
@@ -13,10 +15,12 @@ prelude: |
 
   def build_string_inputs(n, n_rand, **)
     Array.new(n_rand) { rand_string(n, **) }
+      .tap { profile_until_exit("seqset-new-#{n}-string") }
   end
 
   def build_int_inputs(n, n_rand, **)
     Array.new(n_rand) { rand_entries(n, **) }
+      .tap { profile_until_exit("seqset-new-#{n}-int") }
   end
 
   inputs = nil
