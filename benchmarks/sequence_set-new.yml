@@ -3,6 +3,9 @@ prelude: |
   require "net/imap"
   SeqSet = Net::IMAP::SequenceSet
 
+  require "./test/lib/profiling_helper"
+  include ProfilingHelper
+
   N_RAND = 100
 
   def rand_nums(n, min: 1, max: (n * 1.25).to_i) = Array.new(n) { rand(1..max) }
@@ -11,10 +14,12 @@ prelude: |
 
   def build_string_inputs(n, n_rand, **)
     Array.new(n_rand) { rand_string(n, **) }
+      .tap { maybe_profile("seqset-new-#{n}-string") }
   end
 
   def build_int_inputs(n, n_rand, **)
     Array.new(n_rand) { rand_entries(n, **) }
+      .tap { maybe_profile("seqset-new-#{n}-int") }
   end
 
   inputs = nil
@@ -82,6 +87,7 @@ contexts:
   - name: local
     prelude: |
       $LOAD_PATH.unshift "./lib"
+      $allowed_to_profile = true # only profile local code
     require: false
   - name: v0.5.9
     gems:

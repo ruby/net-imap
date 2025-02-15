@@ -55,3 +55,5 @@ class Test::Unit::TestCase
   end
 
 end
+
+require_relative "profiling_helper"
