@@ -5,6 +5,9 @@ require "test/unit"
 
 class ConfigTest < Test::Unit::TestCase
   Config = Net::IMAP::Config
+  THIS_VERSION   = Net::IMAP::VERSION.to_f
+  NEXT_VERSION   = THIS_VERSION + 0.1
+  FUTURE_VERSION = 0.7
 
   setup do
     Config.global.reset
@@ -141,7 +144,23 @@ class ConfigTest < Test::Unit::TestCase
       assert_kind_of Config, config
       assert config.frozen?,            "#{name} isn't frozen"
       assert config.inherited?(:debug), "#{name} doesn't inherit debug"
+      keys = config.to_h.keys - [:debug]
+      keys.each do |key|
+        refute config.inherited?(key)
+      end
       assert_same Config.global, config.parent
+    end
+  end
+
+  test "Config[:default] and Config[:current] both hold default config" do
+    defaults = Config.default.to_h
+    assert_equal(defaults, Config[:default].to_h)
+    assert_equal(defaults, Config[:current].to_h)
+  end
+
+  test ".[] for all version_defaults" do
+    Config.version_defaults.each do |version, config|
+      assert_same Config[version], config
     end
   end
 
@@ -152,8 +171,9 @@ class ConfigTest < Test::Unit::TestCase
     assert_same original, Config[0.1]
     assert_same original, Config[0.2]
     assert_same original, Config[0.3]
-    assert_kind_of Config, Config[0.4]
-    assert_kind_of Config, Config[0.5]
+    ((0.4r..FUTURE_VERSION.to_r) % 0.1r).each do |version|
+      assert_kind_of Config, Config[version.to_f]
+    end
   end
 
   test ".[] range errors" do
@@ -169,10 +189,10 @@ class ConfigTest < Test::Unit::TestCase
   end
 
   test ".[] with symbol names" do
-    assert_same    Config[0.4],   Config[:current]
-    assert_same    Config[0.4],   Config[:default]
-    assert_same    Config[0.5],   Config[:next]
-    assert_kind_of Config,        Config[:future]
+    assert_equal   Config[THIS_VERSION].to_h, Config[:default].to_h
+    assert_same    Config[THIS_VERSION],      Config[:current]
+    assert_same    Config[NEXT_VERSION],      Config[:next]
+    assert_same    Config[FUTURE_VERSION],    Config[:future]
   end
 
   test ".[] with a hash" do
@@ -190,8 +210,8 @@ class ConfigTest < Test::Unit::TestCase
     assert_same Config.default, Config.new(Config.default).parent
     assert_same Config.global,  Config.new(Config.global).parent
     assert_same Config[0.4],    Config.new(0.4).parent
-    assert_same Config[0.5],    Config.new(:next).parent
-    assert_same Config[0.6],    Config.new(:future).parent
+    assert_same Config[NEXT_VERSION],   Config.new(:next).parent
+    assert_same Config[FUTURE_VERSION], Config.new(:future).parent
     assert_equal true, Config.new({debug: true}, debug: false).parent.debug?
     assert_equal true, Config.new({debug: true}, debug: false).parent.frozen?
   end
