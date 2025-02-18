@@ -435,9 +435,8 @@ module Net
       @global = default.new
 
       version_defaults[:default] = Config[default.send(:defaults_hash)]
-      version_defaults[:current] = Config[:default]
 
-      version_defaults[0] = Config[:current].dup.update(
+      version_defaults[0] = Config[:default].dup.update(
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
         enforce_logindisabled: false,
@@ -454,17 +453,36 @@ module Net
         parser_max_deprecated_uidplus_data_size: 1000,
       ).freeze
 
-      version_defaults[0.5] = Config[:current]
+      version_defaults[0.5] = Config[0.4].dup.update(
+        enforce_logindisabled: true,
+        responses_without_block: :warn,
+        parser_use_deprecated_uidplus_data: :up_to_max_size,
+        parser_max_deprecated_uidplus_data_size: 100,
+      ).freeze
 
       version_defaults[0.6] = Config[0.5].dup.update(
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
-      version_defaults[:next] = Config[0.6]
-      version_defaults[:future] = Config[:next]
+
+      version_defaults[0.7] = Config[0.6].dup.update(
+      ).freeze
+
+      current = VERSION.to_f
+      version_defaults[:original] = Config[0]
+      version_defaults[:current]  = Config[current]
+      version_defaults[:next]     = Config[current + 0.1]
+      version_defaults[:future]   = Config[current + 0.2]
 
       version_defaults.freeze
+
+      if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
+        warn "Misconfigured Net::IMAP::Config[:current] => %p,\n" \
+             " not equal to Net::IMAP::Config[:default] => %p" % [
+                self[:current].to_h, self[:default].to_h
+              ]
+      end
     end
   end
 end
