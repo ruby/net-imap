@@ -8,11 +8,6 @@ require_relative "fake_server"
 class IMAPUIDPlusTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
-  def setup
-    super
-    Net::IMAP.config.parser_use_deprecated_uidplus_data = false
-  end
-
   def test_uidplus_appenduid
     with_fake_server(select: "INBOX",
                      extensions: %i[UIDPLUS]) do |server, imap|

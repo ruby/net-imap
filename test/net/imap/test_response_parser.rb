@@ -10,11 +10,6 @@ class ResponseParserTest < Net::IMAP::TestCase
   include NetIMAPTestHelpers
   extend  NetIMAPTestHelpers::TestFixtureGenerators
 
-  def setup
-    super
-    Net::IMAP.config.parser_use_deprecated_uidplus_data = false
-  end
-
   ############################################################################
   # Tests that do no more than parse an example response and assert the result
   # data has the correct values have been moved to yml test fixtures.

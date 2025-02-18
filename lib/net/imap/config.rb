@@ -481,9 +481,9 @@ module Net
         sasl_ir: true,
         enforce_logindisabled: true,
         max_response_size: 512 << 20, # 512 MiB
-        responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: :up_to_max_size,
-        parser_max_deprecated_uidplus_data_size: 100,
+        responses_without_block: :frozen_dup,
+        parser_use_deprecated_uidplus_data: false,
+        parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
 
       @global = default.new
@@ -523,6 +523,9 @@ module Net
       ).freeze
 
       version_defaults[0.7r] = Config[0.6r].dup.update(
+      ).freeze
+
+      version_defaults[0.8r] = Config[0.7r].dup.update(
       ).freeze
 
       # Safe conversions one way only:
