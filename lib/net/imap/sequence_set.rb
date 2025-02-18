@@ -243,13 +243,13 @@ module Net
     # These methods do not modify +self+.
     #
     # - #| (aliased as #union and #+): Returns a new set combining all members
-    #   from +self+ with all members from the other object.
+    #   from +self+ with all members from the other set.
     # - #& (aliased as #intersection): Returns a new set containing all members
-    #   common to +self+ and the other object.
+    #   common to +self+ and the other set.
     # - #- (aliased as #difference): Returns a copy of +self+ with all members
-    #   in the other object removed.
+    #   in the other set removed.
     # - #^ (aliased as #xor): Returns a new set containing all members from
-    #   +self+ and the other object except those common to both.
+    #   +self+ and the other set except those common to both.
     # - #~ (aliased as #complement): Returns a new set containing all members
     #   that are not in +self+
     # - #limit: Returns a copy of +self+ which has replaced <tt>*</tt> with a
@@ -265,7 +265,7 @@ module Net
     # - #add (aliased as #<<): Adds a given element to the set; returns +self+.
     # - #add?: If the given element is not fully included the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
-    # - #merge: Merges multiple elements into the set; returns +self+.
+    # - #merge: Adds all members of the given sets into this set; returns +self+.
     # - #complement!: Replaces the contents of the set with its own #complement.
     #
     # <i>Order preserving:</i>
@@ -289,7 +289,8 @@ module Net
     # - #delete_at: Removes the number at a given offset.
     # - #slice!: Removes the number or consecutive numbers at a given offset or
     #   range of offsets.
-    # - #subtract: Removes each given object from the set; returns +self+.
+    # - #subtract: Removes all members of the given sets from this set; returns
+    #   +self+.
     # - #limit!: Replaces <tt>*</tt> with a given maximum value and removes all
     #   members over that maximum; returns +self+.
     #
@@ -824,33 +825,31 @@ module Net
         deleted
       end
 
-      # Merges all of the elements that appear in any of the +inputs+ into the
+      # Merges all of the elements that appear in any of the +sets+ into the
       # set, and returns +self+.
       #
-      # The +inputs+ may be any objects that would be accepted by ::new:
-      # non-zero 32 bit unsigned integers, ranges, <tt>sequence-set</tt>
-      # formatted strings, other sequence sets, or enumerables containing any of
-      # these.
+      # The +sets+ may be any objects that would be accepted by ::new: non-zero
+      # 32 bit unsigned integers, ranges, <tt>sequence-set</tt> formatted
+      # strings, other sequence sets, or enumerables containing any of these.
       #
-      # #string will be regenerated after all inputs have been merged.
+      # #string will be regenerated after all sets have been merged.
       #
       # Related: #add, #add?, #union
-      def merge(*inputs)
-        tuples_add input_to_tuples inputs
+      def merge(*sets)
+        tuples_add input_to_tuples sets
         normalize!
       end
 
-      # Removes all of the elements that appear in any of the given +objects+
-      # from the set, and returns +self+.
+      # Removes all of the elements that appear in any of the given +sets+ from
+      # the set, and returns +self+.
       #
-      # The +objects+ may be any objects that would be accepted by ::new:
-      # non-zero 32 bit unsigned integers, ranges, <tt>sequence-set</tt>
-      # formatted strings, other sequence sets, or enumerables containing any of
-      # these.
+      # The +sets+ may be any objects that would be accepted by ::new: non-zero
+      # 32 bit unsigned integers, ranges, <tt>sequence-set</tt> formatted
+      # strings, other sequence sets, or enumerables containing any of these.
       #
       # Related: #difference
-      def subtract(*objects)
-        tuples_subtract input_to_tuples objects
+      def subtract(*sets)
+        tuples_subtract input_to_tuples sets
         normalize!
       end
 
@@ -1401,18 +1400,18 @@ module Net
         end
       end
 
-      def input_to_tuples(obj)
-        obj = input_try_convert obj
-        case obj
-        when *STARS, Integer, Range then [input_to_tuple(obj)]
-        when String      then str_to_tuples obj
-        when SequenceSet then obj.tuples
-        when ENUMABLE    then obj.flat_map { input_to_tuples _1 }
+      def input_to_tuples(set)
+        set = input_try_convert set
+        case set
+        when *STARS, Integer, Range then [input_to_tuple(set)]
+        when String      then str_to_tuples set
+        when SequenceSet then set.tuples
+        when ENUMABLE    then set.flat_map { input_to_tuples _1 }
         when nil         then []
         else
           raise DataFormatError,
                 "expected nz-number, range, string, or enumerable; " \
-                "got %p" % [obj]
+                "got %p" % [set]
         end
       end
 
