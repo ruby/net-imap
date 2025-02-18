@@ -319,9 +319,12 @@ module Net
       class << self
 
         # :call-seq:
-        #   SequenceSet[*values] -> valid frozen sequence set
+        #   SequenceSet[*inputs] -> valid frozen sequence set
         #
-        # Returns a frozen SequenceSet, constructed from +values+.
+        # Returns a frozen SequenceSet, constructed from +inputs+.
+        #
+        # When only a single valid frozen SequenceSet is given, that same set is
+        # returned.
         #
         # An empty SequenceSet is invalid and will raise a DataFormatError.
         #
