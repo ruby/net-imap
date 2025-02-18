@@ -174,7 +174,7 @@ module Net
     #
     # <i>Set membership:</i>
     # - #include? (aliased as #member?):
-    #   Returns whether a given object (nz-number, range, or <tt>*</tt>) is
+    #   Returns whether a given element (nz-number, range, or <tt>*</tt>) is
     #   contained by the set.
     # - #include_star?: Returns whether the set contains <tt>*</tt>.
     #
@@ -258,8 +258,8 @@ module Net
     #
     # These methods always update #string to be fully sorted and coalesced.
     #
-    # - #add (aliased as #<<): Adds a given object to the set; returns +self+.
-    # - #add?: If the given object is not an element in the set, adds it and
+    # - #add (aliased as #<<): Adds a given element to the set; returns +self+.
+    # - #add?: If the given element is not fully included the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
     # - #merge: Merges multiple elements into the set; returns +self+.
     # - #complement!: Replaces the contents of the set with its own #complement.
@@ -268,7 +268,7 @@ module Net
     #
     # These methods _may_ cause #string to not be sorted or coalesced.
     #
-    # - #append: Adds a given object to the set, appending it to the existing
+    # - #append: Adds the given entry to the set, appending it to the existing
     #   string, and returns +self+.
     # - #string=: Assigns a new #string value and replaces #elements to match.
     # - #replace: Replaces the contents of the set with the contents
@@ -279,8 +279,8 @@ module Net
     # sorted and coalesced.
     #
     # - #clear: Removes all elements in the set; returns +self+.
-    # - #delete: Removes a given object from the set; returns +self+.
-    # - #delete?: If the given object is an element in the set, removes it and
+    # - #delete: Removes a given element from the set; returns +self+.
+    # - #delete?: If the given element is included in the set, removes it and
     #   returns it; otherwise, returns +nil+.
     # - #delete_at: Removes the number at a given offset.
     # - #slice!: Removes the number or consecutive numbers at a given offset or
@@ -690,7 +690,7 @@ module Net
       alias complement :~
 
       # :call-seq:
-      #   add(object)   -> self
+      #   add(element)   -> self
       #   self << other -> self
       #
       # Adds a range or number to the set and returns +self+.
@@ -698,8 +698,8 @@ module Net
       # #string will be regenerated.  Use #merge to add many elements at once.
       #
       # Related: #add?, #merge, #union
-      def add(object)
-        tuple_add input_to_tuple object
+      def add(element)
+        tuple_add input_to_tuple element
         normalize!
       end
       alias << add
@@ -708,9 +708,9 @@ module Net
       #
       # Unlike #add, #merge, or #union, the new value is appended to #string.
       # This may result in a #string which has duplicates or is out-of-order.
-      def append(object)
+      def append(entry)
         modifying!
-        tuple = input_to_tuple object
+        tuple = input_to_tuple entry
         entry = tuple_to_str tuple
         string unless empty? # write @string before tuple_add
         tuple_add tuple
@@ -718,19 +718,19 @@ module Net
         self
       end
 
-      # :call-seq: add?(object) -> self or nil
+      # :call-seq: add?(element) -> self or nil
       #
       # Adds a range or number to the set and returns +self+.  Returns +nil+
-      # when the object is already included in the set.
+      # when the element is already included in the set.
       #
       # #string will be regenerated.  Use #merge to add many elements at once.
       #
       # Related: #add, #merge, #union, #include?
-      def add?(object)
-        add object unless include? object
+      def add?(element)
+        add element unless include? element
       end
 
-      # :call-seq: delete(object) -> self
+      # :call-seq: delete(element) -> self
       #
       # Deletes the given range or number from the set and returns +self+.
       #
@@ -738,8 +738,8 @@ module Net
       # many elements at once.
       #
       # Related: #delete?, #delete_at, #subtract, #difference
-      def delete(object)
-        tuple_subtract input_to_tuple object
+      def delete(element)
+        tuple_subtract input_to_tuple element
         normalize!
       end
 
@@ -775,8 +775,8 @@ module Net
       # #string will be regenerated after deletion.
       #
       # Related: #delete, #delete_at, #subtract, #difference, #disjoint?
-      def delete?(object)
-        tuple = input_to_tuple object
+      def delete?(element)
+        tuple = input_to_tuple element
         if tuple.first == tuple.last
           return unless include_tuple? tuple
           tuple_subtract tuple
@@ -1386,14 +1386,14 @@ module Net
         super
       end
 
-      def input_to_tuple(obj)
-        obj = input_try_convert obj
-        case obj
-        when *STARS, Integer then [int = to_tuple_int(obj), int]
-        when Range           then range_to_tuple(obj)
-        when String          then str_to_tuple(obj)
+      def input_to_tuple(entry)
+        entry = input_try_convert entry
+        case entry
+        when *STARS, Integer then [int = to_tuple_int(entry), int]
+        when Range           then range_to_tuple(entry)
+        when String          then str_to_tuple(entry)
         else
-          raise DataFormatError, "expected number or range, got %p" % [obj]
+          raise DataFormatError, "expected number or range, got %p" % [entry]
         end
       end
 
