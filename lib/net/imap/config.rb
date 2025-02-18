@@ -361,8 +361,8 @@ module Net
       # Alias for responses_without_block
 
       # **NOTE:** <em>+UIDPlusData+ has been removed since +v0.6.0+, and this
-      # config option only configures deprecation warnings.  The config option
-      # will be **removed** in +v0.7.0+.</em>
+      # config option only affects deprecation warnings.
+      # This config option will be **removed** in +v0.7.0+.</em>
       #
       # ResponseParser always returns CopyUIDData for +COPYUID+ response codes,
       # and AppendUIDData for +APPENDUID+ response codes.  Previously, this
@@ -395,8 +395,8 @@ module Net
       }
 
       # **NOTE:** <em>+UIDPlusData+ has been removed since +v0.6.0+, and this
-      # config option only configures deprecation warnings.  The config option
-      # will be **removed** in +v0.7.0+.</em>
+      # config option is ignored.
+      # This config option will be **removed** in +v0.7.0+.</em>
       #
       # ResponseParser always returns CopyUIDData for +COPYUID+ response codes,
       # and AppendUIDData for +APPENDUID+ response codes.  Previously, this

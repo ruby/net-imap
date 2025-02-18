@@ -2021,7 +2021,7 @@ module Net
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported and the destination supports persistent UIDs, the server's
-    # response should include an +APPENDUID+ response code with UIDPlusData.
+    # response should include an +APPENDUID+ response code with AppendUIDData.
     # This will report the UIDVALIDITY of the destination mailbox and the
     # assigned UID of the appended message.
     #
@@ -2778,7 +2778,7 @@ module Net
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +COPYUID+ response code
-    # with UIDPlusData.  This will report the UIDVALIDITY of the destination
+    # with CopyUIDData.  This will report the UIDVALIDITY of the destination
     # mailbox, the UID set of the source messages, and the assigned UID set of
     # the moved messages.
     #
@@ -2819,7 +2819,7 @@ module Net
     #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported, the server's response should include a +COPYUID+ response code
-    # with UIDPlusData.  This will report the UIDVALIDITY of the destination
+    # with CopyUIDData.  This will report the UIDVALIDITY of the destination
     # mailbox, the UID set of the source messages, and the assigned UID set of
     # the moved messages.
     #
