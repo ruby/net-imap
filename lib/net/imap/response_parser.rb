@@ -1382,7 +1382,7 @@ module Net
         when T_NUMBER then [Integer(token.value)]
         when T_ATOM
           entries = uid_set__ranges(token.value)
-          if (count = entries.sum(&:count)) > MAX_UID_SET_SIZE
+          if (count = entries.sum(&:size)) > MAX_UID_SET_SIZE
             parse_error("uid-set is too large: %d > 10k", count)
           end
           entries.flat_map(&:to_a)
