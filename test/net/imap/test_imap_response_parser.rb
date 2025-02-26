@@ -445,6 +445,13 @@ EOF
         "A004 OK [copyUID 1 10000:20000,1 1:10001] Done\r\n"
       )
     end
+    Timeout.timeout(1) do
+      assert_raise Net::IMAP::ResponseParseError, /uid-set is too large/ do
+        parser.parse(
+          "A004 OK [copyUID 1 1:#{2**32 - 1} 1:#{2**32 - 1}] Done\r\n"
+        )
+      end
+    end
   end
 
 end
