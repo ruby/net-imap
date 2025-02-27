@@ -53,6 +53,8 @@ module Net
   # states: <tt>not authenticated</tt>, +authenticated+, +selected+, and
   # +logout+.  Most commands are valid only in certain states.
   #
+  # See #connection_state.
+  #
   # === Sequence numbers and UIDs
   #
   # Messages have two sorts of identifiers: message sequence
@@ -758,9 +760,10 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
-    autoload :SASL,        File.expand_path("imap/sasl",         __dir__)
-    autoload :SASLAdapter, File.expand_path("imap/sasl_adapter", __dir__)
-    autoload :StringPrep,  File.expand_path("imap/stringprep",   __dir__)
+    autoload :ConnectionState, File.expand_path("imap/connection_state", __dir__)
+    autoload :SASL,            File.expand_path("imap/sasl",             __dir__)
+    autoload :SASLAdapter,     File.expand_path("imap/sasl_adapter",     __dir__)
+    autoload :StringPrep,      File.expand_path("imap/stringprep",       __dir__)
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
@@ -832,6 +835,67 @@ module Net
     #
     # Returns +false+ for a plaintext connection.
     attr_reader :ssl_ctx_params
+
+    # Returns the current connection state.
+    #
+    # Once an IMAP connection is established, the connection is in one of four
+    # states: +not_authenticated+, +authenticated+, +selected+, and +logout+.
+    # Most commands are valid only in certain states.
+    #
+    # The connection state object responds to +to_sym+ and +name+ with the name
+    # of the current connection state, as a Symbol or String.  Future versions
+    # of +net-imap+ may store additional information on the state object.
+    #
+    # From {RFC9051}[https://www.rfc-editor.org/rfc/rfc9051#section-3]:
+    #                    +----------------------+
+    #                    |connection established|
+    #                    +----------------------+
+    #                               ||
+    #                               \/
+    #             +--------------------------------------+
+    #             |          server greeting             |
+    #             +--------------------------------------+
+    #                       || (1)       || (2)        || (3)
+    #                       \/           ||            ||
+    #             +-----------------+    ||            ||
+    #             |Not Authenticated|    ||            ||
+    #             +-----------------+    ||            ||
+    #              || (7)   || (4)       ||            ||
+    #              ||       \/           \/            ||
+    #              ||     +----------------+           ||
+    #              ||     | Authenticated  |<=++       ||
+    #              ||     +----------------+  ||       ||
+    #              ||       || (7)   || (5)   || (6)   ||
+    #              ||       ||       \/       ||       ||
+    #              ||       ||    +--------+  ||       ||
+    #              ||       ||    |Selected|==++       ||
+    #              ||       ||    +--------+           ||
+    #              ||       ||       || (7)            ||
+    #              \/       \/       \/                \/
+    #             +--------------------------------------+
+    #             |               Logout                 |
+    #             +--------------------------------------+
+    #                               ||
+    #                               \/
+    #                 +-------------------------------+
+    #                 |both sides close the connection|
+    #                 +-------------------------------+
+    #
+    # >>>
+    #   Legend for the above diagram:
+    #
+    #   1. connection without pre-authentication (+OK+ #greeting)
+    #   2. pre-authenticated connection (+PREAUTH+ #greeting)
+    #   3. rejected connection (+BYE+ #greeting)
+    #   4. successful #login or #authenticate command
+    #   5. successful #select or #examine command
+    #   6. #close or #unselect command, unsolicited +CLOSED+ response code, or
+    #      failed #select or #examine command
+    #   7. #logout command, server shutdown, or connection closed
+    #
+    # Before the server greeting, the state is +not_authenticated+.
+    # After the connection closes, the state remains +logout+.
+    attr_reader :connection_state
 
     # Creates a new Net::IMAP object and connects it to the specified
     # +host+.
@@ -952,6 +1016,8 @@ module Net
       @exception = nil
       @greeting = nil
       @capabilities = nil
+      @tls_verified = false
+      @connection_state = ConnectionState::NotAuthenticated.new
 
       # Client Protocol Receiver
       @parser = ResponseParser.new(config: @config)
@@ -973,7 +1039,6 @@ module Net
       @logout_command_tag = nil
 
       # Connection
-      @tls_verified = false
       @sock = tcp_socket(@host, @port)
       start_tls_session if ssl_ctx
       start_imap_connection
@@ -989,6 +1054,7 @@ module Net
     # Related: #logout, #logout!
     def disconnect
       return if disconnected?
+      state_logout!
       begin
         begin
           # try to call SSL::SSLSocket#io.
@@ -1374,7 +1440,7 @@ module Net
     # capabilities, they will be cached.
     def authenticate(*args, sasl_ir: config.sasl_ir, **props, &callback)
       sasl_adapter.authenticate(*args, sasl_ir: sasl_ir, **props, &callback)
-        .tap { @capabilities = capabilities_from_resp_code _1 }
+        .tap do state_authenticated! _1 end
     end
 
     # Sends a {LOGIN command [IMAP4rev1 §6.2.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.2.3]
@@ -1408,7 +1474,7 @@ module Net
         raise LoginDisabledError
       end
       send_command("LOGIN", user, password)
-        .tap { @capabilities = capabilities_from_resp_code _1 }
+        .tap do state_authenticated! _1 end
     end
 
     # Sends a {SELECT command [IMAP4rev1 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.1]
@@ -1448,8 +1514,10 @@ module Net
       args = ["SELECT", mailbox]
       args << ["CONDSTORE"] if condstore
       synchronize do
+        state_unselected! # implicitly closes current mailbox
         @responses.clear
         send_command(*args)
+          .tap do state_selected! end
       end
     end
 
@@ -1466,8 +1534,10 @@ module Net
       args = ["EXAMINE", mailbox]
       args << ["CONDSTORE"] if condstore
       synchronize do
+        state_unselected! # implicitly closes current mailbox
         @responses.clear
         send_command(*args)
+          .tap do state_selected! end
       end
     end
 
@@ -1906,6 +1976,7 @@ module Net
     # Related: #unselect
     def close
       send_command("CLOSE")
+        .tap do state_authenticated! end
     end
 
     # Sends an {UNSELECT command [RFC3691 §2]}[https://www.rfc-editor.org/rfc/rfc3691#section-3]
@@ -1922,6 +1993,7 @@ module Net
     # [RFC3691[https://www.rfc-editor.org/rfc/rfc3691]].
     def unselect
       send_command("UNSELECT")
+        .tap do state_authenticated! end
     end
 
     # call-seq:
@@ -3180,6 +3252,7 @@ module Net
       @capabilities    = capabilities_from_resp_code @greeting
       @receiver_thread = start_receiver_thread
     rescue Exception
+      state_logout!
       @sock.close
       raise
     end
@@ -3188,7 +3261,10 @@ module Net
       greeting = get_response
       raise Error, "No server greeting - connection closed" unless greeting
       record_untagged_response_code greeting
-      raise ByeResponseError, greeting if greeting.name == "BYE"
+      case greeting.name
+      when "PREAUTH" then state_authenticated!
+      when "BYE"     then state_logout!; raise ByeResponseError, greeting
+      end
       greeting
     end
 
@@ -3198,6 +3274,8 @@ module Net
       rescue Exception => ex
         @receiver_thread_exception = ex
         # don't exit the thread with an exception
+      ensure
+        state_logout!
       end
     end
 
@@ -3220,6 +3298,7 @@ module Net
           resp = get_response
         rescue Exception => e
           synchronize do
+            state_logout!
             @sock.close
             @exception = e
           end
@@ -3239,6 +3318,7 @@ module Net
               @tagged_response_arrival.broadcast
               case resp.tag
               when @logout_command_tag
+                state_logout!
                 return
               when @continued_command_tag
                 @continuation_request_exception =
@@ -3248,6 +3328,7 @@ module Net
             when UntaggedResponse
               record_untagged_response(resp)
               if resp.name == "BYE" && @logout_command_tag.nil?
+                state_logout!
                 @sock.close
                 @exception = ByeResponseError.new(resp)
                 connection_closed = true
@@ -3255,6 +3336,7 @@ module Net
             when ContinuationRequest
               @continuation_request_arrival.signal
             end
+            state_unselected! if resp in {data: {code: {name: "CLOSED"}}}
             @response_handlers.each do |handler|
               handler.call(resp)
             end
@@ -3632,6 +3714,29 @@ module Net
       if ssl_ctx.verify_mode != VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
+      end
+    end
+
+    def state_authenticated!(resp = nil)
+      synchronize do
+        @capabilities = capabilities_from_resp_code resp if resp
+        @connection_state = ConnectionState::Authenticated.new
+      end
+    end
+
+    def state_selected!
+      synchronize do
+        @connection_state = ConnectionState::Selected.new
+      end
+    end
+
+    def state_unselected!
+      state_authenticated! if connection_state.to_sym == :selected
+    end
+
+    def state_logout!
+      synchronize do
+        @connection_state = ConnectionState::Logout.new
       end
     end
 
