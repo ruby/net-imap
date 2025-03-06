@@ -14,7 +14,11 @@ module Net::IMAP::FakeServer::TestHelper
       end
       yield server
     ensure
-      server&.shutdown
+      begin
+        server&.shutdown
+      rescue IOError
+        raise unless ignore_io_error
+      end
     end
   end
 
