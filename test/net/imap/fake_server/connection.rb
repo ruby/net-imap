@@ -23,7 +23,9 @@ class Net::IMAP::FakeServer
 
     def run
       writer.greeting
-      router << reader.get_command until state.logout?
+      catch(:eof) do
+        router << reader.get_command until state.logout?
+      end
     ensure
       close
     end
