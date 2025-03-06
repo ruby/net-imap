@@ -21,6 +21,7 @@ class Net::IMAP::FakeServer
         $2 or socket.print "+ Continue\r\n"
         buf << socket.read(Integer($1))
       end
+      throw :eof if buf.empty?
       @last_command = parse(buf)
     end
 
