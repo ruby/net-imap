@@ -359,8 +359,8 @@ module Net
   #
   # - #capability: Returns the server's capabilities as an array of strings.
   #
-  #   <em>In general, #capable? should be used rather than explicitly sending a
-  #   +CAPABILITY+ command to the server.</em>
+  #   <em>In general,</em> #capable? <em>should be used rather than explicitly
+  #   sending a +CAPABILITY+ command to the server.</em>
   # - #noop: Allows the server to send unsolicited untagged #responses.
   # - #logout: Tells the server to end the session. Enters the +logout+ state.
   #
@@ -1569,7 +1569,7 @@ module Net
     # When the +condstore+ keyword argument is true, the server is told to
     # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
     # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
-    # #select and all `FETCH` responses will include FetchData#modseq.
+    # #select and all +FETCH+ responses will include FetchData#modseq.
     # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
