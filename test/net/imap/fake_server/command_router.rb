@@ -10,7 +10,9 @@ class Net::IMAP::FakeServer
       def on(*command_names, &handler)
         scope = self.is_a?(Module) ? self : singleton_class
         command_names.each do |command_name|
-          scope.define_method("handle_#{command_name.downcase}", &handler)
+          method_name = :"handle_#{command_name.downcase}"
+          scope.undef_method(method_name) if scope.method_defined?(method_name)
+          scope.define_method(method_name, &handler)
         end
       end
     end
