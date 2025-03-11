@@ -18,6 +18,7 @@ class Net::IMAP::FakeServer
     def tls?; !!@tls_socket end
     def closed?; @closed end
 
+    def eof?;      socket.eof?       end
     def gets(...)  socket.gets(...)  end
     def read(...)  socket.read(...)  end
     def print(...) socket.print(...) end
