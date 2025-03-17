@@ -26,9 +26,12 @@ module Net
         end
         private_class_method :included
 
-        Types = Hash.new do |h, type| type => Proc | nil; type end
-        Types[:boolean] = Boolean = -> {!!_1}
-        Types[Integer]  = ->{Integer(_1)}
+        def self.safe(...) = Ractor.make_shareable nil.instance_eval(...).freeze
+        private_class_method :safe
+
+        Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
+        Types[:boolean] = Boolean = safe{-> {!!_1}}
+        Types[Integer]  = safe{->{Integer(_1)}}
 
         def self.attr_accessor(attr, type: nil)
           type = Types[type] or return
@@ -37,12 +40,12 @@ module Net
         end
 
         Enum = ->(*enum) {
-          enum = enum.dup.freeze
+          enum     = safe{enum}
           expected = -"one of #{enum.map(&:inspect).join(", ")}"
-          ->val {
+          safe{->val {
             return val if enum.include?(val)
             raise ArgumentError, "expected %s, got %p" % [expected, val]
-          }
+          }}
         }
 
       end
