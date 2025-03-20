@@ -245,7 +245,7 @@ module Net
       #   present.  When capabilities are unknown, Net::IMAP will automatically
       #   send a +CAPABILITY+ command first before sending +LOGIN+.
       #
-      attr_accessor :enforce_logindisabled, type: [
+      attr_accessor :enforce_logindisabled, type: Enum[
         false, :when_capabilities_cached, true
       ]
 
@@ -275,7 +275,7 @@ module Net
       #   Raise an ArgumentError with the deprecation warning.
       #
       # Note: #responses_without_args is an alias for #responses_without_block.
-      attr_accessor :responses_without_block, type: [
+      attr_accessor :responses_without_block, type: Enum[
         :silence_deprecation_warning, :warn, :frozen_dup, :raise,
       ]
 
@@ -320,7 +320,7 @@ module Net
       #
       # [+false+ <em>(planned default for +v0.6+)</em>]
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
-      attr_accessor :parser_use_deprecated_uidplus_data, type: [
+      attr_accessor :parser_use_deprecated_uidplus_data, type: Enum[
         true, :up_to_max_size, false
       ]
 

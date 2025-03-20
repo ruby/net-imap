@@ -26,34 +26,27 @@ module Net
         end
         private_class_method :included
 
+        def self.safe(...) = Ractor.make_shareable nil.instance_eval(...).freeze
+        private_class_method :safe
+
+        Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
+        Types[:boolean] = Boolean = safe{-> {!!_1}}
+        Types[Integer]  = safe{->{Integer(_1)}}
+
         def self.attr_accessor(attr, type: nil)
-          return unless type
-          if    :boolean == type then boolean attr
-          elsif Integer  == type then integer attr
-          elsif Array   === type then enum    attr, type
-          else raise ArgumentError, "unknown type coercion %p" % [type]
-          end
+          type = Types[type] or return
+          define_method :"#{attr}=" do |val| super type[val] end
+          define_method :"#{attr}?" do send attr end if type == Boolean
         end
 
-        def self.boolean(attr)
-          define_method :"#{attr}=" do |val| super !!val end
-          define_method :"#{attr}?" do send attr end
-        end
-
-        def self.integer(attr)
-          define_method :"#{attr}=" do |val| super Integer val end
-        end
-
-        def self.enum(attr, enum)
-          enum = enum.dup.freeze
+        Enum = ->(*enum) {
+          enum     = safe{enum}
           expected = -"one of #{enum.map(&:inspect).join(", ")}"
-          define_method :"#{attr}=" do |val|
-            unless enum.include?(val)
-              raise ArgumentError, "expected %s, got %p" % [expected, val]
-            end
-            super val
-          end
-        end
+          safe{->val {
+            return val if enum.include?(val)
+            raise ArgumentError, "expected %s, got %p" % [expected, val]
+          }}
+        }
 
       end
     end
