@@ -134,6 +134,8 @@ module Net
   # Use paginated or limited versions of commands whenever possible.
   #
   # Use #add_response_handler to handle responses after each one is received.
+  # Use the +response_handlers+ argument to ::new to assign response handlers
+  # before the receiver thread is started.
   #
   # == Errors
   #
@@ -984,6 +986,11 @@ module Net
     #     end
     #   }
     #
+    # Response handlers can also be added when the client is created before the
+    # receiver thread is started, by the +response_handlers+ argument to ::new.
+    # This ensures every server response is handled, including the #greeting.
+    #
+    # Related: #remove_response_handler, #response_handlers
     def add_response_handler(handler = nil, &block)
       raise ArgumentError, "two Procs are passed" if handler && block
       @response_handlers.push(block || handler)
@@ -1099,6 +1106,12 @@ module Net
     #         OpenSSL::SSL::SSLContext#set_params as parameters.
     # open_timeout:: Seconds to wait until a connection is opened
     # idle_response_timeout:: Seconds to wait until an IDLE response is received
+    # response_handlers:: A list of response handlers to be added before the
+    #                     receiver thread is started.  This ensures every server
+    #                     response is handled, including the #greeting.  Note
+    #                     that the greeting is handled in the current thread,
+    #                     but all other responses are handled in the receiver
+    #                     thread.
     #
     # The most common errors are:
     #
@@ -1141,6 +1154,7 @@ module Net
         @responses = Hash.new([].freeze)
         @tagged_responses = {}
         @response_handlers = []
+        options[:response_handlers]&.each do |h| add_response_handler(h) end
         @tagged_response_arrival = new_cond
         @continued_command_tag = nil
         @continuation_request_arrival = new_cond
@@ -1157,6 +1171,7 @@ module Net
         if @greeting.name == "BYE"
           raise ByeResponseError, @greeting
         end
+        @response_handlers.each do |handler| handler.call(@greeting) end
 
         @client_thread = Thread.current
         @receiver_thread = Thread.start {
