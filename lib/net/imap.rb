@@ -233,8 +233,9 @@ module Net
   # Use paginated or limited versions of commands whenever possible.
   #
   # Use #add_response_handler to handle responses after each one is received.
-  # Use #extract_responses, #clear_responses, or #responses (with a block) to
-  # prune responses.
+  # Use the +response_handlers+ argument to ::new to assign response handlers
+  # before the receiver thread is started.  Use #extract_responses,
+  # #clear_responses, or #responses (with a block) to prune responses.
   #
   # == Errors
   #
@@ -881,6 +882,12 @@ module Net
     #
     #   See DeprecatedClientOptions.new for deprecated SSL arguments.
     #
+    # [response_handlers]
+    #   A list of response handlers to be added before the receiver thread is
+    #   started.  This ensures every server response is handled, including the
+    #   #greeting.  Note that the greeting is handled in the current thread, but
+    #   all other responses are handled in the receiver thread.
+    #
     # [config]
     #   A Net::IMAP::Config object to use as the basis for #config.  By default,
     #   the global Net::IMAP.config is used.
@@ -952,7 +959,7 @@ module Net
     # [Net::IMAP::ByeResponseError]
     #   Connected to the host successfully, but it immediately said goodbye.
     #
-    def initialize(host, port: nil, ssl:  nil,
+    def initialize(host, port: nil, ssl: nil, response_handlers: nil,
                    config: Config.global, **config_options)
       super()
       # Config options
@@ -975,6 +982,7 @@ module Net
       @receiver_thread = nil
       @receiver_thread_exception = nil
       @receiver_thread_terminating = false
+      response_handlers&.each do add_response_handler(_1) end
 
       # Client Protocol Sender (including state for currently running commands)
       @tag_prefix = "RUBY"
@@ -2756,6 +2764,10 @@ module Net
     #     end
     #   }
     #
+    # Response handlers can also be added when the client is created before the
+    # receiver thread is started, by the +response_handlers+ argument to ::new.
+    # This ensures every server response is handled, including the #greeting.
+    #
     # Related: #remove_response_handler, #response_handlers
     def add_response_handler(handler = nil, &block)
       raise ArgumentError, "two Procs are passed" if handler && block
@@ -2782,6 +2794,7 @@ module Net
     def start_imap_connection
       @greeting        = get_server_greeting
       @capabilities    = capabilities_from_resp_code @greeting
+      @response_handlers.each do |handler| handler.call(@greeting) end
       @receiver_thread = start_receiver_thread
     rescue Exception
       @sock.close
