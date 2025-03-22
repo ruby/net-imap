@@ -2,13 +2,10 @@
 
 require "net/imap"
 require "test/unit"
-require_relative "fake_server"
 
 class IMAPResponseHandlersTest < Test::Unit::TestCase
-  include Net::IMAP::FakeServer::TestHelper
 
   def setup
-    Net::IMAP.config.reset
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
     @threads = []
@@ -23,17 +20,32 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
   end
 
   test "#add_response_handlers" do
-    responses = []
-    with_fake_server do |server, imap|
-      server.on("NOOP") do |resp|
-        3.times do resp.untagged("#{_1 + 1} EXPUNGE") end
-        resp.done_ok
+    server = create_tcp_server
+    port   = server.addr[1]
+    start_server do
+      sock = server.accept
+      Timeout.timeout(5) do
+        sock.print("* OK connection established\r\n")
+        sock.gets # => NOOP
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("* 2 EXPUNGE\r\n")
+        sock.print("* 3 EXPUNGE\r\n")
+        sock.print("RUBY0001 OK NOOP completed\r\n")
+        sock.gets # => LOGOUT
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      ensure
+        sock.close
+        server.close
       end
-
+    end
+    begin
+      responses = []
+      imap = Net::IMAP.new(server_addr, port: port)
       assert_equal 0, imap.response_handlers.length
-      imap.add_response_handler do responses << [:block, _1] end
+      imap.add_response_handler do |r| responses << [:block, r] end
       assert_equal 1, imap.response_handlers.length
-      imap.add_response_handler(->{ responses << [:proc, _1] })
+      imap.add_response_handler(->(r) { responses << [:proc, r] })
       assert_equal 2, imap.response_handlers.length
 
       imap.noop
@@ -48,6 +60,9 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
         [:block, Net::IMAP::UntaggedResponse, "EXPUNGE", 3],
         [:proc,  Net::IMAP::UntaggedResponse, "EXPUNGE", 3],
       ], responses
+    ensure
+      imap&.logout
+      imap&.disconnect
     end
   end
 
@@ -56,14 +71,32 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
     expunges = []
     alerts   = []
     untagged = 0
-    handler0 = ->{ greeting ||= _1 }
+    handler0 = ->(r) { greeting ||= r }
     handler1 = ->(r) { alerts   << r.data.text if r.data.code.name == "ALERT" rescue nil }
     handler2 = ->(r) { expunges << r.data if r.name == "EXPUNGE" }
     handler3 = ->(r) { untagged += 1 if r.is_a?(Net::IMAP::UntaggedResponse) }
     response_handlers = [handler0, handler1, handler2, handler3]
 
-    run_fake_server_in_thread do |server|
-      port = server.port
+    server = create_tcp_server
+    port   = server.addr[1]
+    start_server do
+      sock = server.accept
+      Timeout.timeout(5) do
+        sock.print("* OK connection established\r\n")
+        sock.gets # => NOOP
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("* 1 EXPUNGE\r\n")
+        sock.print("* OK [ALERT] The first alert.\r\n")
+        sock.print("RUBY0001 OK [ALERT] Did you see the alert?\r\n")
+        sock.gets # => LOGOUT
+        sock.print("* BYE terminating connection\r\n")
+        sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      ensure
+        sock.close
+        server.close
+      end
+    end
+    begin
       imap = Net::IMAP.new("localhost", port: port,
                            response_handlers: response_handlers)
       assert_equal response_handlers, imap.response_handlers
@@ -73,20 +106,29 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
       assert_equal imap.greeting, greeting
       assert_equal 1, untagged
 
-      server.on("NOOP") do |resp|
-        resp.untagged "1 EXPUNGE"
-        resp.untagged "1 EXPUNGE"
-        resp.untagged "OK [ALERT] The first alert."
-        resp.done_ok  "[ALERT] Did you see the alert?"
-      end
-
       imap.noop
       assert_equal 4, untagged
       assert_equal [1, 1], expunges # from handler2
       assert_equal ["The first alert.", "Did you see the alert?"], alerts
     ensure
-      imap&.logout! unless imap&.disconnected?
+      imap&.logout
+      imap&.disconnect
     end
   end
 
+  def start_server
+    th = Thread.new do
+      yield
+    end
+    @threads << th
+    sleep 0.1 until th.stop?
+  end
+
+  def create_tcp_server
+    return TCPServer.new(server_addr, 0)
+  end
+
+  def server_addr
+    Addrinfo.tcp("localhost", 0).ip_address
+  end
 end
