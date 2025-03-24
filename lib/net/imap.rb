@@ -2936,10 +2936,8 @@ module Net
         end
       end
       return nil if buff.length == 0
-      if config.debug?
-        $stderr.print(buff.gsub(/^/n, "S: "))
-      end
-      return @parser.parse(buff)
+      $stderr.print(buff.gsub(/^/n, "S: ")) if config.debug?
+      @parser.parse(buff)
     end
 
     #############################
