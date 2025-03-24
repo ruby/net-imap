@@ -1308,10 +1308,8 @@ module Net
         end
       end
       return nil if buff.length == 0
-      if @@debug
-        $stderr.print(buff.gsub(/^/n, "S: "))
-      end
-      return @parser.parse(buff)
+      $stderr.print(buff.gsub(/^/n, "S: ")) if @@debug
+      @parser.parse(buff)
     end
 
     def record_response(name, data)
