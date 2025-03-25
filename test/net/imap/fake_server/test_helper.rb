@@ -4,6 +4,15 @@ require_relative "../fake_server"
 
 module Net::IMAP::FakeServer::TestHelper
 
+  IO_ERRORS = [
+    IOError,
+    EOFError,
+    Errno::ECONNABORTED,
+    Errno::ECONNRESET,
+    Errno::EPIPE,
+    Errno::ETIMEDOUT,
+  ].freeze
+
   def run_fake_server_in_thread(ignore_io_error: false,
                                 report_on_exception: true,
                                 timeout: 10, **opts)
@@ -13,14 +22,14 @@ module Net::IMAP::FakeServer::TestHelper
         Thread.current.abort_on_exception  = false
         Thread.current.report_on_exception = report_on_exception
         server.run
-      rescue IOError
+      rescue *IO_ERRORS
         raise unless ignore_io_error
       end
       yield server
     ensure
       begin
         server&.shutdown
-      rescue IOError
+      rescue *IO_ERRORS
         raise unless ignore_io_error
       end
     end
