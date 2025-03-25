@@ -2226,10 +2226,12 @@ module Net
 
     def get_response
       buff = String.new
-      while true
-        get_response_line(buff) or break
-        break unless /\{(\d+)\}\r\n\z/n =~ buff
-        get_response_literal(buff, $1.to_i) or break
+      catch :eof do
+        while true
+          get_response_line(buff)
+          break unless /\{(\d+)\}\r\n\z/n =~ buff
+          get_response_literal(buff, $1.to_i)
+        end
       end
       return nil if buff.length == 0
       $stderr.print(buff.gsub(/^/n, "S: ")) if @@debug
@@ -2237,13 +2239,13 @@ module Net
     end
 
     def get_response_line(buff)
-      line = @sock.gets(CRLF) or return
+      line = @sock.gets(CRLF) or throw :eof
       buff << line
     end
 
     def get_response_literal(buff, literal_size)
       literal = String.new(capacity: literal_size)
-      @sock.read(literal_size, literal) or return
+      @sock.read(literal_size, literal) or throw :eof
       buff << literal
     end
 
