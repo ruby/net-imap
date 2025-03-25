@@ -3437,7 +3437,7 @@ module Net
         s = @sock.gets(CRLF)
         break unless s
         buff.concat(s)
-        if /\{(\d+)\}\r\n/n =~ s
+        if /\{(\d+)\}\r\n\z/n =~ buff
           s = @sock.read($1.to_i)
           buff.concat(s)
         else
