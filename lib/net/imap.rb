@@ -3435,11 +3435,8 @@ module Net
       buff = String.new
       while true
         get_response_line(buff) or break
-        if /\{(\d+)\}\r\n\z/n =~ buff
-          get_response_literal(buff, $1.to_i) or break
-        else
-          break
-        end
+        break unless /\{(\d+)\}\r\n\z/n =~ buff
+        get_response_literal(buff, $1.to_i) or break
       end
       return nil if buff.length == 0
       $stderr.print(buff.gsub(/^/n, "S: ")) if config.debug?
