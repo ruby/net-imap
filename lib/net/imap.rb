@@ -3434,12 +3434,9 @@ module Net
     def get_response
       buff = String.new
       while true
-        s = @sock.gets(CRLF)
-        break unless s
-        buff.concat(s)
+        get_response_line(buff) or break
         if /\{(\d+)\}\r\n\z/n =~ buff
-          s = @sock.read($1.to_i)
-          buff.concat(s)
+          get_response_literal(buff, $1.to_i) or break
         else
           break
         end
@@ -3447,6 +3444,16 @@ module Net
       return nil if buff.length == 0
       $stderr.print(buff.gsub(/^/n, "S: ")) if config.debug?
       @parser.parse(buff)
+    end
+
+    def get_response_line(buff)
+      line = @sock.gets(CRLF) or return
+      buff << line
+    end
+
+    def get_response_literal(buff, literal_size)
+      literal = @sock.read(literal_size) or return
+      buff << literal
     end
 
     #############################
