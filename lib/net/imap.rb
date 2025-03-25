@@ -2245,7 +2245,8 @@ module Net
     end
 
     def get_response_literal(buff, literal_size)
-      literal = @sock.read(literal_size) or return
+      literal = String.new(capacity: literal_size)
+      @sock.read(literal_size, literal) or return
       buff << literal
     end
 
