@@ -2227,12 +2227,9 @@ module Net
     def get_response
       buff = String.new
       while true
-        s = @sock.gets(CRLF)
-        break unless s
-        buff.concat(s)
+        get_response_line(buff) or break
         if /\{(\d+)\}\r\n\z/n =~ buff
-          s = @sock.read($1.to_i)
-          buff.concat(s)
+          get_response_literal(buff, $1.to_i) or break
         else
           break
         end
@@ -2241,6 +2238,18 @@ module Net
       $stderr.print(buff.gsub(/^/n, "S: ")) if @@debug
       @parser.parse(buff)
     end
+
+    def get_response_line(buff)
+      line = @sock.gets(CRLF) or return
+      buff << line
+    end
+
+    def get_response_literal(buff, literal_size)
+      literal = @sock.read(literal_size) or return
+      buff << literal
+    end
+
+    #############################
 
     def record_response(name, data)
       unless @responses.has_key?(name)
