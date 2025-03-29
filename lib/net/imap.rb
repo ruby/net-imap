@@ -778,9 +778,11 @@ module Net
     def self.config; Config.global end
 
     # Returns the global debug mode.
+    # Delegates to {Net::IMAP.config.debug}[rdoc-ref:Config#debug].
     def self.debug; config.debug end
 
     # Sets the global debug mode.
+    # Delegates to {Net::IMAP.config.debug=}[rdoc-ref:Config#debug=].
     def self.debug=(val)
       config.debug = val
     end
@@ -810,13 +812,20 @@ module Net
     # Net::IMAP.config.
     attr_reader :config
 
+    ##
+    # :attr_reader: open_timeout
     # Seconds to wait until a connection is opened.
-    # If the IMAP object cannot open a connection within this time,
-    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    def open_timeout; config.open_timeout end
+    # Delegates to {config.open_timeout}[rdoc-ref:Config#open_timeout].
 
+    ##
+    # :attr_reader: idle_response_timeout
     # Seconds to wait until an IDLE response is received.
-    def idle_response_timeout; config.idle_response_timeout end
+    # Delegates to {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout].
+
+    # :stopdoc:
+    def open_timeout;           config.open_timeout            end
+    def idle_response_timeout;  config.idle_response_timeout   end
+    # :startdoc:
 
     # The hostname this client connected to
     attr_reader :host
