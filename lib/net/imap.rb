@@ -765,6 +765,7 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
+    autoload :ResponseReader, File.expand_path("imap/response_reader", __dir__)
     autoload :SASL,        File.expand_path("imap/sasl",         __dir__)
     autoload :SASLAdapter, File.expand_path("imap/sasl_adapter", __dir__)
     autoload :StringPrep,  File.expand_path("imap/stringprep",   __dir__)
@@ -998,6 +999,7 @@ module Net
       # Connection
       @tls_verified = false
       @sock = tcp_socket(@host, @port)
+      @reader = ResponseReader.new(self, @sock)
       start_tls_session if ssl_ctx
       start_imap_connection
 
@@ -2923,28 +2925,10 @@ module Net
     end
 
     def get_response
-      buff = String.new
-      catch :eof do
-        while true
-          get_response_line(buff)
-          break unless /\{(\d+)\}\r\n\z/n =~ buff
-          get_response_literal(buff, $1.to_i)
-        end
-      end
+      buff = @reader.read_response_buffer
       return nil if buff.length == 0
       $stderr.print(buff.gsub(/^/n, "S: ")) if config.debug?
       @parser.parse(buff)
-    end
-
-    def get_response_line(buff)
-      line = @sock.gets(CRLF) or throw :eof
-      buff << line
-    end
-
-    def get_response_literal(buff, literal_size)
-      literal = String.new(capacity: literal_size)
-      @sock.read(literal_size, literal) or throw :eof
-      buff << literal
     end
 
     #############################
@@ -3145,6 +3129,7 @@ module Net
       raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
       raise "cannot start TLS without SSLContext" unless ssl_ctx
       @sock = SSLSocket.new(@sock, ssl_ctx)
+      @reader = ResponseReader.new(self, @sock)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, open_timeout)
