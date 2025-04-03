@@ -737,6 +737,8 @@ module Net
   class IMAP < Protocol
     VERSION = "0.3.8"
 
+    autoload :ResponseReader, File.expand_path("imap/response_reader", __dir__)
+
     include MonitorMixin
     if defined?(OpenSSL::SSL)
       include OpenSSL
@@ -2074,6 +2076,7 @@ module Net
       @idle_response_timeout = options[:idle_response_timeout] || 5
       @parser = ResponseParser.new
       @sock = tcp_socket(@host, @port)
+      @reader = ResponseReader.new(self, @sock)
       begin
         if options[:ssl]
           start_tls_session(options[:ssl])
@@ -2225,28 +2228,10 @@ module Net
     end
 
     def get_response
-      buff = String.new
-      catch :eof do
-        while true
-          get_response_line(buff)
-          break unless /\{(\d+)\}\r\n\z/n =~ buff
-          get_response_literal(buff, $1.to_i)
-        end
-      end
+      buff = @reader.read_response_buffer
       return nil if buff.length == 0
       $stderr.print(buff.gsub(/^/n, "S: ")) if @@debug
       @parser.parse(buff)
-    end
-
-    def get_response_line(buff)
-      line = @sock.gets(CRLF) or throw :eof
-      buff << line
-    end
-
-    def get_response_literal(buff, literal_size)
-      literal = String.new(capacity: literal_size)
-      @sock.read(literal_size, literal) or throw :eof
-      buff << literal
     end
 
     #############################
@@ -2428,6 +2413,7 @@ module Net
         context.verify_callback = VerifyCallbackProc
       end
       @sock = SSLSocket.new(@sock, context)
+      @reader = ResponseReader.new(self, @sock)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, @open_timeout)
