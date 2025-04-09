@@ -18,6 +18,8 @@ module Net
             super(attr)
             AttrTypeCoercion.attr_accessor(attr, type: type)
           end
+
+          module_function def Integer? = NilOrInteger
         end
         private_constant :Macros
 
@@ -45,6 +47,8 @@ module Net
           define_method :"#{attr}=" do |val| super type[val] end
           define_method :"#{attr}?" do send attr end if type == Boolean
         end
+
+        NilOrInteger = safe{->val { Integer val unless val.nil? }}
 
         Enum = ->(*enum) {
           enum     = safe{enum}
