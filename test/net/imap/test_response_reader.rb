@@ -6,7 +6,7 @@ require "test/unit"
 
 class ResponseReaderTest < Test::Unit::TestCase
   class FakeClient
-    def max_response_size; config.max_response_size end
+    attr_accessor :max_response_size
   end
 
   def literal(str) "{#{str.bytesize}}\r\n#{str}" end
@@ -47,7 +47,7 @@ class ResponseReaderTest < Test::Unit::TestCase
 
   test "#read_response_buffer with max_response_size" do
     client = FakeClient.new
-    client.config.max_response_size = 10
+    client.max_response_size = 10
     under = "+ 3456\r\n"
     exact = "+ 345678\r\n"
     over  = "+ 3456789\r\n"

@@ -32,6 +32,7 @@ module Net
           "Response size", response_size_msg, "exceeds max_response_size",
           max_response_size && "(#{max_response_size}B)",
         ].compact.join(" ")
+        return super(msg, *args) if kwargs.empty? # ruby 2.6 compatibility
         super(msg, *args, **kwargs)
       end
 

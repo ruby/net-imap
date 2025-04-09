@@ -133,7 +133,7 @@ module Net
   #
   # Use paginated or limited versions of commands whenever possible.
   #
-  # Use Config#max_response_size to impose a limit on incoming server responses
+  # Use #max_response_size to impose a limit on incoming server responses
   # as they are being read.  <em>This is especially important for untrusted
   # servers.</em>
   #
@@ -288,6 +288,40 @@ module Net
     # Seconds to wait until an IDLE response is received.
     attr_reader :idle_response_timeout
 
+    # The maximum allowed server response size.  When +nil+, there is no limit
+    # on response size.
+    #
+    # The default value is _unlimited_ (after +v0.5.8+, the default is 512 MiB).
+    # A _much_ lower value should be used with untrusted servers (for example,
+    # when connecting to a user-provided hostname).  When using a lower limit,
+    # message bodies should be fetched in chunks rather than all at once.
+    #
+    # <em>Please Note:</em> this only limits the size per response.  It does
+    # not prevent a flood of individual responses and it does not limit how
+    # many unhandled responses may be stored on the responses hash.  See
+    # Net::IMAP@Unbounded+memory+use.
+    #
+    # Socket reads are limited to the maximum remaining bytes for the current
+    # response: max_response_size minus the bytes that have already been read.
+    # When the limit is reached, or reading a +literal+ _would_ go over the
+    # limit, ResponseTooLargeError is raised and the connection is closed.
+    # See also #socket_read_limit.
+    #
+    # Note that changes will not take effect immediately, because the receiver
+    # thread may already be waiting for the next response using the previous
+    # value.  Net::IMAP#noop can force a response and enforce the new setting
+    # immediately.
+    #
+    # ==== Versioned Defaults
+    #
+    # Net::IMAP#max_response_size <em>was added in +v0.2.5+ and +v0.3.9+ as an
+    # attr_accessor, and in +v0.4.20+ and +v0.5.7+ as a delegator to a config
+    # attribute.</em>
+    #
+    # * original: +nil+ <em>(no limit)</em>
+    # * +0.5+: 512 MiB
+    attr_accessor :max_response_size
+
     # The thread to receive exceptions.
     attr_accessor :client_thread
 
@@ -316,17 +350,6 @@ module Net
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
     end
-
-    ##
-    # :attr_accessor: max_response_size
-    #
-    # The maximum allowed server response size, in bytes.
-    # Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
-
-    # :stopdoc:
-    def max_response_size;      config.max_response_size       end
-    def max_response_size=(val) config.max_response_size = val end
-    # :startdoc:
 
     # Disconnects from the server.
     def disconnect
@@ -1129,6 +1152,7 @@ module Net
     #                     that the greeting is handled in the current thread,
     #                     but all other responses are handled in the receiver
     #                     thread.
+    # max_response_size:: See #max_response_size.
     #
     # The most common errors are:
     #
@@ -1159,6 +1183,7 @@ module Net
       @tagno = 0
       @open_timeout = options[:open_timeout] || 30
       @idle_response_timeout = options[:idle_response_timeout] || 5
+      @max_response_size     = options[:max_response_size]
       @parser = ResponseParser.new
       @sock = tcp_socket(@host, @port)
       @reader = ResponseReader.new(self, @sock)
