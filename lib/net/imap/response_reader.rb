@@ -52,7 +52,7 @@ module Net
         [limit, max_response_remaining!].compact.min
       end
 
-      def max_response_size      = 512 << 20 # TODO: Config#max_response_size
+      def max_response_size      = client.max_response_size
       def max_response_remaining = max_response_size &.- bytes_read
       def response_too_large?    = max_response_size &.< min_response_size
       def min_response_size      = bytes_read + min_response_remaining
