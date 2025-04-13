@@ -302,6 +302,31 @@ module Net
       # * +0.5+: 512 MiB
       attr_accessor :max_response_size, type: Integer?
 
+      # Sets the limit for how many bytes will be read from the socket at a
+      # time.
+      #
+      # When both socket_read_limit and max_response_size are non-nil, reads are
+      # limited to the smaller of #socket_read_limit and the remaining bytes for
+      # that response.  When reading an IMAP +literal+, reads are also limited
+      # to the remaining bytes in that +literal+
+      #
+      # Please note that this only affects Net::IMAP's reads from its connection
+      # object, which is buffered.  The underlying buffers and IO system calls
+      # will not be directly affected by this read limit.
+      #
+      # Related: #max_response_size
+      #
+      # ==== Versioned Defaults
+      #
+      # Net::IMAP#socket_read_limit _and_ Net::IMAP#socket_read_limit= <em>were
+      # added in +v0.2.5+, +v0.3.9+, +v0.4.20+, and +v0.5.7+.</em>
+      #
+      # <em>Config option added in +v0.4.20+ and +v0.5.7+.</em>
+      #
+      # * original: +nil+ <em>(no limit)</em>
+      # * +0.6+: 16KiB
+      attr_accessor :socket_read_limit, type: Integer?
+
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
       #
@@ -482,6 +507,7 @@ module Net
         enforce_logindisabled: true,
         max_response_size: 512 << 20, # 512 MiB
         responses_without_block: :warn,
+        socket_read_limit: nil,
         parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,
       ).freeze
@@ -520,6 +546,7 @@ module Net
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
+        socket_read_limit: 16 << 10, # 16 KiB
       ).freeze
 
       version_defaults[0.7r] = Config[0.6r].dup.update(
