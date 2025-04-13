@@ -234,9 +234,9 @@ module Net
   #
   # Use paginated or limited versions of commands whenever possible.
   #
-  # Use Config#max_response_size to impose a limit on incoming server responses
-  # as they are being read.  <em>This is especially important for untrusted
-  # servers.</em>
+  # Use Config#max_response_size and Config#socket_read_limit to impose limits
+  # on incoming server responses as they are being read.  <em>This is especially
+  # important for untrusted servers.</em>
   #
   # Use #add_response_handler to handle responses after each one is received.
   # Use the +response_handlers+ argument to ::new to assign response handlers
@@ -876,11 +876,18 @@ module Net
     # The maximum allowed server response size, in bytes.
     # Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
 
+    ##
+    # :attr_accessor: socket_read_limit
+    # The limit for each socket read, in bytes.
+    # Delegates to {config.socket_read_limit}[rdoc-ref:Config#socket_read_limit].
+
     # :stopdoc:
     def open_timeout;           config.open_timeout            end
     def idle_response_timeout;  config.idle_response_timeout   end
     def max_response_size;      config.max_response_size       end
     def max_response_size=(val) config.max_response_size = val end
+    def socket_read_limit;      config.socket_read_limit       end
+    def socket_read_limit=(val) config.socket_read_limit = val end
     # :startdoc:
 
     # The hostname this client connected to
