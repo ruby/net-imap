@@ -88,9 +88,13 @@ module Net
         )
       end
 
-      # TODO: configurable socket_read_limit (currently hardcoded to 4KiB)
+      # Raises SocketReadLimitError if socket_read_limit is zero or negative.
       def socket_read_limit!
-        4096
+        read_limit = client.socket_read_limit
+        if read_limit && !read_limit.positive?
+          raise SocketReadLimitError.new(socket_read_limit: read_limit)
+        end
+        read_limit
       end
 
     end

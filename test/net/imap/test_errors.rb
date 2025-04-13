@@ -37,4 +37,18 @@ class IMAPErrorsTest < Net::IMAP::TestCase
                  "exceeds max_response_size (1200B)", err.message)
   end
 
+  test "SocketReadLimitError" do
+    err = Net::IMAP::SocketReadLimitError.new("manually set message")
+    assert_nil err.socket_read_limit
+    assert_equal "manually set message", err.message
+
+    err = Net::IMAP::SocketReadLimitError.new
+    assert_nil err.socket_read_limit
+    assert_equal "Socket read limit <= 0", err.message
+
+    err = Net::IMAP::SocketReadLimitError.new(socket_read_limit: -1)
+    assert_equal(-1, err.socket_read_limit)
+    assert_equal "Socket read limit -1 <= 0", err.message
+  end
+
 end

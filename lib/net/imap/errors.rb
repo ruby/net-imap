@@ -50,6 +50,19 @@ module Net
       end
     end
 
+    # Error raised when Config#socket_read_limit is less than or equal to zero.
+    class SocketReadLimitError < ResponseReadError
+      attr_reader :socket_read_limit
+
+      def initialize(msg = nil, *args, socket_read_limit: nil, **kwargs)
+        @socket_read_limit = socket_read_limit
+        msg ||= [
+          "Socket read limit", socket_read_limit, "<= 0",
+        ].compact.join(" ")
+        super(msg, *args, **kwargs)
+      end
+    end
+
     # Error raised when a response from the server is non-parsable.
     class ResponseParseError < Error
     end

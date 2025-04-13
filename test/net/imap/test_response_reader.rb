@@ -9,6 +9,7 @@ class ResponseReaderTest < Net::IMAP::TestCase
   class FakeClient
     def config = @config ||= Net::IMAP.config.new
     def max_response_size = config.max_response_size
+    def socket_read_limit = config.socket_read_limit
   end
 
   def literal(str) = "{#{str.bytesize}}\r\n#{str}"
@@ -80,6 +81,27 @@ class ResponseReaderTest < Net::IMAP::TestCase
       result = rcvr.read_response_buffer
       flunk "Got result: %p" % [result]
     end
+  end
+
+  test "#read_response_buffer with socket_read_limit" do
+    client = FakeClient.new
+    client.config.socket_read_limit = 10
+    aaaaaaaaa    = "a" * (20 << 10)
+    many_crs     = "\r" * 1000
+    many_crlfs   = "\r\n" * 100
+    mega_response = [
+      "* fake",
+      aaaaaaaaa,
+      literal(aaaaaaaaa),
+      literal(many_crlfs),
+      literal(literal(literal(many_crlfs))),
+      literal(many_crs),
+      many_crs,
+    ].join(" ")
+    io = StringIO.new(mega_response)
+    rcvr = Net::IMAP::ResponseReader.new(client, io)
+    assert_equal mega_response, rcvr.read_response_buffer.to_str
+    assert_equal "",           rcvr.read_response_buffer.to_str
   end
 
 end

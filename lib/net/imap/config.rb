@@ -305,6 +305,34 @@ module Net
         0.5r => 512 << 20, # 512 MiB
       }
 
+      # Sets the limit for how many bytes will be read from the socket at a
+      # time.
+      #
+      # When both socket_read_limit and max_response_size are non-nil, reads are
+      # limited to the smaller of #socket_read_limit and the remaining bytes for
+      # that response.  When reading an IMAP +literal+, reads are also limited
+      # to the remaining bytes in that +literal+
+      #
+      # Please note that this only affects Net::IMAP's reads from its connection
+      # object, which is buffered.  The underlying buffers and IO system calls
+      # will not be directly affected by this read limit.
+      #
+      # Related: #max_response_size
+      #
+      # ==== Versioned Defaults
+      #
+      # Net::IMAP#socket_read_limit _and_ Net::IMAP#socket_read_limit= <em>were
+      # added in +v0.2.5+, +v0.3.9+, +v0.4.20+, and +v0.5.7+.</em>
+      #
+      # <em>Config option added in +v0.4.20+ and +v0.5.7+.</em>
+      #
+      # * original: +nil+ <em>(no limit)</em>
+      # * +0.6+: 16KiB
+      attr_accessor :socket_read_limit, type: Integer?, defaults: {
+        0.0r => nil,
+        0.7r => 16 << 10, # 16 KiB
+      }
+
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
       #
