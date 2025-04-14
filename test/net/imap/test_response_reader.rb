@@ -19,6 +19,7 @@ class ResponseReaderTest < Test::Unit::TestCase
     long_line    = "tag ok #{aaaaaaaaa} #{aaaaaaaaa}\r\n"
     literal_aaaa = "* fake #{literal aaaaaaaaa}\r\n"
     literal_crlf = "tag ok #{literal many_crlfs} #{literal many_crlfs}\r\n"
+    zero_literal = "tag ok #{literal ""} #{literal ""}\r\n"
     illegal_crs  = "tag ok #{many_crs} #{many_crs}\r\n"
     illegal_lfs  = "tag ok #{literal "\r"}\n#{literal "\r"}\n\r\n"
     io = StringIO.new([
@@ -26,6 +27,7 @@ class ResponseReaderTest < Test::Unit::TestCase
       long_line,
       literal_aaaa,
       literal_crlf,
+      zero_literal,
       illegal_crs,
       illegal_lfs,
       simple,
@@ -35,6 +37,7 @@ class ResponseReaderTest < Test::Unit::TestCase
     assert_equal long_line,    rcvr.read_response_buffer.to_str
     assert_equal literal_aaaa, rcvr.read_response_buffer.to_str
     assert_equal literal_crlf, rcvr.read_response_buffer.to_str
+    assert_equal zero_literal, rcvr.read_response_buffer.to_str
     assert_equal illegal_crs,  rcvr.read_response_buffer.to_str
     assert_equal illegal_lfs,  rcvr.read_response_buffer.to_str
     assert_equal simple,       rcvr.read_response_buffer.to_str
