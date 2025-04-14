@@ -11,26 +11,34 @@ module Net
       end
 
       def read_response_buffer
-        buff = String.new
+        @buff = String.new
         catch :eof do
           while true
-            read_line(buff)
-            break unless /\{(\d+)\}\r\n\z/n =~ buff
-            read_literal(buff, $1.to_i)
+            read_line
+            break unless (@literal_size = get_literal_size)
+            read_literal
           end
         end
         buff
+      ensure
+        @buff = nil
       end
 
       private
 
-      def read_line(buff)
+      attr_reader :buff, :literal_size
+
+      def get_literal_size    = /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i
+
+      def read_line
         buff << (@sock.gets(CRLF) or throw :eof)
       end
 
-      def read_literal(buff, literal_size)
+      def read_literal
         literal = String.new(capacity: literal_size)
         buff << (@sock.read(literal_size, literal) or throw :eof)
+      ensure
+        @literal_size = nil
       end
 
     end
