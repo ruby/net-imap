@@ -35,7 +35,7 @@ module Net
       def get_literal_size    = /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i
 
       def read_line
-        buff << (@sock.gets(CRLF, read_limit) or throw :eof)
+        buff << gets
         max_response_remaining! unless line_done?
       end
 
@@ -43,9 +43,17 @@ module Net
         # check before allocating memory for literal
         max_response_remaining!
         literal = String.new(capacity: literal_size)
-        buff << (@sock.read(read_limit(literal_size), literal) or throw :eof)
+        buff << read(literal_size, literal)
       ensure
         @literal_size = nil
+      end
+
+      def gets(sep = CRLF, limit = nil)
+        @sock.gets(sep, read_limit(limit)) or throw :eof
+      end
+
+      def read(limit = nil, into = nil)
+        @sock.read(read_limit(limit), into) or throw :eof
       end
 
       def read_limit(limit = nil)
