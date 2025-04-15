@@ -12,6 +12,7 @@ module Net
 
       def read_response_buffer
         @buff = String.new
+        @part_offset = 0
         catch :eof do
           while true
             read_line
@@ -29,21 +30,32 @@ module Net
       attr_reader :buff, :literal_size
 
       def bytes_read          = buff.bytesize
+      def part_size           = bytes_read - @part_offset
       def empty?              = buff.empty?
       def done?               = line_done? && !get_literal_size
-      def line_done?          = buff.end_with?(CRLF)
+      def line_done?          = line_query? && @buff.end_with?("\r\n")
+      def line_expecting_LF?  = line_query? && @buff.end_with?("\r")
+      def line_query?         = literal_size ? part_size.zero? : part_size >= 2
       def get_literal_size    = /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i
+      def literal_remaining   = literal_size &.- part_size
+      def literal_remaining?  = literal_size &.> part_size
 
       def read_line
-        buff << gets
-        max_response_remaining! unless line_done?
+        @part_offset = bytes_read
+        until line_done?
+          buff << gets
+          # peek one byte beyond CR, to look for CRLF
+          buff << read(1) while line_expecting_LF?
+        end
       end
 
       def read_literal
+        @part_offset = bytes_read
         # check before allocating memory for literal
         max_response_remaining!
         literal = String.new(capacity: literal_size)
         buff << read(literal_size, literal)
+        buff << read(literal_remaining) while literal_remaining?
       ensure
         @literal_size = nil
       end
@@ -57,7 +69,7 @@ module Net
       end
 
       def read_limit(limit = nil)
-        [limit, max_response_remaining!].compact.min
+        [limit, socket_read_limit!, max_response_remaining!].compact.min
       end
 
       def max_response_size      = client.max_response_size
@@ -66,7 +78,7 @@ module Net
       def min_response_size      = bytes_read + min_response_remaining
 
       def min_response_remaining
-        empty? ? 3 : done? ? 0 : (literal_size || 0) + 2
+        empty? ? 3 : done? ? 0 : line_expecting_LF? ? 1 : (literal_remaining || 0) + 2
       end
 
       def max_response_remaining!
@@ -74,6 +86,11 @@ module Net
         raise ResponseTooLargeError.new(
           max_response_size:, bytes_read:, literal_size:,
         )
+      end
+
+      # TODO: configurable socket_read_limit (currently hardcoded to 4KiB)
+      def socket_read_limit!
+        4096
       end
 
     end
