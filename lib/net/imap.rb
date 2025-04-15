@@ -792,10 +792,11 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
-    autoload :ConnectionState, File.expand_path("imap/connection_state", __dir__)
-    autoload :SASL,            File.expand_path("imap/sasl",             __dir__)
-    autoload :SASLAdapter,     File.expand_path("imap/sasl_adapter",     __dir__)
-    autoload :StringPrep,      File.expand_path("imap/stringprep",       __dir__)
+    dir = File.expand_path("imap", __dir__)
+    autoload :ConnectionState,        "#{dir}/connection_state"
+    autoload :SASL,                   "#{dir}/sasl"
+    autoload :SASLAdapter,            "#{dir}/sasl_adapter"
+    autoload :StringPrep,             "#{dir}/stringprep"
 
     include MonitorMixin
     if defined?(OpenSSL::SSL)
