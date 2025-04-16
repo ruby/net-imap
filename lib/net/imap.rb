@@ -832,7 +832,7 @@ module Net
       alias default_ssl_port default_tls_port
     end
 
-    # Returns the initial greeting the server, an UntaggedResponse.
+    # Returns the initial greeting sent by the server, an UntaggedResponse.
     attr_reader :greeting
 
     # The client configuration.  See Net::IMAP::Config.
