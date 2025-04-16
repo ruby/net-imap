@@ -807,9 +807,11 @@ module Net
     def self.config; Config.global end
 
     # Returns the global debug mode.
+    # Delegates to {Net::IMAP.config.debug}[rdoc-ref:Config#debug].
     def self.debug; config.debug end
 
     # Sets the global debug mode.
+    # Delegates to {Net::IMAP.config.debug=}[rdoc-ref:Config#debug=].
     def self.debug=(val)
       config.debug = val
     end
@@ -830,7 +832,7 @@ module Net
       alias default_ssl_port default_tls_port
     end
 
-    # Returns the initial greeting the server, an UntaggedResponse.
+    # Returns the initial greeting sent by the server, an UntaggedResponse.
     attr_reader :greeting
 
     # The client configuration.  See Net::IMAP::Config.
@@ -839,13 +841,20 @@ module Net
     # Net::IMAP.config.
     attr_reader :config
 
-    # Seconds to wait until a connection is opened.
-    # If the IMAP object cannot open a connection within this time,
-    # it raises a Net::OpenTimeout exception. The default value is 30 seconds.
-    def open_timeout; config.open_timeout end
+    ##
+    # :attr_reader: open_timeout
+    # Seconds to wait until a connection is opened.  Also used by #starttls.
+    # Delegates to {config.open_timeout}[rdoc-ref:Config#open_timeout].
 
+    ##
+    # :attr_reader: idle_response_timeout
     # Seconds to wait until an IDLE response is received.
-    def idle_response_timeout; config.idle_response_timeout end
+    # Delegates to {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout].
+
+    # :stopdoc:
+    def open_timeout;           config.open_timeout            end
+    def idle_response_timeout;  config.idle_response_timeout   end
+    # :startdoc:
 
     # The hostname this client connected to
     attr_reader :host
@@ -1331,6 +1340,10 @@ module Net
     # This method returns after TLS negotiation and hostname verification are
     # both successful.  Any error indicates that the connection has not been
     # secured.
+    #
+    # After the server agrees to start a TLS connection, this method waits up to
+    # {config.open_timeout}[rdoc-ref:Config#open_timeout] before raising
+    # +Net::OpenTimeout+.
     #
     # *Note:*
     # >>>
