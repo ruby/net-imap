@@ -843,7 +843,7 @@ module Net
 
     ##
     # :attr_reader: open_timeout
-    # Seconds to wait until a connection is opened.
+    # Seconds to wait until a connection is opened.  Also used by #starttls.
     # Delegates to {config.open_timeout}[rdoc-ref:Config#open_timeout].
 
     ##
@@ -1340,6 +1340,10 @@ module Net
     # This method returns after TLS negotiation and hostname verification are
     # both successful.  Any error indicates that the connection has not been
     # secured.
+    #
+    # After the server agrees to start a TLS connection, this method waits up to
+    # {config.open_timeout}[rdoc-ref:Config#open_timeout] before raising
+    # +Net::OpenTimeout+.
     #
     # *Note:*
     # >>>

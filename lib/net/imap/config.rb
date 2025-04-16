@@ -193,10 +193,13 @@ module Net
 
       # Seconds to wait until a connection is opened.
       #
+      # Applied separately for establishing TCP connection and starting a TLS
+      # connection.
+      #
       # If the IMAP object cannot open a connection within this time,
       # it raises a Net::OpenTimeout exception.
       #
-      # See Net::IMAP.new.
+      # See Net::IMAP.new and Net::IMAP#starttls.
       #
       # The default value is +30+ seconds.
       attr_accessor :open_timeout, type: Integer
