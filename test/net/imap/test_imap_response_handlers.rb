@@ -37,16 +37,17 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
       assert_equal 2, imap.response_handlers.length
 
       imap.noop
-      assert_pattern do
-        responses => [
-          [:block, Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 1]],
-          [:proc,  Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 1]],
-          [:block, Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 2]],
-          [:proc,  Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 2]],
-          [:block, Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 3]],
-          [:proc,  Net::IMAP::UntaggedResponse[name: "EXPUNGE", data: 3]],
-        ]
-      end
+      responses = responses[0, 6].map {|which, resp|
+        [which, resp.class, resp.name, resp.data]
+      }
+      assert_equal [
+        [:block, Net::IMAP::UntaggedResponse, "EXPUNGE", 1],
+        [:proc,  Net::IMAP::UntaggedResponse, "EXPUNGE", 1],
+        [:block, Net::IMAP::UntaggedResponse, "EXPUNGE", 2],
+        [:proc,  Net::IMAP::UntaggedResponse, "EXPUNGE", 2],
+        [:block, Net::IMAP::UntaggedResponse, "EXPUNGE", 3],
+        [:proc,  Net::IMAP::UntaggedResponse, "EXPUNGE", 3],
+      ], responses
     end
   end
 
@@ -56,14 +57,15 @@ class IMAPResponseHandlersTest < Test::Unit::TestCase
     alerts   = []
     untagged = 0
     handler0 = ->{ greeting ||= _1 }
-    handler1 = ->{ alerts   << _1.data.text if _1 in {data: {code: {name: "ALERT"}}} }
-    handler2 = ->{ expunges << _1.data if _1 in {name: "EXPUNGE"} }
-    handler3 = ->{ untagged += 1 if _1.is_a?(Net::IMAP::UntaggedResponse) }
+    handler1 = ->(r) { alerts   << r.data.text if r.data.code.name == "ALERT" rescue nil }
+    handler2 = ->(r) { expunges << r.data if r.name == "EXPUNGE" }
+    handler3 = ->(r) { untagged += 1 if r.is_a?(Net::IMAP::UntaggedResponse) }
     response_handlers = [handler0, handler1, handler2, handler3]
 
     run_fake_server_in_thread do |server|
       port = server.port
-      imap = Net::IMAP.new("localhost", port:, response_handlers:)
+      imap = Net::IMAP.new("localhost", port: port,
+                           response_handlers: response_handlers)
       assert_equal response_handlers, imap.response_handlers
       refute_same  response_handlers, imap.response_handlers
 
