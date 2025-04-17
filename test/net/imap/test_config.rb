@@ -165,14 +165,18 @@ class ConfigTest < Test::Unit::TestCase
   end
 
   test ".[] for all x.y versions" do
-    original = Config[0]
+    original = Config[0r]
     assert_kind_of Config, original
+    assert_same original, Config[0]
     assert_same original, Config[0.0]
     assert_same original, Config[0.1]
     assert_same original, Config[0.2]
     assert_same original, Config[0.3]
     ((0.4r..FUTURE_VERSION.to_r) % 0.1r).each do |version|
-      assert_kind_of Config, Config[version.to_f]
+      config = Config[version]
+      assert_kind_of Config, config
+      assert_same config, Config[version.to_f]
+      assert_same config, Config[version.to_f.to_r]
     end
   end
 
@@ -186,6 +190,8 @@ class ConfigTest < Test::Unit::TestCase
 
   test ".[] key errors" do
     assert_raise(KeyError) do Config[:nonexistent] end
+    assert_raise(KeyError) do Config["nonexistent"] end
+    assert_raise(KeyError) do Config["0.01"] end
   end
 
   test ".[] with symbol names" do
@@ -193,6 +199,52 @@ class ConfigTest < Test::Unit::TestCase
     assert_same    Config[THIS_VERSION],      Config[:current]
     assert_same    Config[NEXT_VERSION],      Config[:next]
     assert_same    Config[FUTURE_VERSION],    Config[:future]
+  end
+
+  test ".[] with string names" do
+    assert_same Config[:original], Config["original"]
+    assert_same Config[:current],  Config["current"]
+    assert_same Config[0.4r],      Config["0.4.11"]
+    assert_same Config[0.5r],      Config["0.5.6"]
+    assert_same Config[:current],  Config[Net::IMAP::VERSION]
+  end
+
+  test ".[] with object responding to to_sym, to_r, or to_f" do
+    # responds to none of the methods
+    duck = Object.new
+    assert_raise TypeError do Config[duck] end
+
+    # to_sym
+    duck = Object.new
+    def duck.to_sym = :current
+    assert_same Config[:current], Config[duck]
+
+    # to_r
+    duck = Object.new
+    def duck.to_r = 0.6r
+    assert_same Config[0.6r], Config[duck]
+
+    # to_f
+    duck = Object.new
+    def duck.to_f = 0.4
+    assert_same Config[0.4], Config[duck]
+
+    # prefer to_r over to_f
+    def duck.to_r   = 0.5r
+    assert_same Config[0.5r], Config[duck]
+
+    # prefer to_sym over to_r
+    def duck.to_sym = :original
+    assert_same Config[:original], Config[duck]
+
+    # keeps trying if to_sym finds nothing
+    duck = Object.new
+    def duck.to_sym = :nope
+    def duck.to_f   = 0.5
+    assert_same Config[0.5],  Config[duck]
+    # keeps trying if to_sym and to_r both find nothing
+    def duck.to_r   = 1/11111
+    assert_same Config[0.5],  Config[duck]
   end
 
   test ".[] with a hash" do

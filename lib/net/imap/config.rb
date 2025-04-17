@@ -131,8 +131,25 @@ module Net
       def self.global; @global if defined?(@global) end
 
       # A hash of hard-coded configurations, indexed by version number or name.
+      # Values can be accessed with any object that responds to +to_sym+ or
+      # +to_r+/+to_f+ with a non-zero number.
+      #
+      # Config::[] gets named or numbered versions from this hash.
+      #
+      # For example:
+      #     Net::IMAP::Config.version_defaults[0.5] == Net::IMAP::Config[0.5]
+      #     Net::IMAP::Config[0.5]       == Net::IMAP::Config[0.5r]     # => true
+      #     Net::IMAP::Config["current"] == Net::IMAP::Config[:current] # => true
+      #     Net::IMAP::Config["0.5.6"]   == Net::IMAP::Config[0.5r]     # => true
       def self.version_defaults; @version_defaults end
-      @version_defaults = {}
+      @version_defaults = Hash.new {|h, k|
+        # NOTE: String responds to both so the order is significant.
+        # And ignore non-numeric conversion to zero, because: "wat!?".to_r == 0
+        (h.fetch(k.to_r, nil) || h.fetch(k.to_f, nil) if k.is_a?(Numeric)) ||
+          (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
+          (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
+          (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
+      }
 
       # :call-seq:
       #  Net::IMAP::Config[number] -> versioned config
@@ -155,18 +172,17 @@ module Net
         elsif config.nil? && global.nil?   then nil
         elsif config.respond_to?(:to_hash) then new(global, **config).freeze
         else
-          version_defaults.fetch(config) do
+          version_defaults[config] or
             case config
             when Numeric
               raise RangeError, "unknown config version: %p" % [config]
-            when Symbol
+            when String, Symbol
               raise KeyError, "unknown config name: %p" % [config]
             else
               raise TypeError, "no implicit conversion of %s to %s" % [
                 config.class, Config
               ]
             end
-          end
         end
       end
 
@@ -478,8 +494,6 @@ module Net
       version_defaults.to_a.each do |k, v|
         next unless k in Rational
         version_defaults[k.to_f] = v
-        next unless k.to_i.to_r == k
-        version_defaults[k.to_i] = v
       end
 
       current = VERSION.to_r
