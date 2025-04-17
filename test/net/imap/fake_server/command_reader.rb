@@ -3,6 +3,7 @@
 require "net/imap"
 
 class Net::IMAP::FakeServer
+  CommandParseError = RuntimeError
 
   class CommandReader
     attr_reader :last_command
@@ -21,7 +22,10 @@ class Net::IMAP::FakeServer
         $2 or socket.print "+ Continue\r\n"
         buf << socket.read(Integer($1))
       end
+      throw :eof if buf.empty?
       @last_command = parse(buf)
+    rescue CommandParseError => err
+      raise IOError, err.message if socket.eof? && !buf.end_with?("\r\n")
     end
 
     private
@@ -31,7 +35,7 @@ class Net::IMAP::FakeServer
     # TODO: convert bad command exception to tagged BAD response, when possible
     def parse(buf)
       /\A([^ ]+) ((?:UID )?\w+)(?: (.+))?\r\n\z/min =~ buf or
-        raise "bad request: %p" [buf]
+        raise CommandParseError, "bad request: %p" [buf]
       case $2.upcase
       when "LOGIN", "SELECT", "EXAMINE", "ENABLE", "AUTHENTICATE"
         Command.new $1, $2, scan_astrings($3), buf
