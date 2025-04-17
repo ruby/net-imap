@@ -439,44 +439,54 @@ module Net
 
       version_defaults[:default] = Config[default.send(:defaults_hash)]
 
-      version_defaults[0] = Config[:default].dup.update(
+      version_defaults[0r] = Config[:default].dup.update(
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
         enforce_logindisabled: false,
         parser_use_deprecated_uidplus_data: true,
         parser_max_deprecated_uidplus_data_size: 10_000,
       ).freeze
-      version_defaults[0.0] = Config[0]
-      version_defaults[0.1] = Config[0]
-      version_defaults[0.2] = Config[0]
-      version_defaults[0.3] = Config[0]
+      version_defaults[0.0r] = Config[0r]
+      version_defaults[0.1r] = Config[0r]
+      version_defaults[0.2r] = Config[0r]
+      version_defaults[0.3r] = Config[0r]
 
-      version_defaults[0.4] = Config[0.3].dup.update(
+      version_defaults[0.4r] = Config[0.3r].dup.update(
         sasl_ir: true,
         parser_max_deprecated_uidplus_data_size: 1000,
       ).freeze
 
-      version_defaults[0.5] = Config[0.4].dup.update(
+      version_defaults[0.5r] = Config[0.4r].dup.update(
         enforce_logindisabled: true,
         responses_without_block: :warn,
         parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,
       ).freeze
 
-      version_defaults[0.6] = Config[0.5].dup.update(
+      version_defaults[0.6r] = Config[0.5r].dup.update(
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
 
-      version_defaults[0.7] = Config[0.6].dup.update(
+      version_defaults[0.7r] = Config[0.6r].dup.update(
       ).freeze
 
-      current = VERSION.to_f
+      # Safe conversions one way only:
+      #   0.6r.to_f == 0.6  # => true
+      #   0.6 .to_r == 0.6r # => false
+      version_defaults.to_a.each do |k, v|
+        next unless k in Rational
+        version_defaults[k.to_f] = v
+        next unless k.to_i.to_r == k
+        version_defaults[k.to_i] = v
+      end
+
+      current = VERSION.to_r
       version_defaults[:original] = Config[0]
       version_defaults[:current]  = Config[current]
-      version_defaults[:next]     = Config[current + 0.1]
-      version_defaults[:future]   = Config[current + 0.2]
+      version_defaults[:next]     = Config[current + 0.1r]
+      version_defaults[:future]   = Config[current + 0.2r]
 
       version_defaults.freeze
 
