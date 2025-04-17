@@ -140,7 +140,7 @@ class ConfigTest < Test::Unit::TestCase
 
   test ".version_defaults are all frozen, and inherit debug from global" do
     Config.version_defaults.each do |name, config|
-      assert [0, Float, Symbol].any? { _1 === name }
+      assert [0, Float, Rational, Symbol].any? { _1 === name }
       assert_kind_of Config, config
       assert config.frozen?,            "#{name} isn't frozen"
       assert config.inherited?(:debug), "#{name} doesn't inherit debug"
