@@ -131,8 +131,25 @@ module Net
       def self.global; @global if defined?(@global) end
 
       # A hash of hard-coded configurations, indexed by version number or name.
+      # Values can be accessed with any object that responds to +to_sym+ or
+      # +to_r+/+to_f+ with a non-zero number.
+      #
+      # Config::[] gets named or numbered versions from this hash.
+      #
+      # For example:
+      #     Net::IMAP::Config.version_defaults[0.5] == Net::IMAP::Config[0.5]
+      #     Net::IMAP::Config[0.5]       == Net::IMAP::Config[0.5r]     # => true
+      #     Net::IMAP::Config["current"] == Net::IMAP::Config[:current] # => true
+      #     Net::IMAP::Config["0.5.6"]   == Net::IMAP::Config[0.5r]     # => true
       def self.version_defaults; @version_defaults end
-      @version_defaults = {}
+      @version_defaults = Hash.new {|h, k|
+        # NOTE: String responds to both so the order is significant.
+        # And ignore non-numeric conversion to zero, because: "wat!?".to_r == 0
+        (h.fetch(k.to_r, nil) || h.fetch(k.to_f, nil) if k.is_a?(Numeric)) ||
+          (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
+          (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
+          (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
+      }
 
       # :call-seq:
       #  Net::IMAP::Config[number] -> versioned config
@@ -155,18 +172,17 @@ module Net
         elsif config.nil? && global.nil?   then nil
         elsif config.respond_to?(:to_hash) then new(global, **config).freeze
         else
-          version_defaults.fetch(config) do
+          version_defaults[config] or
             case config
             when Numeric
               raise RangeError, "unknown config version: %p" % [config]
-            when Symbol
+            when String, Symbol
               raise KeyError, "unknown config name: %p" % [config]
             else
               raise TypeError, "no implicit conversion of %s to %s" % [
                 config.class, Config
               ]
             end
-          end
         end
       end
 
@@ -439,44 +455,52 @@ module Net
 
       version_defaults[:default] = Config[default.send(:defaults_hash)]
 
-      version_defaults[0] = Config[:default].dup.update(
+      version_defaults[0r] = Config[:default].dup.update(
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
         enforce_logindisabled: false,
         parser_use_deprecated_uidplus_data: true,
         parser_max_deprecated_uidplus_data_size: 10_000,
       ).freeze
-      version_defaults[0.0] = Config[0]
-      version_defaults[0.1] = Config[0]
-      version_defaults[0.2] = Config[0]
-      version_defaults[0.3] = Config[0]
+      version_defaults[0.0r] = Config[0r]
+      version_defaults[0.1r] = Config[0r]
+      version_defaults[0.2r] = Config[0r]
+      version_defaults[0.3r] = Config[0r]
 
-      version_defaults[0.4] = Config[0.3].dup.update(
+      version_defaults[0.4r] = Config[0.3r].dup.update(
         sasl_ir: true,
         parser_max_deprecated_uidplus_data_size: 1000,
       ).freeze
 
-      version_defaults[0.5] = Config[0.4].dup.update(
+      version_defaults[0.5r] = Config[0.4r].dup.update(
         enforce_logindisabled: true,
         responses_without_block: :warn,
         parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,
       ).freeze
 
-      version_defaults[0.6] = Config[0.5].dup.update(
+      version_defaults[0.6r] = Config[0.5r].dup.update(
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
       ).freeze
 
-      version_defaults[0.7] = Config[0.6].dup.update(
+      version_defaults[0.7r] = Config[0.6r].dup.update(
       ).freeze
 
-      current = VERSION.to_f
+      # Safe conversions one way only:
+      #   0.6r.to_f == 0.6  # => true
+      #   0.6 .to_r == 0.6r # => false
+      version_defaults.to_a.each do |k, v|
+        next unless k in Rational
+        version_defaults[k.to_f] = v
+      end
+
+      current = VERSION.to_r
       version_defaults[:original] = Config[0]
       version_defaults[:current]  = Config[current]
-      version_defaults[:next]     = Config[current + 0.1]
-      version_defaults[:future]   = Config[current + 0.2]
+      version_defaults[:next]     = Config[current + 0.1r]
+      version_defaults[:future]   = Config[current + 0.2r]
 
       version_defaults.freeze
 
