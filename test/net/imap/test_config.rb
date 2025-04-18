@@ -216,34 +216,34 @@ class ConfigTest < Test::Unit::TestCase
 
     # to_sym
     duck = Object.new
-    def duck.to_sym = :current
+    def duck.to_sym; :current end
     assert_same Config[:current], Config[duck]
 
     # to_r
     duck = Object.new
-    def duck.to_r = 0.6r
+    def duck.to_r; 0.6r end
     assert_same Config[0.6r], Config[duck]
 
     # to_f
     duck = Object.new
-    def duck.to_f = 0.4
+    def duck.to_f; 0.4 end
     assert_same Config[0.4], Config[duck]
 
     # prefer to_r over to_f
-    def duck.to_r   = 0.5r
+    def duck.to_r; 0.5r end
     assert_same Config[0.5r], Config[duck]
 
     # prefer to_sym over to_r
-    def duck.to_sym = :original
+    def duck.to_sym; :original end
     assert_same Config[:original], Config[duck]
 
     # keeps trying if to_sym finds nothing
     duck = Object.new
-    def duck.to_sym = :nope
-    def duck.to_f   = 0.5
+    def duck.to_sym; :nope end
+    def duck.to_f;   0.5 end
     assert_same Config[0.5],  Config[duck]
     # keeps trying if to_sym and to_r both find nothing
-    def duck.to_r   = 1/11111
+    def duck.to_r;   1/11111 end
     assert_same Config[0.5],  Config[duck]
   end
 

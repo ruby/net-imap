@@ -463,7 +463,7 @@ module Net
       #   0.6r.to_f == 0.6  # => true
       #   0.6 .to_r == 0.6r # => false
       version_defaults.to_a.each do |k, v|
-        next unless k in Rational
+        next unless k.is_a? Rational
         version_defaults[k.to_f] = v
       end
 
