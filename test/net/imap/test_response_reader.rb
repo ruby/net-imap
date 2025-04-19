@@ -10,10 +10,10 @@ class ResponseReaderTest < Test::Unit::TestCase
   end
 
   class FakeClient
-    def config = @config ||= Net::IMAP.config.new
+    def config; @config ||= Net::IMAP.config.new end
   end
 
-  def literal(str) = "{#{str.bytesize}}\r\n#{str}"
+  def literal(str) "{#{str.bytesize}}\r\n#{str}" end
 
   test "#read_response_buffer" do
     client = FakeClient.new
