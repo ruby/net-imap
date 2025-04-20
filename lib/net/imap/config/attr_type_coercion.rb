@@ -26,10 +26,17 @@ module Net
         end
         private_class_method :included
 
-        def self.safe(...) = Ractor.make_shareable nil.instance_eval(...).freeze
+        if defined?(Ractor.make_shareable)
+          def self.safe(...) Ractor.make_shareable nil.instance_eval(...).freeze end
+        else
+          def self.safe(...) nil.instance_eval(...).freeze end
+        end
         private_class_method :safe
 
-        Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
+        Types = Hash.new do |h, type|
+          type.nil? || Proc === type or raise TypeError, "type not nil or Proc"
+          safe{type}
+        end
         Types[:boolean] = Boolean = safe{-> {!!_1}}
         Types[Integer]  = safe{->{Integer(_1)}}
 
