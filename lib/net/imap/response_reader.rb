@@ -28,7 +28,7 @@ module Net
 
       attr_reader :buff, :literal_size
 
-      def get_literal_size    = /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i
+      def get_literal_size; /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i end
 
       def read_line
         buff << (@sock.gets(CRLF) or throw :eof)
