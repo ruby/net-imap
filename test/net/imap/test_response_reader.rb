@@ -49,4 +49,27 @@ class ResponseReaderTest < Test::Unit::TestCase
     assert_equal "",           rcvr.read_response_buffer.to_str
   end
 
+  class LimitedResponseReader < Net::IMAP::ResponseReader
+    attr_reader :max_response_size
+    def initialize(*args, max_response_size:)
+      super(*args)
+      @max_response_size = max_response_size
+    end
+  end
+
+  test "#read_response_buffer with max_response_size" do
+    client = FakeClient.new
+    max_response_size = 10
+    under = "+ 3456\r\n"
+    exact = "+ 345678\r\n"
+    over  = "+ 3456789\r\n"
+    io = StringIO.new([under, exact, over].join)
+    rcvr = LimitedResponseReader.new(client, io, max_response_size:)
+    assert_equal under, rcvr.read_response_buffer.to_str
+    assert_equal exact, rcvr.read_response_buffer.to_str
+    assert_raise Net::IMAP::ResponseTooLargeError do
+      rcvr.read_response_buffer
+    end
+  end
+
 end
