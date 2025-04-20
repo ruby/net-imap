@@ -28,10 +28,10 @@ module Net
 
       attr_reader :buff, :literal_size
 
-      def bytes_read          = buff.bytesize
-      def empty?              = buff.empty?
-      def done?               = line_done? && !get_literal_size
-      def line_done?          = buff.end_with?(CRLF)
+      def bytes_read;       buff.bytesize                         end
+      def empty?;           buff.empty?                           end
+      def done?;            line_done? && !get_literal_size       end
+      def line_done?;       buff.end_with?(CRLF)                  end
       def get_literal_size; /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i end
 
       def read_line
@@ -52,10 +52,10 @@ module Net
         [limit, max_response_remaining!].compact.min
       end
 
-      def max_response_size      = client.max_response_size
-      def max_response_remaining = max_response_size &.- bytes_read
-      def response_too_large?    = max_response_size &.< min_response_size
-      def min_response_size      = bytes_read + min_response_remaining
+      def max_response_size;      client.max_response_size                end
+      def max_response_remaining; max_response_size &.- bytes_read        end
+      def response_too_large?;    max_response_size &.< min_response_size end
+      def min_response_size;      bytes_read + min_response_remaining     end
 
       def min_response_remaining
         empty? ? 3 : done? ? 0 : (literal_size || 0) + 2
@@ -64,7 +64,9 @@ module Net
       def max_response_remaining!
         return max_response_remaining unless response_too_large?
         raise ResponseTooLargeError.new(
-          max_response_size:, bytes_read:, literal_size:,
+          max_response_size: max_response_size,
+          bytes_read:        bytes_read,
+          literal_size:      literal_size,
         )
       end
 

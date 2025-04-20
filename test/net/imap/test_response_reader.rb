@@ -11,7 +11,7 @@ class ResponseReaderTest < Test::Unit::TestCase
 
   class FakeClient
     def config; @config ||= Net::IMAP.config.new end
-    def max_response_size = config.max_response_size
+    def max_response_size; config.max_response_size end
   end
 
   def literal(str) "{#{str.bytesize}}\r\n#{str}" end

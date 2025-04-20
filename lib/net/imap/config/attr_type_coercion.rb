@@ -19,7 +19,7 @@ module Net
             AttrTypeCoercion.attr_accessor(attr, type: type)
           end
 
-          module_function def Integer? = NilOrInteger
+          module_function def Integer?; NilOrInteger end
         end
         private_constant :Macros
 
