@@ -160,8 +160,6 @@ module Net
   # Use paginated or limited versions of commands whenever possible.
   #
   # Use #add_response_handler to handle responses after each one is received.
-  # Use #extract_responses, #clear_responses, or #responses (with a block) to
-  # prune responses.
   #
   # == Errors
   #
