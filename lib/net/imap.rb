@@ -159,6 +159,10 @@ module Net
   #
   # Use paginated or limited versions of commands whenever possible.
   #
+  # Use Config#max_response_size to impose a limit on incoming server responses
+  # as they are being read.  <em>This is especially important for untrusted
+  # servers.</em>
+  #
   # Use #add_response_handler to handle responses after each one is received.
   # Use the +response_handlers+ argument to ::new to assign response handlers
   # before the receiver thread is started.
@@ -799,6 +803,17 @@ module Net
       alias default_imaps_port default_tls_port
       alias default_ssl_port default_tls_port
     end
+
+    ##
+    # :attr_accessor: max_response_size
+    #
+    # The maximum allowed server response size, in bytes.
+    # Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
+
+    # :stopdoc:
+    def max_response_size;      config.max_response_size       end
+    def max_response_size=(val) config.max_response_size = val end
+    # :startdoc:
 
     # Disconnects from the server.
     #
