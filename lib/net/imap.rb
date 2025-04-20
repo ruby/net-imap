@@ -45,9 +45,15 @@ module Net
   # To work on the messages within a mailbox, the client must
   # first select that mailbox, using either #select or #examine
   # (for read-only access).  Once the client has successfully
-  # selected a mailbox, they enter the "_selected_" state, and that
+  # selected a mailbox, they enter the +selected+ state, and that
   # mailbox becomes the _current_ mailbox, on which mail-item
   # related commands implicitly operate.
+  #
+  # === Connection state
+  #
+  # Once an IMAP connection is established, the connection is in one of four
+  # states: <tt>not authenticated</tt>, +authenticated+, +selected+, and
+  # +logout+.  Most commands are valid only in certain states.
   #
   # === Sequence numbers and UIDs
   #
@@ -126,6 +132,35 @@ module Net
   #
   # This script invokes the FETCH command and the SEARCH command concurrently.
   #
+  # When running multiple commands, care must be taken to avoid ambiguity.  For
+  # example, SEARCH responses are ambiguous about which command they are
+  # responding to, so search commands should not run simultaneously, unless the
+  # server supports +ESEARCH+ {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731] or
+  # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051].  See {RFC9051
+  # §5.5}[https://www.rfc-editor.org/rfc/rfc9051.html#section-5.5] for
+  # other examples of command sequences which should not be pipelined.
+  #
+  # == Unbounded memory use
+  #
+  # Net::IMAP reads server responses in a separate receiver thread per client.
+  # Unhandled response data is saved to #responses, and response_handlers run
+  # inside the receiver thread.  See the list of methods for {handling server
+  # responses}[rdoc-ref:Net::IMAP@Handling+server+responses], below.
+  #
+  # Because the receiver thread continuously reads and saves new responses, some
+  # scenarios must be careful to avoid unbounded memory use:
+  #
+  # * Commands such as #list or #fetch can have an enormous number of responses.
+  # * Commands such as #fetch can result in an enormous size per response.
+  # * Long-lived connections will gradually accumulate unsolicited server
+  #   responses, especially +EXISTS+, +FETCH+, and +EXPUNGE+ responses.
+  # * A buggy or untrusted server could send inappropriate responses, which
+  #   could be very numerous, very large, and very rapid.
+  #
+  # Use paginated or limited versions of commands whenever possible.
+  #
+  # Use #add_response_handler to handle responses after each one is received.
+  #
   # == Errors
   #
   # An \IMAP server can send three different types of responses to indicate
@@ -187,7 +222,7 @@ module Net
   # - Net::IMAP.new: A new client connects immediately and waits for a
   #   successful server greeting before returning the new client object.
   # - #starttls: Asks the server to upgrade a clear-text connection to use TLS.
-  # - #logout: Tells the server to end the session. Enters the "_logout_" state.
+  # - #logout: Tells the server to end the session.  Enters the +logout+ state.
   # - #disconnect: Disconnects the connection (without sending #logout first).
   # - #disconnected?: True if the connection has been closed.
   #
@@ -230,40 +265,39 @@ module Net
   #   <em>Capabilities may change after</em> #starttls, #authenticate, or #login
   #   <em>and cached capabilities must be reloaded.</em>
   # - #noop: Allows the server to send unsolicited untagged #responses.
-  # - #logout: Tells the server to end the session. Enters the "_logout_" state.
+  # - #logout: Tells the server to end the session. Enters the +logout+ state.
   #
   # ==== \IMAP commands for the "Not Authenticated" state
   #
-  # In addition to the universal commands, the following commands are valid in
-  # the "<em>not authenticated</em>" state:
+  # In addition to the commands for any state, the following commands are valid
+  # in the +not_authenticated+ state:
   #
   # - #starttls: Upgrades a clear-text connection to use TLS.
   #
   #   <em>Requires the +STARTTLS+ capability.</em>
-  # - #authenticate: Identifies the client to the server using a {SASL
-  #   mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml].
-  #   Enters the "_authenticated_" state.
+  # - #authenticate: Identifies the client to the server using the given {SASL
+  #   mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
+  #   and credentials.  Enters the +authenticated+ state.
   #
   #   <em>Requires the <tt>AUTH=#{mechanism}</tt> capability for the chosen
   #   mechanism.</em>
   # - #login: Identifies the client to the server using a plain text password.
-  #   Using #authenticate is generally preferred.  Enters the "_authenticated_"
-  #   state.
+  #   Using #authenticate is preferred.  Enters the +authenticated+ state.
   #
   #   <em>The +LOGINDISABLED+ capability</em> <b>must NOT</b> <em>be listed.</em>
   #
   # ==== \IMAP commands for the "Authenticated" state
   #
-  # In addition to the universal commands, the following commands are valid in
-  # the "_authenticated_" state:
+  # In addition to the commands for any state, the following commands are valid
+  # in the +authenticated+ state:
   #
   #--
   # - #enable: <em>Not implemented by Net::IMAP, yet.</em>
   #
   #   <em>Requires the +ENABLE+ capability.</em>
   #++
-  # - #select:  Open a mailbox and enter the "_selected_" state.
-  # - #examine: Open a mailbox read-only, and enter the "_selected_" state.
+  # - #select:  Open a mailbox and enter the +selected+ state.
+  # - #examine: Open a mailbox read-only, and enter the +selected+ state.
   # - #create: Creates a new mailbox.
   # - #delete: Permanently remove a mailbox.
   # - #rename: Change the name of a mailbox.
@@ -289,12 +323,12 @@ module Net
   #
   # ==== \IMAP commands for the "Selected" state
   #
-  # In addition to the universal commands and the "authenticated" commands, the
-  # following commands are valid in the "_selected_" state:
+  # In addition to the commands for any state and the +authenticated+
+  # commands, the following commands are valid in the +selected+ state:
   #
-  # - #close: Closes the mailbox and returns to the "_authenticated_" state,
+  # - #close: Closes the mailbox and returns to the +authenticated+ state,
   #   expunging deleted messages, unless the mailbox was opened as read-only.
-  # - #unselect: Closes the mailbox and returns to the "_authenticated_" state,
+  # - #unselect: Closes the mailbox and returns to the +authenticated+ state,
   #   without expunging any messages.
   #
   #   <em>Requires the +UNSELECT+ capability.</em>
@@ -384,7 +418,7 @@ module Net
   # ==== RFC3691: +UNSELECT+
   # Folded into IMAP4rev2[https://tools.ietf.org/html/rfc9051], so it is also
   # listed with {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands].
-  # - #unselect: Closes the mailbox and returns to the "_authenticated_" state,
+  # - #unselect: Closes the mailbox and returns to the +authenticated+ state,
   #   without expunging any messages.
   #
   # ==== RFC4314: +ACL+
