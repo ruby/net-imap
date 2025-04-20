@@ -5,12 +5,7 @@ require "stringio"
 require "test/unit"
 
 class ResponseReaderTest < Test::Unit::TestCase
-  def setup
-    Net::IMAP.config.reset
-  end
-
   class FakeClient
-    def config; @config ||= Net::IMAP.config.new end
   end
 
   def literal(str) "{#{str.bytesize}}\r\n#{str}" end
