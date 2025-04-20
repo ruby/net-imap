@@ -242,7 +242,6 @@ module Net
       #   Use +SASL-IR+ when it is supported by the server and the mechanism.
       attr_accessor :sasl_ir, type: :boolean
 
-
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
       #
@@ -269,7 +268,7 @@ module Net
       #   Raise an ArgumentError with the deprecation warning.
       #
       # Note: #responses_without_args is an alias for #responses_without_block.
-      attr_accessor :responses_without_block, type: [
+      attr_accessor :responses_without_block, type: Enum[
         :silence_deprecation_warning, :warn, :frozen_dup, :raise,
       ]
 
@@ -314,7 +313,7 @@ module Net
       #
       # [+false+ <em>(planned default for +v0.6+)</em>]
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
-      attr_accessor :parser_use_deprecated_uidplus_data, type: [
+      attr_accessor :parser_use_deprecated_uidplus_data, type: Enum[
         true, :up_to_max_size, false
       ]
 
