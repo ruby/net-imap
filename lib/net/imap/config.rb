@@ -242,6 +242,41 @@ module Net
       #   Use +SASL-IR+ when it is supported by the server and the mechanism.
       attr_accessor :sasl_ir, type: :boolean
 
+      # The maximum allowed server response size.  When +nil+, there is no limit
+      # on response size.
+      #
+      # The default value (512 MiB, since +v0.5.7+) is <em>very high</em> and
+      # unlikely to be reached.  To use a lower limit, fetch message bodies in
+      # chunks rather than all at once.  A _much_ lower value should be used
+      # with untrusted servers (for example, when connecting to a user-provided
+      # hostname).
+      #
+      # <em>Please Note:</em> this only limits the size per response.  It does
+      # not prevent a flood of individual responses and it does not limit how
+      # many unhandled responses may be stored on the responses hash.  See
+      # Net::IMAP@Unbounded+memory+use.
+      #
+      # Socket reads are limited to the maximum remaining bytes for the current
+      # response: max_response_size minus the bytes that have already been read.
+      # When the limit is reached, or reading a +literal+ _would_ go over the
+      # limit, ResponseTooLargeError is raised and the connection is closed.
+      # See also #socket_read_limit.
+      #
+      # Note that changes will not take effect immediately, because the receiver
+      # thread may already be waiting for the next response using the previous
+      # value.  Net::IMAP#noop can force a response and enforce the new setting
+      # immediately.
+      #
+      # ==== Versioned Defaults
+      #
+      # Net::IMAP#max_response_size <em>was added in +v0.2.5+ and +v0.3.9+ as an
+      # attr_accessor, and in +v0.4.20+ and +v0.5.7+ as a delegator to this
+      # config attribute.</em>
+      #
+      # * original: +nil+ <em>(no limit)</em>
+      # * +0.5+: 512 MiB
+      attr_accessor :max_response_size, type: Integer?
+
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
       #
@@ -419,6 +454,7 @@ module Net
         open_timeout: 30,
         idle_response_timeout: 5,
         sasl_ir: true,
+        max_response_size: nil,
         responses_without_block: :silence_deprecation_warning,
         parser_use_deprecated_uidplus_data: true,
         parser_max_deprecated_uidplus_data_size: 1000,
@@ -430,6 +466,7 @@ module Net
 
       version_defaults[0r] = Config[:default].dup.update(
         sasl_ir: false,
+        max_response_size: nil,
         parser_use_deprecated_uidplus_data: true,
         parser_max_deprecated_uidplus_data_size: 10_000,
       ).freeze
@@ -444,6 +481,7 @@ module Net
       ).freeze
 
       version_defaults[0.5r] = Config[0.4r].dup.update(
+        max_response_size: 512 << 20, # 512 MiB
         responses_without_block: :warn,
         parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,

@@ -428,4 +428,17 @@ class ConfigTest < Test::Unit::TestCase
     assert_same grandchild, greatgrandchild.parent
   end
 
+  test "#max_response_size=(Integer | nil)" do
+    config = Config.new
+
+    config.max_response_size = 10_000
+    assert_equal 10_000, config.max_response_size
+
+    config.max_response_size = nil
+    assert_nil config.max_response_size
+
+    assert_raise(ArgumentError) do config.max_response_size = "invalid" end
+    assert_raise(TypeError) do config.max_response_size = :invalid  end
+  end
+
 end
