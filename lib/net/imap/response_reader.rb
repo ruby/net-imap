@@ -28,17 +28,46 @@ module Net
 
       attr_reader :buff, :literal_size
 
+      def bytes_read;       buff.bytesize                         end
+      def empty?;           buff.empty?                           end
+      def done?;            line_done? && !get_literal_size       end
+      def line_done?;       buff.end_with?(CRLF)                  end
       def get_literal_size; /\{(\d+)\}\r\n\z/n =~ buff && $1.to_i end
 
       def read_line
-        buff << (@sock.gets(CRLF) or throw :eof)
+        buff << (@sock.gets(CRLF, read_limit) or throw :eof)
+        max_response_remaining! unless line_done?
       end
 
       def read_literal
+        # check before allocating memory for literal
+        max_response_remaining!
         literal = String.new(capacity: literal_size)
-        buff << (@sock.read(literal_size, literal) or throw :eof)
+        buff << (@sock.read(read_limit(literal_size), literal) or throw :eof)
       ensure
         @literal_size = nil
+      end
+
+      def read_limit(limit = nil)
+        [limit, max_response_remaining!].compact.min
+      end
+
+      def max_response_size;      client.max_response_size                end
+      def max_response_remaining; max_response_size &.- bytes_read        end
+      def response_too_large?;    max_response_size &.< min_response_size end
+      def min_response_size;      bytes_read + min_response_remaining     end
+
+      def min_response_remaining
+        empty? ? 3 : done? ? 0 : (literal_size || 0) + 2
+      end
+
+      def max_response_remaining!
+        return max_response_remaining unless response_too_large?
+        raise ResponseTooLargeError.new(
+          max_response_size: max_response_size,
+          bytes_read:        bytes_read,
+          literal_size:      literal_size,
+        )
       end
 
     end

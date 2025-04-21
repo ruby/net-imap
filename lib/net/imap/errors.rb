@@ -11,6 +11,40 @@ module Net
     class DataFormatError < Error
     end
 
+    # Error raised when the socket cannot be read, due to a configured limit.
+    class ResponseReadError < Error
+    end
+
+    # Error raised when a response is larger than IMAP#max_response_size.
+    class ResponseTooLargeError < ResponseReadError
+      attr_reader :bytes_read, :literal_size
+      attr_reader :max_response_size
+
+      def initialize(msg = nil, *args,
+                     bytes_read:        nil,
+                     literal_size:      nil,
+                     max_response_size: nil,
+                     **kwargs)
+        @bytes_read        = bytes_read
+        @literal_size      = literal_size
+        @max_response_size = max_response_size
+        msg ||= [
+          "Response size", response_size_msg, "exceeds max_response_size",
+          max_response_size && "(#{max_response_size}B)",
+        ].compact.join(" ")
+        return super(msg, *args) if kwargs.empty? # ruby 2.6 compatibility
+        super(msg, *args, **kwargs)
+      end
+
+      private
+
+      def response_size_msg
+        if bytes_read && literal_size
+          "(#{bytes_read}B read + #{literal_size}B literal)"
+        end
+      end
+    end
+
     # Error raised when a response from the server is non-parseable.
     class ResponseParseError < Error
     end
