@@ -234,6 +234,10 @@ module Net
   #
   # Use paginated or limited versions of commands whenever possible.
   #
+  # Use Config#max_response_size to impose a limit on incoming server responses
+  # as they are being read.  <em>This is especially important for untrusted
+  # servers.</em>
+  #
   # Use #add_response_handler to handle responses after each one is received.
   # Use the +response_handlers+ argument to ::new to assign response handlers
   # before the receiver thread is started.  Use #extract_responses,
@@ -853,9 +857,17 @@ module Net
     # Seconds to wait until an IDLE response is received.
     # Delegates to {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout].
 
+    ##
+    # :attr_accessor: max_response_size
+    #
+    # The maximum allowed server response size, in bytes.
+    # Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
+
     # :stopdoc:
     def open_timeout;           config.open_timeout            end
     def idle_response_timeout;  config.idle_response_timeout   end
+    def max_response_size;      config.max_response_size       end
+    def max_response_size=(val) config.max_response_size = val end
     # :startdoc:
 
     # The hostname this client connected to
