@@ -106,6 +106,35 @@ module Net
   #
   # This script invokes the FETCH command and the SEARCH command concurrently.
   #
+  # When running multiple commands, care must be taken to avoid ambiguity.  For
+  # example, SEARCH responses are ambiguous about which command they are
+  # responding to, so search commands should not run simultaneously, unless the
+  # server supports +ESEARCH+ {[RFC4731]}[https://rfc-editor.org/rfc/rfc4731] or
+  # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051].  See {RFC9051
+  # §5.5}[https://www.rfc-editor.org/rfc/rfc9051.html#section-5.5] for
+  # other examples of command sequences which should not be pipelined.
+  #
+  # == Unbounded memory use
+  #
+  # Net::IMAP reads server responses in a separate receiver thread per client.
+  # Unhandled response data is saved to #responses, and response_handlers run
+  # inside the receiver thread.  See the list of methods for {handling server
+  # responses}[rdoc-ref:Net::IMAP@Handling+server+responses], below.
+  #
+  # Because the receiver thread continuously reads and saves new responses, some
+  # scenarios must be careful to avoid unbounded memory use:
+  #
+  # * Commands such as #list or #fetch can have an enormous number of responses.
+  # * Commands such as #fetch can result in an enormous size per response.
+  # * Long-lived connections will gradually accumulate unsolicited server
+  #   responses, especially +EXISTS+, +FETCH+, and +EXPUNGE+ responses.
+  # * A buggy or untrusted server could send inappropriate responses, which
+  #   could be very numerous, very large, and very rapid.
+  #
+  # Use paginated or limited versions of commands whenever possible.
+  #
+  # Use #add_response_handler to handle responses after each one is received.
+  #
   # == Errors
   #
   # An IMAP server can send three different types of responses to indicate
