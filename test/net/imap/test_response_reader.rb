@@ -6,7 +6,7 @@ require "test/unit"
 
 class ResponseReaderTest < Test::Unit::TestCase
   class FakeClient
-    def max_response_size = config.max_response_size
+    def max_response_size; config.max_response_size end
   end
 
   def literal(str) "{#{str.bytesize}}\r\n#{str}" end
