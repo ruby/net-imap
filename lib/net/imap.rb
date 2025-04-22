@@ -255,7 +255,7 @@ module Net
   #    Unicode", RFC-2152[https://tools.ietf.org/html/rfc2152], May 1997.
   #
   class IMAP < Protocol
-    VERSION = "0.2.4"
+    VERSION = "0.2.5"
 
     autoload :ResponseReader, File.expand_path("imap/response_reader", __dir__)
 
