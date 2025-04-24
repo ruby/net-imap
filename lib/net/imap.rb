@@ -3578,11 +3578,11 @@ module Net
     end
 
     def enforce_logindisabled?
-      if config.enforce_logindisabled == :when_capabilities_cached
-        capabilities_cached?
-      else
-        config.enforce_logindisabled
-      end
+      may_depend_on_capabilities_cached?(config.enforce_logindisabled)
+    end
+
+    def may_depend_on_capabilities_cached?(value)
+      value == :when_capabilities_cached ? capabilities_cached? : value
     end
 
     def expunge_internal(...)
