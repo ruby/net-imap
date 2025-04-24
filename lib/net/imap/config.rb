@@ -240,9 +240,21 @@ module Net
       #   Do not use +SASL-IR+, even when it is supported by the server and the
       #   mechanism.
       #
+      # [+:when_capabilities_cached+]
+      #   Use +SASL-IR+ when Net::IMAP#capabilities_cached? is +true+ and it is
+      #   supported by the server and the mechanism, but do not send a
+      #   +CAPABILITY+ command to discover the server capabilities.
+      #
+      #   <em>(+:when_capabilities_cached+ option was added by +v0.5.8+)</em>
+      #
       # [+true+ <em>(default since +v0.4+)</em>]
       #   Use +SASL-IR+ when it is supported by the server and the mechanism.
-      attr_accessor :sasl_ir, type: :boolean
+      attr_accessor :sasl_ir, type: Enum[
+        false, :when_capabilities_cached, true
+      ]
+      # :stopdoc:
+      alias sasl_ir? sasl_ir
+      # :startdoc:
 
       # Controls the behavior of Net::IMAP#login when the +LOGINDISABLED+
       # capability is present.  When enforced, Net::IMAP will raise a

@@ -84,6 +84,58 @@ class IMAPAuthenticateTest < Net::IMAP::TestCase
     end
   end
 
+  test("#authenticate without cached capabilities never sends initial response " \
+       "when config.sasl_ir: :when_capabilities_cached") do
+    [true, false].each do |server_support|
+      with_fake_server(
+        preauth: false, cleartext_auth: true, sasl_ir: server_support,
+        greeting_capabilities: false,
+      ) do |server, imap|
+        imap.config.sasl_ir = :when_capabilities_cached
+        imap.authenticate("PLAIN", "test_user", "test-password")
+        cmd, cont = 2.times.map { server.commands.pop }
+        assert_equal %w[AUTHENTICATE PLAIN], [cmd.name, *cmd.args]
+        assert_equal(["\x00test_user\x00test-password"].pack("m0"),
+                     cont[:continuation].strip)
+        assert_empty server.commands
+      end
+    end
+  end
+
+  test("#authenticate with cached capabilities sends an initial response " \
+       "when config.sasl_ir: :when_capabilities_cached " \
+       "and supported by both the mechanism and the server") do
+    with_fake_server(
+      preauth: false, cleartext_auth: true, sasl_ir: true,
+      greeting_capabilities: true,
+    ) do |server, imap|
+      imap.config.sasl_ir = :when_capabilities_cached
+      imap.authenticate("PLAIN", "test_user", "test-password")
+      cmd = server.commands.pop
+      assert_equal "AUTHENTICATE", cmd.name
+      assert_equal(["PLAIN", ["\x00test_user\x00test-password"].pack("m0")],
+                    cmd.args)
+      assert_empty server.commands
+    end
+  end
+
+  test("#authenticate with cached capabilities doesn't send initial response " \
+       "when config.sasl_ir: :when_capabilities_cached " \
+       "and not supported by the server") do
+    with_fake_server(
+      preauth: false, cleartext_auth: true, sasl_ir: false,
+      greeting_capabilities: true,
+    ) do |server, imap|
+      imap.config.sasl_ir = :when_capabilities_cached
+      imap.authenticate("PLAIN", "test_user", "test-password")
+      cmd, cont = 2.times.map { server.commands.pop }
+      assert_equal %w[AUTHENTICATE PLAIN], [cmd.name, *cmd.args]
+      assert_equal(["\x00test_user\x00test-password"].pack("m0"),
+                    cont[:continuation].strip)
+      assert_empty server.commands
+    end
+  end
+
   test("#authenticate never sends an initial response " \
        "when config.sasl_ir: false") do
     [true, false].each do |server_support|
