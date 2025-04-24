@@ -1518,6 +1518,7 @@ module Net
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
     def authenticate(*args, sasl_ir: config.sasl_ir, **props, &callback)
+      sasl_ir = may_depend_on_capabilities_cached?(sasl_ir)
       sasl_adapter.authenticate(*args, sasl_ir: sasl_ir, **props, &callback)
         .tap do state_authenticated! _1 end
     end
