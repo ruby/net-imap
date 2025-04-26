@@ -24,10 +24,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-
 module Net
   class IMAP
-    data_or_object = RUBY_VERSION >= "3.2.0" ? ::Data : Object
+    data_or_object =
+      if RUBY_VERSION >= "3.2.0" && defined?(::Data) && ::Data.respond_to?(:define)
+        ::Data
+      else
+        Object
+      end
     class DataLite < data_or_object
       def encode_with(coder) coder.map = to_h.transform_keys(&:to_s)        end
       def init_with(coder) initialize(**coder.map.transform_keys(&:to_sym)) end
@@ -39,7 +43,7 @@ end
 
 # :nocov:
 # Need to skip test coverage for the rest, because it isn't loaded by ruby 3.2+.
-return if RUBY_VERSION >= "3.2.0"
+return if RUBY_VERSION >= "3.2.0" && defined?(::Data) && ::Data.respond_to?(:define)
 
 module Net
   class IMAP
