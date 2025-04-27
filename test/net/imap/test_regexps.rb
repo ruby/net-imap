@@ -3,8 +3,6 @@
 require "net/imap"
 require "test/unit"
 
-return unless Regexp.respond_to?(:linear_time?)
-
 begin
   require_relative "regexp_collector"
 rescue LoadError
@@ -34,7 +32,13 @@ class IMAPRegexpsTest < Test::Unit::TestCase
   )
 
   def test_linear_time(data)
-    assert Regexp.linear_time?(data.regexp)
+    regexp = data.regexp
+    assert Regexp.linear_time?(regexp), "%p might backtrack" % [regexp]
+  rescue NoMethodError
+    pend "Regexp.linear_time? not implemented by #{RUBY_ENGINE} #{RUBY_ENGINE_VERSION}"
+  rescue Test::Unit::AssertionFailedError
+    raise if RUBY_ENGINE == "ruby"
+    pend "%p might backtrack in %s %s" % [regexp, RUBY_ENGINE, RUBY_ENGINE_VERSION]
   end
 
 end
