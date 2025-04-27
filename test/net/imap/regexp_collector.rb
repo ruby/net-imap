@@ -1,6 +1,8 @@
 # frozen_string_literal: true
 
 class RegexpCollector
+  Data = Net::IMAP::Data
+
   ConstantRegexp = Data.define(:mod, :const_name, :regexp) do
     def name = "%s::%s" % [mod, const_name]
   end
