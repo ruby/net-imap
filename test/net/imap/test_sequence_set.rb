@@ -289,6 +289,8 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal SequenceSet.empty, SequenceSet[1..100][-50..-60]
     assert_equal SequenceSet.empty, SequenceSet[1..100][-10..10]
     assert_equal SequenceSet.empty, SequenceSet[1..100][60..-60]
+    assert_equal SequenceSet.empty, SequenceSet[1..100][10...0]
+    assert_equal SequenceSet.empty, SequenceSet[1..100][0...0]
     assert_nil SequenceSet.empty[2..4]
     assert_nil SequenceSet[101..200][1000..1060]
     assert_nil SequenceSet[101..200][-1000..-60]
