@@ -571,6 +571,8 @@ module Net
       #
       # Returns the maximum value in +self+, +star+ when the set includes
       # <tt>*</tt>, or +nil+ when the set is empty.
+      #
+      # Related: #min, #minmax
       def max(star: :*)
         (val = @tuples.last&.last) && val == STAR_INT ? star : val
       end
@@ -581,12 +583,16 @@ module Net
       # set is <tt>*</tt>, or +nil+ when the set is empty.
       def min(star: :*)
         (val = @tuples.first&.first) && val == STAR_INT ? star : val
+      #
+      # Related: #max, #minmax
       end
 
       # :call-seq: minmax(star: :*) => nil or [integer, integer or star]
       #
       # Returns a 2-element array containing the minimum and maximum numbers in
       # +self+, or +nil+ when the set is empty.
+      #
+      # Related: #min, #max
       def minmax(star: :*); [min(star: star), max(star: star)] unless empty? end
 
       # Returns false when the set is empty.
@@ -1276,6 +1282,7 @@ module Net
       #   Net::IMAP::SequenceSet["500:*"].limit(max: 37)
       #   #=> Net::IMAP::SequenceSet["37"]
       #
+      # Related: #limit!
       def limit(max:)
         max = to_tuple_int(max)
         if    empty?                      then self.class.empty
