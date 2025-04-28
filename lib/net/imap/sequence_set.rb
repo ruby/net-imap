@@ -1245,7 +1245,10 @@ module Net
       def slice_range(range)
         first = range.begin ||  0
         last  = range.end   || -1
-        last -= 1 if range.exclude_end? && range.end && last != STAR_INT
+        if range.exclude_end?
+          return SequenceSet.empty if last.zero?
+          last -= 1 if range.end && last != STAR_INT
+        end
         if (first * last).positive? && last < first
           SequenceSet.empty
         elsif (min = at(first))
