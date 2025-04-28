@@ -89,7 +89,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "#union",           {transform: ->{ _1 | (1..100)      }, }
   data "#intersection",    {transform: ->{ _1 & (1..100)      }, }
   data "#difference",      {transform: ->{ _1 - (1..100)      }, }
-  # data "#xor",             {transform: ->{ _1 ^ (1..100)      }, }
+  data "#xor",             {transform: ->{ _1 ^ (1..100)      }, }
   data "#complement",      {transform: ->{ ~_1                }, }
   data "#normalize",       {transform: ->{ _1.normalize       }, }
   data "#limit",           {transform: ->{ _1.limit(max: 22)  }, freeze: :always }
@@ -97,7 +97,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   test "transforms keep frozen status" do |data|
     data => {transform:}
     set = SequenceSet.new("2:4,7:11,99,999")
+    dup = set.dup
     result = transform.to_proc.(set)
+    assert_equal dup, set, "transform should not modified"
     if data in {freeze: :always}
       assert result.frozen?, "this transform always returns frozen"
     else
