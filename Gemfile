@@ -15,6 +15,7 @@ gem "test-unit"
 gem "test-unit-ruby-core", git: "https://github.com/ruby/test-unit-ruby-core"
 
 gem "benchmark-driver", require: false
+gem "benchmark-ips",    require: false
 
 group :test do
   gem "simplecov",        require: false
