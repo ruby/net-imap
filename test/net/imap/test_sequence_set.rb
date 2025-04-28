@@ -83,6 +83,32 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     end
   end
 
+  data "#slice(length)",   {transform: ->{ _1.slice(0, 10)    }, }
+  data "#slice(range)",    {transform: ->{ _1.slice(0...10)   }, }
+  data "#slice => empty",  {transform: ->{ _1.slice(0...0)    }, }
+  data "#slice => empty",  {transform: ->{ _1.slice(10..9)    }, }
+  data "#union",           {transform: ->{ _1 | (1..100)      }, }
+  data "#intersection",    {transform: ->{ _1 & (1..100)      }, }
+  data "#difference",      {transform: ->{ _1 - (1..100)      }, }
+  # data "#xor",             {transform: ->{ _1 ^ (1..100)      }, }
+  data "#complement",      {transform: ->{ ~_1                }, }
+  data "#normalize",       {transform: ->{ _1.normalize       }, }
+  data "#limit",           {transform: ->{ _1.limit(max: 22)  }, freeze: :always }
+  data "#limit => empty",  {transform: ->{ _1.limit(max: 1)   }, freeze: :always }
+  test "transforms keep frozen status" do |data|
+    data => {transform:}
+    set = SequenceSet.new("2:4,7:11,99,999")
+    result = transform.to_proc.(set)
+    if data in {freeze: :always}
+      assert result.frozen?, "this transform always returns frozen"
+    else
+      refute result.frozen?, "transform of non-frozen returned frozen"
+    end
+    set.freeze
+    result = transform.to_proc.(set)
+    assert result.frozen?, "transform of frozen returned non-frozen"
+  end
+
   %i[clone dup].each do |method|
     test "##{method}" do
       orig = SequenceSet.new "2:4,7:11,99,999"
