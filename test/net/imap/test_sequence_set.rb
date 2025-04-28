@@ -296,6 +296,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
                  SequenceSet[((1..10_000) % 10).to_a][-5, 4]
     assert_nil SequenceSet[111..222, 888..999][2000, 4]
     assert_nil SequenceSet[111..222, 888..999][-2000, 4]
+    # with length longer than the remaining members
+    assert_equal SequenceSet[101...200],
+                 SequenceSet[1...200][100, 10000]
   end
 
   test "#[range]" do
@@ -322,6 +325,8 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_nil SequenceSet.empty[2..4]
     assert_nil SequenceSet[101..200][1000..1060]
     assert_nil SequenceSet[101..200][-1000..-60]
+    # with length longer than the remaining members
+    assert_equal SequenceSet[101..1111], SequenceSet[1..1111][100..999_999]
   end
 
   test "#find_index" do
