@@ -1249,6 +1249,7 @@ module Net
           remain_frozen_empty
         elsif (min = at(first))
           max = at(last)
+          max = :* if max.nil?
           if    max == :*  then self & (min..)
           elsif min <= max then self & (min..max)
           else                  remain_frozen_empty
