@@ -702,7 +702,9 @@ module Net
       #
       # <tt>(seqset ^ other)</tt> is equivalent to <tt>((seqset | other) -
       # (seqset & other))</tt>.
-      def ^(other) remain_frozen (dup | other).subtract(self & other) end
+      def ^(other)
+        remain_frozen dup.subtract(SequenceSet.new(other).subtract(self))
+      end
       alias xor :^
 
       # :call-seq:
