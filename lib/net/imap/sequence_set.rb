@@ -248,6 +248,10 @@ module Net
     #   +self+ and the other set except those common to both.
     # - #~ (aliased as #complement): Returns a new set containing all members
     #   that are not in +self+
+    # - #above: Return a copy of +self+ which only contains numbers above a
+    #   given number.
+    # - #below: Return a copy of +self+ which only contains numbers below a
+    #   given value.
     # - #limit: Returns a copy of +self+ which has replaced <tt>*</tt> with a
     #   given maximum value and removed all members over that maximum.
     #
@@ -1284,6 +1288,58 @@ module Net
       end
 
       public
+
+      # Returns a copy of +self+ which only contains the numbers above +num+.
+      #
+      #   Net::IMAP::SequenceSet["5,10:22,50"].above(10) # to_s => "11:22,50"
+      #   Net::IMAP::SequenceSet["5,10:22,50"].above(20) # to_s => "21:22,50
+      #   Net::IMAP::SequenceSet["5,10:22,50"].above(30) # to_s => "50"
+      #
+      # This returns the same result as #intersection with <tt>((num+1)..)</tt>
+      # or #difference with <tt>(..num)</tt>.
+      #
+      #   Net::IMAP::SequenceSet["5,10:22,50"] & (11..)   # to_s => "11:22,50"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] - (..10)   # to_s => "11:22,50"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] & (21..)   # to_s => "21:22,50"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] - (..20)   # to_s => "21:22,50"
+      #
+      # Related: #above, #-, #&
+      def above(num)
+        NumValidator.valid_nz_number?(num) or
+          raise ArgumentError, "not a valid sequence set number"
+        difference(..num)
+      end
+
+      # Returns a copy of +self+ which only contains numbers below +num+.
+      #
+      #   Net::IMAP::SequenceSet["5,10:22,50"].below(10) # to_s => "5"
+      #   Net::IMAP::SequenceSet["5,10:22,50"].below(20) # to_s => "5,10:19"
+      #   Net::IMAP::SequenceSet["5,10:22,50"].below(30) # to_s => "5,10:22"
+      #
+      # This returns the same result as #intersection with <tt>(..(num-1))</tt>
+      # or #difference with <tt>(num..)</tt>.
+      #
+      #   Net::IMAP::SequenceSet["5,10:22,50"] & (..9)    # to_s => "5"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] - (10..)   # to_s => "5"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] & (..19)   # to_s => "5,10:19"
+      #   Net::IMAP::SequenceSet["5,10:22,50"] - (20..)   # to_s => "5,10:19"
+      #
+      # When the set does not contain <tt>*</tt>, #below is identical to #limit
+      # with <tt>max: num - 1</tt>.  When the set does contain <tt>*</tt>,
+      # #below always drops it from the result.  Use #limit when the IMAP
+      # semantics for <tt>*</tt> must be enforced.
+      #
+      #   Net::IMAP::SequenceSet["5,10:22,50"].below(30)      # to_s => "5,10:22"
+      #   Net::IMAP::SequenceSet["5,10:22,50"].limit(max: 29) # to_s => "5,10:22"
+      #   Net::IMAP::SequenceSet["5,10:22,*"].below(30)       # to_s => "5,10:22"
+      #   Net::IMAP::SequenceSet["5,10:22,*"].limit(max: 29)  # to_s => "5,10:22,29"
+      #
+      # Related: #above, #-, #&, #limit
+      def below(num)
+        NumValidator.valid_nz_number?(num) or
+          raise ArgumentError, "not a valid sequence set number"
+        difference(num..)
+      end
 
       # Returns a frozen SequenceSet with <tt>*</tt> converted to +max+, numbers
       # and ranges over +max+ removed, and ranges containing +max+ converted to
