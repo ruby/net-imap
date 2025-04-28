@@ -82,6 +82,8 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     end
   end
 
+  data "#min(count)",      {transform: ->{ _1.min(10)         }, }
+  data "#max(count)",      {transform: ->{ _1.max(10)         }, }
   data "#slice(length)",   {transform: ->{ _1.slice(0, 10)    }, }
   data "#slice(range)",    {transform: ->{ _1.slice(0...10)   }, }
   data "#slice => empty",  {transform: ->{ _1.slice(0...0)    }, }
@@ -580,6 +582,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal   3, SequenceSet.new("34:3").min
     assert_equal 345, SequenceSet.new("345,678").min
     assert_nil        SequenceSet.new.min
+    # with a count
+    assert_equal SequenceSet["3:6"],     SequenceSet["34:3"].min(4)
+    assert_equal SequenceSet["345"],     SequenceSet["345,678"].min(1)
+    assert_equal SequenceSet["345,678"], SequenceSet["345,678"].min(222)
+    assert_equal SequenceSet.empty,      SequenceSet.new.min(5)
   end
 
   test "#max" do
@@ -590,6 +597,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal nil, SequenceSet["345:*"].max(star: nil)
     assert_equal "*", SequenceSet["345:*"].max(star: "*")
     assert_nil SequenceSet.new.max(star: "ignored")
+    # with a count
+    assert_equal SequenceSet["31:34"],   SequenceSet["34:3"].max(4)
+    assert_equal SequenceSet["678"],     SequenceSet["345,678"].max(1)
+    assert_equal SequenceSet["345,678"], SequenceSet["345,678"].max(222)
+    assert_equal SequenceSet.empty,      SequenceSet.new.max(5)
   end
 
   test "#minmax" do
