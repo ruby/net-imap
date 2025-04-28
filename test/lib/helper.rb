@@ -1,4 +1,6 @@
-unless ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i
+if !(ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i) &&
+    RUBY_ENGINE == "ruby" # C Ruby only
+
   require "simplecov"
 
   # Cannot use ".simplecov" file: simplecov-json triggers a circular require.
