@@ -94,6 +94,8 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "#xor",             {transform: ->{ _1 ^ (1..100)      }, }
   data "#complement",      {transform: ->{ ~_1                }, }
   data "#normalize",       {transform: ->{ _1.normalize       }, }
+  data "#above",           {transform: ->{ _1.above(22)       }, }
+  data "#below",           {transform: ->{ _1.below(22)       }, }
   data "#limit",           {transform: ->{ _1.limit(max: 22)  }, freeze: :always }
   data "#limit => empty",  {transform: ->{ _1.limit(max: 1)   }, freeze: :always }
   test "transforms keep frozen status" do |data|
@@ -385,6 +387,38 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal   7, set.find_ordered_index(11)
     assert_equal   1, SequenceSet["1,*"].find_ordered_index(-1)
     assert_equal   0, SequenceSet["*,1"].find_ordered_index(-1)
+  end
+
+  test "#above" do
+    set = SequenceSet["5,10:22,50"]
+    assert_equal SequenceSet.empty,         set.above(2**32 - 1)
+    assert_equal SequenceSet.empty,         set.above(99)
+    assert_equal SequenceSet.empty,         set.above(50)
+    assert_equal SequenceSet["50"],         set.above(40)
+    assert_equal SequenceSet["50"],         set.above(30)
+    assert_equal SequenceSet["21:22,50"],   set.above(20)
+    assert_equal SequenceSet["11:22,50"],   set.above(10)
+    assert_equal SequenceSet["5,10:22,50"], set.above(1)
+    assert_raise ArgumentError do           set.above(2**32) end
+    assert_raise ArgumentError do           set.above(0)     end
+    assert_raise ArgumentError do           set.above(-1)    end
+    assert_raise ArgumentError do           set.above(:*)    end
+  end
+
+  test "#below" do
+    set = SequenceSet["5,10:22,50"]
+    assert_equal SequenceSet["5,10:22,50"], set.below(99)
+    assert_equal SequenceSet["5,10:22"],    set.below(50)
+    assert_equal SequenceSet["5,10:22"],    set.below(40)
+    assert_equal SequenceSet["5,10:22"],    set.below(30)
+    assert_equal SequenceSet["5,10:19"],    set.below(20)
+    assert_equal SequenceSet["5"],          set.below(10)
+    assert_equal SequenceSet.empty,         set.below(1)
+    assert_equal SequenceSet.empty,         set.below(1)
+    assert_raise ArgumentError do           set.below(2**32) end
+    assert_raise ArgumentError do           set.below(0)     end
+    assert_raise ArgumentError do           set.below(-1)    end
+    assert_raise ArgumentError do           set.below(:*)    end
   end
 
   test "#limit" do
