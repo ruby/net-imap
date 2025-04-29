@@ -34,13 +34,12 @@ prelude: |
         subtract dup.subtract(SequenceSet.new(other))
       end
 
-      # TODO: add this as a public method
       def xor!(other) # :nodoc:
         modifying!
         copy  = dup
         other = SequenceSet.new(other)
         merge(other).subtract(other.subtract(copy.complement!))
-      end
+      end unless instance_methods.include?(:xor!)
 
       # L - (L ^ R)
       def and2!(other)

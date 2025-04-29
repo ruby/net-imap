@@ -70,6 +70,7 @@ prelude: |
 
 benchmark:
   "      L ^ R":             l, r = sets; l ^ r
+  "      L.xor! R":          l, r = sets; l.xor! r
   "      (L | R) - (R & L)": l, r = sets; (l | r) - (r & l)
   "0.5.8 (L | R) - (R & L)": l, r = sets; l.xor0  r
   "dup1  (L | R) - (R & L)": l, r = sets; l.xor1  r
