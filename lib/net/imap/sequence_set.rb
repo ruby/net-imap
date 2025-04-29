@@ -345,6 +345,8 @@ module Net
     #   this set; returns +self+.
     # - #complement!: In-place set #complement.  Replaces the contents of this
     #   set with its own #complement; returns +self+.
+    # - #xor!: In-place +XOR+ operation.  Adds numbers that are unique to the
+    #   other set and removes numbers that are common to both; returns +self+.
     #
     # <i>Order preserving:</i>
     #
@@ -902,7 +904,7 @@ module Net
       # * <tt>(lhs | rhs) - (lhs & rhs)</tt>
       # * <tt>(lhs - rhs) | (rhs - lhs)</tt>
       # * <tt>(lhs ^ other) ^ (other ^ rhs)</tt>
-      def ^(other) remain_frozen (dup | other).subtract(self & other) end
+      def ^(other) remain_frozen dup.xor! other end
       alias xor :^
 
       # :call-seq:
@@ -1627,6 +1629,24 @@ module Net
       def intersect!(other)
         modifying!
         subtract SequenceSet.new(other).complement!
+      end
+
+      # In-place set #xor.  Adds any numbers in +other+ that are missing from
+      # this set, removes any numbers in +other+ that are already in this set,
+      # and returns +self+.
+      #
+      # +other+ can be any object that would be accepted by ::new.
+      #
+      #     set = Net::IMAP::SequenceSet.new(1..5)
+      #     set.xor! [2, 4, 6]
+      #     set #=> Net::IMAP::SequenceSet["1,3,5:6"]
+      #
+      # Related: #xor, #merge, #subtract
+      def xor!(other)
+        modifying!
+        other = IMAP::SequenceSet(other)
+        both = self & other
+        merge(other).subtract(both)
       end
 
       # Returns a new SequenceSet with a normalized string representation.
