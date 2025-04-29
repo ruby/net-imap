@@ -575,6 +575,36 @@ module Net
       end
       alias overlap? intersect?
 
+      # :call-seq:
+      #   above?(number) -> true or false
+      #
+      # Returns whether the set contains any numbers greater than +number+ (not
+      # inclusive of +number+).
+      #
+      # This returns the same result as #intersect? with <tt>(num+1)..</tt>.
+      #
+      # Related: #below?, #intersect?, #above, #below
+      def above?(number)
+        NumValidator.valid_nz_number?(number) or
+          raise ArgumentError, "not a valid sequence set number"
+        intersect?((number + 1)..)
+      end
+
+      # :call-seq:
+      #   below?(number) -> true or false
+      #
+      # Returns whether the set contains any numbers less than +number+ (not
+      # inclusive of +number+).
+      #
+      # This returns the same result as #intersect? with <tt>..(num-1)</tt>.
+      #
+      # Related: #above?, #intersect?, #above, #below
+      def below?(number)
+        NumValidator.valid_nz_number?(number) or
+          raise ArgumentError, "not a valid sequence set number"
+        intersect?(..(number - 1))
+      end
+
       # Returns +true+ if the set and a given object have no common elements,
       # +false+ otherwise.
       #
@@ -1360,7 +1390,7 @@ module Net
       #   Net::IMAP::SequenceSet["5,10:22,50"] & (21..)   # to_s => "21:22,50"
       #   Net::IMAP::SequenceSet["5,10:22,50"] - (..20)   # to_s => "21:22,50"
       #
-      # Related: #above, #-, #&
+      # Related: #above?, #below, #-, #&
       def above(num)
         NumValidator.valid_nz_number?(num) or
           raise ArgumentError, "not a valid sequence set number"
@@ -1391,7 +1421,7 @@ module Net
       #   Net::IMAP::SequenceSet["5,10:22,*"].below(30)       # to_s => "5,10:22"
       #   Net::IMAP::SequenceSet["5,10:22,*"].limit(max: 29)  # to_s => "5,10:22,29"
       #
-      # Related: #above, #-, #&, #limit
+      # Related: #below?, #above, #-, #&, #limit
       def below(num)
         NumValidator.valid_nz_number?(num) or
           raise ArgumentError, "not a valid sequence set number"
