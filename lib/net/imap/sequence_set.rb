@@ -108,11 +108,15 @@ module Net
     # When a set includes <tt>*</tt>, some methods may have surprising behavior.
     #
     # For example, #complement treats <tt>*</tt> as its own number.  This way,
-    # the #intersection of a set and its #complement will always be empty.
-    # This is not how an \IMAP server interprets the set: it will convert
-    # <tt>*</tt> to either the number of messages in the mailbox or +UIDNEXT+,
-    # as appropriate.  And there _will_ be overlap between a set and its
-    # complement after #limit is applied to each:
+    # the #intersection of a set and its #complement will always be empty.  And
+    # <tt>*</tt> is sorted as greater than any other number in the set.  This is
+    # not how an \IMAP server interprets the set: it will convert <tt>*</tt> to
+    # the number of messages in the mailbox, the +UID+ of the last message in
+    # the mailbox, or +UIDNEXT+, as appropriate.  Several methods have an
+    # argument for how <tt>*</tt> should be interpreted.
+    #
+    # But, for example, this means that there may be overlap between a set and
+    # its complement after #limit is applied to each:
     #
     #   ~Net::IMAP::SequenceSet["*"]  == Net::IMAP::SequenceSet[1..(2**32-1)]
     #   ~Net::IMAP::SequenceSet[1..5] == Net::IMAP::SequenceSet["6:*"]
@@ -179,9 +183,9 @@ module Net
     # - #include_star?: Returns whether the set contains <tt>*</tt>.
     #
     # <i>Minimum and maximum value elements:</i>
-    # - #min: Returns one or more minimum numbers in the set.
-    # - #max: Returns one or more maximum numbers in the set.
-    # - #minmax: Returns the minimum and maximum numbers in the set.
+    # - #min: Returns one or more of the lowest numbers in the set.
+    # - #max: Returns one or more of the highest numbers in the set.
+    # - #minmax: Returns the lowest and highest numbers in the set.
     #
     # <i>Accessing value by offset in sorted set:</i>
     # - #[] (aliased as #slice): Returns the number or consecutive subset at a
@@ -643,7 +647,14 @@ module Net
       #     Net::IMAP::SequenceSet["1:5"] | 2 | [4..6, 99]
       #     #=> Net::IMAP::SequenceSet["1:6,99"]
       #
-      # Related: #add, #merge
+      # Related: #add, #merge, #&, #-, #^, #~
+      #
+      # ==== Set identities
+      #
+      # <tt>lhs | rhs</tt> is equivalent to:
+      # * <tt>rhs | lhs</tt> (commutative)
+      # * <tt>~(~lhs & ~rhs)</tt> (De Morgan's Law)
+      # * <tt>(lhs & rhs) ^ (lhs ^ rhs)</tt>
       def |(other) remain_frozen dup.merge other end
       alias :+    :|
       alias union :|
@@ -662,7 +673,17 @@ module Net
       #     Net::IMAP::SequenceSet[1..5] - 2 - 4 - 6
       #     #=> Net::IMAP::SequenceSet["1,3,5"]
       #
-      # Related: #subtract
+      # Related: #subtract, #|, #&, #^, #~
+      #
+      # ==== Set identities
+      #
+      # <tt>lhs - rhs</tt> is equivalent to:
+      # * <tt>~r - ~l</tt>
+      # * <tt>lhs & ~rhs</tt>
+      # * <tt>~(~lhs | rhs)</tt>
+      # * <tt>lhs & (lhs ^ rhs)</tt>
+      # * <tt>lhs ^ (lhs & rhs)</tt>
+      # * <tt>rhs ^ (lhs | rhs)</tt>
       def -(other) remain_frozen dup.subtract other end
       alias difference :-
 
@@ -680,7 +701,17 @@ module Net
       #     Net::IMAP::SequenceSet[1..5] & [2, 4, 6]
       #     #=> Net::IMAP::SequenceSet["2,4"]
       #
-      # <tt>(seqset & other)</tt> is equivalent to <tt>(seqset - ~other)</tt>.
+      # Related: #intersect?, #|, #-, #^, #~
+      #
+      # ==== Set identities
+      #
+      # <tt>lhs & rhs</tt> is equivalent to:
+      # * <tt>rhs & lhs</tt> (commutative)
+      # * <tt>~(~lhs | ~rhs)</tt> (De Morgan's Law)
+      # * <tt>lhs - ~rhs</tt>
+      # * <tt>lhs - (lhs - rhs)</tt>
+      # * <tt>lhs - (lhs ^ rhs)</tt>
+      # * <tt>lhs ^ (lhs - rhs)</tt>
       def &(other)
         remain_frozen dup.subtract SequenceSet.new(other).complement!
       end
@@ -700,8 +731,16 @@ module Net
       #     Net::IMAP::SequenceSet[1..5] ^ [2, 4, 6]
       #     #=> Net::IMAP::SequenceSet["1,3,5:6"]
       #
-      # <tt>(seqset ^ other)</tt> is equivalent to <tt>((seqset | other) -
-      # (seqset & other))</tt>.
+      # Related: #|, #&, #-, #~
+      #
+      # ==== Set identities
+      #
+      # <tt>lhs ^ rhs</tt> is equivalent to:
+      # * <tt>rhs ^ lhs</tt> (commutative)
+      # * <tt>~lhs ^ ~rhs</tt>
+      # * <tt>(lhs | rhs) - (lhs & rhs)</tt>
+      # * <tt>(lhs - rhs) | (rhs - lhs)</tt>
+      # * <tt>(lhs ^ other) ^ (other ^ rhs)</tt>
       def ^(other) remain_frozen (dup | other).subtract(self & other) end
       alias xor :^
 
@@ -719,7 +758,12 @@ module Net
       #     ~Net::IMAP::SequenceSet["6:99,223:*"]
       #     #=> Net::IMAP::SequenceSet["1:5,100:222"]
       #
-      # Related: #complement!
+      # Related: #complement!, #|, #&, #-, #^
+      #
+      # ==== Set identities
+      #
+      # <tt>~set</tt> is equivalent to:
+      # * <tt>full - set</tt>, where "full" is Net::IMAP::SequenceSet.full
       def ~; remain_frozen dup.complement! end
       alias complement :~
 
@@ -731,7 +775,10 @@ module Net
       #
       # #string will be regenerated.  Use #merge to add many elements at once.
       #
-      # Related: #add?, #merge, #union
+      # Use #append to append new elements to #string.  See
+      # Net::IMAP@Ordered+and+Normalized+Sets.
+      #
+      # Related: #add?, #merge, #union, #append
       def add(element)
         tuple_add input_to_tuple element
         normalize!
@@ -742,6 +789,10 @@ module Net
       #
       # Unlike #add, #merge, or #union, the new value is appended to #string.
       # This may result in a #string which has duplicates or is out-of-order.
+      #
+      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      #
+      # Related: #add, #merge, #union
       def append(entry)
         modifying!
         tuple = input_to_tuple entry
@@ -890,20 +941,20 @@ module Net
       # This is useful when the given order is significant, for example in a
       # ESEARCH response to IMAP#sort.
       #
+      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      #
       # Related: #each_entry, #elements
       def entries; each_entry.to_a end
 
       # Returns an array of ranges and integers and <tt>:*</tt>.
       #
       # The returned elements are sorted and coalesced, even when the input
-      # #string is not.  <tt>*</tt> will sort last.  See #normalize.
+      # #string is not.  <tt>*</tt> will sort last.  See #normalize,
+      # Net::IMAP@Ordered+and+Normalized+Sets.
       #
       # By itself, <tt>*</tt> translates to <tt>:*</tt>.  A range containing
       # <tt>*</tt> translates to an endless range.  Use #limit to translate both
       # cases to a maximum value.
-      #
-      # The returned elements will be sorted and coalesced, even when the input
-      # #string is not.  <tt>*</tt> will sort last.  See #normalize.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,*,12:11"].elements
       #   #=> [2, 5..9, 11..12, :*]
@@ -915,14 +966,12 @@ module Net
       # Returns an array of ranges
       #
       # The returned elements are sorted and coalesced, even when the input
-      # #string is not.  <tt>*</tt> will sort last.  See #normalize.
+      # #string is not.  <tt>*</tt> will sort last.  See #normalize,
+      # Net::IMAP@Ordered+and+Normalized+Sets.
       #
       # <tt>*</tt> translates to an endless range.  By itself, <tt>*</tt>
       # translates to <tt>:*..</tt>.  Use #limit to set <tt>*</tt> to a maximum
       # value.
-      #
-      # The returned ranges will be sorted and coalesced, even when the input
-      # #string is not.  <tt>*</tt> will sort last.  See #normalize.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,*,12:11"].ranges
       #   #=> [2..2, 5..9, 11..12, :*..]
@@ -935,7 +984,7 @@ module Net
       # Returns a sorted array of all of the number values in the sequence set.
       #
       # The returned numbers are sorted and de-duplicated, even when the input
-      # #string is not.  See #normalize.
+      # #string is not.  See #normalize, Net::IMAP@Ordered+and+Normalized+Sets.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,12:11"].numbers
       #   #=> [2, 5, 6, 7, 8, 9, 11, 12]
@@ -967,6 +1016,8 @@ module Net
       # no sorting, deduplication, or coalescing.  When #string is in its
       # normalized form, this will yield the same values as #each_element.
       #
+      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      #
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
@@ -977,7 +1028,7 @@ module Net
       # and returns self.  Returns an enumerator when called without a block.
       #
       # The returned numbers are sorted and de-duplicated, even when the input
-      # #string is not.  See #normalize.
+      # #string is not.  See #normalize, Net::IMAP@Ordered+and+Normalized+Sets.
       #
       # Related: #elements, #each_entry
       def each_element # :yields: integer or range or :*
@@ -1400,6 +1451,7 @@ module Net
       #
       # The returned set's #string is sorted and deduplicated.  Adjacent or
       # overlapping elements will be merged into a single larger range.
+      # See Net::IMAP@Ordered+and+Normalized+Sets.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalize
       #   #=> Net::IMAP::SequenceSet["1:7,9:11"]
@@ -1412,7 +1464,7 @@ module Net
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
-      # +self+.
+      # +self+.  See Net::IMAP@Ordered+and+Normalized+Sets.
       #
       # Related: #normalize, #normalized_string
       def normalize!
@@ -1422,10 +1474,12 @@ module Net
 
       # Returns a normalized +sequence-set+ string representation, sorted
       # and deduplicated.  Adjacent or overlapping elements will be merged into
-      # a single larger range.  Returns +nil+ when the set is empty.
+      # a single larger range.  See Net::IMAP@Ordered+and+Normalized+Sets.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalized_string
       #   #=> "1:7,9:11"
+      #
+      # Returns +nil+ when the set is empty.
       #
       # Related: #normalize!, #normalize
       def normalized_string
