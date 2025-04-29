@@ -66,6 +66,7 @@ prelude: |
 
 benchmark:
   "      L & R":       l, r = sets; l & r
+  "mut!  L & R":       l, r = sets; l.intersect! r
   "      L - ~R":      l, r = sets; l - ~r
   "and0  L - ~R":      l, r = sets; l.and0  r
   "and0! L - ~R":      l, r = sets; l.and0! r
