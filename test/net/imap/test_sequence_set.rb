@@ -23,7 +23,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert seqset.cover? sorted.sample 100
   end
 
-  test "compared to reference Set, add many random values" do
+  test "fuzz test: add numbers and compare to reference Set" do
     set    = Set.new
     seqset = SequenceSet.new
     10.times do
@@ -32,12 +32,86 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     end
   end
 
-  test "compared to reference Set, add many large ranges" do
+  test "fuzz test: add ranges and compare to reference Set" do
     set    = Set.new
     seqset = SequenceSet.new
     (1..10_000).each_slice(250) do
       compare_to_reference_set _1, set, seqset
       assert_equal 1, seqset.elements.size
+    end
+  end
+
+  test "fuzz test: set union identities" do
+    10.times do
+      lhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      rhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      union = lhs | rhs
+      assert_equal union, rhs | lhs # commutative
+      assert_equal union, ~(~lhs & ~rhs) # De Morgan's Law
+      assert_equal union, lhs | (lhs ^ rhs)
+      assert_equal union, lhs | (rhs - lhs)
+      assert_equal union, (lhs & rhs) ^ (lhs ^ rhs)
+      mutable = lhs.dup
+      assert_equal union, mutable.merge(rhs)
+      assert_equal union, mutable
+    end
+  end
+
+  test "fuzz test: set intersection identities" do
+    10.times do
+      lhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      rhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      intersection = lhs & rhs
+      assert_equal intersection, rhs & lhs # commutative
+      assert_equal intersection, ~(~lhs | ~rhs) # De Morgan's Law
+      assert_equal intersection, lhs - ~rhs
+      assert_equal intersection, lhs - (lhs - rhs)
+      assert_equal intersection, lhs - (lhs ^ rhs)
+      assert_equal intersection, lhs ^ (lhs - rhs)
+    end
+  end
+
+  test "fuzz test: set subtraction identities" do
+    10.times do
+      lhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      rhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      difference = lhs - rhs
+      assert_equal difference, ~rhs - ~lhs
+      assert_equal difference, ~(~lhs | rhs)
+      assert_equal difference, lhs & (lhs ^ rhs)
+      assert_equal difference, lhs ^ (lhs & rhs)
+      assert_equal difference, rhs ^ (lhs | rhs)
+      mutable = lhs.dup
+      assert_equal difference, mutable.subtract(rhs)
+      assert_equal difference, mutable
+    end
+  end
+
+  test "fuzz test: set xor identities" do
+    10.times do
+      lhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      rhs = SequenceSet[Array.new(100) { rand(1..300) }]
+      mid = SequenceSet[Array.new(100) { rand(1..300) }]
+      xor = lhs ^ rhs
+      assert_equal xor, rhs ^ lhs # commutative
+      assert_equal xor, (lhs | rhs) - (lhs & rhs)
+      assert_equal xor, (lhs ^ mid) ^ (mid ^ rhs)
+      assert_equal xor, ~lhs ^ ~rhs
+    end
+  end
+
+  test "fuzz test: set complement identities" do
+    10.times do
+      set = SequenceSet[Array.new(100) { rand(1..300) }]
+      complement = ~set
+      assert_equal set,        ~complement
+      assert_equal complement, ~set.dup
+      assert_equal complement, SequenceSet.full - set
+      mutable = set.dup
+      assert_equal complement, mutable.complement!
+      assert_equal complement, mutable
+      assert_equal set,        mutable.complement!
+      assert_equal set,        mutable
     end
   end
 
