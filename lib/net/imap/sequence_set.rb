@@ -676,7 +676,7 @@ module Net
       #
       # <tt>(seqset ^ other)</tt> is equivalent to <tt>((seqset | other) -
       # (seqset & other))</tt>.
-      def ^(other) remain_frozen (self | other).subtract(self & other) end
+      def ^(other) remain_frozen (dup | other).subtract(self & other) end
       alias xor :^
 
       # :call-seq:
@@ -1245,14 +1245,18 @@ module Net
       def slice_range(range)
         first = range.begin ||  0
         last  = range.end   || -1
-        last -= 1 if range.exclude_end? && range.end && last != STAR_INT
+        if range.exclude_end?
+          return remain_frozen_empty if last.zero?
+          last -= 1 if range.end && last != STAR_INT
+        end
         if (first * last).positive? && last < first
-          SequenceSet.empty
+          remain_frozen_empty
         elsif (min = at(first))
           max = at(last)
+          max = :* if max.nil?
           if    max == :*  then self & (min..)
           elsif min <= max then self & (min..max)
-          else                  SequenceSet.empty
+          else                  remain_frozen_empty
           end
         end
       end
@@ -1380,6 +1384,7 @@ module Net
       private
 
       def remain_frozen(set) frozen? ? set.freeze : set end
+      def remain_frozen_empty; frozen? ? SequenceSet.empty : SequenceSet.new end
 
       # frozen clones are shallow copied
       def initialize_clone(other)

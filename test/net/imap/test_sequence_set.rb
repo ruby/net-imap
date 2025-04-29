@@ -83,6 +83,34 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     end
   end
 
+  data "#slice(length)",   {transform: ->{ _1.slice(0, 10)    }, }
+  data "#slice(range)",    {transform: ->{ _1.slice(0...10)   }, }
+  data "#slice => empty",  {transform: ->{ _1.slice(0...0)    }, }
+  data "#slice => empty",  {transform: ->{ _1.slice(10..9)    }, }
+  data "#union",           {transform: ->{ _1 | (1..100)      }, }
+  data "#intersection",    {transform: ->{ _1 & (1..100)      }, }
+  data "#difference",      {transform: ->{ _1 - (1..100)      }, }
+  data "#xor",             {transform: ->{ _1 ^ (1..100)      }, }
+  data "#complement",      {transform: ->{ ~_1                }, }
+  data "#normalize",       {transform: ->{ _1.normalize       }, }
+  data "#limit",           {transform: ->{ _1.limit(max: 22)  }, freeze: :always }
+  data "#limit => empty",  {transform: ->{ _1.limit(max: 1)   }, freeze: :always }
+  test "transforms keep frozen status" do |data|
+    transform = data.fetch(:transform)
+    set = SequenceSet.new("2:4,7:11,99,999")
+    dup = set.dup
+    result = transform.to_proc.(set)
+    assert_equal dup, set, "transform should not modified"
+    if data[:freeze] == :always
+      assert result.frozen?, "this transform always returns frozen"
+    else
+      refute result.frozen?, "transform of non-frozen returned frozen"
+    end
+    set.freeze
+    result = transform.to_proc.(set)
+    assert result.frozen?, "transform of frozen returned non-frozen"
+  end
+
   %i[clone dup].each do |method|
     test "##{method}" do
       orig = SequenceSet.new "2:4,7:11,99,999"
@@ -265,6 +293,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
                  SequenceSet[((1..10_000) % 10).to_a][-5, 4]
     assert_nil SequenceSet[111..222, 888..999][2000, 4]
     assert_nil SequenceSet[111..222, 888..999][-2000, 4]
+    # with length longer than the remaining members
+    assert_equal SequenceSet[101...200],
+                 SequenceSet[1...200][100, 10000]
   end
 
   test "#[range]" do
@@ -286,9 +317,13 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal SequenceSet.empty, SequenceSet[1..100][-50..-60]
     assert_equal SequenceSet.empty, SequenceSet[1..100][-10..10]
     assert_equal SequenceSet.empty, SequenceSet[1..100][60..-60]
+    assert_equal SequenceSet.empty, SequenceSet[1..100][10...0]
+    assert_equal SequenceSet.empty, SequenceSet[1..100][0...0]
     assert_nil SequenceSet.empty[2..4]
     assert_nil SequenceSet[101..200][1000..1060]
     assert_nil SequenceSet[101..200][-1000..-60]
+    # with length longer than the remaining members
+    assert_equal SequenceSet[101..1111], SequenceSet[1..1111][100..999_999]
   end
 
   test "#find_index" do
