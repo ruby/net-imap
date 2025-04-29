@@ -739,7 +739,7 @@ module Net
       # * <tt>(lhs | rhs) - (lhs & rhs)</tt>
       # * <tt>(lhs - rhs) | (rhs - lhs)</tt>
       # * <tt>(lhs ^ other) ^ (other ^ rhs)</tt>
-      def ^(other) remain_frozen (dup | other).subtract(self & other) end
+      def ^(other) remain_frozen dup.xor! other end
       alias xor :^
 
       # :call-seq:
@@ -1449,6 +1449,15 @@ module Net
       def intersect!(other) # :nodoc:
         modifying!
         subtract SequenceSet.new(other).complement!
+      end
+
+      # TODO: document and directly test this
+      def xor!(other) # :nodoc:
+        modifying!
+        copy  = dup
+        other = SequenceSet.new(other)
+        # subtract(other).merge(other.subtract(copy))      # (L - R) | (R - L)
+        merge(other).subtract(copy.intersect!(other))    # (L | R) - (L & R)
       end
 
       # Returns a new SequenceSet with a normalized string representation.

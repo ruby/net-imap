@@ -99,6 +99,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
       assert_equal xor, (lhs | rhs) - (lhs & rhs)
       assert_equal xor, (lhs ^ mid) ^ (mid ^ rhs)
       assert_equal xor, ~lhs ^ ~rhs
+      mutable = lhs.dup
+      assert_equal xor, mutable.xor!(rhs)
+      assert_equal xor, mutable
     end
   end
 
