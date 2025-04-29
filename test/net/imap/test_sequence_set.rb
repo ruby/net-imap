@@ -104,6 +104,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
       assert_equal xor, (lhs | rhs) - (lhs & rhs)
       assert_equal xor, (lhs ^ mid) ^ (mid ^ rhs)
       assert_equal xor, ~lhs ^ ~rhs
+      mutable = lhs.dup
+      assert_equal xor, mutable.xor!(rhs)
+      assert_equal xor, mutable
     end
   end
 
@@ -155,6 +158,7 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "#subtract",    ->{ _1.subtract  1 }
   data "#limit!",      ->{ _1.limit! max: 10 }
   data "#intersect!",  ->{ _1.intersect! SequenceSet[1..100] }
+  data "#xor!",        ->{ _1.xor!       SequenceSet[9..98]  }
   data "#complement!", :complement!
   data "#normalize!",  :normalize!
   test "frozen error message" do |modification|
