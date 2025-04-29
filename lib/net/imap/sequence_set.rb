@@ -179,8 +179,8 @@ module Net
     # - #include_star?: Returns whether the set contains <tt>*</tt>.
     #
     # <i>Minimum and maximum value elements:</i>
-    # - #min: Returns the minimum number in the set.
-    # - #max: Returns the maximum number in the set.
+    # - #min: Returns one or more minimum numbers in the set.
+    # - #max: Returns one or more maximum numbers in the set.
     # - #minmax: Returns the minimum and maximum numbers in the set.
     #
     # <i>Accessing value by offset in sorted set:</i>
@@ -567,26 +567,52 @@ module Net
         empty? || input_to_tuples(other).none? { intersect_tuple? _1 }
       end
 
-      # :call-seq: max(star: :*) => integer or star or nil
+      # :call-seq:
+      #   max(star: :*) => integer or star or nil
+      #   max(count, star: :*) => SequenceSet
       #
       # Returns the maximum value in +self+, +star+ when the set includes
       # <tt>*</tt>, or +nil+ when the set is empty.
-      def max(star: :*)
-        (val = @tuples.last&.last) && val == STAR_INT ? star : val
+      #
+      # When +count+ is given, a new SequenceSet is returned, containing only
+      # the last +count+ numbers.  An empty SequenceSet is returned when +self+
+      # is empty.  (+star+ is ignored when +count+ is given.)
+      #
+      # Related: #min, #minmax, #slice
+      def max(count = nil, star: :*)
+        if count
+          slice(-[count, size].min..) || remain_frozen_empty
+        elsif (val = @tuples.last&.last)
+          val == STAR_INT ? star : val
+        end
       end
 
-      # :call-seq: min(star: :*) => integer or star or nil
+      # :call-seq:
+      #   min(star: :*) => integer or star or nil
+      #   min(count, star: :*) => SequenceSet
       #
       # Returns the minimum value in +self+, +star+ when the only value in the
       # set is <tt>*</tt>, or +nil+ when the set is empty.
-      def min(star: :*)
-        (val = @tuples.first&.first) && val == STAR_INT ? star : val
+      #
+      # When +count+ is given, a new SequenceSet is returned, containing only
+      # the first +count+ numbers.  An empty SequenceSet is returned when +self+
+      # is empty.  (+star+ is ignored when +count+ is given.)
+      #
+      # Related: #max, #minmax, #slice
+      def min(count = nil, star: :*)
+        if count
+          slice(0...count) || remain_frozen_empty
+        elsif (val = @tuples.first&.first)
+          val != STAR_INT ? val : star
+        end
       end
 
       # :call-seq: minmax(star: :*) => nil or [integer, integer or star]
       #
       # Returns a 2-element array containing the minimum and maximum numbers in
       # +self+, or +nil+ when the set is empty.
+      #
+      # Related: #min, #max
       def minmax(star: :*); [min(star: star), max(star: star)] unless empty? end
 
       # Returns false when the set is empty.
@@ -1276,6 +1302,7 @@ module Net
       #   Net::IMAP::SequenceSet["500:*"].limit(max: 37)
       #   #=> Net::IMAP::SequenceSet["37"]
       #
+      # Related: #limit!
       def limit(max:)
         max = to_tuple_int(max)
         if    empty?                      then self.class.empty
