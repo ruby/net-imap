@@ -96,12 +96,12 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   data "#limit",           {transform: ->{ _1.limit(max: 22)  }, freeze: :always }
   data "#limit => empty",  {transform: ->{ _1.limit(max: 1)   }, freeze: :always }
   test "transforms keep frozen status" do |data|
-    data => {transform:}
+    transform = data.fetch(:transform)
     set = SequenceSet.new("2:4,7:11,99,999")
     dup = set.dup
     result = transform.to_proc.(set)
     assert_equal dup, set, "transform should not modified"
-    if data in {freeze: :always}
+    if data[:freeze] == :always
       assert result.frozen?, "this transform always returns frozen"
     else
       refute result.frozen?, "transform of non-frozen returned frozen"
