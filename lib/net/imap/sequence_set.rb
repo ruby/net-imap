@@ -1475,8 +1475,9 @@ module Net
       # TODO: document and directly test this
       def xor!(other) # :nodoc:
         modifying!
-        both = self & other
-        merge(other).subtract(both)
+        copy  = dup
+        other = SequenceSet.new(other)
+        merge(other).subtract(other.subtract(copy.complement!))
       end
 
       # TODO: document this
