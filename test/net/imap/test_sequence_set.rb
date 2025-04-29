@@ -573,6 +573,16 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_equal seqset["1,5,11:99"], seqset["1,5:6,8:9,11:99"].subtract("6:9")
   end
 
+  test "#xor" do
+    seqset = -> { SequenceSet.new(_1) }
+    assert_equal seqset["1:5,11:15"], seqset["1:10"] ^ seqset["6:15"]
+    assert_equal seqset["1,3,5:6"],   seqset[1..5]   ^ [2, 4, 6]
+    assert_equal SequenceSet.empty,   seqset[1..5]   ^ seqset[1..5]
+    assert_equal seqset["1:100"],     seqset["1:50"] ^ seqset["51:100"]
+    assert_equal seqset["1:50"],      seqset["1:50"] ^ SequenceSet.empty
+    assert_equal seqset["1:50"],      SequenceSet.empty ^ seqset["1:50"]
+  end
+
   test "#min" do
     assert_equal   3, SequenceSet.new("34:3").min
     assert_equal 345, SequenceSet.new("345,678").min
