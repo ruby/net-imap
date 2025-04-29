@@ -67,6 +67,9 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
       assert_equal intersection, lhs - (lhs - rhs)
       assert_equal intersection, lhs - (lhs ^ rhs)
       assert_equal intersection, lhs ^ (lhs - rhs)
+      mutable = lhs.dup
+      assert_equal intersection, mutable.intersect!(rhs)
+      assert_equal intersection, mutable
     end
   end
 

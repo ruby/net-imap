@@ -712,9 +712,7 @@ module Net
       # * <tt>lhs - (lhs - rhs)</tt>
       # * <tt>lhs - (lhs ^ rhs)</tt>
       # * <tt>lhs ^ (lhs - rhs)</tt>
-      def &(other)
-        remain_frozen dup.subtract SequenceSet.new(other).complement!
-      end
+      def &(other) remain_frozen dup.intersect! other end
       alias intersection :&
 
       # :call-seq:
@@ -1445,6 +1443,12 @@ module Net
         if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
         @tuples = flat.each_slice(2).to_a
         normalize!
+      end
+
+      # TODO: document and directly test this
+      def intersect!(other) # :nodoc:
+        modifying!
+        subtract SequenceSet.new(other).complement!
       end
 
       # Returns a new SequenceSet with a normalized string representation.
