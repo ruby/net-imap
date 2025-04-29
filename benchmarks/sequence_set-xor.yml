@@ -30,12 +30,6 @@ prelude: |
         merge(other).subtract(other.subtract(copy.complement!))
       end
 
-      # TODO: add this as a public method
-      def intersect!(other) # :nodoc:
-        modifying!
-        subtract SequenceSet.new(other).complement!
-      end
-
       # (L | R) - (L & R)
       def xor2!(other)
         modifying!
