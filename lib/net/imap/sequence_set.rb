@@ -256,6 +256,20 @@ module Net
     # - #disjoint?:
     #   Returns whether +self+ and a given object have no common elements.
     #
+    # <i>Comparison to a number:</i>
+    # - #all_above?:
+    #   Returns whether every number in +self+ is greater than a given number.
+    # - #all_below?:
+    #   Returns whether every number in +self+ is less than a given number.
+    # - #any_above?:
+    #   Returns whether +self+ contains any numbers greater than a given number.
+    # - #any_below?:
+    #   Returns whether +self+ contains any numbers less than a given number.
+    # - #none_above?:
+    #   Returns whether +self+ contains no numbers greater than a given number.
+    # - #none_below?:
+    #   Returns whether +self+ contains no numbers less than a given number.
+    #
     # === Methods for Querying
     # These methods do not modify +self+.
     #
@@ -345,7 +359,7 @@ module Net
     # - #above: Return a copy of +self+ which only contains numbers above a
     #   given number.
     # - #below: Return a copy of +self+ which only contains numbers below a
-    #   given value.
+    #   given number.
     # - #limit: Returns a copy of +self+ which has replaced <tt>*</tt> with a
     #   given maximum value and removed all members over that maximum.
     #
@@ -772,6 +786,225 @@ module Net
       # Related: #intersection, #intersect?
       def disjoint?(other)
         empty? || import_runs(other).none? { intersect_run? _1 }
+      end
+
+      # :call-seq:
+      #   all_above?(number) -> true or false
+      #
+      # Returns whether the set only contains numbers greater than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].all_above?(9)  => true
+      #     Net::IMAP::SequenceSet["5:8"].all_above?(7)  => false
+      #     Net::IMAP::SequenceSet["5:8"].all_above?(5)  => false
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["*"].all_above?(UINT32_MAX - 1)  => true
+      #     Net::IMAP::SequenceSet["*"].all_above?(UINT32_MAX)      => false
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(1...UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.all_above?(number)       =>  result
+      #     set.none_below?(number + 1)  => ^result
+      #     !set.any_below?(number + 1)  => ^result
+      #
+      #     set == set.above(number)     => ^result
+      #     set.disjoint?(..number)      => ^result
+      #     number < set.min             => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #above
+      def all_above?(number)
+        number = nz_number(number)
+        empty? || number < min(star: UINT32_MAX)
+      end
+
+      # :call-seq:
+      #   all_below?(number) -> true or false
+      #
+      # Returns whether the set only contains numbers less than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].all_below?(9)  => true
+      #     Net::IMAP::SequenceSet["5:8"].all_below?(8)  => false
+      #     Net::IMAP::SequenceSet["5:8"].all_below?(5)  => false
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["*"].all_below?(UINT32_MAX)  => false
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(2..UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.all_below?(number)       =>  result
+      #     set.none_above?(number - 1)  => ^result
+      #     !set.any_above?(number - 1)  => ^result
+      #
+      #     set == set.below(number)     => ^result
+      #     set.disjoint?(number..)      => ^result
+      #     set.max < number             => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #below
+      def all_below?(number)
+        number = nz_number(number)
+        empty? || max(star: UINT32_MAX) < number
+      end
+
+      # :call-seq:
+      #   any_above?(number) -> true or false
+      #
+      # Returns whether the set contains any numbers greater than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].any_above?(1)  => true
+      #     Net::IMAP::SequenceSet["5:8"].any_above?(7)  => true
+      #     Net::IMAP::SequenceSet["5:8"].any_above?(8)  => false
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["1:*"].any_above?(UINT32_MAX - 1)  => true
+      #     Net::IMAP::SequenceSet["1:*"].any_above?(UINT32_MAX)      => false
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(1...UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.any_above?(number)         =>  result
+      #     !set.none_above?(number)       => ^result
+      #     !set.all_below?(number + 1)    => ^result
+      #
+      #     set.cover?(set.above(number))  => ^result
+      #     set.intersect?(number + 1..)   => ^result
+      #     number < set.max               => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #above
+      def any_above?(number)
+        number = nz_number(number)
+        valid? && number < max(star: UINT32_MAX)
+      end
+
+      # :call-seq:
+      #   any_below?(number) -> true or false
+      #
+      # Returns whether the set contains any numbers less than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].any_below? 5  => false
+      #     Net::IMAP::SequenceSet["5:8"].any_below? 6  => true
+      #     Net::IMAP::SequenceSet["5:8"].any_below? 9  => true
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["*"].any_below?(UINT32_MAX)  => false
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(2..UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.any_below?(number)         =>  result
+      #     !set.none_below?(number)       => ^result
+      #     !set.all_above?(number - 1)    => ^result
+      #
+      #     set.cover?(set.below(number))  => ^result
+      #     set.intersect?(...number)      => ^result
+      #     set.min < number               => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #below
+      def any_below?(number)
+        number = nz_number(number)
+        valid? && min(star: UINT32_MAX) < number
+      end
+
+      # :call-seq:
+      #   none_above?(number) -> true or false
+      #
+      # Returns whether the set contains no numbers greater than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].none_above?(9)  => true
+      #     Net::IMAP::SequenceSet["5:8"].none_above?(8)  => true
+      #     Net::IMAP::SequenceSet["5:8"].none_above?(7)  => false
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["*"].none_above?(UINT32_MAX - 1)  => false
+      #     Net::IMAP::SequenceSet["*"].none_above?(UINT32_MAX)      => true
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(1...UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.none_above?(number)      =>  result
+      #     !set.any_above?(number)      => ^result
+      #     set.all_below?(number + 1)   => ^result
+      #
+      #     set.above(number).empty?     => ^result
+      #     set.disjoint?(number..)      => ^result
+      #     set.max <= number            => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #above
+      def none_above?(number)
+        number = nz_number(number)
+        empty? || max(star: UINT32_MAX) <= number
+      end
+
+      # :call-seq:
+      #   none_below?(number) -> true or false
+      #
+      # Returns whether the set contains no numbers less than +number+ (not
+      # inclusive of +number+).
+      #
+      #     Net::IMAP::SequenceSet["5:8"].none_below?(4)  => true
+      #     Net::IMAP::SequenceSet["5:8"].none_below?(5)  => true
+      #     Net::IMAP::SequenceSet["5:8"].none_below?(6)  => false
+      #
+      # <tt>"*"</tt> is evaluated as +UINT32_MAX+:
+      #     Net::IMAP::SequenceSet["*"].none_below?(UINT32_MAX)  => true
+      #
+      # This is roughly equivalent to several other comparisons:
+      #
+      #     # Given the following assumptions:
+      #     set.empty?        => false
+      #     set.include_star? => false
+      #     number            => ^(2..UINT32_MAX)
+      #
+      #     # Then these expressions will always return the same result:
+      #     set.none_below?(number)      =>  result
+      #     !set.any_below?(number)      => ^result
+      #     set.all_above?(number - 1)   => ^result
+      #
+      #     set.above(number).empty?     => ^result
+      #     set.disjoint?(...number)     => ^result
+      #     number <= set.min            => ^result
+      #
+      # Related: {other comparison methods}[rdoc-ref:SequenceSet@Methods+for+Comparing],
+      # #below
+      def none_below?(number)
+        number = nz_number(number)
+        empty? || number <= min(star: UINT32_MAX)
       end
 
       # :call-seq:
@@ -1560,7 +1793,9 @@ module Net
       #   Net::IMAP::SequenceSet["5,10:22,50"] & (21..)   # to_s => "21:22,50"
       #   Net::IMAP::SequenceSet["5,10:22,50"] - (..20)   # to_s => "21:22,50"
       #
-      # Related: #above, #-, #&
+      # Related: #below,
+      # {other set operations}[rdoc-ref:SequenceSet@Methods+for+Set+Operations],
+      # #all_above?, #any_above?, #none_above?
       def above(num)
         NumValidator.valid_nz_number?(num) or
           raise ArgumentError, "not a valid sequence set number"
@@ -1591,7 +1826,9 @@ module Net
       #   Net::IMAP::SequenceSet["5,10:22,*"].below(30)       # to_s => "5,10:22"
       #   Net::IMAP::SequenceSet["5,10:22,*"].limit(max: 29)  # to_s => "5,10:22,29"
       #
-      # Related: #above, #-, #&, #limit
+      # Related: #above,
+      # {other set operations}[rdoc-ref:SequenceSet@Methods+for+Set+Operations],
+      # #all_below?, #any_below?, #none_below?
       def below(num)
         NumValidator.valid_nz_number?(num) or
           raise ArgumentError, "not a valid sequence set number"
