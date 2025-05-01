@@ -3782,7 +3782,7 @@ module Net
     def build_ssl_ctx(ssl)
       if ssl
         params = (Hash.try_convert(ssl) || {}).freeze
-        context = SSLContext.new
+        context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
         if defined?(VerifyCallbackProc)
           context.verify_callback = VerifyCallbackProc
@@ -3798,12 +3798,12 @@ module Net
       raise "SSL extension not installed" unless defined?(OpenSSL::SSL)
       raise "already using SSL" if @sock.kind_of?(OpenSSL::SSL::SSLSocket)
       raise "cannot start TLS without SSLContext" unless ssl_ctx
-      @sock = SSLSocket.new(@sock, ssl_ctx)
+      @sock = OpenSSL::SSL::SSLSocket.new(@sock, ssl_ctx)
       @reader = ResponseReader.new(self, @sock)
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, open_timeout)
-      if ssl_ctx.verify_mode != VERIFY_NONE
+      if ssl_ctx.verify_mode != OpenSSL::SSL::VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
       end
