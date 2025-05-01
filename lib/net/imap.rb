@@ -3780,9 +3780,6 @@ module Net
         params = (Hash.try_convert(ssl) || {}).freeze
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
-        if defined?(VerifyCallbackProc)
-          context.verify_callback = VerifyCallbackProc
-        end
         context.freeze
         [params, context]
       else
