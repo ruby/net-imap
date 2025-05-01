@@ -388,9 +388,11 @@ class StringPrepTablesGenerator
   end
 
   def asgn_mapping(name, replacement = to_map(tables[name]))
+    indent = "  " * 2
+    replacement = replacement.inspect.gsub(/" => "/, '"=>"')
     cname = name.tr(?., ?_).upcase
-    "# Replacements for %s\n%s%s = %p.freeze" % [
-      "IN_#{name}", "  " * 2, "MAP_#{cname}", replacement,
+    "# Replacements for %s\n%s%s = %s.freeze" % [
+      "IN_#{name}", indent, "MAP_#{cname}", replacement,
     ]
   end
 
