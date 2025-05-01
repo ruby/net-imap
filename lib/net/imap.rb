@@ -804,10 +804,6 @@ module Net
     autoload :StringPrep,             "#{dir}/stringprep"
 
     include MonitorMixin
-    if defined?(OpenSSL::SSL)
-      include OpenSSL
-      include SSL
-    end
 
     # Returns the global Config object
     def self.config; Config.global end
