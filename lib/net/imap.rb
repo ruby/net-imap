@@ -805,10 +805,6 @@ module Net
     autoload :StringPrep,             "#{dir}/stringprep"
 
     include MonitorMixin
-    if defined?(OpenSSL::SSL)
-      include OpenSSL
-      include SSL
-    end
 
     # :call-seq:
     #   Net::IMAP::SequenceSet(set = nil) -> SequenceSet
