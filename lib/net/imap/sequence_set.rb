@@ -1669,6 +1669,18 @@ module Net
         str.split(":", 2).map! { to_tuple_int _1 }.minmax
       end
 
+      def each_tuple_complement
+        return to_enum(__method__) unless block_given?
+        if    full?  then # no yield
+        elsif empty? then yield 1, STAR_INT
+        else
+          yield 1, min - 1 unless min <= 1
+          tuples.each_cons(2) do |(_, a), (b,_)| yield a+1, b-1 end
+          yield max + 1, STAR_INT unless max == STAR_INT
+        end
+        nil
+      end
+
       def include_tuple?((min, max)) range_gte_to(min)&.cover?(min..max) end
 
       def intersect_tuple?((min, max))
