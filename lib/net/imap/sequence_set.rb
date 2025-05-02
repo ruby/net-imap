@@ -778,7 +778,7 @@ module Net
       # #string will be regenerated.  Use #merge to add many elements at once.
       #
       # Use #append to append new elements to #string.  See
-      # Net::IMAP@Ordered+and+Normalized+Sets.
+      # SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #add?, #merge, #union, #append
       def add(element)
@@ -793,7 +793,7 @@ module Net
       # Unlike #add, #merge, or #union, the new value is appended to #string.
       # This may result in a #string which has duplicates or is out-of-order.
       #
-      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      # See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #add, #merge, #union
       def append(entry)
@@ -947,7 +947,7 @@ module Net
       # This is useful when the given order is significant, for example in a
       # ESEARCH response to IMAP#sort.
       #
-      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      # See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #each_entry, #elements
       def entries; each_entry.to_a end
@@ -956,7 +956,7 @@ module Net
       #
       # The returned elements are sorted and coalesced, even when the input
       # #string is not.  <tt>*</tt> will sort last.  See #normalize,
-      # Net::IMAP@Ordered+and+Normalized+Sets.
+      # SequenceSet@Ordered+and+Normalized+sets.
       #
       # By itself, <tt>*</tt> translates to <tt>:*</tt>.  A range containing
       # <tt>*</tt> translates to an endless range.  Use #limit to translate both
@@ -973,7 +973,7 @@ module Net
       #
       # The returned elements are sorted and coalesced, even when the input
       # #string is not.  <tt>*</tt> will sort last.  See #normalize,
-      # Net::IMAP@Ordered+and+Normalized+Sets.
+      # SequenceSet@Ordered+and+Normalized+sets.
       #
       # <tt>*</tt> translates to an endless range.  By itself, <tt>*</tt>
       # translates to <tt>:*..</tt>.  Use #limit to set <tt>*</tt> to a maximum
@@ -990,7 +990,7 @@ module Net
       # Returns a sorted array of all of the number values in the sequence set.
       #
       # The returned numbers are sorted and de-duplicated, even when the input
-      # #string is not.  See #normalize, Net::IMAP@Ordered+and+Normalized+Sets.
+      # #string is not.  See #normalize, SequenceSet@Ordered+and+Normalized+sets.
       #
       #   Net::IMAP::SequenceSet["2,5:9,6,12:11"].numbers
       #   #=> [2, 5, 6, 7, 8, 9, 11, 12]
@@ -1022,7 +1022,7 @@ module Net
       # no sorting, deduplication, or coalescing.  When #string is in its
       # normalized form, this will yield the same values as #each_element.
       #
-      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      # See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
@@ -1034,7 +1034,7 @@ module Net
       # and returns self.  Returns an enumerator when called without a block.
       #
       # The returned numbers are sorted and de-duplicated, even when the input
-      # #string is not.  See #normalize, Net::IMAP@Ordered+and+Normalized+Sets.
+      # #string is not.  See #normalize, SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #elements, #each_entry
       def each_element # :yields: integer or range or :*
@@ -1459,7 +1459,7 @@ module Net
       #
       # The returned set's #string is sorted and deduplicated.  Adjacent or
       # overlapping elements will be merged into a single larger range.
-      # See Net::IMAP@Ordered+and+Normalized+Sets.
+      # See SequenceSet@Ordered+and+Normalized+sets.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalize
       #   #=> Net::IMAP::SequenceSet["1:7,9:11"]
@@ -1472,7 +1472,7 @@ module Net
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
-      # +self+.  See Net::IMAP@Ordered+and+Normalized+Sets.
+      # +self+.  See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #normalize, #normalized_string
       def normalize!
@@ -1483,7 +1483,7 @@ module Net
 
       # Returns a normalized +sequence-set+ string representation, sorted
       # and deduplicated.  Adjacent or overlapping elements will be merged into
-      # a single larger range.  See Net::IMAP@Ordered+and+Normalized+Sets.
+      # a single larger range.  See SequenceSet@Ordered+and+Normalized+sets.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalized_string
       #   #=> "1:7,9:11"
