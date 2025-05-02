@@ -61,15 +61,16 @@ module Net
     # Sometimes the order of the set's members is significant, such as with the
     # +ESORT+, <tt>CONTEXT=SORT</tt>, and +UIDPLUS+ extensions.  So, when a
     # sequence set is created by the parser or with a single string value, that
-    # #string representation is preserved.
+    # #string representation is preserved.  Use #each_entry, #entries, or
+    # #each_ordered_number to enumerate the entries in the string order.
     #
-    # Internally, SequenceSet stores a normalized representation which sorts all
+    # Internally, SequenceSet uses a normalized representation which sorts all
     # entries, de-duplicates numbers, and coalesces adjacent or overlapping
-    # ranges.  Most methods use this normalized representation to achieve
-    # <tt>O(lg n)</tt> porformance.  Use #entries or #each_entry to enumerate
-    # the set in its original order.
+    # ranges.  Many methods use this normalized set representation for <tt>O(lg
+    # n)</tt> performance.  Use #each_element, #elements, #each_range, #ranges,
+    # #each_number, or #numbers to enumerate the set in sorted order.
     #
-    # Most modification methods convert #string to its normalized form.  To
+    # Most modification methods reset #string to its normalized form.  To
     # preserve #string order while modifying a set, use #append, #string=, or
     # #replace.
     #
