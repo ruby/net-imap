@@ -528,8 +528,8 @@ module Net
       def cover?(other) input_to_tuples(other).none? { !include_tuple?(_1) } end
 
       # Returns +true+ when a given number or range is in +self+, and +false+
-      # otherwise.  Returns +false+ unless +number+ is an Integer, Range, or
-      # <tt>*</tt>.
+      # otherwise.  Returns +nil+ when +number+ isn't a valid SequenceSet
+      # element (Integer, Range, <tt>*</tt>, +sequence-set+ string).
       #
       #     set = Net::IMAP::SequenceSet["5:10,100,111:115"]
       #     set.include? 1      #=> false
@@ -551,7 +551,10 @@ module Net
       #     set.include?(100..) #=> false
       #
       # Related: #include_star?, #cover?, #===
-      def include?(element) include_tuple? input_to_tuple element end
+      def include?(element)
+        tuple = input_to_tuple element rescue nil
+        !!include_tuple?(tuple) if tuple
+      end
 
       alias member? include?
 
