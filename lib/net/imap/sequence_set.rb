@@ -383,7 +383,11 @@ module Net
       def initialize(input = nil) input ? replace(input) : clear end
 
       # Removes all elements and returns self.
-      def clear; @tuples, @string = [], nil; self end
+      def clear
+        modifying! # redundant check, to normalize the error message for JRuby
+        @tuples, @string = [], nil
+        self
+      end
 
       # Replace the contents of the set with the contents of +other+ and returns
       # +self+.
@@ -439,11 +443,13 @@ module Net
         if str.nil?
           clear
         else
+          modifying! # redundant check, to normalize the error message for JRuby
           str = String.try_convert(str) or raise ArgumentError, "not a string"
           tuples = str_to_tuples str
           @tuples, @string = [], -str
           tuples_add tuples
         end
+        str
       end
 
       # Returns the \IMAP +sequence-set+ string representation, or an empty
@@ -780,6 +786,7 @@ module Net
       #
       # Related: #add?, #merge, #union, #append
       def add(element)
+        modifying! # short-circuit before input_to_tuple
         tuple_add input_to_tuple element
         normalize!
       end
@@ -794,7 +801,7 @@ module Net
       #
       # Related: #add, #merge, #union
       def append(entry)
-        modifying!
+        modifying! # short-circuit before input_to_tuple
         tuple = input_to_tuple entry
         entry = tuple_to_str tuple
         string unless empty? # write @string before tuple_add
@@ -812,6 +819,7 @@ module Net
       #
       # Related: #add, #merge, #union, #include?
       def add?(element)
+        modifying! # short-circuit before include?
         add element unless include? element
       end
 
@@ -824,6 +832,7 @@ module Net
       #
       # Related: #delete?, #delete_at, #subtract, #difference
       def delete(element)
+        modifying! # short-circuit before input_to_tuple
         tuple_subtract input_to_tuple element
         normalize!
       end
@@ -861,6 +870,7 @@ module Net
       #
       # Related: #delete, #delete_at, #subtract, #difference, #disjoint?
       def delete?(element)
+        modifying! # short-circuit before input_to_tuple
         tuple = input_to_tuple element
         if tuple.first == tuple.last
           return unless include_tuple? tuple
@@ -901,6 +911,7 @@ module Net
       #
       # Related: #slice, #delete_at, #delete, #delete?, #subtract, #difference
       def slice!(index, length = nil)
+        modifying! # short-circuit before slice
         deleted = slice(index, length) and subtract deleted
         deleted
       end
@@ -916,6 +927,7 @@ module Net
       #
       # Related: #add, #add?, #union
       def merge(*sets)
+        modifying! # short-circuit before input_to_tuples
         tuples_add input_to_tuples sets
         normalize!
       end
@@ -1424,6 +1436,7 @@ module Net
       #
       # Related: #limit
       def limit!(max:)
+        modifying! # short-circuit, and normalize the error message for JRuby
         star = include_star?
         max  = to_tuple_int(max)
         tuple_subtract [max + 1, STAR_INT]
@@ -1438,6 +1451,7 @@ module Net
       #
       # Related: #complement
       def complement!
+        modifying! # short-circuit, and normalize the error message for JRuby
         return replace(self.class.full) if empty?
         return clear                    if full?
         flat = @tuples.flat_map { [_1 - 1, _2 + 1] }
@@ -1468,6 +1482,7 @@ module Net
       #
       # Related: #normalize, #normalized_string
       def normalize!
+        modifying! # redundant check, to normalize the error message for JRuby
         @string = nil
         self
       end
@@ -1537,6 +1552,7 @@ module Net
       end
 
       def initialize_dup(other)
+        modifying! # redundant check, to normalize the error message for JRuby
         @tuples = other.tuples.map(&:dup)
         @string = other.string&.-@
         super
