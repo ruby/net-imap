@@ -154,7 +154,14 @@ module Net
       end
 
       def test_recursive_inspect
-        # TODO: TruffleRuby's Data fails this test with a StackOverflowError
+        if Data.superclass == ::Object
+          omit_if_truffleruby "TruffleRuby: format('%p', nil) returns '': " \
+                              "https://github.com/oracle/truffleruby/issues/3846"
+        else
+          omit_if_truffleruby "TruffleRuby: Data#inspect has stack overflow: " \
+                              "https://github.com/oracle/truffleruby/issues/3847"
+        end
+
         klass = Data.define(:value, :head, :tail) do
           def initialize(value:, head: nil, tail: nil)
             case tail
