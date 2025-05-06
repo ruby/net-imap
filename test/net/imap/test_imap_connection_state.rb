@@ -26,6 +26,7 @@ class ConnectionStateTest < Test::Unit::TestCase
   end
 
   test "#deconstruct" do
+    # TODO: TruffleRuby's Data fails these
     assert_equal [:not_authenticated], NotAuthenticated[].deconstruct
     assert_equal [:authenticated],     Authenticated[]   .deconstruct
     assert_equal [:selected],          Selected[]        .deconstruct
@@ -33,6 +34,7 @@ class ConnectionStateTest < Test::Unit::TestCase
   end
 
   test "#deconstruct_keys" do
+    # TODO: TruffleRuby's Data fails these
     assert_equal({symbol: :not_authenticated}, NotAuthenticated[].deconstruct_keys([:symbol]))
     assert_equal({symbol: :authenticated},     Authenticated[]   .deconstruct_keys([:symbol]))
     assert_equal({symbol: :selected},          Selected[]        .deconstruct_keys([:symbol]))
