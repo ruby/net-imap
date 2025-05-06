@@ -154,6 +154,7 @@ module Net
       end
 
       def test_recursive_inspect
+        # TODO: TruffleRuby's Data fails this test with a StackOverflowError
         klass = Data.define(:value, :head, :tail) do
           def initialize(value:, head: nil, tail: nil)
             case tail
@@ -183,6 +184,7 @@ module Net
           " tail=#<data value=3, head=#{seen}," \
           " tail=#<data value=4, head=#{seen}," \
           " tail=nil>>>>",
+          # TODO: JRuby's Data fails on the next line
           list.inspect
         )
 
@@ -196,6 +198,7 @@ module Net
           " tail=#<data DoubleLinkList value=3, head=#{seen}," \
           " tail=#<data DoubleLinkList value=4, head=#{seen}," \
           " tail=nil>>>>",
+          # TODO: JRuby's Data fails on the next line
           list.inspect
         )
       ensure
@@ -340,6 +343,47 @@ module Net
         assert_equal("test", data.name)
         assert_equal("other", data.other)
       end
+
+      class Abstract < Data
+      end
+
+      class Inherited < Abstract.define(:foo)
+      end
+
+      def test_subclass_can_create
+        # TODO: JRuby's Data fails all of these
+        assert_equal 1, Inherited[1]    .foo
+        assert_equal 2, Inherited[foo: 2].foo
+        assert_equal 3, Inherited.new(3).foo
+        assert_equal 4, Inherited.new(foo: 4).foo
+      end
+
+      class AbstractWithClassMethod < Data
+        def self.inherited_class_method; :ok end
+      end
+
+      class InheritsClassMethod < AbstractWithClassMethod.define(:foo)
+      end
+
+      def test_subclass_class_method
+        # TODO: JRuby's Data fails on the next line
+        assert_equal :ok, InheritsClassMethod.inherited_class_method
+      end
+
+      class AbstractWithOverride < Data
+        def deconstruct; [:ok, *super] end
+      end
+
+      class InheritsOverride < AbstractWithOverride.define(:foo)
+      end
+
+      def test_subclass_override_deconstruct
+        # TODO: JRuby's Data fails on the next line
+        data = InheritsOverride[:foo]
+        # TODO: TruffleRuby's Data fails on the next line
+        assert_equal %i[ok foo], data.deconstruct
+      end
+
     end
   end
 end

@@ -26,12 +26,54 @@
 
 module Net
   class IMAP
-    data_or_object =
-      if RUBY_VERSION >= "3.2.0" && defined?(::Data) && ::Data.respond_to?(:define)
-        ::Data
-      else
-        Object
+
+    # :nocov:
+    # Skip coverage: how much of the file runs depends on the engine version.
+
+    # Test whether RUBY_ENGINE has sufficient support for ::Data.
+    # TODO: golf this down to the bare minimum that's failing.
+    data_or_object = ::Object
+    if defined?(::Data) && ::Data.respond_to?(:define)
+      begin
+        class TestData < ::Data
+          def self.YAML(data)
+            coder = Struct.new(:map).new(data)
+            data = self.allocate
+            data.init_with(coder)
+            data
+          end
+          def init_with(coder) initialize(**coder.map.transform_keys(&:to_sym)) end
+          def deconstruct; [:ok, *super] end
+        end
+
+        class TestDataDefine < TestData.define(:str, :bool)
+          def initialize(str: nil, bool: nil)
+            str  => String       | nil; str  = -str if str
+            bool => true | false | nil; bool = !!bool
+            super
+          end
+        end
+
+        test_init = TestDataDefine.YAML({"str" => "str"})
+        test_empty = TestData.define[]
+
+        if test_init.deconstruct != [:ok, "str", false]
+          raise "subclassing misbehaves"
+        elsif test_empty.deconstruct != [:ok]
+          raise "can't define empty"
+        end
+        data_or_object = ::Data
+      rescue => ex
+        warn "Insufficient implementation of Data: %s (%s) for %s %s" % [
+          ex, ex.class, RUBY_ENGINE, RUBY_ENGINE_VERSION,
+        ]
+        data_or_object = ::Object
+      ensure
+        remove_const :TestData       if const_defined?(:TestData)
+        remove_const :TestDataDefine if const_defined?(:TestDataDefine)
       end
+    end
+
     class DataLite < data_or_object
       def encode_with(coder) coder.map = to_h.transform_keys(&:to_s)        end
       def init_with(coder) initialize(**coder.map.transform_keys(&:to_sym)) end
@@ -41,9 +83,7 @@ module Net
   end
 end
 
-# :nocov:
-# Need to skip test coverage for the rest, because it isn't loaded by ruby 3.2+.
-return if RUBY_VERSION >= "3.2.0" && defined?(::Data) && ::Data.respond_to?(:define)
+return unless Net::IMAP::DataLite.superclass == Object
 
 module Net
   class IMAP
