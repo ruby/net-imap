@@ -28,11 +28,8 @@ module Net
         end
         private_class_method :included
 
-        if defined?(Ractor.make_shareable)
-          def self.safe(...) Ractor.make_shareable nil.instance_eval(...).freeze end
-        else
-          def self.safe(...) nil.instance_eval(...).freeze end
-        end
+        # Used in v0.5.8+ for Ractor sharability.
+        def self.safe(...) nil.instance_eval(...).freeze end
         private_class_method :safe
 
         Types = Hash.new do |h, type|
