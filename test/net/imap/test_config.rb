@@ -270,10 +270,15 @@ class ConfigTest < Net::IMAP::TestCase
   test "#freeze" do
     config = Config.new(open_timeout: 1)
     config.freeze
-    assert_raise FrozenError do
-      config.open_timeout = 2
+    assert config.frozen?
+    assert config.__send__(:data).frozen?
+    pend_if_truffleruby "https://github.com/oracle/truffleruby/issues/3850" do
+      assert_raise FrozenError do
+        config.open_timeout = 2
+        assert_equal 1, config.open_timeout
+      end
+      assert_equal 1, config.open_timeout
     end
-    assert_same 1, config.open_timeout
   end
 
   test "#dup" do
@@ -302,10 +307,14 @@ class ConfigTest < Net::IMAP::TestCase
     original.freeze
     copy = original.clone
     assert copy.frozen?
-    assert_raise FrozenError do
-      copy.open_timeout = 2
+    assert copy.__send__(:data).frozen?
+    pend_if_truffleruby "https://github.com/oracle/truffleruby/issues/3850" do
+      assert_raise FrozenError do
+        copy.open_timeout = 2
+        assert_equal 1, copy.open_timeout
+      end
+      assert_equal 1, copy.open_timeout
     end
-    assert_equal 1, copy.open_timeout
   end
 
   test "#inherited? and #reset" do
