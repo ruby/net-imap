@@ -14,8 +14,10 @@ class FetchDataTest < Net::IMAP::TestCase
   end
 
   test "#uid" do
-    data = Net::IMAP::FetchData.new(22222, "UID" => 54_321)
-    assert_equal 54_321, data.uid
+    pend_if_truffleruby do
+      data = Net::IMAP::FetchData.new(22222, "UID" => 54_321)
+      assert_equal 54_321, data.uid
+    end
   end
 end
 
@@ -37,8 +39,10 @@ class UIDFetchDataTest < Net::IMAP::TestCase
   end
 
   test "#initialize warns when uid differs from attr['UID']" do
-    assert_warn(/UIDs do not match/i) do
-      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+    pend_if_truffleruby do
+      assert_warn(/UIDs do not match/i) do
+        Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+      end
     end
   end
 
