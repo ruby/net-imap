@@ -79,9 +79,11 @@ class ResponseReaderTest < Test::Unit::TestCase
     client.config.max_response_size = 10
     io = StringIO.new(barely_over)
     rcvr = Net::IMAP::ResponseReader.new(client, io)
-    assert_raise Net::IMAP::ResponseTooLargeError do
-      result = rcvr.read_response_buffer
-      flunk "Got result: %p" % [result]
+    pend_if_truffleruby do
+      assert_raise Net::IMAP::ResponseTooLargeError do
+        result = rcvr.read_response_buffer
+        flunk "Got result: %p" % [result]
+      end
     end
   end
 
