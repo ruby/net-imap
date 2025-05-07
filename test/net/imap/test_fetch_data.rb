@@ -36,20 +36,24 @@ class UIDFetchDataTest < Test::Unit::TestCase
     assert_equal 22222, data.uid
   end
 
-  test "#uid warns when differs from UID attribute" do
-    data = nil
+  test "#initialize warns when uid differs from attr['UID']" do
     assert_warn(/UIDs do not match/i) do
-      data = Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
     end
+  end
+
+  test "#uid ignores the UID attribute" do
+    data = EnvUtil.suppress_warning {
+      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+    }
     assert_equal 22222, data.uid
   end
 
   test "#deconstruct_keys" do
-    assert_warn(/UIDs do not match/i) do
-      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321) => {
-        uid: 22222
-      }
-    end
+    data = EnvUtil.suppress_warning {
+      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+    }
+    assert_pattern { data => { uid: 22222 } }
   end
 end
 
