@@ -87,31 +87,15 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
     end
 
     test "combined options hash and keyword args raises ArgumentError" do
-      ex = nil
-      run_fake_server_in_thread(
-        ignore_io_error: true, implicit_tls: true
-      ) do |server|
-        imap = Net::IMAP.new("localhost", {port: 993}, ssl: true)
-      rescue => ex
-        nil
-      ensure
-        imap&.disconnect
+      assert_raise_with_message ArgumentError, /deprecated.*keyword arg/ do
+        Net::IMAP.new("localhost", {port: 993}, ssl: true)
       end
-      assert_equal ArgumentError, ex.class
     end
 
     test "combined options hash and ssl args raises ArgumentError" do
-      ex = nil
-      run_fake_server_in_thread(
-        ignore_io_error: true, implicit_tls: true
-      ) do |server|
-        imap = Net::IMAP.new("localhost", {port: 993}, true)
-      rescue => ex
-        nil
-      ensure
-        imap&.disconnect
+      assert_raise_with_message ArgumentError, /deprecated SSL.*options hash/ do
+        Net::IMAP.new("localhost", {port: 993}, true)
       end
-      assert_equal ArgumentError, ex.class
     end
 
   end
