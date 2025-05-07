@@ -3807,7 +3807,9 @@ module Net
     end
 
     def state_unselected!
-      state_authenticated! if connection_state.to_sym == :selected
+      synchronize do
+        state_authenticated! if connection_state.to_sym == :selected
+      end
     end
 
     def state_logout!
