@@ -55,13 +55,33 @@ class ResponseReaderTest < Test::Unit::TestCase
     client.config.max_response_size = 10
     under = "+ 3456\r\n"
     exact = "+ 345678\r\n"
-    over  = "+ 3456789\r\n"
-    io = StringIO.new([under, exact, over].join)
+    very_over     = "+ 3456789 #{?a * (16<<10)}}\r\n"
+    slightly_over = "+ 34567890\r\n" # CRLF after the limit
+    io = StringIO.new([under, exact, very_over, slightly_over].join)
     rcvr = Net::IMAP::ResponseReader.new(client, io)
     assert_equal under, rcvr.read_response_buffer.to_str
     assert_equal exact, rcvr.read_response_buffer.to_str
     assert_raise Net::IMAP::ResponseTooLargeError do
-      rcvr.read_response_buffer
+      result = rcvr.read_response_buffer
+      flunk "Got result: %p" % [result]
+    end
+    io = StringIO.new(slightly_over)
+    rcvr = Net::IMAP::ResponseReader.new(client, io)
+    assert_raise Net::IMAP::ResponseTooLargeError do
+      result = rcvr.read_response_buffer
+      flunk "Got result: %p" % [result]
+    end
+  end
+
+  test "#read_response_buffer max_response_size straddling CRLF" do
+    barely_over = "+ 3456789\r\n"  # CRLF straddles the boundary
+    client = FakeClient.new
+    client.config.max_response_size = 10
+    io = StringIO.new(barely_over)
+    rcvr = Net::IMAP::ResponseReader.new(client, io)
+    assert_raise Net::IMAP::ResponseTooLargeError do
+      result = rcvr.read_response_buffer
+      flunk "Got result: %p" % [result]
     end
   end
 
