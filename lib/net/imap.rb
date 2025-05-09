@@ -3797,7 +3797,9 @@ module Net
     end
 
     def state_logout!
+      return true if connection_state in [:logout, *]
       synchronize do
+        return true if connection_state in [:logout, *]
         @connection_state = ConnectionState::Logout.new
       end
     end
