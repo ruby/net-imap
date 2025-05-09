@@ -3066,8 +3066,8 @@ module Net
             raise @exception || Net::IMAP::Error.new("connection closed")
           end
         ensure
+          remove_response_handler(response_handler)
           unless @receiver_thread_terminating
-            remove_response_handler(response_handler)
             put_string("DONE#{CRLF}")
             response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
