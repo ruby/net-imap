@@ -14,8 +14,10 @@ class FetchDataTest < Test::Unit::TestCase
   end
 
   test "#uid" do
-    data = Net::IMAP::FetchData.new(22222, "UID" => 54_321)
-    assert_equal 54_321, data.uid
+    pend_if_truffleruby do
+      data = Net::IMAP::FetchData.new(22222, "UID" => 54_321)
+      assert_equal 54_321, data.uid
+    end
   end
 end
 
@@ -25,20 +27,22 @@ class UIDFetchDataTest < Test::Unit::TestCase
   end
 
   test "#seqno does not exist" do
-    data = Net::IMAP::UIDFetchData.new(22222)
+    data = pend_if_jruby { Net::IMAP::UIDFetchData.new(22222) } or next
     assert_raise NoMethodError do
       data.seqno
     end
   end
 
   test "#uid replaces #seqno" do
-    data = Net::IMAP::UIDFetchData.new(22222)
+    data = pend_if_jruby { Net::IMAP::UIDFetchData.new(22222) } or next
     assert_equal 22222, data.uid
   end
 
   test "#initialize warns when uid differs from attr['UID']" do
-    assert_warn(/UIDs do not match/i) do
-      Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+    pend_if_truffleruby do
+      assert_warn(/UIDs do not match/i) do
+        Net::IMAP::UIDFetchData.new(22222, "UID" => 54_321)
+      end
     end
   end
 
