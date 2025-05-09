@@ -1133,7 +1133,7 @@ module Net
     #
     # Related: #logout, #logout!
     def disconnect
-      state_logout! unless connection_state.to_sym == :logout
+      in_logout_state = try_state_logout?
       return if disconnected?
       begin
         begin
@@ -1153,6 +1153,10 @@ module Net
         @sock.close
       end
       raise e if e
+    ensure
+      # Try again after shutting down the receiver thread.  With no reciever
+      # left to wait for, any remaining locks should be _very_ brief.
+      state_logout! unless in_logout_state
     end
 
     # Returns true if disconnected from the server.
@@ -3815,6 +3819,16 @@ module Net
       synchronize do
         @connection_state = ConnectionState::Logout.new
       end
+    end
+
+    # don't wait to aqcuire the lock
+    def try_state_logout?
+      return true if connection_state in [:logout, *]
+      return false unless acquired_lock = mon_try_enter
+      state_logout!
+      true
+    ensure
+      mon_exit if acquired_lock
     end
 
     def sasl_adapter
