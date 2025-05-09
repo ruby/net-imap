@@ -1131,10 +1131,10 @@ module Net
       rescue Exception => e
         @receiver_thread.raise(e)
       end
-      @receiver_thread.join
       synchronize do
         @sock.close
       end
+      @receiver_thread.join
       raise e if e
     ensure
       # Try again after shutting down the receiver thread.  With no reciever
