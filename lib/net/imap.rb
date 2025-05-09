@@ -1065,10 +1065,10 @@ module Net
       rescue Exception => e
         @receiver_thread.raise(e)
       end
-      @receiver_thread.join
       synchronize do
         @sock.close
       end
+      @receiver_thread.join
       raise e if e
     end
 
