@@ -1116,8 +1116,8 @@ module Net
     #
     # Related: #logout, #logout!
     def disconnect
+      state_logout! unless connection_state.to_sym == :logout
       return if disconnected?
-      state_logout!
       begin
         begin
           # try to call SSL::SSLSocket#io.
