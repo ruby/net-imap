@@ -1073,6 +1073,35 @@ EOF
     end
   end
 
+  test "#authenticate can be canceled with SASL::AuthenticationCanceled" do
+    with_fake_server(
+      preauth: false, cleartext_auth: true,
+      sasl_ir: false, sasl_mechanisms: %i[PLAIN]
+    ) do |server, imap|
+      registry = Net::IMAP::SASL::Authenticators.new(use_defaults: false)
+      registry.add_authenticator :plain, ->(*a, **kw, &b) {
+        obj = Object.new
+        obj.define_singleton_method(:process) do |challenge|
+          raise(Net::IMAP::SASL::AuthenticationCanceled,
+                "a: %p, kw: %p, b: %p, c: %p" % [a, kw, b, challenge])
+        end
+        obj
+      }
+      error = nil
+      assert_raise_with_message(Net::IMAP::SASL::AuthenticationCanceled,
+                                /authentication canceled/i) do
+        imap.authenticate(:plain, foo: :bar, registry: registry)
+      rescue => error
+        raise # for assert_raise
+      end
+      assert_kind_of Net::IMAP::SASL::AuthenticationCanceled,  error.cause
+      assert_equal   'a: [], kw: {:foo=>:bar}, b: nil, c: ""', error.cause.to_s
+      assert_kind_of Net::IMAP::BadResponseError, error.response
+      assert_equal   "canceled",                  error.response.to_s
+      refute imap.disconnected?
+    end
+  end
+
   test "#uid_expunge with EXPUNGE responses" do
     with_fake_server(select: "INBOX",
                      extensions: %i[UIDPLUS]) do |server, imap|
