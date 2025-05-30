@@ -537,8 +537,8 @@ module Net
       #     set.include? 11..20 #=> false
       #     set.include? 100    #=> true
       #     set.include? 6      #=> true, covered by "5:10"
-      #     set.include? 4..9   #=> true, covered by "5:10"
-      #     set.include? "4:9"  #=> true, strings are parsed
+      #     set.include? 6..9   #=> true, covered by "5:10"
+      #     set.include? "6:9"  #=> true, strings are parsed
       #     set.include? 4..9   #=> false, intersection is not sufficient
       #     set.include? "*"    #=> false, use #limit to re-interpret "*"
       #     set.include? -1     #=> false, -1 is interpreted as "*"
@@ -547,8 +547,8 @@ module Net
       #     set.include? :*     #=> true
       #     set.include? "*"    #=> true
       #     set.include? -1     #=> true
-      #     set.include? 200..  #=> true
-      #     set.include? 100..  #=> false
+      #     set.include?(200..) #=> true
+      #     set.include?(100..) #=> false
       #
       # Related: #include_star?, #cover?, #===
       def include?(element) include_tuple? input_to_tuple element end
