@@ -586,7 +586,7 @@ module Net
 
       # :call-seq:
       #   max(star: :*) => integer or star or nil
-      #   max(count, star: :*) => SequenceSet
+      #   max(count) => SequenceSet
       #
       # Returns the maximum value in +self+, +star+ when the set includes
       # <tt>*</tt>, or +nil+ when the set is empty.
@@ -606,7 +606,7 @@ module Net
 
       # :call-seq:
       #   min(star: :*) => integer or star or nil
-      #   min(count, star: :*) => SequenceSet
+      #   min(count) => SequenceSet
       #
       # Returns the minimum value in +self+, +star+ when the only value in the
       # set is <tt>*</tt>, or +nil+ when the set is empty.
@@ -624,10 +624,11 @@ module Net
         end
       end
 
-      # :call-seq: minmax(star: :*) => nil or [integer, integer or star]
+      # :call-seq: minmax(star: :*) => [min, max] or nil
       #
       # Returns a 2-element array containing the minimum and maximum numbers in
-      # +self+, or +nil+ when the set is empty.
+      # +self+, or +nil+ when the set is empty.  +star+ is handled the same way
+      # as by #min and #max.
       #
       # Related: #min, #max
       def minmax(star: :*); [min(star: star), max(star: star)] unless empty? end
