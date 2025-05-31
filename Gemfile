@@ -14,6 +14,7 @@ gem "rdoc"
 gem "test-unit"
 gem "test-unit-ruby-core", git: "https://github.com/ruby/test-unit-ruby-core"
 
+gem "benchmark", require: false
 gem "benchmark-driver", require: false
 gem "vernier", require: false
 
