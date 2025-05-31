@@ -377,7 +377,7 @@ module Net
 
       # Create a new SequenceSet object from +input+, which may be another
       # SequenceSet, an IMAP formatted +sequence-set+ string, a number, a
-      # range, <tt>:*</tt>, or an enumerable of these.
+      # range, <tt>:*</tt>, a Set of numbers, or an Array of these.
       #
       # Use ::[] to create a frozen (non-empty) SequenceSet.
       def initialize(input = nil) input ? replace(input) : clear end
@@ -650,9 +650,7 @@ module Net
       # Returns a new sequence set that has every number in the +other+ object
       # added.
       #
-      # +other+ may be any object that would be accepted by ::new: a non-zero 32
-      # bit unsigned integer, range, <tt>sequence-set</tt> formatted string,
-      # another sequence set, or an enumerable containing any of these.
+      # +other+ may be any object that would be accepted by ::new.
       #
       #     Net::IMAP::SequenceSet["1:5"] | 2 | [4..6, 99]
       #     #=> Net::IMAP::SequenceSet["1:6,99"]
@@ -676,9 +674,7 @@ module Net
       # Returns a new sequence set built by duplicating this set and removing
       # every number that appears in +other+.
       #
-      # +other+ may be any object that would be accepted by ::new: a non-zero 32
-      # bit unsigned integer, range, <tt>sequence-set</tt> formatted string,
-      # another sequence set, or an enumerable containing any of these.
+      # +other+ may be any object that would be accepted by ::new.
       #
       #     Net::IMAP::SequenceSet[1..5] - 2 - 4 - 6
       #     #=> Net::IMAP::SequenceSet["1,3,5"]
@@ -704,9 +700,7 @@ module Net
       # Returns a new sequence set containing only the numbers common to this
       # set and +other+.
       #
-      # +other+ may be any object that would be accepted by ::new: a non-zero 32
-      # bit unsigned integer, range, <tt>sequence-set</tt> formatted string,
-      # another sequence set, or an enumerable containing any of these.
+      # +other+ may be any object that would be accepted by ::new.
       #
       #     Net::IMAP::SequenceSet[1..5] & [2, 4, 6]
       #     #=> Net::IMAP::SequenceSet["2,4"]
@@ -734,9 +728,7 @@ module Net
       # Returns a new sequence set containing numbers that are exclusive between
       # this set and +other+.
       #
-      # +other+ may be any object that would be accepted by ::new: a non-zero 32
-      # bit unsigned integer, range, <tt>sequence-set</tt> formatted string,
-      # another sequence set, or an enumerable containing any of these.
+      # +other+ may be any object that would be accepted by ::new.
       #
       #     Net::IMAP::SequenceSet[1..5] ^ [2, 4, 6]
       #     #=> Net::IMAP::SequenceSet["1,3,5:6"]
@@ -923,9 +915,7 @@ module Net
       # Merges all of the elements that appear in any of the +sets+ into the
       # set, and returns +self+.
       #
-      # The +sets+ may be any objects that would be accepted by ::new: non-zero
-      # 32 bit unsigned integers, ranges, <tt>sequence-set</tt> formatted
-      # strings, other sequence sets, or enumerables containing any of these.
+      # The +sets+ may be any objects that would be accepted by ::new.
       #
       # #string will be regenerated after all sets have been merged.
       #
