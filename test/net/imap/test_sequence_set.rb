@@ -794,13 +794,16 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   end
 
   test "#include?" do
-    assert SequenceSet["2:4"].include?(3)
-    assert SequenceSet["2,*:12"].include? :*
-    assert SequenceSet["2,*:12"].include?(-1)
+    assert_equal true, SequenceSet["2:4"].include?(3)
+    assert_equal true, SequenceSet["2,*:12"].include?(:*)
+    assert_equal true, SequenceSet["2,*:12"].include?(-1)
+    assert_nil SequenceSet["1:*"].include?("hopes and dreams")
+    assert_nil SequenceSet["1:*"].include?(:wat?)
+    assert_nil SequenceSet["1:*"].include?([1, 2, 3])
     set = SequenceSet.new Array.new(100) { rand(1..1500) }
     rev = (~set).limit(max: 1_501)
-    set.numbers.each do assert set.include?(_1) end
-    rev.numbers.each do refute set.include?(_1) end
+    set.numbers.each do assert_equal true,  set.include?(_1) end
+    rev.numbers.each do assert_equal false, set.include?(_1) end
   end
 
   test "#cover?" do
