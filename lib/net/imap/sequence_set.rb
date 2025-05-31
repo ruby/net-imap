@@ -178,8 +178,7 @@ module Net
     #
     # <i>Set membership:</i>
     # - #include? (aliased as #member?):
-    #   Returns whether a given element (nz-number, range, or <tt>*</tt>) is
-    #   contained by the set.
+    #   Returns whether a given element is contained by the set.
     # - #include_star?: Returns whether the set contains <tt>*</tt>.
     #
     # <i>Minimum and maximum value elements:</i>
@@ -525,7 +524,7 @@ module Net
       # Returns whether +other+ is contained within the set.  +other+ may be any
       # object that would be accepted by ::new.
       #
-      # Related: #===, #include?, #include_star?
+      # Related: #===, #include?, #include_star?, #intersect?
       def cover?(other) input_to_tuples(other).none? { !include_tuple?(_1) } end
 
       # Returns +true+ when a given number or range is in +self+, and +false+
@@ -551,7 +550,7 @@ module Net
       #     set.include?(200..) #=> true
       #     set.include?(100..) #=> false
       #
-      # Related: #include_star?, #cover?, #===
+      # Related: #include_star?, #cover?, #===, #intersect?
       def include?(element)
         tuple = input_to_tuple element rescue nil
         !!include_tuple?(tuple) if tuple
@@ -568,7 +567,7 @@ module Net
       #     Net::IMAP::SequenceSet["5:10"].intersect? "7,9,11" #=> true
       #     Net::IMAP::SequenceSet["5:10"].intersect? "11:33"  #=> false
       #
-      # Related: #intersection, #disjoint?
+      # Related: #intersection, #disjoint?, #cover?, #include?
       def intersect?(other)
         valid? && input_to_tuples(other).any? { intersect_tuple? _1 }
       end
