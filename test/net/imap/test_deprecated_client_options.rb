@@ -55,6 +55,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
     end
 
     test "Convert deprecated usessl (= true) and certs, with warning" do
+      omit_if_jruby "SSL tests don't work yet"
       run_fake_server_in_thread(implicit_tls: true) do |server|
         certs = server.config.tls[:ca_file]
         assert_deprecated_warning(/Call Net::IMAP\.new with keyword/i) do
@@ -71,6 +72,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
     end
 
     test "Convert deprecated usessl (= true) and verify (= false), with warning" do
+      omit_if_jruby "SSL tests don't work yet"
       run_fake_server_in_thread(implicit_tls: true) do |server|
         assert_deprecated_warning(/Call Net::IMAP\.new with keyword/i) do
           with_client("localhost", server.port, true, nil, false) do |client|
@@ -102,6 +104,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
 
   class StartTLSTests < DeprecatedClientOptionsTest
     test "Convert obsolete options hash to keywords" do
+      omit_if_jruby "SSL tests don't work yet"
       with_fake_server(preauth: false) do |server, imap|
         imap.starttls(ca_file: server.config.tls[:ca_file], min_version: :TLS1_2)
         assert_equal(
@@ -114,6 +117,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
     end
 
     test "Convert deprecated certs, verify with warning" do
+      omit_if_jruby "SSL tests don't work yet"
       with_fake_server(preauth: false) do |server, imap|
         assert_deprecated_warning(/Call Net::IMAP#starttls with keyword/i) do
           imap.starttls(server.config.tls[:ca_file], false)
