@@ -1688,7 +1688,7 @@ module Net
       def initialize_dup(other)
         modifying! # redundant check, to normalize the error message for JRuby
         @tuples = other.tuples.map(&:dup)
-        @string = other.string&.-@
+        @string = other.instance_variable_get(:@string)&.-@
         super
       end
 
