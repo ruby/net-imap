@@ -1,0 +1,57 @@
+---
+prelude: |
+  require "net/imap"
+
+  def init(n:, d:)
+    n       = n.to_int
+    samples = (1e5.to_i / n).ceil.clamp(1..100)
+    domain  = 1..(n*d).floor
+    $sets   = Array.new(samples) {
+      set = Net::IMAP::SequenceSet.new
+      n.times do set << rand(domain) end
+      set
+    }
+    $idxs   = Array.new([10_000, 2 * n].min) { rand(0..n - 1) }
+    $lens   = Array.new([10_000,     n].min) { rand(1..n) }
+    $ranges = Array.new([10_000, n * n].min) {
+      start = idx
+      stop  = start.negative? ? rand(start..-1) : rand(start...n)
+      start..stop
+    }
+  end
+
+  def set   = $sets.sample
+  def idx   = $idxs.sample
+  def len   = $lens.sample
+  def range = $ranges.sample
+
+  # warmup
+  init n: 100, d: 2
+  100.times do
+    set[idx]
+    set[range]
+    set[idx, len]
+  end
+
+benchmark:
+
+  - { name: "(N= 10 )      set[idx]", prelude: "init(n: 1e1, d: 4.0)", script: "set[idx]" }
+  - { name: "(N=100 )      set[idx]", prelude: "init(n: 1e2, d: 4.0)", script: "set[idx]" }
+  - { name: "(N=  1K)      set[idx]", prelude: "init(n: 1e3, d: 2.0)", script: "set[idx]" }
+  - { name: "(N= 10K)      set[idx]", prelude: "init(n: 1e4, d: 2.0)", script: "set[idx]" }
+  - { name: "(N=100K)      set[idx]", prelude: "init(n: 1e5, d: 2.0)", script: "set[idx]" }
+  - { name: "(N=  1M)      set[idx]", prelude: "init(n: 1e6, d: 1.5)", script: "set[idx]" }
+
+  - { name: "(N= 10 ) set[idx, len]", prelude: "init(n: 1e1, d: 4.0)", script: "set[idx, len]" }
+  - { name: "(N=100 ) set[idx, len]", prelude: "init(n: 1e2, d: 4.0)", script: "set[idx, len]" }
+  - { name: "(N=  1K) set[idx, len]", prelude: "init(n: 1e3, d: 2.0)", script: "set[idx, len]" }
+  - { name: "(N= 10K) set[idx, len]", prelude: "init(n: 1e4, d: 2.0)", script: "set[idx, len]" }
+  - { name: "(N=100K) set[idx, len]", prelude: "init(n: 1e5, d: 2.0)", script: "set[idx, len]" }
+  - { name: "(N=  1M) set[idx, len]", prelude: "init(n: 1e6, d: 1.5)", script: "set[idx, len]" }
+
+  - { name: "(N= 10 )    set[range]", prelude: "init(n: 1e1, d: 4.0)", script: "set[range]" }
+  - { name: "(N=100 )    set[range]", prelude: "init(n: 1e2, d: 4.0)", script: "set[range]" }
+  - { name: "(N=  1K)    set[range]", prelude: "init(n: 1e3, d: 2.0)", script: "set[range]" }
+  - { name: "(N= 10K)    set[range]", prelude: "init(n: 1e4, d: 2.0)", script: "set[range]" }
+  - { name: "(N=100K)    set[range]", prelude: "init(n: 1e5, d: 2.0)", script: "set[range]" }
+  - { name: "(N=  1M)    set[range]", prelude: "init(n: 1e6, d: 1.5)", script: "set[range]" }
