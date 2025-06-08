@@ -392,8 +392,8 @@ module Net
       # Replace the contents of the set with the contents of +other+ and returns
       # +self+.
       #
-      # +other+ may be another SequenceSet, or it may be an IMAP +sequence-set+
-      # string, a number, a range, <tt>*</tt>, or an enumerable of these.
+      # +other+ may be another SequenceSet or any other object that would be
+      # accepted by ::new.
       def replace(other)
         case other
         when SequenceSet then initialize_dup(other)
