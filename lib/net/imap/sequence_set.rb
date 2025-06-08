@@ -392,8 +392,8 @@ module Net
       # Replace the contents of the set with the contents of +other+ and returns
       # +self+.
       #
-      # +other+ may be another SequenceSet, or it may be an IMAP +sequence-set+
-      # string, a number, a range, <tt>*</tt>, or an enumerable of these.
+      # +other+ may be another SequenceSet or any other object that would be
+      # accepted by ::new.
       def replace(other)
         case other
         when SequenceSet then initialize_dup(other)
@@ -509,8 +509,9 @@ module Net
 
       # :call-seq: self === other -> true | false | nil
       #
-      # Returns whether +other+ is contained within the set.  Returns +nil+ if a
-      # StandardError is raised while converting +other+ to a comparable type.
+      # Returns whether +other+ is contained within the set.  +other+ may be any
+      # object that would be accepted by ::new.  Returns +nil+ if StandardError
+      # is raised while converting +other+ to a comparable type.
       #
       # Related: #cover?, #include?, #include_star?
       def ===(other)
@@ -929,9 +930,7 @@ module Net
       # Removes all of the elements that appear in any of the given +sets+ from
       # the set, and returns +self+.
       #
-      # The +sets+ may be any objects that would be accepted by ::new: non-zero
-      # 32 bit unsigned integers, ranges, <tt>sequence-set</tt> formatted
-      # strings, other sequence sets, or enumerables containing any of these.
+      # The +sets+ may be any objects that would be accepted by ::new.
       #
       # Related: #difference
       def subtract(*sets)
@@ -1573,9 +1572,8 @@ module Net
         when Array       then set.flat_map { input_to_tuples _1 }
         when nil         then []
         else
-          raise DataFormatError,
-                "expected nz-number, range, string, or enumerable; " \
-                "got %p" % [set]
+          raise DataFormatError, "expected nz-number, range, '*', Set, Array; " \
+                                 "got %p" % [set]
         end
       end
 
