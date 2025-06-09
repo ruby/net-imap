@@ -340,6 +340,43 @@ module Net
         assert_equal("test", data.name)
         assert_equal("other", data.other)
       end
+
+      class Abstract < Data
+      end
+
+      class Inherited < Abstract.define(:foo)
+      end
+
+      def test_subclass_can_create
+        assert_equal 1, Inherited[1]    .foo
+        assert_equal 2, Inherited[foo: 2].foo
+        assert_equal 3, Inherited.new(3).foo
+        assert_equal 4, Inherited.new(foo: 4).foo
+      end
+
+      class AbstractWithClassMethod < Data
+        def self.inherited_class_method; :ok end
+      end
+
+      class InheritsClassMethod < AbstractWithClassMethod.define(:foo)
+      end
+
+      def test_subclass_class_method
+        assert_equal :ok, InheritsClassMethod.inherited_class_method
+      end
+
+      class AbstractWithOverride < Data
+        def deconstruct; [:ok, *super] end
+      end
+
+      class InheritsOverride < AbstractWithOverride.define(:foo)
+      end
+
+      def test_subclass_override_deconstruct
+        data = InheritsOverride[:foo]
+        assert_equal %i[ok foo], data.deconstruct
+      end
+
     end
   end
 end
