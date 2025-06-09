@@ -25,21 +25,25 @@ class ConnectionStateTest < Net::IMAP::TestCase
   end
 
   test "#deconstruct" do
-    assert_equal [:not_authenticated], NotAuthenticated[].deconstruct
-    assert_equal [:authenticated],     Authenticated[]   .deconstruct
-    assert_equal [:selected],          Selected[]        .deconstruct
-    assert_equal [:logout],            Logout[]          .deconstruct
+    pend_if_truffleruby "TruffleRuby bug overriding ::Data methods" do
+      assert_equal [:not_authenticated], NotAuthenticated[].deconstruct
+      assert_equal [:authenticated],     Authenticated[]   .deconstruct
+      assert_equal [:selected],          Selected[]        .deconstruct
+      assert_equal [:logout],            Logout[]          .deconstruct
+    end
   end
 
   test "#deconstruct_keys" do
-    assert_equal({symbol: :not_authenticated}, NotAuthenticated[].deconstruct_keys([:symbol]))
-    assert_equal({symbol: :authenticated},     Authenticated[]   .deconstruct_keys([:symbol]))
-    assert_equal({symbol: :selected},          Selected[]        .deconstruct_keys([:symbol]))
-    assert_equal({symbol: :logout},            Logout[]          .deconstruct_keys([:symbol]))
-    assert_equal({name: "not_authenticated"},  NotAuthenticated[].deconstruct_keys([:name]))
-    assert_equal({name: "authenticated"},      Authenticated[]   .deconstruct_keys([:name]))
-    assert_equal({name: "selected"},           Selected[]        .deconstruct_keys([:name]))
-    assert_equal({name: "logout"},             Logout[]          .deconstruct_keys([:name]))
+    pend_if_truffleruby "TruffleRuby bug overriding ::Data methods" do
+      assert_equal({symbol: :not_authenticated}, NotAuthenticated[].deconstruct_keys([:symbol]))
+      assert_equal({symbol: :authenticated},     Authenticated[]   .deconstruct_keys([:symbol]))
+      assert_equal({symbol: :selected},          Selected[]        .deconstruct_keys([:symbol]))
+      assert_equal({symbol: :logout},            Logout[]          .deconstruct_keys([:symbol]))
+      assert_equal({name: "not_authenticated"},  NotAuthenticated[].deconstruct_keys([:name]))
+      assert_equal({name: "authenticated"},      Authenticated[]   .deconstruct_keys([:name]))
+      assert_equal({name: "selected"},           Selected[]        .deconstruct_keys([:name]))
+      assert_equal({name: "logout"},             Logout[]          .deconstruct_keys([:name]))
+    end
   end
 
   test "#not_authenticated?" do
