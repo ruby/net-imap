@@ -616,7 +616,7 @@ module Net
           if normalized_entries?(entries)
             @tuples.replace entries.map!(&:minmax)
           else
-            tuples_add entries.map!(&:minmax)
+            add_minmaxes entries.map!(&:minmax)
             @string = -str
           end
         else
@@ -954,7 +954,7 @@ module Net
       # Related: #add?, #merge, #union, #append
       def add(element)
         modifying! # short-circuit before import_run
-        tuple_add import_run element
+        add_run import_run element
         normalize!
       end
       alias << add
@@ -993,7 +993,7 @@ module Net
         adj = minmax.first - 1
         if @string.nil? && (@tuples.empty? || tuples.last.last <= adj)
           # append to elements or coalesce with last element
-          tuple_add minmax
+          add_minmax minmax
           return self
         elsif @string.nil?
           # generate string for out-of-order append
@@ -1011,7 +1011,7 @@ module Net
           end
         end
         entry = export_minmax minmax
-        tuple_add minmax
+        add_minmax minmax
         @string = -"#{head}#{comma}#{entry}"
         self
       end
@@ -1039,7 +1039,7 @@ module Net
       # Related: #delete?, #delete_at, #subtract, #difference
       def delete(element)
         modifying! # short-circuit before import_run
-        tuple_subtract import_run element
+        subtract_run import_run element
         normalize!
       end
 
@@ -1080,12 +1080,12 @@ module Net
         minmax = import_minmax element
         if minmax.first == minmax.last
           return unless include_minmax? minmax
-          tuple_subtract minmax
+          subtract_minmax minmax
           normalize!
           export_num minmax.first
         else
           copy = dup
-          tuple_subtract minmax
+          subtract_minmax minmax
           normalize!
           copy if copy.subtract(self).valid?
         end
@@ -1132,7 +1132,7 @@ module Net
       # Related: #add, #add?, #union
       def merge(*sets)
         modifying! # short-circuit before import_runs
-        tuples_add import_runs sets
+        add_runs import_runs sets
         normalize!
       end
 
@@ -1144,7 +1144,7 @@ module Net
       # Related: #difference
       def subtract(*sets)
         modifying! # short-circuit before import_runs
-        tuples_subtract import_runs sets
+        subtract_runs import_runs sets
         normalize!
       end
 
@@ -1643,8 +1643,8 @@ module Net
         modifying! # short-circuit before querying
         star = include_star?
         max  = import_num(max)
-        tuple_subtract [max + 1, STAR_INT]
-        tuple_add      [max,     max     ] if star
+        subtract_minmax [max + 1, STAR_INT]
+        add_minmax      [max,     max     ] if star
         normalize!
       end
 
@@ -1994,30 +1994,41 @@ module Net
         end
       end
 
-      def tuples_add(tuples)      tuples.each do tuple_add _1      end; self end
-      def tuples_subtract(tuples) tuples.each do tuple_subtract _1 end; self end
+      def add_minmaxes(minmaxes)
+        minmaxes.each do |minmax|
+          add_minmax minmax
+        end
+        self
+      end
+
+      def subtract_minmaxes(minmaxes)
+        minmaxes.each do |minmax|
+          subtract_minmax minmax
+        end
+        self
+      end
 
       #
-      #   --|=====| |=====new tuple=====|                 append
-      #   ?????????-|=====new tuple=====|-|===lower===|-- insert
+      #   --|=====| |=====new run=======|                 append
+      #   ?????????-|=====new run=======|-|===lower===|-- insert
       #
-      #             |=====new tuple=====|
+      #             |=====new run=======|
       #   ---------??=======lower=======??--------------- noop
       #
       #   ---------??===lower==|--|==|                    join remaining
       #   ---------??===lower==|--|==|----|===upper===|-- join until upper
       #   ---------??===lower==|--|==|--|=====upper===|-- join to upper
-      def tuple_add(tuple)
+      def add_minmax(minmax)
         modifying!
-        min, max = tuple
+        min, max = minmax
         lower, lower_idx = bsearch_minmax_with_index(min - 1)
         if    lower.nil?              then tuples << [min, max]
         elsif (max + 1) < lower.first then tuples.insert(lower_idx, [min, max])
-        else  tuple_coalesce(lower, lower_idx, min, max)
+        else  add_coalesced_minmax(lower, lower_idx, min, max)
         end
       end
 
-      def tuple_coalesce(lower, lower_idx, min, max)
+      def add_coalesced_minmax(lower, lower_idx, min, max)
         return if lower.first <= min && max <= lower.last
         lower[0] = [min, lower.first].min
         lower[1] = [max, lower.last].max
@@ -2031,7 +2042,7 @@ module Net
         tuples.slice!(lower_idx..upper_idx)
       end
 
-      #         |====tuple================|
+      #         |====subtracted run=======|
       # --|====|                               no more       1. noop
       # --|====|---------------------------|====lower====|-- 2. noop
       # -------|======lower================|---------------- 3. split
@@ -2044,25 +2055,25 @@ module Net
       # -------??=====lower====|--|====|       no more       6. delete rest
       # -------??=====lower====|--|====|---|====upper====|-- 7. delete until
       # -------??=====lower====|--|====|--|=====upper====|-- 8. delete and trim
-      def tuple_subtract(tuple)
+      def subtract_minmax(minmax)
         modifying!
-        min, max = tuple
+        min, max = minmax
         lower, idx = bsearch_minmax_with_index(min)
         if    lower.nil?        then nil # case 1.
         elsif max < lower.first then nil # case 2.
-        elsif max < lower.last  then tuple_trim_or_split   lower, idx, min, max
-        else                         tuples_trim_or_delete lower, idx, min, max
+        elsif max < lower.last  then trim_or_split_minmax  lower, idx, min, max
+        else                         trim_or_delete_minmax lower, idx, min, max
         end
       end
 
-      def tuple_trim_or_split(lower, idx, tmin, tmax)
+      def trim_or_split_minmax(lower, idx, tmin, tmax)
         if lower.first < tmin # split
           tuples.insert(idx, [lower.first, tmin - 1])
         end
         lower[0] = tmax + 1
       end
 
-      def tuples_trim_or_delete(lower, lower_idx, tmin, tmax)
+      def trim_or_delete_minmax(lower, lower_idx, tmin, tmax)
         if lower.first < tmin # trim lower
           lower[1] = tmin - 1
           lower_idx += 1
@@ -2075,6 +2086,11 @@ module Net
         end
         tuples.slice!(lower_idx..upper_idx)
       end
+
+      alias add_runs      add_minmaxes
+      alias add_run       add_minmax
+      alias subtract_runs subtract_minmaxes
+      alias subtract_run  subtract_minmax
 
       def bsearch_minmax_with_index(num)
         idx = tuples.bsearch_index { _2 >= num } and [tuples[idx], idx]
