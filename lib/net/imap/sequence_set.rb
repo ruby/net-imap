@@ -698,7 +698,7 @@ module Net
       # object that would be accepted by ::new.
       #
       # Related: #===, #include?, #include_star?, #intersect?
-      def cover?(other) import_runs(other).none? { !include_tuple?(_1) } end
+      def cover?(other) import_runs(other).none? { !include_run?(_1) } end
 
       # Returns +true+ when a given number or range is in +self+, and +false+
       # otherwise.  Returns +nil+ when +number+ isn't a valid SequenceSet
@@ -726,7 +726,7 @@ module Net
       # Related: #include_star?, #cover?, #===, #intersect?
       def include?(element)
         run = import_run element rescue nil
-        !!include_tuple?(run) if run
+        !!include_run?(run) if run
       end
 
       alias member? include?
@@ -742,7 +742,7 @@ module Net
       #
       # Related: #intersection, #disjoint?, #cover?, #include?
       def intersect?(other)
-        valid? && import_runs(other).any? { intersect_tuple? _1 }
+        valid? && import_runs(other).any? { intersect_run? _1 }
       end
       alias overlap? intersect?
 
@@ -754,7 +754,7 @@ module Net
       #
       # Related: #intersection, #intersect?
       def disjoint?(other)
-        empty? || import_runs(other).none? { intersect_tuple? _1 }
+        empty? || import_runs(other).none? { intersect_run? _1 }
       end
 
       # :call-seq:
@@ -1079,7 +1079,7 @@ module Net
         modifying! # short-circuit before import_minmax
         minmax = import_minmax element
         if minmax.first == minmax.last
-          return unless include_tuple? minmax
+          return unless include_minmax? minmax
           tuple_subtract minmax
           normalize!
           export_num minmax.first
@@ -1978,12 +1978,15 @@ module Net
         true
       end
 
-      def include_tuple?((min, max)) range_gte_to(min)&.cover?(min..max) end
+      def include_minmax?((min, max)) range_gte_to(min)&.cover?(min..max) end
 
-      def intersect_tuple?((min, max))
+      def intersect_minmax?((min, max))
         range = range_gte_to(min) and
           range.include?(min) || range.include?(max) || (min..max).cover?(range)
       end
+
+      alias include_run?   include_minmax?
+      alias intersect_run? intersect_minmax?
 
       def modifying!
         if frozen?
