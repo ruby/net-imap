@@ -154,6 +154,7 @@ module Net
     # * ::new: Creates a new mutable sequence set, which may be empty (invalid).
     # * ::try_convert: Calls +to_sequence_set+ on an object and verifies that
     #   the result is a SequenceSet.
+    # * Net::IMAP::SequenceSet(): Coerce an input using ::try_convert or ::new.
     # * ::empty: Returns a frozen empty (invalid) SequenceSet.
     # * ::full: Returns a frozen SequenceSet containing every possible number.
     #
@@ -338,7 +339,7 @@ module Net
         #
         # Use ::new to create a mutable or empty SequenceSet.
         #
-        # Related: ::new, ::try_convert
+        # Related: ::new, Net::IMAP::SequenceSet(), ::try_convert
         def [](first, *rest)
           if rest.empty?
             if first.is_a?(SequenceSet) && first.frozen? && first.valid?
@@ -361,7 +362,7 @@ module Net
         # If +obj.to_sequence_set+ doesn't return a SequenceSet, an exception is
         # raised.
         #
-        # Related: ::new, ::[]
+        # Related: Net::IMAP::SequenceSet(), ::new, ::[]
         def try_convert(obj)
           return obj if obj.is_a?(SequenceSet)
           return nil unless obj.respond_to?(:to_sequence_set)
@@ -387,6 +388,8 @@ module Net
       # * ::[] returns a frozen validated (non-empty) SequenceSet, without
       #   allocating a new object when the input is already a valid frozen
       #   SequenceSet.
+      # * Net::IMAP::SequenceSet() coerces an input to SequenceSet, without
+      #   allocating a new object when the input is already a SequenceSet.
       # * ::try_convert calls +to_sequence_set+ on inputs that support it and
       #   returns +nil+ for inputs that don't.
       # * ::empty and ::full both return frozen singleton sets which can be
