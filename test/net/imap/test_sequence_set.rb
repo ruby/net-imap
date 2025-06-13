@@ -273,6 +273,36 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_raise DataFormatError do SequenceSet.try_convert(obj) end
   end
 
+  test "Net::IMAP::SequenceSet(set)" do
+    assert_equal SequenceSet.empty,   Net::IMAP::SequenceSet()
+    assert_equal SequenceSet.empty,   Net::IMAP::SequenceSet(nil)
+    assert_equal SequenceSet.empty,   Net::IMAP::SequenceSet([])
+    assert_equal SequenceSet.empty,   Net::IMAP::SequenceSet([[]])
+    assert_equal SequenceSet.empty,   Net::IMAP::SequenceSet("")
+    assert_equal SequenceSet[123],    Net::IMAP::SequenceSet(123)
+    assert_equal SequenceSet[12..34], Net::IMAP::SequenceSet(12..34)
+    assert_equal SequenceSet[12..34], Net::IMAP::SequenceSet("12:34")
+
+    refute Net::IMAP::SequenceSet("").frozen?
+
+    assert_raise DataFormatError do Net::IMAP::SequenceSet(Object.new) end
+
+    set = SequenceSet[123]
+    assert_same set, Net::IMAP::SequenceSet(set)
+
+    set = SequenceSet.new(123)
+    assert_same set, Net::IMAP::SequenceSet(set)
+
+    obj = Object.new
+    set = SequenceSet[192, 168, 1, 255]
+    obj.define_singleton_method(:to_sequence_set) { set }
+    assert_same set, Net::IMAP::SequenceSet(obj)
+
+    obj = Object.new
+    def obj.to_sequence_set; 192_168.001_255 end
+    assert_raise DataFormatError do Net::IMAP::SequenceSet(obj) end
+  end
+
   test "#at(non-negative index)" do
     assert_nil        SequenceSet.empty.at(0)
     assert_equal   1, SequenceSet[1..].at(0)
