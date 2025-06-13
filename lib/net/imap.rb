@@ -801,6 +801,7 @@ module Net
     autoload :ResponseReader,         "#{dir}/response_reader"
     autoload :SASL,                   "#{dir}/sasl"
     autoload :SASLAdapter,            "#{dir}/sasl_adapter"
+    autoload :SequenceSet,            "#{dir}/sequence_set"
     autoload :StringPrep,             "#{dir}/stringprep"
 
     include MonitorMixin
