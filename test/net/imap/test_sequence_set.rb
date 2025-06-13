@@ -237,6 +237,17 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
   test ".[frozen SequenceSet] returns that SequenceSet" do
     frozen_seqset = SequenceSet[123..456]
     assert_same frozen_seqset, SequenceSet[frozen_seqset]
+
+    coercible = Object.new
+    frozen_seqset = SequenceSet[192, 168, 1, 255]
+    coercible.define_singleton_method(:to_sequence_set) { frozen_seqset }
+    assert_same frozen_seqset, SequenceSet[coercible]
+
+    coercible = Object.new
+    mutable_seqset = SequenceSet.new([192, 168, 1, 255])
+    coercible.define_singleton_method(:to_sequence_set) { mutable_seqset }
+    assert_equal mutable_seqset, SequenceSet[coercible]
+    refute_same  mutable_seqset, SequenceSet[coercible]
   end
 
   test ".new, input may be empty" do
