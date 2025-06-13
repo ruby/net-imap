@@ -390,11 +390,8 @@ module Net
         # Related: ::new, ::try_convert
         def [](first, *rest)
           if rest.empty?
-            if first.is_a?(SequenceSet) && first.frozen? && first.valid?
-              first
-            else
-              new(first).validate.freeze
-            end
+            set = try_convert(first)&.validate
+            set&.frozen? ? set : (set&.dup || new(first).validate).freeze
           else
             new(first).merge(*rest).validate.freeze
           end
