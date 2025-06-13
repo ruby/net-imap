@@ -1508,7 +1508,15 @@ module Net
         end
       end
 
-      # Returns self
+      ##
+      # :method: to_sequence_set
+      # :call-seq: to_sequence_set -> self
+      #
+      # Returns +self+
+      #
+      # Related: ::try_convert
+
+      # :nodoc: (work around rdoc bug)
       alias to_sequence_set itself
 
       # Unstable API: currently for internal use only (Net::IMAP#validate_data)
