@@ -809,6 +809,22 @@ module Net
       include SSL
     end
 
+    # :call-seq:
+    #   Net::IMAP::SequenceSet(set = nil) -> SequenceSet
+    #
+    # Coerces +set+ into a SequenceSet, using either SequenceSet.try_convert or
+    # SequenceSet.new.
+    #
+    # * When +set+ is a SequenceSet, that same set is returned.
+    # * When +set+ responds to +to_sequence_set+, +set.to_sequence_set+ is
+    #   returned.
+    # * Otherwise, returns the result from calling SequenceSet.new with +set+.
+    #
+    # Related: SequenceSet.try_convert, SequenceSet.new, SequenceSet::[]
+    def self.SequenceSet(set = nil)
+      SequenceSet.try_convert(set) || SequenceSet.new(set)
+    end
+
     # Returns the global Config object
     def self.config; Config.global end
 
