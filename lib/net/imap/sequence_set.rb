@@ -337,6 +337,8 @@ module Net
         # An empty SequenceSet is invalid and will raise a DataFormatError.
         #
         # Use ::new to create a mutable or empty SequenceSet.
+        #
+        # Related: ::new, ::try_convert
         def [](first, *rest)
           if rest.empty?
             if first.is_a?(SequenceSet) && first.frozen? && first.valid?
@@ -358,6 +360,8 @@ module Net
         #
         # If +obj.to_sequence_set+ doesn't return a SequenceSet, an exception is
         # raised.
+        #
+        # Related: ::new, ::[]
         def try_convert(obj)
           return obj if obj.is_a?(SequenceSet)
           return nil unless obj.respond_to?(:to_sequence_set)
@@ -379,7 +383,14 @@ module Net
       # SequenceSet, an IMAP formatted +sequence-set+ string, a number, a
       # range, <tt>:*</tt>, a Set of numbers, or an Array of these.
       #
-      # Use ::[] to create a frozen (non-empty) SequenceSet.
+      # === Alternative set creation methods
+      # * ::[] returns a frozen validated (non-empty) SequenceSet, without
+      #   allocating a new object when the input is already a valid frozen
+      #   SequenceSet.
+      # * ::try_convert calls +to_sequence_set+ on inputs that support it and
+      #   returns +nil+ for inputs that don't.
+      # * ::empty and ::full both return frozen singleton sets which can be
+      #   combined with set operations (#|, #&, #^, #-, etc) to make new sets.
       def initialize(input = nil) input ? replace(input) : clear end
 
       # Removes all elements and returns self.
