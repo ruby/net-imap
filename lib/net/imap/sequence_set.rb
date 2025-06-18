@@ -689,7 +689,7 @@ module Net
       # ==== Set identities
       #
       # <tt>lhs - rhs</tt> is equivalent to:
-      # * <tt>~r - ~l</tt>
+      # * <tt>~rhs - ~lhs</tt>
       # * <tt>lhs & ~rhs</tt>
       # * <tt>~(~lhs | rhs)</tt>
       # * <tt>lhs & (lhs ^ rhs)</tt>
