@@ -1151,9 +1151,7 @@ module Net
       rescue Exception => e
         @receiver_thread.raise(e)
       end
-      synchronize do
-        @sock.close
-      end
+      @sock.close
       @receiver_thread.join
       raise e if e
     ensure
