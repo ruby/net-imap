@@ -1056,13 +1056,7 @@ module Net
     def disconnect
       return if disconnected?
       begin
-        begin
-          # try to call SSL::SSLSocket#io.
-          @sock.io.shutdown
-        rescue NoMethodError
-          # @sock is not an SSL::SSLSocket.
-          @sock.shutdown
-        end
+        @sock.to_io.shutdown
       rescue Errno::ENOTCONN
         # ignore `Errno::ENOTCONN: Socket is not connected' on some platforms.
       rescue Exception => e
