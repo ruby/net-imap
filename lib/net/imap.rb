@@ -1131,6 +1131,9 @@ module Net
 
     # Disconnects from the server.
     #
+    # Waits for receiver thread to close before returning.  Slow or stuck
+    # response handlers can cause #disconnect to hang until they complete.
+    #
     # Related: #logout, #logout!
     def disconnect
       in_logout_state = try_state_logout?
