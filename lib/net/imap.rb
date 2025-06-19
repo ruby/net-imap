@@ -3362,8 +3362,6 @@ module Net
       rescue Exception => ex
         @receiver_thread_exception = ex
         # don't exit the thread with an exception
-      ensure
-        state_logout!
       end
     end
 
@@ -3445,6 +3443,8 @@ module Net
           @idle_done_cond.signal
         end
       end
+    ensure
+      state_logout!
     end
 
     def get_tagged_response(tag, cmd, timeout = nil)
@@ -3807,11 +3807,15 @@ module Net
     end
 
     def state_unselected!
-      state_authenticated! if connection_state.to_sym == :selected
+      synchronize do
+        state_authenticated! if connection_state.to_sym == :selected
+      end
     end
 
     def state_logout!
+      return true if connection_state in [:logout, *]
       synchronize do
+        return true if connection_state in [:logout, *]
         @connection_state = ConnectionState::Logout.new
       end
     end
