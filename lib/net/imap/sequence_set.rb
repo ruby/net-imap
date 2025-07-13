@@ -566,11 +566,12 @@ module Net
       # otherwise.
       def deconstruct; valid? ? [normalized_string] : [] end
 
-      # Assigns a new string to #string and resets #elements to match.  It
-      # cannot be set to an empty string—assign +nil+ or use #clear instead.
-      # The string is validated but not normalized.
+      # Assigns a new string to #string and resets #elements to match.
+      # Assigning +nil+ or an empty string are equivalent to calling #clear.
       #
-      # Use #add or #merge to add a string to an existing set.
+      # Non-empty strings are validated but not normalized.
+      #
+      # Use #add, #merge, or #append to add a string to an existing set.
       #
       # Related: #replace, #clear
       def string=(str)
