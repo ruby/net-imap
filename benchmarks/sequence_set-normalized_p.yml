@@ -1,0 +1,106 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  SAMPLES     = Integer ENV.fetch("BENCHMARK_SAMPLES",      100)
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+  ABNORMAL_RATIO = Float ENV.fetch("BENCHMARK_ABNORMAL_RATIO", 0.2)
+
+  def init_sets(count: 100, set_size: INPUT_COUNT, max: MAX_INPUT)
+    Array.new(count) {
+      Net::IMAP::SequenceSet.new(Array.new(set_size) { rand(1..max) })
+    }
+  end
+
+  def init_normal_sets(...)
+    init_sets(...)
+  end
+
+  def init_frozen_normal_sets(...)
+    init_sets(...)
+      .map(&:freeze)
+  end
+
+  def init_unsorted_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = seqset.entries.shuffle
+        seqset.clear
+        entries.each do |entry|
+          seqset.append entry
+        end
+      end
+  end
+
+  def init_abnormal_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = seqset.entries.shuffle
+        seqset.clear
+        entries.each do |entry|
+          if ABNORMAL_RATIO < rand
+            seqset.append entry
+          elsif entry.is_a? Range
+            seqset.append "#{entry.end || "*"}:#{entry.begin}"
+          else
+            seqset.append "#{entry}:#{entry}"
+          end
+        end
+      end
+  end
+
+  # Benchmark against a naive version that could be used in earlier releases
+  unless Net::IMAP::SequenceSet.instance_methods.include?(:normalized?)
+    class Net::IMAP::SequenceSet
+      def normalized?
+        @string.nil? || @string == normalized_string
+      end
+    end
+  end
+
+  # warmup (esp. for JIT)
+  WARMUP_RUNS.times do
+    init_sets(count: 20, set_size: 100, max: 120).each do |set|
+      set.normalized?
+    end
+  end
+
+benchmark:
+  - name: "normal (#string not called)"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.normalized?
+  - name: "normal (#string called)"
+    prelude: $sets = init_normal_sets.tap do _1.each(&:string) end
+    script:  $sets.sample.normalized?
+  - name: "frozen and normal"
+    prelude: $sets = init_frozen_normal_sets
+    script:  $sets.sample.normalized?
+  - name: "unsorted"
+    prelude: $sets = init_unsorted_sets
+    script:  $sets.sample.normalized?
+  - name: "abnormal"
+    prelude: $sets = init_abnormal_sets
+    script:  $sets.sample.normalized?
+
+contexts:
+  # n.b: can't use anything newer as the baseline: it's over 500x faster!
+  - name: v0.5.9
+    gems:
+      net-imap: 0.5.9
+    require: false
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+      $allowed_to_profile = true # only profile local code
+    require: false
+  - name: v0.5.0
+    gems:
+      net-imap: 0.5.0
+    require: false
+  - name: v0.4.21
+    gems:
+      net-imap: 0.4.21
+    require: false
