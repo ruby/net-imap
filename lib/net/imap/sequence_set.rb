@@ -574,15 +574,16 @@ module Net
       # Use #add, #merge, or #append to add a string to an existing set.
       #
       # Related: #replace, #clear
-      def string=(str)
-        if str.nil?
+      def string=(input)
+        if input.nil?
           clear
-        else
-          modifying! # redundant check, to normalize the error message for JRuby
-          str = String.try_convert(str) or raise ArgumentError, "not a string"
+        elsif (str = String.try_convert(input))
+          modifying! # short-circuit before parsing the string
           tuples = str_to_tuples str
           @tuples, @string = [], -str
           tuples_add tuples
+        else
+          raise ArgumentError, "expected a string or nil, got #{input.class}"
         end
         str
       end
