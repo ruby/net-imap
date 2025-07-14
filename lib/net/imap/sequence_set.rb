@@ -547,7 +547,10 @@ module Net
       # accepted by ::new.
       def replace(other)
         case other
-        when SequenceSet then initialize_dup(other)
+        when SequenceSet then
+          modifying! # short circuit before doing any work
+          @tuples = other.deep_copy_tuples
+          @string = other.instance_variable_get(:@string)
         when String      then self.string = other
         else                  clear; merge other
         end
@@ -1734,6 +1737,8 @@ module Net
 
       attr_reader :tuples # :nodoc:
 
+      def deep_copy_tuples; @tuples.map { _1.dup } end # :nodoc:
+
       private
 
       def remain_frozen(set) frozen? ? set.freeze : set end
@@ -1741,13 +1746,12 @@ module Net
 
       # frozen clones are shallow copied
       def initialize_clone(other)
-        other.frozen? ? super : initialize_dup(other)
+        @tuples = other.deep_copy_tuples unless other.frozen?
+        super
       end
 
       def initialize_dup(other)
-        modifying! # redundant check, to normalize the error message for JRuby
-        @tuples = other.tuples.map(&:dup)
-        @string = other.string&.-@
+        @tuples = other.deep_copy_tuples
         super
       end
 
