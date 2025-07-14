@@ -1857,11 +1857,8 @@ module Net
       end
 
       def tuple_to_str(tuple) tuple.uniq.map{ from_tuple_int _1 }.join(":") end
-      def str_to_tuples(str) str.split(",", -1).map! { str_to_tuple _1 } end
-      def str_to_tuple(str)
-        raise DataFormatError, "invalid sequence set string" if str.empty?
-        str.split(":", 2).map! { to_tuple_int _1 }.minmax
-      end
+      def str_to_tuples(str)  each_parsed_entry(str).map(&:minmax) end
+      def str_to_tuple(str)   parse_string_entry(str).minmax end
 
       def parse_string_entry(str)
         raise DataFormatError, "invalid sequence set string" if str.empty?
@@ -1870,6 +1867,7 @@ module Net
 
       # yields validated but unsorted [num] or [num, num]
       def each_parsed_entry(str)
+        return to_enum(__method__, str) unless block_given?
         str&.split(",", -1) do |entry| yield parse_string_entry(entry) end
       end
 
