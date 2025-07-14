@@ -1659,20 +1659,20 @@ module Net
         @string.nil? || normal_string?(@string)
       end
 
-      # Returns a new SequenceSet with a normalized string representation.
+      # Returns a SequenceSet with a #string that is fully normalized: entries
+      # have been sorted, deduplicated, and coalesced, and all entries are in
+      # normal form.  See SequenceSet@Ordered+and+Normalized+sets.
       #
-      # The returned set's #string is sorted and deduplicated.  Adjacent or
-      # overlapping elements will be merged into a single larger range.
-      # See SequenceSet@Ordered+and+Normalized+sets.
+      # Frozen normalized sets will return +self+.  Otherwise, a duplicate set
+      # is created with the same elements but a normalized string.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalize
       #   #=> Net::IMAP::SequenceSet["1:7,9:11"]
       #
       # Related: #normalize!, #normalized_string
       def normalize
-        str = normalized_string
-        return self if frozen? && str == string
-        remain_frozen dup.instance_exec { @string = str&.-@; self }
+        return self if frozen? && normalized?
+        remain_frozen dup.normalize!
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
