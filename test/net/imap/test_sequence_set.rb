@@ -894,6 +894,55 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     "denormalized" => ['Net::IMAP::SequenceSet("2,1")',   "2,1"],
     "star"         => ['Net::IMAP::SequenceSet("*")',     "*"],
     "frozen"       => ['Net::IMAP::SequenceSet["1,3,5:*"]', [1, 3, 5..], true],
+    "at limit" => [
+      "Net::IMAP::SequenceSet(\"#{((1..1024) % 2).to_a.join(",")}\")",
+      [((1..1024) % 2).to_a],
+      false
+    ],
+    "just over limit"  => [
+      '#<Net::IMAP::SequenceSet 513 entries ' \
+      '"1,3,5,7,9,11,13,15,' \
+      '17,19,21,23,25,27,29,31,' \
+      '...(481 entries omitted)...,' \
+      '995,997,999,1001,1003,1005,1007,1009,' \
+      '1011,1013,1015,1017,1019,1021,1023,1025">',
+      ((1..1025) % 2).to_a,
+      false
+    ],
+    "denormalized at limit" => [
+      "Net::IMAP::SequenceSet(\"#{(1..512).to_a.reverse.join(",")}\")",
+      (1..512).to_a.reverse.join(","),
+      false
+    ],
+    "over limit"  => [
+      '#<Net::IMAP::SequenceSet 2046 entries ' \
+      '"1:5,7,9,11,13,15,17,19,' \
+      '21,23,25,27,29,31,33,35,' \
+      '...(2014 entries omitted)...,' \
+      '4065,4067,4069,4071,4073,4075,4077,4079,' \
+      '4081,4083,4085,4087,4089,4091,4093,4095">',
+      [((1..4096) % 2).to_a, 2, 4], # add 2 and 4 to demonstrate range: "1:5"
+      false
+    ],
+    "frozen over limit"  => [
+      '#<Net::IMAP::SequenceSet 2046 entries "' \
+      '1:5,7,9,11,13,15,17,19,21,23,25,27,29,31,33,35,' \
+      '...(2014 entries omitted)...,' \
+      '4065,4067,4069,4071,4073,4075,4077,4079,' \
+      '4081,4083,4085,4087,4089,4091,4093,4095" (frozen)>',
+      [((1..4096) % 2).to_a, 2, 4], # add 2 and 4 to demonstrate range: "1:5"
+      true
+    ],
+    "denormalized over limit" => [
+      '#<Net::IMAP::SequenceSet 1000 entries "'                  \
+      '100001,100002,100003,100004,100005,100006,100007,100008,' \
+      '100009,100010,100011,100012,100013,100014,100015,100016,' \
+      '...(968 entries omitted)...,'                            \
+      '100985,100986,100987,100988,100989,100990,100991,100992,' \
+      '100993,100994,100995,100996,100997,100998,100999,101000">',
+      (100_001..101_000).to_a.join(","),
+      false
+    ],
   )
   def test_inspect((expected, input, freeze))
     seqset = SequenceSet.new(input)

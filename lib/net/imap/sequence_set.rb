@@ -396,6 +396,23 @@ module Net
       STARS     = [:*, ?*, -1].freeze
       private_constant :STARS
 
+      INSPECT_MAX_LEN      = 512
+      INSPECT_TRUNCATE_LEN =  16
+      private_constant :INSPECT_MAX_LEN, :INSPECT_TRUNCATE_LEN
+
+      # /(,\d+){100}\z/ is shockingly slow on huge strings.
+      # /(,\d{0,10}){100}\z/ is ok, but ironically, Regexp.linear_time? is false.
+      #
+      # This unrolls all nested quantifiers.  It's much harder to read, but it's
+      # also the fastest out of all the versions I tested.
+      nz_uint32   = /[1-9](?:\d(?:\d(?:\d(?:\d(?:\d(?:\d(?:\d(?:\d(?:\d)?)?)?)?)?)?)?)?)?/
+      num_or_star = /#{nz_uint32}|\*/
+      entry       = /#{num_or_star}(?::#{num_or_star})?/
+      entries     = ([entry] * INSPECT_TRUNCATE_LEN).join(",")
+      INSPECT_ABRIDGED_HEAD_RE = /\A#{entries},/
+      INSPECT_ABRIDGED_TAIL_RE = /,#{entries}\z/
+      private_constant :INSPECT_ABRIDGED_HEAD_RE, :INSPECT_ABRIDGED_TAIL_RE
+
       class << self
 
         # :call-seq:
@@ -1646,13 +1663,37 @@ module Net
       #   Net::IMAP::SequenceSet[1..5, 1024, 15, 2000].inspect
       #   #=> 'Net::IMAP::SequenceSet["1:5,15,1024,2000"]'
       #
+      # Large sets (by number of #entries) have abridged output, with only the
+      # first and last entries:
+      #
+      #   Net::IMAP::SequenceSet(((1..5000) % 2).to_a).inspect
+      #   #=> #<Net::IMAP::SequenceSet 2500 entries "1,3,5,7,9,11,13,15,17,19,21,23,25,27,29,31,...(2468 entries omitted)...,4969,4971,4973,4975,4977,4979,4981,4983,4985,4987,4989,4991,4993,4995,4997,4999">
+      #
       # Related: #to_s, #string
       def inspect
-        if empty?
+        case (count = count_entries)
+        when 0
           (frozen? ? "%s.empty" : "%s()") % [self.class]
-        else
+        when ..INSPECT_MAX_LEN
           (frozen? ? "%s[%p]" : "%s(%p)") % [self.class, to_s]
+        else
+          if @string
+            head = @string[INSPECT_ABRIDGED_HEAD_RE]
+            tail = @string[INSPECT_ABRIDGED_TAIL_RE]
+          else
+            head = export_string_entries(@tuples.first(INSPECT_TRUNCATE_LEN)) + ","
+            tail = "," + export_string_entries(@tuples.last(INSPECT_TRUNCATE_LEN))
+          end
+          '#<%s %d entries "%s...(%d entries omitted)...%s"%s>' % [
+            self.class, count,
+            head, count - INSPECT_TRUNCATE_LEN * 2, tail,
+            frozen? ? " (frozen)" : "",
+          ]
         end
+      end
+
+      private def count_entries
+        @string ? @string.count(",") + 1 : @tuples.count
       end
 
       ##
@@ -1757,6 +1798,10 @@ module Net
 
       def to_tuple_int(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
       def from_tuple_int(num) num == STAR_INT ? :* : num end
+
+      def export_string_entries(entries)
+        -entries.map { tuple_to_str _1 }.join(",")
+      end
 
       def tuple_to_str(tuple) tuple.uniq.map{ from_tuple_int _1 }.join(":") end
       def str_to_tuples(str) str.split(",", -1).map! { str_to_tuple _1 } end
