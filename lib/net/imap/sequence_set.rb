@@ -84,7 +84,7 @@ module Net
     #
     #     # Other inputs are normalized
     #     set = Net::IMAP::SequenceSet([1, 2, [3..7, 5], 6..10, 2048, 1024])
-    #     set.valid_string  #=> "1:10,55,1024:2048"
+    #     set.valid_string  #=> "1:10,1024,2048"
     #     set.frozen?       #=> false
     #
     #     unfrozen = set
@@ -107,7 +107,7 @@ module Net
     #
     #     # Other inputs are normalized
     #     set = Net::IMAP::SequenceSet[1, 2, [3..7, 5], 6..10, 2048, 1024]
-    #     set.valid_string  #=> "1:10,55,1024:2048"
+    #     set.valid_string  #=> "1:10,1024,2048"
     #     set.frozen?       #=> true
     #
     #     frozen   = set
@@ -465,7 +465,7 @@ module Net
       #     set = Net::IMAP::SequenceSet.new("1,2,3:7,5,6:10,2048,1024")
       #     set.valid_string  #=> "1,2,3:7,5,6:10,2048,1024"
       #     set = Net::IMAP::SequenceSet.new(1, 2, 3..7, 5, 6..10, 2048, 1024)
-      #     set.valid_string  #=> "1:10,55,1024:2048"
+      #     set.valid_string  #=> "1:10,1024,2048"
       #
       # With no arguments (or +nil+) creates an empty sequence set.  Note that
       # an empty sequence set is invalid in the \IMAP grammar.
