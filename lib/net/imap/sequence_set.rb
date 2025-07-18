@@ -1633,10 +1633,10 @@ module Net
       # Returns an inspection string for the SequenceSet.
       #
       #   Net::IMAP::SequenceSet.new.inspect
-      #   #=> "#<Net::IMAP::SequenceSet empty>"
+      #   #=> "Net::IMAP::SequenceSet()"
       #
       #   Net::IMAP::SequenceSet(1..5, 1024, 15, 2000).inspect
-      #   #=> '#<Net::IMAP::SequenceSet "1:5,15,1024,2000">'
+      #   #=> 'Net::IMAP::SequenceSet("1:5,15,1024,2000")'
       #
       # Frozen sets have slightly different output:
       #
@@ -1648,9 +1648,9 @@ module Net
       #
       def inspect
         if empty?
-          (frozen? ? "%s.empty" : "#<%s empty>") % [self.class]
+          (frozen? ? "%s.empty" : "%s()") % [self.class]
         else
-          (frozen? ? "%s[%p]" : "#<%s %p>") % [self.class, to_s]
+          (frozen? ? "%s[%p]" : "%s(%p)") % [self.class, to_s]
         end
       end
 

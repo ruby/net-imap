@@ -888,11 +888,11 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
 
   data(
     # desc         => [expected, input, freeze]
-    "empty"        => ["#<Net::IMAP::SequenceSet empty>",   nil],
+    "empty"        => ["Net::IMAP::SequenceSet()",          nil],
     "frozen empty" => ["Net::IMAP::SequenceSet.empty",      nil, true],
-    "normalized"   => ['#<Net::IMAP::SequenceSet "1:2">',   [2, 1]],
-    "denormalized" => ['#<Net::IMAP::SequenceSet "2,1">',   "2,1"],
-    "star"         => ['#<Net::IMAP::SequenceSet "*">',     "*"],
+    "normalized"   => ['Net::IMAP::SequenceSet("1:2")',   [2, 1]],
+    "denormalized" => ['Net::IMAP::SequenceSet("2,1")',   "2,1"],
+    "star"         => ['Net::IMAP::SequenceSet("*")',     "*"],
     "frozen"       => ['Net::IMAP::SequenceSet["1,3,5:*"]', [1, 3, 5..], true],
   )
   def test_inspect((expected, input, freeze))
