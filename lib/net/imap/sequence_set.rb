@@ -582,7 +582,7 @@ module Net
       # the set is updated the string will be normalized.
       #
       # Related: #valid_string, #normalized_string, #to_s, #inspect
-      def string; @string ||= normalized_string if valid? end
+      def string; @string || normalized_string if valid? end
 
       # Returns an array with #normalized_string when valid and an empty array
       # otherwise.
@@ -601,13 +601,18 @@ module Net
           clear
         elsif (str = String.try_convert(input))
           modifying! # short-circuit before parsing the string
-          tuples = str_to_tuples str
-          @tuples, @string = [], -str
-          tuples_add tuples
+          entries = each_parsed_entry(str).to_a
+          clear
+          if normalized_entries?(entries)
+            @tuples.replace entries.map(&:minmax)
+          else
+            tuples_add entries.map(&:minmax)
+            @string = -str
+          end
         else
           raise ArgumentError, "expected a string or nil, got #{input.class}"
         end
-        str
+        input
       end
 
       # Returns the \IMAP +sequence-set+ string representation, or an empty
@@ -620,7 +625,6 @@ module Net
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
       def freeze
         return self if frozen?
-        string
         @tuples.each(&:freeze).freeze
         super
       end
@@ -959,7 +963,7 @@ module Net
         modifying! # short-circuit before input_to_tuple
         tuple = input_to_tuple entry
         entry = tuple_to_str tuple
-        string unless empty? # write @string before tuple_add
+        @string ||= string unless empty?
         tuple_add tuple
         @string = -(@string ? "#{@string},#{entry}" : entry)
         self
@@ -1871,9 +1875,11 @@ module Net
         str&.split(",", -1) do |entry| yield parse_string_entry(entry) end
       end
 
-      def normal_string?(str)
+      def normal_string?(str) normalized_entries? each_parsed_entry str end
+
+      def normalized_entries?(entries)
         max = nil
-        each_parsed_entry(str) do |first, last|
+        entries.each do |first, last|
           return false if last && last  <= first    # 1:1 or 2:1
           return false if max  && first <= max + 1  # 2,1 or 1,1 or 1,2
           max = last || first
