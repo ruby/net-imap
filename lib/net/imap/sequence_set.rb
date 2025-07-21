@@ -559,7 +559,7 @@ module Net
       # If the set was created from a single string, it is not normalized.  If
       # the set is updated the string will be normalized.
       #
-      # Related: #valid_string, #normalized_string, #to_s
+      # Related: #valid_string, #normalized_string, #to_s, #inspect
       def string; @string ||= normalized_string if valid? end
 
       # Returns an array with #normalized_string when valid and an empty array
@@ -592,7 +592,7 @@ module Net
       # string when the set is empty.  Note that an empty set is invalid in the
       # \IMAP syntax.
       #
-      # Related: #valid_string, #normalized_string, #to_s
+      # Related: #string, #valid_string, #normalized_string, #inspect
       def to_s; string || "" end
 
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
@@ -1625,7 +1625,7 @@ module Net
       #
       # Returns +nil+ when the set is empty.
       #
-      # Related: #normalize!, #normalize
+      # Related: #normalize!, #normalize, #string, #to_s
       def normalized_string
         @tuples.empty? ? nil : -@tuples.map { tuple_to_str _1 }.join(",")
       end
@@ -1646,6 +1646,7 @@ module Net
       #   Net::IMAP::SequenceSet[1..5, 1024, 15, 2000].inspect
       #   #=> 'Net::IMAP::SequenceSet["1:5,15,1024,2000"]'
       #
+      # Related: #to_s, #string
       def inspect
         if empty?
           (frozen? ? "%s.empty" : "%s()") % [self.class]
