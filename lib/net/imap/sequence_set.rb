@@ -1877,7 +1877,7 @@ module Net
         max = nil
         each_parsed_entry(str) do |first, last|
           return false if last && last  <= first    # 1:1 or 2:1
-          return false if max  && first <= max + 1  # 1,2 or 1:2,3
+          return false if max  && first <= max + 1  # 2,1 or 1,1 or 1,2
           max = last || first
         end
         true
