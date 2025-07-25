@@ -6,6 +6,8 @@ prelude: |
   INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
   MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
   WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+  SHUFFLE_PCT = Float   ENV.fetch("BENCHMARK_SHUFFLE_PCT",  0.2)
+  ABNORMAL_PCT = Float  ENV.fetch("BENCHMARK_ABNORMAL_PCT", 0.2)
 
   def init_sets(count: 100, set_size: INPUT_COUNT, max: MAX_INPUT)
     Array.new(count) {
@@ -22,10 +24,23 @@ prelude: |
       .map(&:freeze)
   end
 
+  def shuffle_entries(seqset)
+    case SHUFFLE_PCT
+    in 1.0... then seqset.entries.shuffle
+    in ...0.0 then raise RangeError, "SHUFFLE_PCT should be positive"
+    else
+      unsorted, entries = seqset.entries.partition { rand < SHUFFLE_PCT }
+      unsorted.each do |entry|
+        entries.insert(rand(0..entries.size), entry)
+      end
+      entries
+    end
+  end
+
   def init_unsorted_sets(...)
     init_sets(...)
       .each do |seqset|
-        entries = seqset.entries.shuffle
+        entries = shuffle_entries(seqset)
         seqset.clear
         entries.each do |entry|
           seqset.append entry
@@ -33,20 +48,24 @@ prelude: |
       end
   end
 
+  def abnormal_form(seqset)
+    seqset.entries
+      .map {|entry|
+        if ABNORMAL_PCT < rand
+          entry.is_a?(Range) ? "#{entry.begin}:#{entry.end || :*}" : entry
+        elsif entry.is_a? Range
+          "#{entry.end || "*"}:#{entry.begin}"
+        else
+          "#{entry}:#{entry}"
+        end
+      }
+      .join(",")
+  end
+
   def init_abnormal_sets(...)
     init_sets(...)
       .each do |seqset|
-        entries = seqset.entries.shuffle
-        seqset.clear
-        entries.each do |entry|
-          if [true, false].sample
-            seqset.append entry
-          elsif entry.is_a? Range
-            seqset.append "#{entry.end || "*"}:#{entry.begin}"
-          else
-            seqset.append "#{entry}:#{entry}"
-          end
-        end
+        seqset.string = abnormal_form(seqset)
       end
   end
 
