@@ -13,6 +13,19 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     def self.shutdown = ProfilingHelper.stop_profiler
   end
 
+  if ENV["PROFILE_ALLOCATIONS"] =~ /\A(1|y(es)?|t(rue)?)\z/i
+    module ProfileAllocations
+      def setup = @allocated = GC.stat(:total_allocated_objects)
+
+      def teardown
+        return unless @allocated
+        allocated = GC.stat(:total_allocated_objects)
+        $stderr.puts "Allocated: %6d in %p" % [allocated - @allocated, local_name]
+      end
+    end
+    include ProfileAllocations
+  end
+
   def compare_to_reference_set(nums, set, seqset)
     set.merge nums
     seqset.merge nums
