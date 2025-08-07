@@ -19,7 +19,7 @@ module ProfilingHelper
     at_exit { stop_profiler }
   end
 
-  def start_profiler!(name, **)
+  def start_profiler!(name, **opts)
     require "vernier"
     require "fileutils"
 
@@ -31,6 +31,6 @@ module ProfilingHelper
     out = File.join(outdir, outfile)
 
     FileUtils.mkdir_p outdir
-    Vernier.start_profile(out:, **)
+    Vernier.start_profile(out:, **opts)
   end
 end
