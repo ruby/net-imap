@@ -3,7 +3,14 @@
 module ProfilingHelper
   module_function
 
-  def profile?            = ENV["NET_IMAP_PROFILE"] in /\A(1|t|true|on|yes)\z/i
+  def profile?
+    require "vernier"
+    ENV["NET_IMAP_PROFILE"] in /\A(1|t|true|on|yes)\z/i
+  rescue LoadError
+    def profile? = false
+    false
+  end
+
   def start_profiler(...) = if profile? then start_profiler!(...) end
   def stop_profiler       = if profile? then stop_profiler!       end
   def stop_profiler!      = Vernier.stop_profile
