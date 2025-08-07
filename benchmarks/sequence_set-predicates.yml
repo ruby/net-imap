@@ -7,6 +7,9 @@ prelude: |
   MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
   WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
 
+  require "./test/lib/profiling_helper"
+  include ProfilingHelper
+
   SETS = Array.new(1000) {
     Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
   }
@@ -28,16 +31,20 @@ prelude: |
 
 benchmark:
   - name:   "intersect?"
+    prelude: 'maybe_profile("seqset-intersect-p")'
     script:  l, r = sets; l.intersect? r
   - name: "disjoint?"
+    prelude: 'maybe_profile("seqset-disjoint-p")'
     script:  l, r = sets; l.disjoint? r
   - name: "cover?"
+    prelude: 'maybe_profile("seqset-cover-p")'
     script:  l, r = sets; l.cover? r
 
 contexts:
   - name: local
     prelude: |
       $LOAD_PATH.unshift "./lib"
+      $allowed_to_profile = true # only profile local code
     require: false
   - name: v0.5.9
     gems:
