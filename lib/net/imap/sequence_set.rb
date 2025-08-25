@@ -145,6 +145,10 @@ module Net
     # #entries and #elements are identical.  Use #append to preserve #entries
     # order while modifying a set.
     #
+    # Non-normalized sets store both representations of the set, which can more
+    # than double memory usage.  Very large sequence sets should avoid
+    # denormalizing methods (such as #append) unless order is significant.
+    #
     # == Using <tt>*</tt>
     #
     # \IMAP sequence sets may contain a special value <tt>"*"</tt>, which
@@ -586,7 +590,7 @@ module Net
       # the set is updated the string will be normalized.
       #
       # Related: #valid_string, #normalized_string, #to_s, #inspect
-      def string; @string ||= normalized_string if valid? end
+      def string; @string || normalized_string if valid? end
 
       # Returns an array with #normalized_string when valid and an empty array
       # otherwise.
@@ -605,13 +609,18 @@ module Net
           clear
         elsif (str = String.try_convert(input))
           modifying! # short-circuit before parsing the string
-          tuples = str_to_tuples str
-          @tuples, @string = [], -str
-          tuples_add tuples
+          entries = each_parsed_entry(str).to_a
+          clear
+          if normalized_entries?(entries)
+            @tuples.replace entries.map!(&:minmax)
+          else
+            tuples_add entries.map!(&:minmax)
+            @string = -str
+          end
         else
           raise ArgumentError, "expected a string or nil, got #{input.class}"
         end
-        str
+        input
       end
 
       # Returns the \IMAP +sequence-set+ string representation, or an empty
@@ -624,7 +633,6 @@ module Net
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
       def freeze
         return self if frozen?
-        string
         @tuples.each(&:freeze).freeze
         super
       end
@@ -971,7 +979,10 @@ module Net
       #    set = Net::IMAP::SequenceSet.new("2,1,9:10")
       #    set.append(11..12) # => Net::IMAP::SequenceSet("2,1,9:12")
       #
-      # See SequenceSet@Ordered+and+Normalized+sets.
+      # Non-normalized sets store the string <em>in addition to</em> an internal
+      # normalized uint32 set representation.  This can more than double memory
+      # usage, so large sets should avoid using #append unless preserving order
+      # is required.  See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #add, #merge, #union
       def append(entry)
@@ -1685,10 +1696,11 @@ module Net
         merge(other).subtract(both)
       end
 
-      # Returns a new SequenceSet with a normalized string representation.
+      # Returns a SequenceSet with a normalized string representation: entries
+      # have been sorted, deduplicated, and coalesced, and all entries
+      # are in normal form.  Returns +self+ for frozen normalized sets, and a
+      # normalized duplicate otherwise.
       #
-      # The returned set's #string is sorted and deduplicated.  Adjacent or
-      # overlapping elements will be merged into a single larger range.
       # See SequenceSet@Ordered+and+Normalized+sets.
       #
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalize
@@ -1696,9 +1708,8 @@ module Net
       #
       # Related: #normalize!, #normalized_string
       def normalize
-        str = normalized_string
-        return self if frozen? && str == string
-        remain_frozen dup.instance_exec { @string = str&.-@; self }
+        return self if frozen? && (@string.nil? || @string == normalized_string)
+        remain_frozen dup.normalize!
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
@@ -1884,9 +1895,27 @@ module Net
 
       def tuple_to_str(tuple) tuple.uniq.map{ from_tuple_int _1 }.join(":") end
       def str_to_tuples(str) str.split(",", -1).map! { str_to_tuple _1 } end
-      def str_to_tuple(str)
+      def str_to_tuple(str) parse_string_entry(str).minmax end
+
+      def parse_string_entry(str)
         raise DataFormatError, "invalid sequence set string" if str.empty?
-        str.split(":", 2).map! { to_tuple_int _1 }.minmax
+        str.split(":", 2).map! { to_tuple_int _1 }
+      end
+
+      # yields validated but unsorted [num] or [num, num]
+      def each_parsed_entry(str)
+        return to_enum(__method__, str) unless block_given?
+        str&.split(",", -1) do |entry| yield parse_string_entry(entry) end
+      end
+
+      def normalized_entries?(entries)
+        max = nil
+        entries.each do |first, last|
+          return false if last && last  <= first    # 1:1 or 2:1
+          return false if max  && first <= max + 1  # 2,1 or 1,1 or 1,2
+          max = last || first
+        end
+        true
       end
 
       def include_tuple?((min, max)) range_gte_to(min)&.cover?(min..max) end
