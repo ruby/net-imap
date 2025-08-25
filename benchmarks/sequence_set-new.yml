@@ -9,8 +9,17 @@ prelude: |
   N_RAND = 100
 
   def rand_nums(n, min: 1, max: (n * 1.25).to_i) = Array.new(n) { rand(1..max) }
-  def rand_entries(...) = SeqSet[rand_nums(...)].elements.shuffle
-  def rand_string(...)  = SeqSet[rand_nums(...)].string.split(?,).shuffle.join(?,)
+  def rand_entries(...) = SeqSet[rand_nums(...)].elements
+  def rand_string(...)  = SeqSet[rand_nums(...)].string
+
+  def shuffle(inputs)
+    inputs.map! do
+      case _1
+      in Array  => elements then elements.shuffle
+      in String => string   then string.split(?,).shuffle.join(?,)
+      end
+    end
+  end
 
   def build_string_inputs(n, n_rand, **)
     Array.new(n_rand) { rand_string(n, **) }
@@ -35,51 +44,83 @@ prelude: |
 
 benchmark:
 
-  - name:    n=10 ints
+  - name:    n=     10   ints   (sorted)
     prelude: inputs = build_int_inputs 10, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=10 string
+  - name:    n=     10 string   (sorted)
     prelude: inputs = build_string_inputs 10, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=100 ints
+  - name:    n=     10   ints (shuffled)
+    prelude: inputs = build_int_inputs 10, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=     10 string (shuffled)
+    prelude: inputs = build_string_inputs 10, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=    100   ints   (sorted)
     prelude: inputs = build_int_inputs 100, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=100 string
+  - name:    n=    100 string   (sorted)
     prelude: inputs = build_string_inputs 100, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=1000 ints
+  - name:    n=    100   ints (shuffled)
+    prelude: inputs = build_int_inputs 100, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=    100 string (shuffled)
+    prelude: inputs = build_string_inputs 100, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=  1,000   ints   (sorted)
     prelude: inputs = build_int_inputs 1000, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=1000 string
+  - name:    n=  1,000 string   (sorted)
     prelude: inputs = build_string_inputs 1000, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=10,000 ints
+  - name:    n=  1,000   ints (shuffled)
+    prelude: inputs = build_int_inputs 1000, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=  1,000 string (shuffled)
+    prelude: inputs = build_string_inputs 1000, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n= 10,000   ints   (sorted)
     prelude: inputs = build_int_inputs 10_000, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=10,000 string
+  - name:    n= 10,000 string   (sorted)
     prelude: inputs = build_string_inputs 10_000, N_RAND
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=100,000 ints
+  - name:    n= 10,000   ints (shuffled)
+    prelude: inputs = build_int_inputs 10_000, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n= 10,000 string (shuffled)
+    prelude: inputs = build_string_inputs 10_000, N_RAND and shuffle inputs
+    script:  SeqSet[inputs[i = (i+1) % N_RAND]]
+
+  - name:    n=100,000   ints   (sorted)
     prelude: inputs = build_int_inputs 100_000, N_RAND / 2
     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-  - name:    n=100,000 string
+  - name:    n=100,000 string   (sorted)
     prelude: inputs = build_string_inputs 100_000, N_RAND / 2
     script:  SeqSet[inputs[i = (i+1) % (N_RAND / 2)]]
 
-#   - name:    n=1,000,000 ints
+#   - name:    n=1,000,000   ints
 #     prelude: inputs = build_int_inputs 1_000_000
 #     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
-#   - name:    n=10,000,000 ints
+#   - name:    n=10,000,000   ints
 #     prelude: inputs = build_int_inputs 10_000_000
 #     script:  SeqSet[inputs[i = (i+1) % N_RAND]]
 
@@ -88,6 +129,10 @@ contexts:
     prelude: |
       $LOAD_PATH.unshift "./lib"
       $allowed_to_profile = true # only profile local code
+    require: false
+  - name: v0.5.12
+    gems:
+      net-imap: 0.5.12
     require: false
   - name: v0.5.9
     gems:

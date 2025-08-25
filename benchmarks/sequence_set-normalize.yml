@@ -99,6 +99,10 @@ benchmark:
 
 contexts:
   # n.b: can't use anything newer as the baseline: it's over 500x faster!
+  - name: v0.5.12
+    gems:
+      net-imap: 0.5.12
+    require: false
   - name: v0.5.9
     gems:
       net-imap: 0.5.9
