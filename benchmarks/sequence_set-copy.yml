@@ -1,0 +1,96 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS", 1000)
+
+  require "./test/lib/profiling_helper"
+  include ProfilingHelper
+
+  def init_sets(count: 100, set_size: INPUT_COUNT, max: MAX_INPUT)
+    Array.new(count) {
+      Net::IMAP::SequenceSet.new(Array.new(set_size) { rand(1..max) })
+    }
+  end
+
+  def init_normal_sets(...)
+    init_sets(...)
+  end
+
+  def init_unsorted_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = seqset.entries.shuffle
+        seqset.clear
+        entries.each do |entry|
+          seqset.append entry
+        end
+      end
+  end
+
+  # warmup (esp. for JIT)
+  WARMUP_RUNS.times do
+    init_sets(count: 20, set_size: 100, max: 120).each do |set|
+      set.dup
+      set.clone
+      Net::IMAP::SequenceSet.new set
+    end
+  end
+
+benchmark:
+  - name: "normal.dup (#string not called)"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.dup
+  - name: "normal.dup (#string called)"
+    prelude: $sets = init_normal_sets.tap do _1.each(&:string) end
+    script:  $sets.sample.dup
+  - name: "normal.freeze.dup"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.freeze.dup
+  - name: "frozen.dup"
+    prelude: $sets = init_normal_sets.map(&:freeze)
+    script:  $sets.sample.dup
+
+  - name: "normal.clone (#string not called)"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.clone
+  - name: "normal.clone (#string called)"
+    prelude: $sets = init_normal_sets.tap do _1.each(&:string) end
+    script:  $sets.sample.clone
+  - name: "normal.freeze.clone"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.freeze.clone
+  - name: "frozen.clone"
+    prelude: $sets = init_normal_sets.map(&:freeze)
+    script:  $sets.sample.clone
+
+  - name: "SequenceSet.new(normal) (#string not called)"
+    prelude: $sets = init_normal_sets
+    script:  Net::IMAP::SequenceSet.new $sets.sample
+  - name: "SequenceSet.new(normal) (#string called)"
+    prelude: $sets = init_normal_sets.tap do _1.each(&:string) end
+    script:  Net::IMAP::SequenceSet.new $sets.sample
+  - name: "SequenceSet.new(frozen)"
+    prelude: $sets = init_normal_sets.map(&:freeze)
+    script:  Net::IMAP::SequenceSet.new $sets.sample
+  - name: "SequenceSet.new(unsorted)"
+    prelude: $sets = init_unsorted_sets
+    script:  Net::IMAP::SequenceSet.new $sets.sample
+
+contexts:
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+      $allowed_to_profile = true # only profile local code
+    require: false
+  - name: v0.5.9
+    gems:
+      net-imap: 0.5.9
+    require: false
+  - name: v0.4.21
+    gems:
+      net-imap: 0.4.21
+    require: false
