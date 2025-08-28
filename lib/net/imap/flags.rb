@@ -173,7 +173,7 @@ module Net
     SUBSCRIBED = :Subscribed
 
     # The mailbox is a remote mailbox.
-    REMOTE = :Remove
+    REMOTE = :Remote
 
     # Alias for NO_INFERIORS, to match the \IMAP spelling.
     NOINFERIORS   = NO_INFERIORS
