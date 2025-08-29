@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPTest < Test::Unit::TestCase
+class IMAPTest < Net::IMAP::TestCase
   CA_FILE = File.expand_path("../fixtures/cacert.pem", __dir__)
   SERVER_KEY = File.expand_path("../fixtures/server.key", __dir__)
   SERVER_CERT = File.expand_path("../fixtures/server.crt", __dir__)

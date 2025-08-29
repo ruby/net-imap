@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPResponsesTest < Test::Unit::TestCase
+class IMAPResponsesTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
   CONFIG_OPTIONS = %i[

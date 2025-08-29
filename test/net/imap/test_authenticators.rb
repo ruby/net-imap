@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class AuthenticatorsTest < Test::Unit::TestCase
+class AuthenticatorsTest < Net::IMAP::TestCase
 
   test "SASL::Authenticators.normalize_name" do
     authenticators = Net::IMAP::SASL::Authenticators

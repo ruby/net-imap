@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPLoginTest < Test::Unit::TestCase
+class IMAPLoginTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
   def setup

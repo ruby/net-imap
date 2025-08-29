@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class SearchDataTests < Test::Unit::TestCase
+class SearchDataTests < Net::IMAP::TestCase
   SearchResult = Net::IMAP::SearchResult
 
   test "#modseq" do

@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class FetchDataTest < Test::Unit::TestCase
+class FetchDataTest < Net::IMAP::TestCase
   def fetch_data_class
     Net::IMAP::FetchData
   end
@@ -19,7 +19,7 @@ class FetchDataTest < Test::Unit::TestCase
   end
 end
 
-class UIDFetchDataTest < Test::Unit::TestCase
+class UIDFetchDataTest < Net::IMAP::TestCase
   def fetch_data_class
     Net::IMAP::UIDFetchData
   end

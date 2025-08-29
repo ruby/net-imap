@@ -6,7 +6,7 @@ require "json"
 
 require_relative "../../../rakelib/string_prep_tables_generator"
 
-class StringPrepTablesTest < Test::Unit::TestCase
+class StringPrepTablesTest < Net::IMAP::TestCase
   include Net::IMAP::StringPrep
 
   # Surrogates are excluded.  They are handled by enforcing valid UTF8 encoding.

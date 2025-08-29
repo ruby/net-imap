@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class ThreadMemberTest < Test::Unit::TestCase
+class ThreadMemberTest < Net::IMAP::TestCase
 
   test "#to_sequence_set" do
     # copied from the fourth example in RFC5256: (3 6 (4 23)(44 7 96))

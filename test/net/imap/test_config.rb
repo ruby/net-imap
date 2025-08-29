@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class ConfigTest < Test::Unit::TestCase
+class ConfigTest < Net::IMAP::TestCase
   Config = Net::IMAP::Config
   THIS_VERSION   = Net::IMAP::VERSION.to_f
   NEXT_VERSION   = THIS_VERSION + 0.1

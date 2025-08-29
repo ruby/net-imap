@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class IMAPSequenceSetTest < Test::Unit::TestCase
+class IMAPSequenceSetTest < Net::IMAP::TestCase
   # alias for convenience
   SequenceSet     = Net::IMAP::SequenceSet
   DataFormatError = Net::IMAP::DataFormatError

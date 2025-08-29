@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class VanishedDataTest < Test::Unit::TestCase
+class VanishedDataTest < Net::IMAP::TestCase
   VanishedData    = Net::IMAP::VanishedData
   SequenceSet     = Net::IMAP::SequenceSet
   DataFormatError = Net::IMAP::DataFormatError

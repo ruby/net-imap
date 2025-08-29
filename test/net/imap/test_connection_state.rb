@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class ConnectionStateTest < Test::Unit::TestCase
+class ConnectionStateTest < Net::IMAP::TestCase
   NotAuthenticated = Net::IMAP::ConnectionState::NotAuthenticated
   Authenticated    = Net::IMAP::ConnectionState::Authenticated
   Selected         = Net::IMAP::ConnectionState::Selected
