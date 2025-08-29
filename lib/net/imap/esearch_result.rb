@@ -25,6 +25,12 @@ module Net
     # Some search extensions may result in the server sending ESearchResult
     # responses after the initiating command has completed.  Use
     # IMAP#add_response_handler to handle these responses.
+    #
+    # ==== Compatibility with SearchResult
+    #
+    # Note that both SearchResult and ESearchResult implement +each+, +to_a+,
+    # and +to_sequence_set+.  These methods can be used regardless of whether
+    # the server returns +SEARCH+ or +ESEARCH+ data (or no data).
     class ESearchResult < Data.define(:tag, :uid, :data)
       def initialize(tag: nil, uid: nil, data: nil)
         tag  => String       | nil; tag = -tag if tag

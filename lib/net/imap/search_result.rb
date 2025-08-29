@@ -7,6 +7,12 @@ module Net
     # identifiers returned by Net::IMAP#uid_search.
     #
     # For backward compatibility, SearchResult inherits from Array.
+    #
+    # ==== Compatibility with ESearchResult
+    #
+    # Note that both SearchResult and ESearchResult implement +each+, +to_a+,
+    # and +to_sequence_set+.  These methods can be used regardless of whether
+    # the server returns +SEARCH+ or +ESEARCH+ data (or no data).
     class SearchResult < Array
 
       # Returns a SearchResult populated with the given +seq_nums+.
