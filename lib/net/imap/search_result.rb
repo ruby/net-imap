@@ -60,9 +60,8 @@ module Net
       #     [3, 5, 7] == Net::IMAP::SearchResult[3, 5, 7, modseq: 99] # => true
       #
       def ==(other)
-        (modseq ?
-         other.is_a?(self.class) && modseq == other.modseq :
-         other.is_a?(Array)) &&
+        other.is_a?(Array) &&
+          modseq == (other.modseq if other.respond_to?(:modseq)) &&
           size == other.size &&
           sort == other.sort
       end

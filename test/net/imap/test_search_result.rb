@@ -24,6 +24,10 @@ class SearchDataTests < Test::Unit::TestCase
     sorted   = SearchResult[2, 4, 99, 2048, modseq: 99_999]
     assert_equal unsorted, sorted
     assert_equal sorted, unsorted
+
+    nomodseq = SearchResult[2, 4, 99, 2048]
+    refute_equal sorted, nomodseq
+    refute_equal nomodseq, sorted
   end
 
   test "SearchResult[*nz_numbers] == Array[*nz_numbers]" do
