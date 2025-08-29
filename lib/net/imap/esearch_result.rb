@@ -45,7 +45,7 @@ module Net
       # Note that SearchResult also implements +to_a+, so it can be used without
       # checking if the server returned +SEARCH+ or +ESEARCH+ data.
       #
-      # Related: #to_sequence_set, #all, #partial
+      # Related: #each, #to_sequence_set, #all, #partial
       def to_a; to_sequence_set.numbers end
 
       # :call-seq: to_sequence_set -> SequenceSet or nil
@@ -61,9 +61,26 @@ module Net
       # Note that SearchResult also implements +to_sequence_set+, so it can be
       # used without checking if the server returned +SEARCH+ or +ESEARCH+ data.
       #
-      # Related: #to_a, #all, #partial
+      # Related: #each, #to_a, #all, #partial
       def to_sequence_set
         all || partial&.to_sequence_set || SequenceSet.empty
+      end
+
+      # When either #all or #partial contains a SequenceSet of message sequence
+      # numbers or UIDs, +each+ yields each integer in the set.
+      #
+      # When both #all and #partial are +nil+, either because the server
+      # returned no results or because +ALL+ and +PARTIAL+ were not included in
+      # the IMAP#search +RETURN+ options, #each does not yield.
+      #
+      # Note that SearchResult also implements +#each+, so it can be used
+      # without checking if the server returned +SEARCH+ or +ESEARCH+ data.
+      #
+      # Related: #to_sequence_set, #to_a, #all, #partial
+      def each(&)
+        return to_enum(__callee__) unless block_given?
+        to_sequence_set.each_number(&)
+        self
       end
 
       ##
