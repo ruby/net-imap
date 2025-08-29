@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "net_imap_test_helpers"
 
-class IMAPResponseParserTest < Test::Unit::TestCase
+class ResponseParserTest < Test::Unit::TestCase
   TEST_FIXTURE_PATH = File.join(__dir__, "fixtures/response_parser")
 
   include NetIMAPTestHelpers

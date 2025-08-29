@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class DeprecatedClientOptionsTest < Test::Unit::TestCase
+class IMAPDeprecatedClientOptionsTest < Test::Unit::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
   def setup
@@ -20,7 +20,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
     Socket.do_not_reverse_lookup = @do_not_reverse_lookup
   end
 
-  class InitializeTests < DeprecatedClientOptionsTest
+  class InitializeTests < IMAPDeprecatedClientOptionsTest
 
     test "Convert obsolete options hash to keywords" do
       run_fake_server_in_thread do |server|
@@ -100,7 +100,7 @@ class DeprecatedClientOptionsTest < Test::Unit::TestCase
 
   end
 
-  class StartTLSTests < DeprecatedClientOptionsTest
+  class StartTLSTests < IMAPDeprecatedClientOptionsTest
     test "Convert obsolete options hash to keywords" do
       with_fake_server(preauth: false) do |server, imap|
         imap.starttls(ca_file: server.config.tls[:ca_file], min_version: :TLS1_2)
