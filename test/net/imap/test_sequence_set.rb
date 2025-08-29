@@ -15,9 +15,13 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   if ENV["PROFILE_ALLOCATIONS"] =~ /\A(1|y(es)?|t(rue)?)\z/i
     module ProfileAllocations
-      def setup = @allocated = GC.stat(:total_allocated_objects)
+      def setup
+        @allocated = GC.stat(:total_allocated_objects)
+        super
+      end
 
       def teardown
+        super
         return unless @allocated
         allocated = GC.stat(:total_allocated_objects)
         $stderr.puts "Allocated: %6d in %p" % [allocated - @allocated, local_name]

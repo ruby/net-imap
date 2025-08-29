@@ -7,21 +7,6 @@ require_relative "fake_server"
 class IMAPResponseHandlersTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    if !@threads.empty?
-      assert_join_threads(@threads)
-    end
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
-
   test "#add_response_handlers" do
     responses = []
     with_fake_server do |server, imap|

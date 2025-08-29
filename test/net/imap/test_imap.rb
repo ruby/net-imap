@@ -11,21 +11,6 @@ class IMAPTest < Net::IMAP::TestCase
 
   include Net::IMAP::FakeServer::TestHelper
 
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    if !@threads.empty?
-      assert_join_threads(@threads)
-    end
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
-
   if defined?(OpenSSL::SSL::SSLError)
     def test_imaps_unknown_ca
       assert_raise(OpenSSL::SSL::SSLError) do

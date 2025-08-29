@@ -36,6 +36,19 @@ Test::Unit::TestCase.include Test::Unit::CoreAssertions
 
 require "net/imap"
 class Net::IMAP::TestCase < Test::Unit::TestCase
+  def setup
+    Net::IMAP.config.reset
+    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
+    Socket.do_not_reverse_lookup = true
+    @threads = []
+  end
+
+  def teardown
+    assert_join_threads(@threads) unless @threads.empty?
+  ensure
+    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
+  end
+
   def wait_for_response_count(imap, type:, count:,
                               timeout: 0.5, interval: 0.001)
     deadline = Time.now + timeout

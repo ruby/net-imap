@@ -10,16 +10,6 @@ class ResponseParserTest < Net::IMAP::TestCase
   include NetIMAPTestHelpers
   extend  NetIMAPTestHelpers::TestFixtureGenerators
 
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-  end
-
-  def teardown
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
-
   ############################################################################
   # Tests that do no more than parse an example response and assert the result
   # data has the correct values have been moved to yml test fixtures.

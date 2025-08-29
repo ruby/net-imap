@@ -7,19 +7,6 @@ require_relative "fake_server"
 class IMAPDeprecatedClientOptionsTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    assert_join_threads(@threads) unless @threads.empty?
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
-
   class InitializeTests < IMAPDeprecatedClientOptionsTest
 
     test "Convert obsolete options hash to keywords" do
