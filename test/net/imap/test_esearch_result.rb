@@ -34,6 +34,28 @@ class ESearchResultTest < Test::Unit::TestCase
     assert_equal [1, 5, 6, 7, 8], esearch.to_a
   end
 
+  test "#each" do
+    esearch = ESearchResult.new(nil, true, [])
+    assert_kind_of Enumerator, esearch.each
+    ary = []
+    assert_same esearch, esearch.each { ary << _1 }
+    assert_equal [], ary
+
+    esearch = ESearchResult.new(nil, false, [["ALL", SequenceSet["1,5:8"]]])
+    assert_equal [1, 5, 6, 7, 8], esearch.each.to_a
+    ary = []
+    assert_same esearch, esearch.each { ary << _1 }
+    assert_equal [1, 5, 6, 7, 8], ary
+
+    esearch = ESearchResult.new(nil, false, [
+      ["PARTIAL", ESearchResult::PartialResult[1..5, "1,5:8"]]
+    ])
+    assert_equal [1, 5, 6, 7, 8], esearch.each.to_a
+    ary = []
+    assert_same esearch, esearch.each { ary << _1 }
+    assert_equal [1, 5, 6, 7, 8], ary
+  end
+
   test "#tag" do
     esearch = ESearchResult.new("A0001", false, [["count", 0]])
     assert_equal "A0001", esearch.tag
