@@ -8,6 +8,19 @@ class ESearchResultTest < Test::Unit::TestCase
   SequenceSet   = Net::IMAP::SequenceSet
   ExtensionData = Net::IMAP::ExtensionData
 
+  test "#to_sequence_set" do
+    esearch = ESearchResult.new(nil, true, [])
+    assert_equal SequenceSet.empty, esearch.to_sequence_set
+    esearch = ESearchResult.new(nil, false, [])
+    assert_equal SequenceSet.empty, esearch.to_sequence_set
+    esearch = ESearchResult.new(nil, false, [["ALL", SequenceSet["1,5:8"]]])
+    assert_equal SequenceSet[1, 5, 6, 7, 8], esearch.to_sequence_set
+    esearch = ESearchResult.new(nil, false, [
+      ["PARTIAL", ESearchResult::PartialResult[1..5, "1,5:8"]]
+    ])
+    assert_equal SequenceSet[1, 5, 6, 7, 8], esearch.to_sequence_set
+  end
+
   test "#to_a" do
     esearch = ESearchResult.new(nil, true, [])
     assert_equal [], esearch.to_a
