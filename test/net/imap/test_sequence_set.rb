@@ -294,6 +294,10 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
     assert_nil SequenceSet.try_convert(Object.new)
 
     obj = Object.new
+    def obj.to_sequence_set; nil end
+    assert_nil SequenceSet.try_convert(obj)
+
+    obj = Object.new
     def obj.to_sequence_set; SequenceSet[192, 168, 1, 255] end
     assert_equal SequenceSet[192, 168, 1, 255], SequenceSet.try_convert(obj)
 

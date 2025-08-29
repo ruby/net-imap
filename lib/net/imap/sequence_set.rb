@@ -444,14 +444,14 @@ module Net
         # +to_sequence_set+, calls +obj.to_sequence_set+ and returns the result.
         # Otherwise returns +nil+.
         #
-        # If +obj.to_sequence_set+ doesn't return a SequenceSet, an exception is
-        # raised.
+        # If +obj.to_sequence_set+ doesn't return a SequenceSet or +nil+, an
+        # exception is raised.
         #
         # Related: Net::IMAP::SequenceSet(), ::new, ::[]
         def try_convert(obj)
           return obj if obj.is_a?(SequenceSet)
           return nil unless obj.respond_to?(:to_sequence_set)
-          obj = obj.to_sequence_set
+          return nil unless obj = obj.to_sequence_set
           return obj if obj.is_a?(SequenceSet)
           raise DataFormatError, "invalid object returned from to_sequence_set"
         end
