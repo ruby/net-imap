@@ -29,6 +29,12 @@ class VanishedDataTest < Net::IMAP::TestCase
     assert_raise DataFormatError do VanishedData.new nil, true end
   end
 
+  test ".new allows SequenceSet.empty singleton, not other empty sets" do
+    assert_same SequenceSet.empty, VanishedData[SequenceSet.empty, true].uids
+    assert_raise DataFormatError do VanishedData[SequenceSet.new, true] end
+    assert_raise DataFormatError do VanishedData[SequenceSet.new.freeze, true] end
+  end
+
   test ".[uids: string, earlier: bool]" do
     vanished = VanishedData[uids: "1,3:5,7", earlier: true]
     assert_equal SequenceSet["1,3:5,7"], vanished.uids
