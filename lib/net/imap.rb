@@ -2110,8 +2110,8 @@ module Net
     end
 
     # call-seq:
-    #   uid_expunge{uid_set) -> array of message sequence numbers
-    #   uid_expunge{uid_set) -> VanishedData of UIDs
+    #   uid_expunge(uid_set) -> array of message sequence numbers
+    #   uid_expunge(uid_set) -> VanishedData of UIDs
     #
     # Sends a {UID EXPUNGE command [RFC4315 §2.1]}[https://www.rfc-editor.org/rfc/rfc4315#section-2.1]
     # {[IMAP4rev2 §6.4.9]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.4.9]
