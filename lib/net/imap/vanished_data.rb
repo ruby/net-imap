@@ -19,7 +19,7 @@ module Net
       # * +uids+ will be converted by SequenceSet.[].
       # * +earlier+ will be converted to +true+ or +false+
       def initialize(uids:, earlier:)
-        uids    = SequenceSet[uids]
+        uids    = SequenceSet[uids] unless uids.equal? SequenceSet.empty
         earlier = !!earlier
         super
       end
