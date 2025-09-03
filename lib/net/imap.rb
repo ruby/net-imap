@@ -1560,6 +1560,9 @@ module Net
         .tap do state_authenticated! _1 end
     end
 
+    # :call-seq:
+    #   select(mailbox, **opts) -> result
+    #
     # Sends a {SELECT command [IMAP4rev1 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.1]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     #
@@ -1593,17 +1596,13 @@ module Net
     # the +condstore+ keyword parameter may be used.
     #   imap.select("mbox", condstore: true)
     #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
-    def select(mailbox, condstore: false)
-      args = ["SELECT", mailbox]
-      args << ["CONDSTORE"] if condstore
-      synchronize do
-        state_unselected! # implicitly closes current mailbox
-        @responses.clear
-        send_command(*args)
-          .tap do state_selected! end
-      end
+    def select(...)
+      select_internal("SELECT", ...)
     end
 
+    # :call-seq:
+    #   examine(mailbox, **opts) -> result
+    #
     # Sends a {EXAMINE command [IMAP4rev1 §6.3.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.2]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     # Behaves the same as #select, except that the selected +mailbox+ is
@@ -1613,15 +1612,8 @@ module Net
     # exist or is for some reason non-examinable.
     #
     # Related: #select
-    def examine(mailbox, condstore: false)
-      args = ["EXAMINE", mailbox]
-      args << ["CONDSTORE"] if condstore
-      synchronize do
-        state_unselected! # implicitly closes current mailbox
-        @responses.clear
-        send_command(*args)
-          .tap do state_selected! end
-      end
+    def examine(...)
+      select_internal("EXAMINE", ...)
     end
 
     # Sends a {CREATE command [IMAP4rev1 §6.3.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.3]
@@ -3585,6 +3577,17 @@ module Net
         capabilities_cached?
       else
         config.enforce_logindisabled
+      end
+    end
+
+    def select_internal(command, mailbox, condstore: false)
+      args = [command, mailbox]
+      args << ["CONDSTORE"] if condstore
+      synchronize do
+        state_unselected! # implicitly closes current mailbox
+        @responses.clear
+        send_command(*args)
+          .tap do state_selected! end
       end
     end
 
