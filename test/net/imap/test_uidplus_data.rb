@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class TestUIDPlusData < Test::Unit::TestCase
+class TestUIDPlusData < Net::IMAP::TestCase
 
   test "#uid_mapping with sorted source_uids" do
     uidplus = Net::IMAP::UIDPlusData.new(
@@ -45,7 +45,7 @@ class TestUIDPlusData < Test::Unit::TestCase
 
 end
 
-class TestAppendUIDData < Test::Unit::TestCase
+class TestAppendUIDData < Net::IMAP::TestCase
   # alias for convenience
   AppendUIDData = Net::IMAP::AppendUIDData
   SequenceSet = Net::IMAP::SequenceSet
@@ -81,7 +81,7 @@ class TestAppendUIDData < Test::Unit::TestCase
 
 end
 
-class TestCopyUIDData < Test::Unit::TestCase
+class TestCopyUIDData < Net::IMAP::TestCase
   # alias for convenience
   CopyUIDData = Net::IMAP::CopyUIDData
   SequenceSet = Net::IMAP::SequenceSet

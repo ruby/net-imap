@@ -17,7 +17,7 @@ unless defined?(RegexpCollector)
   end
 end
 
-class IMAPRegexpsTest < Test::Unit::TestCase
+class IMAPRegexpsTest < Net::IMAP::TestCase
 
   data(
     RegexpCollector.new(

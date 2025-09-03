@@ -4,21 +4,11 @@ require "net/imap"
 require "test/unit"
 require_relative "net_imap_test_helpers"
 
-class IMAPResponseParserTest < Test::Unit::TestCase
+class ResponseParserTest < Net::IMAP::TestCase
   TEST_FIXTURE_PATH = File.join(__dir__, "fixtures/response_parser")
 
   include NetIMAPTestHelpers
   extend  NetIMAPTestHelpers::TestFixtureGenerators
-
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-  end
-
-  def teardown
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
 
   ############################################################################
   # Tests that do no more than parse an example response and assert the result

@@ -4,23 +4,8 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPMaxResponseSizeTest < Test::Unit::TestCase
+class IMAPMaxResponseSizeTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
-
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    if !@threads.empty?
-      assert_join_threads(@threads)
-    end
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
 
   test "#max_response_size reading literals" do
     with_fake_server(preauth: true) do |server, imap|

@@ -29,7 +29,7 @@ require "test/unit"
 
 module Net
   class IMAP
-    class TestData < Test::Unit::TestCase
+    class TestData < Net::IMAP::TestCase
       def test_define
         klass = Data.define(:foo, :bar)
         assert_kind_of(Class, klass)

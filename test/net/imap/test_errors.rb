@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class IMAPErrorsTest < Test::Unit::TestCase
+class IMAPErrorsTest < Net::IMAP::TestCase
 
   test "ResponseTooLargeError" do
     err = Net::IMAP::ResponseTooLargeError.new

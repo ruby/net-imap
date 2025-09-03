@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class IMAPSequenceSetTest < Test::Unit::TestCase
+class IMAPSequenceSetTest < Net::IMAP::TestCase
   # alias for convenience
   SequenceSet     = Net::IMAP::SequenceSet
   DataFormatError = Net::IMAP::DataFormatError
@@ -15,9 +15,13 @@ class IMAPSequenceSetTest < Test::Unit::TestCase
 
   if ENV["PROFILE_ALLOCATIONS"] =~ /\A(1|y(es)?|t(rue)?)\z/i
     module ProfileAllocations
-      def setup = @allocated = GC.stat(:total_allocated_objects)
+      def setup
+        @allocated = GC.stat(:total_allocated_objects)
+        super
+      end
 
       def teardown
+        super
         return unless @allocated
         allocated = GC.stat(:total_allocated_objects)
         $stderr.puts "Allocated: %6d in %p" % [allocated - @allocated, local_name]

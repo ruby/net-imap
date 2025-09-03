@@ -4,7 +4,7 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPResponsesTest < Test::Unit::TestCase
+class IMAPResponsesTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
   CONFIG_OPTIONS = %i[
@@ -12,21 +12,6 @@ class IMAPResponsesTest < Test::Unit::TestCase
     warn
     raise
   ].freeze
-
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    if !@threads.empty?
-      assert_join_threads(@threads)
-    end
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
 
   def for_each_config_option(imap)
     original = imap.config.responses_without_block

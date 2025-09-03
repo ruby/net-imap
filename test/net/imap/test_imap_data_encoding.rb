@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class IMAPDataEncodingTest < Test::Unit::TestCase
+class DataEncodingTest < Net::IMAP::TestCase
 
   def test_encode_utf7
     assert_equal("foo", Net::IMAP.encode_utf7("foo"))

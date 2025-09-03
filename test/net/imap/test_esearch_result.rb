@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class ESearchResultTest < Test::Unit::TestCase
+class ESearchResultTest < Net::IMAP::TestCase
   ESearchResult = Net::IMAP::ESearchResult
   SequenceSet   = Net::IMAP::SequenceSet
   ExtensionData = Net::IMAP::ExtensionData

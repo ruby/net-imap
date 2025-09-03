@@ -3,7 +3,7 @@
 require "net/imap"
 require "test/unit"
 
-class StringPrepProfilesTest < Test::Unit::TestCase
+class StringPrepProfilesTest < Net::IMAP::TestCase
   include Net::IMAP::StringPrep
   include Net::IMAP::StringPrep::Trace
 

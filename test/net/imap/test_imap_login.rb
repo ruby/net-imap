@@ -4,23 +4,8 @@ require "net/imap"
 require "test/unit"
 require_relative "fake_server"
 
-class IMAPLoginTest < Test::Unit::TestCase
+class IMAPLoginTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
-
-  def setup
-    Net::IMAP.config.reset
-    @do_not_reverse_lookup = Socket.do_not_reverse_lookup
-    Socket.do_not_reverse_lookup = true
-    @threads = []
-  end
-
-  def teardown
-    if !@threads.empty?
-      assert_join_threads(@threads)
-    end
-  ensure
-    Socket.do_not_reverse_lookup = @do_not_reverse_lookup
-  end
 
   test "#login doesn't send CAPABILITY when it is already cached" do
     with_fake_server(

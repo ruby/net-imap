@@ -4,10 +4,7 @@ require "net/imap"
 require "stringio"
 require "test/unit"
 
-class ResponseReaderTest < Test::Unit::TestCase
-  def setup
-    Net::IMAP.config.reset
-  end
+class ResponseReaderTest < Net::IMAP::TestCase
 
   class FakeClient
     def config = @config ||= Net::IMAP.config.new
