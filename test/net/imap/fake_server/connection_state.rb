@@ -3,6 +3,21 @@
 class Net::IMAP::FakeServer
 
   class ConnectionState
+    Error = Class.new(RuntimeError)
+
+    class InvalidStateChange < Error
+      def initialize(msg = "invalid state change", *args, **change)
+        msg = "%s: %p" % [msg, change] if change
+        super(msg, *args)
+      end
+    end
+
+    class AlreadyLoggedOut < InvalidStateChange
+      def initialize(msg = "already logged out", *args)
+        super(msg, *args)
+      end
+    end
+
     attr_reader :user
     attr_reader :session
     attr_reader :enabled
@@ -46,29 +61,30 @@ class Net::IMAP::FakeServer
     def logout?;            name == :logout            end
 
     def authenticate(user)
-      not_authenticated? or raise "invalid state change"
+      not_authenticated? or raise InvalidStateChange, name => :authenticated
       user               or raise ArgumentError
       @user = user
     end
 
     def select(mbox:, **options)
-      authenticated? || selected? or raise "invalid state change"
+      authenticated? || selected? or raise InvalidStateChange, name => :selected
       mbox                        or raise ArgumentError
       @session = Session.new mbox: mbox, **options
     end
 
     def unselect
-      selected? or raise "invalid state change"
+      selected? or raise InvalidStateChange, selected: :authenticated
       @session = nil
     end
 
     def unauthenticate
-      authenticated? || selected? or raise "invalid state change"
+      authenticated? || selected? or
+        raise InvalidStateChange, name => :not_authenticated
       @user = @selected = nil
     end
 
     def logout
-      !logout? or raise "already logged out"
+      !logout? or raise AlreadyLoggedOut
       @logout = true
     end
 
