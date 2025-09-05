@@ -51,6 +51,15 @@ module Net
       # See SequenceSet#numbers.
       def to_a; uids.numbers end
 
+      # Yields each UID in #uids and returns +self+.  Returns an Enumerator when
+      # no block is given.
+      #
+      # See SequenceSet#each_number.
+      def each(&)
+        return to_enum unless block_given?
+        uids.each_number(&)
+        self
+      end
     end
   end
 end

@@ -71,8 +71,18 @@ class VanishedDataTest < Net::IMAP::TestCase
     assert_raise DataFormatError do VanishedData[nil,     nil] end
   end
 
-  test "#to_a delegates to uids (SequenceSet#to_a)" do
+  test "#to_a delegates to uids (SequenceSet#numbers)" do
     assert_equal [1, 2, 3, 4], VanishedData["1:4", true].to_a
+  end
+
+  test "#each delegates to uids (SequenceSert#each_number)" do
+    assert_kind_of Enumerator, VanishedData["1:4", true].each
+    assert_equal [1, 2, 3, 4], VanishedData["1:4", true].each.to_a
+    ary = []
+    vanished = VanishedData["5:6,100", true]
+    returned = vanished.each do ary << _1 end
+    assert_same vanished, returned
+    assert_equal [5, 6, 100], ary
   end
 
   test "#deconstruct_keys returns uids and earlier" do
