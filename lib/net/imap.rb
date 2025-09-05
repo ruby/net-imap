@@ -1560,6 +1560,9 @@ module Net
         .tap do state_authenticated! _1 end
     end
 
+    # :call-seq:
+    #   select(mailbox, **opts) -> result
+    #
     # Sends a {SELECT command [IMAP4rev1 §6.3.1]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.1]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     #
@@ -1569,12 +1572,6 @@ module Net
     # Note that these values can change if new messages arrive during a session
     # or when existing messages are expunged; see #add_response_handler for a
     # way to detect these events.
-    #
-    # When the +condstore+ keyword argument is true, the server is told to
-    # enable the extension.  If +mailbox+ supports persistence of mod-sequences,
-    # the +HIGHESTMODSEQ+ ResponseCode will be sent as an untagged response to
-    # #select and all `FETCH` responses will include FetchData#modseq.
-    # Otherwise, the +NOMODSEQ+ ResponseCode will be sent.
     #
     # A Net::IMAP::NoResponseError is raised if the mailbox does not
     # exist or is for some reason non-selectable.
@@ -1590,20 +1587,29 @@ module Net
     #   imap.responses("NO", &:last)&.code&.name == "UIDNOTSTICKY"
     #
     # If [CONDSTORE[https://www.rfc-editor.org/rfc/rfc7162.html]] is supported,
-    # the +condstore+ keyword parameter may be used.
+    # the +condstore+ keyword parameter may be used.  When the +condstore+
+    # keyword argument is true, the server is told to enable the extension.  If
+    # +mailbox+ supports persistence of mod-sequences, the +HIGHESTMODSEQ+
+    # ResponseCode will be sent as an untagged response to #select and all
+    # `FETCH` responses will include FetchData#modseq.  Otherwise, the
+    # +NOMODSEQ+ ResponseCode will be sent.
+    #
     #   imap.select("mbox", condstore: true)
     #   modseq = imap.responses("HIGHESTMODSEQ", &:last)
-    def select(mailbox, condstore: false)
-      args = ["SELECT", mailbox]
-      args << ["CONDSTORE"] if condstore
-      synchronize do
-        state_unselected! # implicitly closes current mailbox
-        @responses.clear
-        send_command(*args)
-          .tap do state_selected! end
-      end
+    #
+    # If [QRESYNC[https://www.rfc-editor.org/rfc/rfc7162.html]] is enabled,
+    # the +qresync+ keyword parameter may be used.  The optional +qresync+
+    # argument can provide quick resynchronization parameters: the last known
+    # UIDVALIDITY, the last known MODSEQ, <em>(optional)</em> known UIDs, and
+    # <em>(optional)</em> message sequence match data.
+    #
+    def select(...)
+      select_internal("SELECT", ...)
     end
 
+    # :call-seq:
+    #   examine(mailbox, **opts) -> result
+    #
     # Sends a {EXAMINE command [IMAP4rev1 §6.3.2]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.2]
     # to select a +mailbox+ so that messages in the +mailbox+ can be accessed.
     # Behaves the same as #select, except that the selected +mailbox+ is
@@ -1613,15 +1619,8 @@ module Net
     # exist or is for some reason non-examinable.
     #
     # Related: #select
-    def examine(mailbox, condstore: false)
-      args = ["EXAMINE", mailbox]
-      args << ["CONDSTORE"] if condstore
-      synchronize do
-        state_unselected! # implicitly closes current mailbox
-        @responses.clear
-        send_command(*args)
-          .tap do state_selected! end
-      end
+    def examine(...)
+      select_internal("EXAMINE", ...)
     end
 
     # Sends a {CREATE command [IMAP4rev1 §6.3.3]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.3.3]
@@ -2962,9 +2961,7 @@ module Net
     #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+QRESYNC+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
-    #   *NOTE:* Enabling QRESYNC will replace +EXPUNGE+ with +VANISHED+, but
-    #   the extension arguments to #select, #examine, and #uid_fetch are not
-    #   supported yet.
+    #   *NOTE:* The +QRESYNC+ argument to #uid_fetch is not supported yet.
     #
     #   Adds quick resynchronization options to #select, #examine, and
     #   #uid_fetch.  +QRESYNC+ _must_ be explicitly enabled before using any of
@@ -3585,6 +3582,20 @@ module Net
         capabilities_cached?
       else
         config.enforce_logindisabled
+      end
+    end
+
+    def select_internal(command, mailbox, condstore: false, qresync: nil)
+      args = [command, mailbox]
+      params = []
+      params << "CONDSTORE"          if condstore
+      params << "QRESYNC" << qresync if qresync # TODO: validate qresync params
+      args   << params unless params.empty?
+      synchronize do
+        state_unselected! # implicitly closes current mailbox
+        @responses.clear
+        send_command(*args)
+          .tap do state_selected! end
       end
     end
 
