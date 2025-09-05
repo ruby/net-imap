@@ -7,6 +7,14 @@ require_relative "fake_server"
 class IMAPFetchTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
+  test "argument errors" do
+    with_fake_server select: "inbox" do |_, imap|
+      assert_raise_with_message(ArgumentError, /\Apartial.*uid_fetch/) do
+        imap.fetch(1, "FAST", partial: 1..10)
+      end
+    end
+  end
+
   test "#fetch with FETCH responses" do
     with_fake_server select: "inbox" do |server, imap|
       server.on("FETCH") do |resp|
