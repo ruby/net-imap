@@ -3684,6 +3684,9 @@ module Net
     end
 
     def fetch_internal(cmd, set, attr, mod = nil, partial: nil, changedsince: nil)
+      if partial && !cmd.start_with?("UID ")
+        raise ArgumentError, "partial can only be used with uid_fetch"
+      end
       set = SequenceSet[set]
       if partial
         mod ||= []
