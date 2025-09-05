@@ -15,6 +15,7 @@ class Net::IMAP::FakeServer
       @reader = CommandReader.new  socket
       @writer = ResponseWriter.new socket, config: config, state: state
       @router = CommandRouter.new  writer, config: config, state: state
+      @mutex  = Thread::Mutex.new
     end
 
     def commands; state.commands end
@@ -31,11 +32,13 @@ class Net::IMAP::FakeServer
     end
 
     def close
-      unless state.logout?
-        state.logout
-        writer.bye
+      @mutex.synchronize do
+        unless state.logout?
+          state.logout
+          writer.bye
+        end
+        socket&.close unless socket&.closed?
       end
-      socket&.close unless socket&.closed?
     end
 
     private
