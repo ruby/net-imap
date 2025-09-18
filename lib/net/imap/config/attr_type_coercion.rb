@@ -28,10 +28,22 @@ module Net
         end
         private_class_method :included
 
-        if defined?(Ractor.make_shareable)
-          def self.safe(...) Ractor.make_shareable nil.instance_eval(...).freeze end
+        if defined?(Ractor.shareable_proc)
+          def self.safe(&b)
+            case obj = b.call
+            when Proc
+              Ractor.shareable_proc(&obj)
+            else
+              Ractor.make_shareable obj
+            end
+          end
+        elsif defined?(Ractor.make_shareable)
+          def self.safe(&b)
+            obj = nil.instance_eval(&b).freeze
+            Ractor.make_shareable obj
+          end
         else
-          def self.safe(...) nil.instance_eval(...).freeze end
+          def self.safe(&b) nil.instance_eval(&b).freeze end
         end
         private_class_method :safe
 
@@ -48,10 +60,11 @@ module Net
         NilOrInteger = safe{->val { Integer val unless val.nil? }}
 
         Enum = ->(*enum) {
-          enum     = safe{enum}
-          expected = -"one of #{enum.map(&:inspect).join(", ")}"
+          sh_enum = Ractor.make_shareable(enum)
+          safe_enum = safe{sh_enum}
+          expected = -"one of #{safe_enum.map(&:inspect).join(", ")}"
           safe{->val {
-            return val if enum.include?(val)
+            return val if safe_enum.include?(val)
             raise ArgumentError, "expected %s, got %p" % [expected, val]
           }}
         }
