@@ -1761,10 +1761,10 @@ module Net
         UntaggedResponse.new label("ENABLED"), capability__list, @str
       end
 
-      # As a workaround for buggy servers, allow a trailing SP:
-      #     *(SP capability) [SP]
+      # As a workaround for buggy servers, allow extra spaces:
+      #     *(SP *SP capability) *SP
       def capability__list
-        list = []; while SP? && (capa = capability?) do list << capa end; list
+        list = []; while accept_spaces && (capa = capability?) do list << capa end; list
       end
 
       alias resp_code__capability capability__list
