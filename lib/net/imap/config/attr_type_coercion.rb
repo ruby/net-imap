@@ -60,8 +60,7 @@ module Net
         NilOrInteger = safe{->val { Integer val unless val.nil? }}
 
         Enum = ->(*enum) {
-          sh_enum = Ractor.make_shareable(enum)
-          safe_enum = safe{sh_enum}
+          safe_enum = safe{enum}
           expected = -"one of #{safe_enum.map(&:inspect).join(", ")}"
           safe{->val {
             return val if safe_enum.include?(val)
