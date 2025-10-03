@@ -30,7 +30,7 @@ module Net
 
         if defined?(Ractor.shareable_proc)
           def self.safe(&b)
-            case obj = b.call
+            case obj = nil.instance_eval(&b).freeze
             when Proc
               Ractor.shareable_proc(&obj)
             else
@@ -59,12 +59,11 @@ module Net
 
         NilOrInteger = safe{->val { Integer val unless val.nil? }}
 
-        Enum = ->(*enum) {
-          sh_enum = Ractor.make_shareable(enum)
-          safe_enum = safe{sh_enum}
-          expected = -"one of #{safe_enum.map(&:inspect).join(", ")}"
+        Enum = ->(*unsafe_enum) {
+          enum = safe{unsafe_enum}
+          expected = -"one of #{enum.map(&:inspect).join(", ")}"
           safe{->val {
-            return val if safe_enum.include?(val)
+            return val if enum.include?(val)
             raise ArgumentError, "expected %s, got %p" % [expected, val]
           }}
         }
