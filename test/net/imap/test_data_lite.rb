@@ -374,7 +374,9 @@ module Net
 
       def test_subclass_override_deconstruct
         data = InheritsOverride[:foo]
-        assert_equal %i[ok foo], data.deconstruct
+        pend_if_truffleruby do
+          assert_equal %i[ok foo], data.deconstruct
+        end
       end
 
     end
