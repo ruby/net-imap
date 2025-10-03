@@ -19,7 +19,7 @@ gem "benchmark-driver", require: false
 gem "vernier", require: false, platform: :mri
 
 group :test do
-  gem "simplecov",        require: false
-  gem "simplecov-html",   require: false
-  gem "simplecov-json",   require: false
+  gem "simplecov",        require: false, platforms: %i[mri windows]
+  gem "simplecov-html",   require: false, platforms: %i[mri windows]
+  gem "simplecov-json",   require: false, platforms: %i[mri windows]
 end

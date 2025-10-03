@@ -20,6 +20,8 @@ jobs:
         ruby: ${{ fromJson(needs.ruby-versions.outputs.versions) }}
         os: [ ubuntu-latest, macos-latest, windows-latest ]
         experimental: [false]
+        include:
+          - { ruby: truffleruby-head, os: ubuntu-latest,  experimental: true }
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}
     timeout-minutes: 15
@@ -36,7 +38,8 @@ jobs:
       timeout-minutes: 5 # _should_ finish in under a minute
 
     - uses: joshmfrankel/simplecov-check-action@main
-      if: matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request'
+      if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' &&
+        !startsWith(matrix.ruby, 'truffleruby') && !startsWith(matrix.ruby, 'jruby') }}
       with:
         check_job_name: "SimpleCov - ${{ matrix.ruby }}"
         minimum_suite_coverage: 90

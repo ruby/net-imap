@@ -1,4 +1,6 @@
-unless ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i
+if !(ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i) &&
+    RUBY_ENGINE == "ruby" # C Ruby only
+
   require "simplecov"
 
   # Cannot use ".simplecov" file: simplecov-json triggers a circular require.
@@ -69,6 +71,46 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     rescue NoMatchingPatternError => e
       flunk e.message
     end
+  end
+
+  def pend_if(condition, *args, &block)
+    if condition
+      pend(*args, &block)
+    else
+      block.call if block
+    end
+  end
+
+  def pend_unless(condition, *args, &block)
+    if condition
+      block.call if block
+    else
+      pend(*args, &block)
+    end
+  end
+
+  def omit_unless_cruby(msg = "test omitted for non-CRuby", &block)
+    omit_unless(RUBY_ENGINE == "ruby", msg, &block)
+  end
+
+  def omit_if_truffleruby(msg = "test omitted on TruffleRuby", &block)
+    omit_if(RUBY_ENGINE == "truffleruby", msg, &block)
+  end
+
+  def omit_if_jruby(msg = "test omitted on JRuby", &block)
+    omit_if(RUBY_ENGINE == "jruby", msg, &block)
+  end
+
+  def pend_unless_cruby(msg = "test is pending for non-CRuby", &block)
+    pend_unless(RUBY_ENGINE == "ruby", msg, &block)
+  end
+
+  def pend_if_truffleruby(msg = "test is pending on TruffleRuby", &block)
+    pend_if(RUBY_ENGINE == "truffleruby", msg, &block)
+  end
+
+  def pend_if_jruby(msg = "test is pending on JRuby", &block)
+    pend_if(RUBY_ENGINE == "jruby", msg, &block)
   end
 
 end
