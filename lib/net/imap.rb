@@ -2675,6 +2675,7 @@ module Net
     #     # fetch should return quickly and allocate little memory
     #     results.size # => 0..500
     #     break if results.empty?
+    #     results.sort_by!(&:uid) # server may return results out of order
     #     next_uid_to_fetch = results.last.uid + 1
     #     process results
     #   end
