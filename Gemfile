@@ -7,6 +7,7 @@ gemspec
 gem "digest"
 gem "strscan"
 gem "base64"
+gem "psych", ">= 5.3.0" # 5.2.5 for Data serialization, 5.3.0 for TruffleRuby
 
 gem "irb"
 gem "rake"

@@ -8,12 +8,12 @@
     :response: "* ESEARCH (TAG \"A01\") UID PARTIAL (-1:-100 200:250,252:300)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/object:Net::IMAP::ESearchResult
+      data: !ruby/data:Net::IMAP::ESearchResult
         tag: A01
         uid: true
         data:
         - - PARTIAL
-          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/data:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: -100
               end: -1
@@ -26,12 +26,12 @@
     :response: "* ESEARCH (TAG \"A02\") UID PARTIAL (23500:24000 55500:56000)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/object:Net::IMAP::ESearchResult
+      data: !ruby/data:Net::IMAP::ESearchResult
         tag: A02
         uid: true
         data:
         - - PARTIAL
-          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/data:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: 23500
               end: 24000
@@ -44,12 +44,12 @@
     :response: "* ESEARCH (TAG \"A04\") UID PARTIAL (24000:24500 NIL)\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
       name: ESEARCH
-      data: !ruby/object:Net::IMAP::ESearchResult
+      data: !ruby/data:Net::IMAP::ESearchResult
         tag: A04
         uid: true
         data:
         - - PARTIAL
-          - !ruby/object:Net::IMAP::ESearchResult::PartialResult
+          - !ruby/data:Net::IMAP::ESearchResult::PartialResult
             range: !ruby/range
               begin: 24000
               end: 24500
