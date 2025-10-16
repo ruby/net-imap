@@ -2,7 +2,7 @@
 
 module Net
   class IMAP
-    class ConnectionState < Net::IMAP::Data # :nodoc:
+    class ConnectionState < Data # :nodoc:
       def self.define(symbol, *attrs)
         symbol => Symbol
         state = super(*attrs)
