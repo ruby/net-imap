@@ -3,7 +3,6 @@
 require "date"
 
 require_relative "errors"
-require_relative "data_lite"
 
 module Net
   class IMAP < Protocol
