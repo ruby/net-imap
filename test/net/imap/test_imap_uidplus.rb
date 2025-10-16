@@ -8,6 +8,11 @@ require_relative "fake_server"
 class IMAPUIDPlusTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
+  def setup
+    super
+    Net::IMAP.config.parser_use_deprecated_uidplus_data = false
+  end
+
   def test_uidplus_appenduid
     with_fake_server(select: "INBOX",
                      extensions: %i[UIDPLUS]) do |server, imap|
@@ -21,7 +26,10 @@ class IMAPUIDPlusTest < Net::IMAP::TestCase
 
         hello world
       EOF
-      assert_equal([38505, nil, [3955]], resp.data.code.data.to_a)
+      code = resp.data.code
+      assert_equal("APPENDUID", code.name)
+      assert_equal(38505,       code.data.uidvalidity)
+      assert_equal([3955],      code.data.assigned_uids.numbers)
       assert_equal "APPEND", server.commands.pop.name
     end
   end
@@ -33,12 +41,13 @@ class IMAPUIDPlusTest < Net::IMAP::TestCase
         cmd.done_ok code: "COPYUID 38505 3955,3960:3962 3963:3966"
       end
       resp = imap.uid_copy([3955,3960..3962], 'trash')
+      code = resp.data.code
       cmd  = server.commands.pop
       assert_equal(["UID COPY", "3955,3960:3962 trash"], [cmd.name, cmd.args])
-      assert_equal(
-        [38505, [3955, 3960, 3961, 3962], [3963, 3964, 3965, 3966]],
-        resp.data.code.data.to_a
-      )
+      assert_equal("COPYUID", code.name)
+      assert_equal(38505, code.data.uidvalidity)
+      assert_equal([3955, 3960, 3961, 3962], code.data.source_uids.numbers)
+      assert_equal([3963, 3964, 3965, 3966], code.data.assigned_uids.numbers)
     end
   end
 
@@ -49,9 +58,13 @@ class IMAPUIDPlusTest < Net::IMAP::TestCase
         cmd.done_ok code: "COPYUID 38505 3955 3967"
       end
       resp = imap.uid_copy(3955, 'trash')
+      code = resp.data.code
       cmd  = server.commands.pop
       assert_equal(["UID COPY", "3955 trash"], [cmd.name, cmd.args])
-      assert_equal([38505, [3955], [3967]], resp.data.code.data.to_a)
+      assert_equal("COPYUID", code.name)
+      assert_equal(38505, code.data.uidvalidity)
+      assert_equal([3955], code.data.source_uids.numbers)
+      assert_equal([3967], code.data.assigned_uids.numbers)
     end
   end
 

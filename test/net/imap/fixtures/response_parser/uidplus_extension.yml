@@ -10,11 +10,10 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: APPENDUID
-          data: !ruby/struct:Net::IMAP::UIDPlusData
+          data: !ruby/object:Net::IMAP::AppendUIDData
             uidvalidity: 38505
-            source_uids:
-            assigned_uids:
-            - 3955
+            assigned_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: '3955'
         text: APPEND completed
       raw_data: "A003 OK [APPENDUID 38505 3955] APPEND completed\r\n"
 
@@ -27,16 +26,12 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: COPYUID
-          data: !ruby/struct:Net::IMAP::UIDPlusData
+          data: !ruby/object:Net::IMAP::CopyUIDData
             uidvalidity: 38505
-            source_uids:
-            - 304
-            - 319
-            - 320
-            assigned_uids:
-            - 3956
-            - 3957
-            - 3958
+            source_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: 304,319:320
+            assigned_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: 3956:3958
         text: Done
       raw_data: "A004 OK [COPYUID 38505 304,319:320 3956:3958] Done\r\n"
 
@@ -48,14 +43,10 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: APPENDUID
-          data: !ruby/struct:Net::IMAP::UIDPlusData
+          data: !ruby/object:Net::IMAP::AppendUIDData
             uidvalidity: 2
-            source_uids:
-            assigned_uids:
-            - 4
-            - 6
-            - 7
-            - 9
+            assigned_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: 4,6:7,9
         text: APPEND completed
       raw_data: "A003 OK [APPENDUID 2 4,6:7,9] APPEND completed\r\n"
 
@@ -71,25 +62,11 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: COPYUID
-          data: !ruby/struct:Net::IMAP::UIDPlusData
+          data: !ruby/object:Net::IMAP::CopyUIDData
             uidvalidity: 9999
-            source_uids:
-            - 19
-            - 20
-            - 495
-            - 496
-            - 497
-            - 498
-            - 499
-            - 500
-            assigned_uids:
-            - 92
-            - 93
-            - 94
-            - 95
-            - 96
-            - 97
-            - 100
-            - 101
+            source_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: 20:19,500:495
+            assigned_uids: !ruby/object:Net::IMAP::SequenceSet
+              string: 92:97,101:100
         text: Done
       raw_data: "A004 OK [copyUID 9999 20:19,500:495 92:97,101:100] Done\r\n"
