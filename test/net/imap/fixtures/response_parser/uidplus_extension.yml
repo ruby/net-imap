@@ -10,7 +10,7 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: APPENDUID
-          data: !ruby/object:Net::IMAP::AppendUIDData
+          data: !ruby/data:Net::IMAP::AppendUIDData
             uidvalidity: 38505
             assigned_uids: !ruby/object:Net::IMAP::SequenceSet
               string: '3955'
@@ -26,7 +26,7 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: COPYUID
-          data: !ruby/object:Net::IMAP::CopyUIDData
+          data: !ruby/data:Net::IMAP::CopyUIDData
             uidvalidity: 38505
             source_uids: !ruby/object:Net::IMAP::SequenceSet
               string: 304,319:320
@@ -43,7 +43,7 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: APPENDUID
-          data: !ruby/object:Net::IMAP::AppendUIDData
+          data: !ruby/data:Net::IMAP::AppendUIDData
             uidvalidity: 2
             assigned_uids: !ruby/object:Net::IMAP::SequenceSet
               string: 4,6:7,9
@@ -62,7 +62,7 @@
       data: !ruby/struct:Net::IMAP::ResponseText
         code: !ruby/struct:Net::IMAP::ResponseCode
           name: COPYUID
-          data: !ruby/object:Net::IMAP::CopyUIDData
+          data: !ruby/data:Net::IMAP::CopyUIDData
             uidvalidity: 9999
             source_uids: !ruby/object:Net::IMAP::SequenceSet
               string: 20:19,500:495
