@@ -7,6 +7,7 @@ gemspec
 gem "digest"
 gem "strscan"
 gem "base64"
+gem "psych", ">= 5.2.5" # for Data serialization
 
 gem "irb"
 gem "rake"
