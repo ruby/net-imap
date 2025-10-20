@@ -54,13 +54,11 @@ class VanishedDataTest < Net::IMAP::TestCase
   end
 
   test ".[], mixing args raises ArgumentError" do
-    pend_if_jruby do
-      assert_raise ArgumentError do
-        VanishedData[1, true, uids: "1", earlier: true]
-      end
-      assert_raise ArgumentError do VanishedData["1234", earlier: true] end
-      assert_raise ArgumentError do VanishedData[nil, true, uids: "1"]  end
+    assert_raise ArgumentError do
+      VanishedData[1, true, uids: "1", earlier: true]
     end
+    assert_raise ArgumentError do VanishedData["1234", earlier: true] end
+    assert_raise ArgumentError do VanishedData[nil, true, uids: "1"]  end
   end
 
   test ".[], missing args raises ArgumentError" do
