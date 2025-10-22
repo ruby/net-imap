@@ -292,6 +292,12 @@ class StringPrepTablesGenerator
       .to_h.compact
       .transform_values {|t| t.first.size == 2 ? t.to_h : t }
     tables["titles"] = titles
+
+    # See https://github.com/ruby/json/issues/870
+    if RUBY_ENGINE == "jruby"
+      tables["titles"].transform_values! { _1.dump.undump }
+    end
+
     tables
   end
 
