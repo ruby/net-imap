@@ -1120,6 +1120,12 @@ module Net
       start_imap_connection
     end
 
+    # Returns true when the connection uses TLS, regardless of whether the TLS
+    # negotiation has completed or the remote hostname has been verified.
+    #
+    # Most scenarios should use #tls_verified? instead.
+    def tls?; @sock.is_a?(OpenSSL::SSL::SSLSocket) end
+
     # Returns true after the TLS negotiation has completed and the remote
     # hostname has been verified.  Returns false when TLS has been established
     # but peer verification was disabled.
