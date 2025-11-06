@@ -19,9 +19,9 @@ module Net
         NEXT_VERSION    = CURRENT_VERSION + 0.1r
 
         # The config version used for <tt>Config[:future]</tt>.
-        FUTURE_VERSION  = 0.7r
+        FUTURE_VERSION  = 1.0r
 
-        VERSIONS = ((0.0r..0.8r) % 0.1r).to_a.freeze
+        VERSIONS = ((0.0r..FUTURE_VERSION) % 0.1r).to_a.freeze
         private_constant :VERSIONS
 
         # See Config.version_defaults.
