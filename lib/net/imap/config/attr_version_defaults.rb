@@ -40,13 +40,23 @@ module Net
 
         def attr_accessor(name, defaults: nil, default: (unset = true), **kw)
           unless unset
-            defaults ||= { 0.0r => default }
+            version  = DEFAULT_TO_INHERIT.include?(name) ? nil : 0.0r
+            defaults = { version => default }
           end
           defaults&.each_pair do |version, default|
             AttrVersionDefaults.version_defaults[version] ||= {}
             AttrVersionDefaults.version_defaults[version][name] = default
           end
           super(name, **kw)
+        end
+
+        def self.compile_default!
+          raise "Config.default already compiled" if Config.default
+          default = VERSIONS.select { _1 <= CURRENT_VERSION }
+            .filter_map { version_defaults[_1] }
+            .prepend(version_defaults.delete(nil))
+            .inject(&:merge)
+          Config.new(default).freeze
         end
 
         def self.compile_version_defaults!
