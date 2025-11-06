@@ -12,6 +12,15 @@ module Net
       # Adds a +defaults+ parameter to +attr_accessor+, which is used to compile
       # Config.version_defaults.
       module AttrVersionDefaults
+        # The <tt>x.y</tt> part of Net::IMAP::VERSION, as a Rational number.
+        CURRENT_VERSION = VERSION.to_r
+
+        # The config version used for <tt>Config[:next]</tt>.
+        NEXT_VERSION    = CURRENT_VERSION + 0.1r
+
+        # The config version used for <tt>Config[:future]</tt>.
+        FUTURE_VERSION  = CURRENT_VERSION + 0.2r
+
         # See Config.version_defaults.
         singleton_class.attr_accessor :version_defaults
 
@@ -27,6 +36,19 @@ module Net
         # :stopdoc: internal APIs only
 
         def self.compile_version_defaults!
+          # Safe conversions one way only:
+          #   0.6r.to_f == 0.6  # => true
+          #   0.6 .to_r == 0.6r # => false
+          version_defaults.to_a.each do |k, v|
+            next unless k in Rational
+            version_defaults[k.to_f] = v
+          end
+
+          version_defaults[:original] = Config[0.0r]
+          version_defaults[:current]  = Config[CURRENT_VERSION]
+          version_defaults[:next]     = Config[NEXT_VERSION]
+          version_defaults[:future]   = Config[FUTURE_VERSION]
+
           version_defaults.freeze
         end
 
