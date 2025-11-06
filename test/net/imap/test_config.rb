@@ -72,6 +72,7 @@ class ConfigTest < Net::IMAP::TestCase
   test ".default" do
     default = Config.default
     assert default.equal?(Config.default)
+    assert_nil default.parent
     assert default.is_a?(Config)
     assert default.frozen?
     refute default.debug?
