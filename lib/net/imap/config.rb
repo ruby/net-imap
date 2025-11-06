@@ -482,45 +482,41 @@ module Net
 
       @global = default.new
 
-      version_defaults[:default] = Config[default.send(:defaults_hash)]
+      version_defaults[:default] = default.send(:defaults_hash)
 
-      version_defaults[0r] = Config[:default].dup.update(
+      version_defaults[0r] = {
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
         enforce_logindisabled: false,
         max_response_size: nil,
         parser_use_deprecated_uidplus_data: true,
         parser_max_deprecated_uidplus_data_size: 10_000,
-      ).freeze
-      version_defaults[0.0r] = Config[0r]
-      version_defaults[0.1r] = Config[0r]
-      version_defaults[0.2r] = Config[0r]
-      version_defaults[0.3r] = Config[0r]
+      }
 
-      version_defaults[0.4r] = Config[0.3r].dup.update(
+      version_defaults[0.4r] = {
         sasl_ir: true,
         parser_max_deprecated_uidplus_data_size: 1000,
-      ).freeze
+      }
 
-      version_defaults[0.5r] = Config[0.4r].dup.update(
+      version_defaults[0.5r] = {
         enforce_logindisabled: true,
         max_response_size: 512 << 20, # 512 MiB
         responses_without_block: :warn,
         parser_use_deprecated_uidplus_data: :up_to_max_size,
         parser_max_deprecated_uidplus_data_size: 100,
-      ).freeze
+      }
 
-      version_defaults[0.6r] = Config[0.5r].dup.update(
+      version_defaults[0.6r] = {
         responses_without_block: :frozen_dup,
         parser_use_deprecated_uidplus_data: false,
         parser_max_deprecated_uidplus_data_size: 0,
-      ).freeze
+      }
 
-      version_defaults[0.7r] = Config[0.6r].dup.update(
-      ).freeze
+      version_defaults[0.7r] = {
+      }
 
-      version_defaults[0.8r] = Config[0.7r].dup.update(
-      ).freeze
+      version_defaults[0.8r] = {
+      }
 
       AttrVersionDefaults.compile_version_defaults!
 

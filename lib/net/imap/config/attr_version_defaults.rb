@@ -21,6 +21,8 @@ module Net
         # The config version used for <tt>Config[:future]</tt>.
         FUTURE_VERSION  = CURRENT_VERSION + 0.2r
 
+        VERSIONS = ((0.0r..0.8r) % 0.1r).to_a.freeze
+
         # See Config.version_defaults.
         singleton_class.attr_accessor :version_defaults
 
@@ -36,6 +38,16 @@ module Net
         # :stopdoc: internal APIs only
 
         def self.compile_version_defaults!
+          version_defaults[:default] = Config[version_defaults[:default]]
+          version_defaults[0.0r]     = Config[:default].dup
+            .update(**version_defaults[0.0r]).freeze
+
+          VERSIONS.each_cons(2) do |prior, version|
+            updates = version_defaults[version]
+            version_defaults[version] = version_defaults[prior]
+              .then { updates ? _1.dup.update(**updates).freeze : _1 }
+          end
+
           # Safe conversions one way only:
           #   0.6r.to_f == 0.6  # => true
           #   0.6 .to_r == 0.6r # => false
