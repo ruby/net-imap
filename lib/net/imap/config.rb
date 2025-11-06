@@ -212,7 +212,7 @@ module Net
       # See Net::IMAP.new and Net::IMAP#starttls.
       #
       # The default value is +30+ seconds.
-      attr_accessor :open_timeout, type: Integer
+      attr_accessor :open_timeout, type: Integer, default: 30
 
       # Seconds to wait until an IDLE response is received, after
       # the client asks to leave the IDLE state.
@@ -220,7 +220,7 @@ module Net
       # See Net::IMAP#idle and Net::IMAP#idle_done.
       #
       # The default value is +5+ seconds.
-      attr_accessor :idle_response_timeout, type: Integer
+      attr_accessor :idle_response_timeout, type: Integer, default: 5
 
       # Whether to use the +SASL-IR+ extension when the server and \SASL
       # mechanism both support it.  Can be overridden by the +sasl_ir+ keyword
@@ -236,7 +236,10 @@ module Net
       #
       # [+true+ <em>(default since +v0.4+)</em>]
       #   Use +SASL-IR+ when it is supported by the server and the mechanism.
-      attr_accessor :sasl_ir, type: :boolean
+      attr_accessor :sasl_ir, type: :boolean, defaults: {
+        0.0r => false,
+        0.4r => true,
+      }
 
       # Controls the behavior of Net::IMAP#login when the +LOGINDISABLED+
       # capability is present.  When enforced, Net::IMAP will raise a
@@ -260,7 +263,10 @@ module Net
       #
       attr_accessor :enforce_logindisabled, type: Enum[
         false, :when_capabilities_cached, true
-      ]
+      ], defaults: {
+        0.0r => false,
+        0.5r => true,
+      }
 
       # The maximum allowed server response size.  When +nil+, there is no limit
       # on response size.
@@ -294,7 +300,10 @@ module Net
       #
       # * original: +nil+ <em>(no limit)</em>
       # * +0.5+: 512 MiB
-      attr_accessor :max_response_size, type: Integer?
+      attr_accessor :max_response_size, type: Integer?, defaults: {
+        0.0r => nil,
+        0.5r => 512 << 20, # 512 MiB
+      }
 
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
@@ -324,7 +333,11 @@ module Net
       # Note: #responses_without_args is an alias for #responses_without_block.
       attr_accessor :responses_without_block, type: Enum[
         :silence_deprecation_warning, :warn, :frozen_dup, :raise,
-      ]
+      ], defaults: {
+        0.0r => :silence_deprecation_warning,
+        0.5r => :warn,
+        0.6r => :frozen_dup,
+      }
 
       alias responses_without_args  responses_without_block  # :nodoc:
       alias responses_without_args= responses_without_block= # :nodoc:
@@ -369,7 +382,11 @@ module Net
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
       attr_accessor :parser_use_deprecated_uidplus_data, type: Enum[
         true, :up_to_max_size, false
-      ]
+      ], defaults: {
+        0.0r => true,
+        0.5r => :up_to_max_size,
+        0.6r => false,
+      }
 
       # The maximum +uid-set+ size that ResponseParser will parse into
       # deprecated UIDPlusData.  This limit only applies when
@@ -393,7 +410,13 @@ module Net
       # * +0.5+: <tt>100</tt>
       # * +0.6+: <tt>0</tt>
       #
-      attr_accessor :parser_max_deprecated_uidplus_data_size, type: Integer
+      attr_accessor :parser_max_deprecated_uidplus_data_size, type: Integer,
+        defaults: {
+          0.0r => 10_000,
+          0.4r =>  1_000,
+          0.5r =>    100,
+          0.6r =>      0,
+        }
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
@@ -481,34 +504,6 @@ module Net
       ).freeze
 
       @global = default.new
-
-      version_defaults[0r] = {
-        sasl_ir: false,
-        responses_without_block: :silence_deprecation_warning,
-        enforce_logindisabled: false,
-        max_response_size: nil,
-        parser_use_deprecated_uidplus_data: true,
-        parser_max_deprecated_uidplus_data_size: 10_000,
-      }
-
-      version_defaults[0.4r] = {
-        sasl_ir: true,
-        parser_max_deprecated_uidplus_data_size: 1000,
-      }
-
-      version_defaults[0.5r] = {
-        enforce_logindisabled: true,
-        max_response_size: 512 << 20, # 512 MiB
-        responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: :up_to_max_size,
-        parser_max_deprecated_uidplus_data_size: 100,
-      }
-
-      version_defaults[0.6r] = {
-        responses_without_block: :frozen_dup,
-        parser_use_deprecated_uidplus_data: false,
-        parser_max_deprecated_uidplus_data_size: 0,
-      }
 
       AttrVersionDefaults.compile_version_defaults!
 

@@ -37,13 +37,23 @@ module Net
 
         # :stopdoc: internal APIs only
 
+        def attr_accessor(name, defaults: nil, default: (unset = true), **kw)
+          unless unset
+            defaults ||= { 0.0r => default }
+          end
+          defaults&.each_pair do |version, default|
+            AttrVersionDefaults.version_defaults[version] ||= {}
+            AttrVersionDefaults.version_defaults[version][name] = default
+          end
+          super(name, **kw)
+        end
+
         def self.compile_version_defaults!
           # Temporarily assign Config.default, enabling #load_defaults(:default)
           version_defaults[:default] = Config.default
           # Use #load_defaults so some attributes are inherited from global.
           version_defaults[:default] = Config.new.load_defaults(:default).freeze
-          version_defaults[0.0r]     = Config[:default].dup
-            .update(**version_defaults[0.0r]).freeze
+          version_defaults[0.0r]     = Config[version_defaults.fetch(0.0r)]
 
           VERSIONS.each_cons(2) do |prior, version|
             updates = version_defaults[version]
