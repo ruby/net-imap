@@ -3,6 +3,7 @@
 require_relative "config/attr_accessors"
 require_relative "config/attr_inheritance"
 require_relative "config/attr_type_coercion"
+require_relative "config/attr_version_defaults"
 
 module Net
   class IMAP
@@ -141,15 +142,7 @@ module Net
       #     Net::IMAP::Config[0.5]       == Net::IMAP::Config[0.5r]     # => true
       #     Net::IMAP::Config["current"] == Net::IMAP::Config[:current] # => true
       #     Net::IMAP::Config["0.5.6"]   == Net::IMAP::Config[0.5r]     # => true
-      def self.version_defaults; @version_defaults end
-      @version_defaults = Hash.new {|h, k|
-        # NOTE: String responds to both so the order is significant.
-        # And ignore non-numeric conversion to zero, because: "wat!?".to_r == 0
-        (h.fetch(k.to_r, nil) || h.fetch(k.to_f, nil) if k.is_a?(Numeric)) ||
-          (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
-          (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
-          (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
-      }
+      def self.version_defaults; AttrVersionDefaults.version_defaults end
 
       # :call-seq:
       #  Net::IMAP::Config[number] -> versioned config
@@ -189,6 +182,7 @@ module Net
       include AttrAccessors
       include AttrInheritance
       include AttrTypeCoercion
+      extend  AttrVersionDefaults
 
       # The debug mode (boolean).  The default value is +false+.
       #
@@ -539,7 +533,7 @@ module Net
       version_defaults[:next]     = Config[current + 0.1r]
       version_defaults[:future]   = Config[current + 0.2r]
 
-      version_defaults.freeze
+      AttrVersionDefaults.compile_version_defaults!
 
       if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
         warn "Misconfigured Net::IMAP::Config[:current] => %p,\n" \
