@@ -38,7 +38,10 @@ module Net
         # :stopdoc: internal APIs only
 
         def self.compile_version_defaults!
-          version_defaults[:default] = Config[version_defaults[:default]]
+          # Temporarily assign Config.default, enabling #load_defaults(:default)
+          version_defaults[:default] = Config.default
+          # Use #load_defaults so some attributes are inherited from global.
+          version_defaults[:default] = Config.new.load_defaults(:default).freeze
           version_defaults[0.0r]     = Config[:default].dup
             .update(**version_defaults[0.0r]).freeze
 
