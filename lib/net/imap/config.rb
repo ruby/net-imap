@@ -194,7 +194,7 @@ module Net
       #
       # *NOTE:* Versioned default configs inherit #debug from Config.global, and
       # #load_defaults will not override #debug.
-      attr_accessor :debug, type: :boolean
+      attr_accessor :debug, type: :boolean, default: false
 
       # method: debug?
       # :call-seq: debug? -> boolean
@@ -491,28 +491,10 @@ module Net
         to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
       end
 
-      @default = new(
-        debug: false,
-        open_timeout: 30,
-        idle_response_timeout: 5,
-        sasl_ir: true,
-        enforce_logindisabled: true,
-        max_response_size: 512 << 20, # 512 MiB
-        responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: :up_to_max_size,
-        parser_max_deprecated_uidplus_data_size: 100,
-      ).freeze
-
-      @global = default.new
-
+      @default = AttrVersionDefaults.compile_default!
+      @global  = default.new
       AttrVersionDefaults.compile_version_defaults!
 
-      if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
-        warn "Misconfigured Net::IMAP::Config[:current] => %p,\n" \
-             " not equal to Net::IMAP::Config[:default] => %p" % [
-                self[:current].to_h, self[:default].to_h
-              ]
-      end
     end
   end
 end
