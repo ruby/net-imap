@@ -490,21 +490,6 @@ module Net
       version_defaults[0.7r] = Config[0.6r].dup.update(
       ).freeze
 
-      # Safe conversions one way only:
-      #   0.6r.to_f == 0.6  # => true
-      #   0.6 .to_r == 0.6r # => false
-      version_defaults.to_a.each do |k, v|
-        next unless k.is_a? Rational
-        version_defaults[k.to_f] = v
-      end
-
-      current = VERSION.to_r
-      version_defaults[:original] = Config[0]
-      version_defaults[:current]  = Config[current]
-      version_defaults[:next]     = Config[current + 0.1r]
-
-      version_defaults[:future]   = Config[0.7r]
-
       AttrVersionDefaults.compile_version_defaults!
 
       if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
