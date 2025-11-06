@@ -512,12 +512,6 @@ module Net
         parser_max_deprecated_uidplus_data_size: 0,
       }
 
-      version_defaults[0.7r] = {
-      }
-
-      version_defaults[0.8r] = {
-      }
-
       AttrVersionDefaults.compile_version_defaults!
 
       if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
