@@ -482,8 +482,6 @@ module Net
 
       @global = default.new
 
-      version_defaults[:default] = default.send(:defaults_hash)
-
       version_defaults[0r] = {
         sasl_ir: false,
         responses_without_block: :silence_deprecation_warning,
