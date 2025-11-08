@@ -484,4 +484,33 @@ class ConfigTest < Net::IMAP::TestCase
     )
   end
 
+  test "#pretty_print" do
+    default_attrs = Config.global.to_h.map { "%s=%p" % _1 }
+    width = 80
+    output = String.new
+    PP.pp Config.global, output, width
+    assert_equal(<<~PP, output)
+      #<#{Config}.global
+        inherits from #{Config}.default
+          #{default_attrs.join("\n    ")}>
+    PP
+
+    Config.global.debug = true
+    config = Config[0.5].new(enforce_logindisabled: :when_capabilities_cached)
+    default_attrs = Config[0.5].to_h.except(:debug, :enforce_logindisabled)
+      .map { "%s=%p" % _1 }
+
+    output = String.new
+    PP.pp config, output, width
+    assert_equal(<<~PP, output)
+      #<#{Config}:0x#{config_id(config)}
+        enforce_logindisabled=:when_capabilities_cached
+        inherits from #{Config}[0.5]
+          #{default_attrs.join("\n    ")}
+          inherits from #{Config}.global
+            debug=true
+            inherits from #{Config}.default
+              (overridden)>
+    PP
+  end
 end

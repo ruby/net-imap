@@ -523,11 +523,41 @@ module Net
       #     #      inherits from Net::IMAP::Config.global debug=true
       #     #      inherits from Net::IMAP::Config.default>"
       #
+      # Use +pp+ (see #pretty_print) to inspect _all_ config attributes,
+      # including default values.
+      #
       # Use #to_h to inspect all config attributes ignoring inheritance.
       def inspect;
         "#<#{inspect_recursive}>"
       end
       alias to_s inspect
+
+      # Used by PP[https://docs.ruby-lang.org/en/master/PP.html] to create a
+      # string representation of all config attributes and the inheritance
+      # chain.  Inherited attributes are listed with the ancestor config from
+      # which they are inherited.
+      #
+      #     pp Config.new[0.4].new(open_timeout: 10, idle_response_timeout: 10)
+      #     # #<Net::IMAP::Config:0x0000745871125410
+      #     #   open_timeout=10
+      #     #   idle_response_timeout=10
+      #     #   inherits from Net::IMAP::Config[0.4]
+      #     #     responses_without_block=:silence_deprecation_warning
+      #     #     max_response_size=nil
+      #     #     sasl_ir=true
+      #     #     enforce_logindisabled=false
+      #     #     parser_use_deprecated_uidplus_data=true
+      #     #     parser_max_deprecated_uidplus_data_size=1000
+      #     #     inherits from Net::IMAP::Config.global
+      #     #       inherits from Net::IMAP::Config.default
+      #     #         debug=false>
+      #
+      # Related: #inspect, #to_h.
+      def pretty_print(pp)
+        pp.group(2, "#<", ">") do
+          pretty_print_recursive(pp)
+        end
+      end
 
       # :stopdoc:
 
@@ -564,6 +594,26 @@ module Net
           strings << "inherits from #{parent.inspect_recursive(inherited_overrides)}"
         end
         strings.join " "
+      end
+
+      def pretty_print_recursive(pp, attrs = AttrAccessors.struct.members)
+        pp.text name
+        assigned = assigned_attrs_hash(attrs)
+        pp.breakable
+        pp.seplist(assigned, ->{pp.breakable}) do |key, val|
+          pp.text key.to_s
+          pp.text "="
+          pp.pp val
+        end
+        if parent
+          pp.breakable if assigned.any?
+          pp.nest(2) do
+            pp.text "inherits from "
+            parent.pretty_print_recursive(pp, attrs - assigned.keys)
+          end
+        elsif assigned.empty?
+          pp.text "(overridden)"
+        end
       end
 
       def assigned_attrs_hash(attrs)
