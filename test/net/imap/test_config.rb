@@ -440,4 +440,48 @@ class ConfigTest < Net::IMAP::TestCase
     assert_raise(TypeError) do config.max_response_size = :invalid  end
   end
 
+  def config_id(config)
+    Kernel.instance_method(:to_s).bind_call(config).match(/0x(\h*)>/)[1]
+  end
+
+  test "#inspect" do
+    assert_equal(
+      "#<#{Config}.global inherits from #{Config}.default>",
+      Config.global.inspect
+    )
+
+    Config.global.debug = true
+    assert_equal(
+      "#<#{Config}.global debug=true inherits from #{Config}.default>",
+      Config.global.inspect
+    )
+
+    config = Config.global.new(sasl_ir: true)
+    id = config_id(config)
+    assert_equal(
+      "#<#{Config}:0x#{id} sasl_ir=true " \
+      "inherits from #{Config}.global debug=true " \
+      "inherits from #{Config}.default>",
+      config.inspect
+    )
+
+    Config.global.reset(:debug)
+    nested = Config[0.4].new(sasl_ir: true).new(open_timeout: 60)
+    assert_equal(
+      "#<#{Config}:0x#{config_id(nested)} open_timeout=60 " \
+      "inherits from #{Config}:0x#{config_id(nested.parent)} sasl_ir=true " \
+      "inherits from #{Config}[0.4] " \
+      "inherits from #{Config}.global " \
+      "inherits from #{Config}.default>",
+      nested.inspect
+    )
+
+    config_attrs = Config::AttrAccessors.struct.members
+      .map { / #{_1}=.+/.source }.join
+    assert_match(
+      /#<#{Config}.default#{config_attrs}>/,
+      Config.default.inspect
+    )
+  end
+
 end

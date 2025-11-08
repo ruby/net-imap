@@ -485,7 +485,91 @@ module Net
       # Returns all config attributes in a hash.
       def to_h; data.members.to_h { [_1, send(_1)] } end
 
+      # Returns a string representation of overriden config attributes and the
+      # inheritance chain.
+      #
+      # Attributes overridden by ancestors are also inspected, recursively.
+      # Attributes that are inherited from default configs are not shown (see
+      # Config@Versioned+defaults and Config@Named+defaults).
+      #
+      #     # (Line breaks have been added to the example output for legibility.)
+      #
+      #     Net::IMAP::Config.new(0.4)
+      #       .new(open_timeout: 10, enforce_logindisabled: true)
+      #       .inspect
+      #     #=> "#<Net::IMAP::Config:0x0000745871125410 open_timeout=10 enforce_logindisabled=true
+      #     #      inherits from Net::IMAP::Config[0.4]
+      #     #      inherits from Net::IMAP::Config.global
+      #     #      inherits from Net::IMAP::Config.default>"
+      #
+      # Non-default attributes are listed after the ancestor config from which
+      # they are inherited.
+      #
+      #     # (Line breaks have been added to the example output for legibility.)
+      #
+      #     config = Net::IMAP::Config.global
+      #       .new(open_timeout: 10, idle_response_timeout: 2)
+      #       .new(enforce_logindisabled: :when_capabilities_cached, sasl_ir: false)
+      #     config.inspect
+      #     #=> "#<Net::IMAP::Config:0x00007ce2a1e20e40 sasl_ir=false enforce_logindisabled=:when_capabilities_cached
+      #     #      inherits from Net::IMAP::Config:0x00007ce2a1e20f80 open_timeout=10 idle_response_timeout=2
+      #     #      inherits from Net::IMAP::Config.global
+      #     #      inherits from Net::IMAP::Config.default>"
+      #
+      #     Net::IMAP.debug = true
+      #     config.inspect
+      #     #=> "#<Net::IMAP::Config:0x00007ce2a1e20e40 sasl_ir=false enforce_logindisabled=:when_capabilities_cached
+      #     #      inherits from Net::IMAP::Config:0x00007ce2a1e20f80 open_timeout=10 idle_response_timeout=2
+      #     #      inherits from Net::IMAP::Config.global debug=true
+      #     #      inherits from Net::IMAP::Config.default>"
+      #
+      # Use #to_h to inspect all config attributes ignoring inheritance.
+      def inspect;
+        "#<#{inspect_recursive}>"
+      end
+      alias to_s inspect
+
+      # :stopdoc:
+
       protected
+
+      def named_default?
+        equal?(Config.default) ||
+          AttrVersionDefaults::VERSIONS.any? { equal? Config[_1] }
+      end
+
+      def name
+        if    equal? Config.default   then "#{Config}.default"
+        elsif equal? Config.global    then "#{Config}.global"
+        elsif equal? Config[0.0r]     then "#{Config}[:original]"
+        elsif equal? Config[:default] then "#{Config}[:default]"
+        elsif (v = AttrVersionDefaults::VERSIONS.find { equal? Config[_1] })
+          "%s[%0.1f]" % [Config, v]
+        else
+          Kernel.instance_method(:to_s).bind_call(self).delete("<#>")
+        end
+      end
+
+      def inspect_recursive(attrs = AttrAccessors.struct.members)
+        strings  = [name]
+        assigned = assigned_attrs_hash(attrs)
+        strings.concat assigned.map { "%s=%p" % _1 }
+        if parent
+          if parent.equal?(Config.default)
+            inherited_overrides = []
+          elsif parent
+            inherited_overrides = attrs - assigned.keys
+            inherited_overrides &= DEFAULT_TO_INHERIT if parent.named_default?
+          end
+          strings << "inherits from #{parent.inspect_recursive(inherited_overrides)}"
+        end
+        strings.join " "
+      end
+
+      def assigned_attrs_hash(attrs)
+        own_attrs = attrs.reject { inherited?(_1) }
+        own_attrs.to_h { [_1, data[_1]] }
+      end
 
       def defaults_hash
         to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
