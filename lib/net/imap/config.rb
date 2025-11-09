@@ -3,6 +3,7 @@
 require_relative "config/attr_accessors"
 require_relative "config/attr_inheritance"
 require_relative "config/attr_type_coercion"
+require_relative "config/attr_version_defaults"
 
 module Net
   class IMAP
@@ -141,15 +142,7 @@ module Net
       #     Net::IMAP::Config[0.5]       == Net::IMAP::Config[0.5r]     # => true
       #     Net::IMAP::Config["current"] == Net::IMAP::Config[:current] # => true
       #     Net::IMAP::Config["0.5.6"]   == Net::IMAP::Config[0.5r]     # => true
-      def self.version_defaults; @version_defaults end
-      @version_defaults = Hash.new {|h, k|
-        # NOTE: String responds to both so the order is significant.
-        # And ignore non-numeric conversion to zero, because: "wat!?".to_r == 0
-        (h.fetch(k.to_r, nil) || h.fetch(k.to_f, nil) if k.is_a?(Numeric)) ||
-          (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
-          (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
-          (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
-      }
+      def self.version_defaults; AttrVersionDefaults.version_defaults end
 
       # :call-seq:
       #  Net::IMAP::Config[number] -> versioned config
@@ -189,6 +182,7 @@ module Net
       include AttrAccessors
       include AttrInheritance
       include AttrTypeCoercion
+      extend  AttrVersionDefaults
 
       # The debug mode (boolean).  The default value is +false+.
       #
@@ -200,7 +194,7 @@ module Net
       #
       # *NOTE:* Versioned default configs inherit #debug from Config.global, and
       # #load_defaults will not override #debug.
-      attr_accessor :debug, type: :boolean
+      attr_accessor :debug, type: :boolean, default: false
 
       # method: debug?
       # :call-seq: debug? -> boolean
@@ -218,7 +212,7 @@ module Net
       # See Net::IMAP.new and Net::IMAP#starttls.
       #
       # The default value is +30+ seconds.
-      attr_accessor :open_timeout, type: Integer
+      attr_accessor :open_timeout, type: Integer, default: 30
 
       # Seconds to wait until an IDLE response is received, after
       # the client asks to leave the IDLE state.
@@ -226,7 +220,7 @@ module Net
       # See Net::IMAP#idle and Net::IMAP#idle_done.
       #
       # The default value is +5+ seconds.
-      attr_accessor :idle_response_timeout, type: Integer
+      attr_accessor :idle_response_timeout, type: Integer, default: 5
 
       # Whether to use the +SASL-IR+ extension when the server and \SASL
       # mechanism both support it.  Can be overridden by the +sasl_ir+ keyword
@@ -242,7 +236,10 @@ module Net
       #
       # [+true+ <em>(default since +v0.4+)</em>]
       #   Use +SASL-IR+ when it is supported by the server and the mechanism.
-      attr_accessor :sasl_ir, type: :boolean
+      attr_accessor :sasl_ir, type: :boolean, defaults: {
+        0.0r => false,
+        0.4r => true,
+      }
 
       # Controls the behavior of Net::IMAP#login when the +LOGINDISABLED+
       # capability is present.  When enforced, Net::IMAP will raise a
@@ -266,7 +263,10 @@ module Net
       #
       attr_accessor :enforce_logindisabled, type: Enum[
         false, :when_capabilities_cached, true
-      ]
+      ], defaults: {
+        0.0r => false,
+        0.5r => true,
+      }
 
       # The maximum allowed server response size.  When +nil+, there is no limit
       # on response size.
@@ -300,7 +300,10 @@ module Net
       #
       # * original: +nil+ <em>(no limit)</em>
       # * +0.5+: 512 MiB
-      attr_accessor :max_response_size, type: Integer?
+      attr_accessor :max_response_size, type: Integer?, defaults: {
+        0.0r => nil,
+        0.5r => 512 << 20, # 512 MiB
+      }
 
       # Controls the behavior of Net::IMAP#responses when called without any
       # arguments (+type+ or +block+).
@@ -330,7 +333,11 @@ module Net
       # Note: #responses_without_args is an alias for #responses_without_block.
       attr_accessor :responses_without_block, type: Enum[
         :silence_deprecation_warning, :warn, :frozen_dup, :raise,
-      ]
+      ], defaults: {
+        0.0r => :silence_deprecation_warning,
+        0.5r => :warn,
+        0.6r => :frozen_dup,
+      }
 
       alias responses_without_args  responses_without_block  # :nodoc:
       alias responses_without_args= responses_without_block= # :nodoc:
@@ -375,7 +382,11 @@ module Net
       #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
       attr_accessor :parser_use_deprecated_uidplus_data, type: Enum[
         true, :up_to_max_size, false
-      ]
+      ], defaults: {
+        0.0r => true,
+        0.5r => :up_to_max_size,
+        0.6r => false,
+      }
 
       # The maximum +uid-set+ size that ResponseParser will parse into
       # deprecated UIDPlusData.  This limit only applies when
@@ -399,7 +410,13 @@ module Net
       # * +0.5+: <tt>100</tt>
       # * +0.6+: <tt>0</tt>
       #
-      attr_accessor :parser_max_deprecated_uidplus_data_size, type: Integer
+      attr_accessor :parser_max_deprecated_uidplus_data_size, type: Integer,
+        defaults: {
+          0.0r => 10_000,
+          0.4r =>  1_000,
+          0.5r =>    100,
+          0.6r =>      0,
+        }
 
       # Creates a new config object and initialize its attribute with +attrs+.
       #
@@ -474,82 +491,10 @@ module Net
         to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
       end
 
-      @default = new(
-        debug: false,
-        open_timeout: 30,
-        idle_response_timeout: 5,
-        sasl_ir: true,
-        enforce_logindisabled: true,
-        max_response_size: 512 << 20, # 512 MiB
-        responses_without_block: :frozen_dup,
-        parser_use_deprecated_uidplus_data: false,
-        parser_max_deprecated_uidplus_data_size: 0,
-      ).freeze
+      @default = AttrVersionDefaults.compile_default!
+      @global  = default.new
+      AttrVersionDefaults.compile_version_defaults!
 
-      @global = default.new
-
-      version_defaults[:default] = Config[default.send(:defaults_hash)]
-
-      version_defaults[0r] = Config[:default].dup.update(
-        sasl_ir: false,
-        responses_without_block: :silence_deprecation_warning,
-        enforce_logindisabled: false,
-        max_response_size: nil,
-        parser_use_deprecated_uidplus_data: true,
-        parser_max_deprecated_uidplus_data_size: 10_000,
-      ).freeze
-      version_defaults[0.0r] = Config[0r]
-      version_defaults[0.1r] = Config[0r]
-      version_defaults[0.2r] = Config[0r]
-      version_defaults[0.3r] = Config[0r]
-
-      version_defaults[0.4r] = Config[0.3r].dup.update(
-        sasl_ir: true,
-        parser_max_deprecated_uidplus_data_size: 1000,
-      ).freeze
-
-      version_defaults[0.5r] = Config[0.4r].dup.update(
-        enforce_logindisabled: true,
-        max_response_size: 512 << 20, # 512 MiB
-        responses_without_block: :warn,
-        parser_use_deprecated_uidplus_data: :up_to_max_size,
-        parser_max_deprecated_uidplus_data_size: 100,
-      ).freeze
-
-      version_defaults[0.6r] = Config[0.5r].dup.update(
-        responses_without_block: :frozen_dup,
-        parser_use_deprecated_uidplus_data: false,
-        parser_max_deprecated_uidplus_data_size: 0,
-      ).freeze
-
-      version_defaults[0.7r] = Config[0.6r].dup.update(
-      ).freeze
-
-      version_defaults[0.8r] = Config[0.7r].dup.update(
-      ).freeze
-
-      # Safe conversions one way only:
-      #   0.6r.to_f == 0.6  # => true
-      #   0.6 .to_r == 0.6r # => false
-      version_defaults.to_a.each do |k, v|
-        next unless k in Rational
-        version_defaults[k.to_f] = v
-      end
-
-      current = VERSION.to_r
-      version_defaults[:original] = Config[0]
-      version_defaults[:current]  = Config[current]
-      version_defaults[:next]     = Config[current + 0.1r]
-      version_defaults[:future]   = Config[current + 0.2r]
-
-      version_defaults.freeze
-
-      if ($VERBOSE || $DEBUG) && self[:current].to_h != self[:default].to_h
-        warn "Misconfigured Net::IMAP::Config[:current] => %p,\n" \
-             " not equal to Net::IMAP::Config[:default] => %p" % [
-                self[:current].to_h, self[:default].to_h
-              ]
-      end
     end
   end
 end

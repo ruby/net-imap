@@ -7,7 +7,7 @@ class ConfigTest < Net::IMAP::TestCase
   Config = Net::IMAP::Config
   THIS_VERSION   = Net::IMAP::VERSION.to_f
   NEXT_VERSION   = THIS_VERSION + 0.1
-  FUTURE_VERSION = THIS_VERSION + 0.2
+  FUTURE_VERSION = 1.0
 
   setup do
     Config.global.reset
@@ -72,6 +72,7 @@ class ConfigTest < Net::IMAP::TestCase
   test ".default" do
     default = Config.default
     assert default.equal?(Config.default)
+    assert_nil default.parent
     assert default.is_a?(Config)
     assert default.frozen?
     refute default.debug?
@@ -184,8 +185,7 @@ class ConfigTest < Net::IMAP::TestCase
     assert_raise(RangeError) do Config[0.01] end
     assert_raise(RangeError) do Config[0.11] end
     assert_raise(RangeError) do Config[0.111] end
-    assert_raise(RangeError) do Config[0.9] end
-    assert_raise(RangeError) do Config[1] end
+    assert_raise(RangeError) do Config[1.1] end
   end
 
   test ".[] key errors" do
