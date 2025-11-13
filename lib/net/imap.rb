@@ -1120,6 +1120,31 @@ module Net
       start_imap_connection
     end
 
+    # Returns a string representation of +self+, showing basic client state
+    # information.
+    #
+    #   imap = Net::IMAP.new(hostname, ssl: true)
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS not_authenticated>"
+    #
+    #   imap.authenticate(:oauthbearer, "user", token)
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS authenticated>"
+    #
+    #   imap.select("INBOX")
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS selected>"
+    #
+    #   imap.logout
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS logout>"
+    #
+    def inspect
+      tls_state = tls_verified? ? "TLS" :
+        ssl_ctx ? "TLS (NOT VERIFIED)" :
+        "PLAINTEXT"
+      conn_state = disconnected? ? "disconnected" : connection_state.to_sym
+      "#<%s:0x%08x %s:%s %s %s>" % [
+        self.class.name, __id__, host, port, tls_state, conn_state
+      ]
+    end
+
     # Returns true after the TLS negotiation has completed and the remote
     # hostname has been verified.  Returns false when TLS has been established
     # but peer verification was disabled.
