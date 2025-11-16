@@ -59,10 +59,6 @@ module Net
         end
 
         def self.compile_version_defaults!
-          # Temporarily assign Config.default, enabling #load_defaults(:default)
-          version_defaults[:default] = Config.default
-          # Use #load_defaults so some attributes are inherited from global.
-          version_defaults[:default] = Config.new.load_defaults(:default).freeze
           version_defaults[0.0r]     = Config[version_defaults.fetch(0.0r)]
 
           VERSIONS.each_cons(2) do |prior, version|
@@ -81,6 +77,7 @@ module Net
 
           version_defaults[:original] = Config[0.0r]
           version_defaults[:current]  = Config[CURRENT_VERSION]
+          version_defaults[:default]  = Config[CURRENT_VERSION]
           version_defaults[:next]     = Config[NEXT_VERSION]
           version_defaults[:future]   = Config[FUTURE_VERSION]
 

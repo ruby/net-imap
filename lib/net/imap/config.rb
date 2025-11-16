@@ -578,7 +578,6 @@ module Net
         if    equal? Config.default   then "#{Config}.default"
         elsif equal? Config.global    then "#{Config}.global"
         elsif equal? Config[0.0r]     then "#{Config}[:original]"
-        elsif equal? Config[:default] then "#{Config}[:default]"
         elsif (v = AttrVersionDefaults::VERSIONS.find { equal? Config[_1] })
           "%s[%0.1f]" % [Config, v]
         else
