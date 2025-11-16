@@ -54,9 +54,22 @@ module Net
         # Creates a new config, which inherits from +self+.
         def new(**attrs) self.class.new(self, **attrs) end
 
+        # :call-seq:
+        #   inherited?(attr)   -> true or false
+        #   inherited?(*attrs) -> true or false
+        #   inherited?         -> true or false
+        #
         # Returns +true+ if +attr+ is inherited from #parent and not overridden
         # by this config.
-        def inherited?(attr) data[attr] == INHERITED end
+        #
+        # When multiple +attrs+ are given, returns +true+ if *all* of them are
+        # inherited, or +false+ if any of them are overriden.  When no +attrs+
+        # are given, returns +true+ if *all* attributes are inherited, or
+        # +false+ if any attribute is overriden.
+        def inherited?(*attrs)
+          attrs = data.members if attrs.empty?
+          attrs.all? { data[_1] == INHERITED }
+        end
 
         # :call-seq:
         #   reset -> self
