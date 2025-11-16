@@ -574,13 +574,15 @@ module Net
         elsif equal? Config[0.0r]     then "#{Config}[:original]"
         elsif (v = AttrVersionDefaults::VERSIONS.find { equal? Config[_1] })
           "%s[%0.1f]" % [Config, v]
-        else
-          Kernel.instance_method(:to_s).bind_call(self).delete("<#>")
         end
       end
 
+      def inspect_name
+        name || Kernel.instance_method(:to_s).bind_call(self).delete("<#>")
+      end
+
       def inspect_recursive(attrs = AttrAccessors.struct.members)
-        strings  = [name]
+        strings  = [inspect_name]
         assigned = assigned_attrs_hash(attrs)
         strings.concat assigned.map { "%s=%p" % _1 }
         if parent
@@ -596,7 +598,7 @@ module Net
       end
 
       def pretty_print_recursive(pp, attrs = AttrAccessors.struct.members)
-        pp.text name
+        pp.text inspect_name
         assigned = assigned_attrs_hash(attrs)
         pp.breakable
         pp.seplist(assigned, ->{pp.breakable}) do |key, val|
