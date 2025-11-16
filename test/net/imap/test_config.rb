@@ -308,21 +308,41 @@ class ConfigTest < Net::IMAP::TestCase
     assert_equal 1, copy.open_timeout
   end
 
-  test "#inherited? and #reset(attr)" do
+  test "#inherited? and #reset" do
     base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
     child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10
+    refute child.inherited?
     refute child.inherited?(:idle_response_timeout)
+    refute child.inherited?(:idle_response_timeout, :open_timeout)
+    refute child.inherited?(:sasl_ir, :open_timeout)
+    assert child.inherited?(:sasl_ir, :max_response_size)
+    assert child.inherited?(:sasl_ir)
+
     assert_equal 10, child.reset(:idle_response_timeout)
-    assert child.inherited?(:idle_response_timeout)
     assert_equal 15, child.idle_response_timeout
+    refute child.inherited?
+    assert child.inherited?(:idle_response_timeout)
+    refute child.inherited?(:idle_response_timeout, :open_timeout)
+    refute child.inherited?(:sasl_ir, :open_timeout)
+    assert child.inherited?(:sasl_ir, :max_response_size)
+    assert child.inherited?(:sasl_ir)
     refute child.inherited?(:open_timeout)
     refute child.inherited?(:debug)
+
     child.debug = false
+    refute child.inherited?
     refute child.inherited?(:debug)
+
     assert_equal false, child.reset(:debug)
+    refute child.inherited?
     assert child.inherited?(:debug)
     assert_equal false, child.debug
+
     assert_equal nil, child.reset(:debug)
+
+    assert_same child, child.reset
+    assert child.inherited?
+    assert child.inherited?(:debug, :idle_response_timeout, :open_timeout)
   end
 
   test "#reset all attributes" do
