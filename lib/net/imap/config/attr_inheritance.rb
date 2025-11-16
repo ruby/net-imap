@@ -66,9 +66,29 @@ module Net
         # inherited, or +false+ if any of them are overriden.  When no +attrs+
         # are given, returns +true+ if *all* attributes are inherited, or
         # +false+ if any attribute is overriden.
+        #
+        # Related: #overrides?
         def inherited?(*attrs)
           attrs = data.members if attrs.empty?
           attrs.all? { data[_1] == INHERITED }
+        end
+
+        # :call-seq:
+        #   overrides?(attr)   -> true or false
+        #   overrides?(*attrs) -> true or false
+        #   overrides?         -> true or false
+        #
+        # Returns +true+ if +attr+ is defined on this config and not inherited
+        # from #parent.
+        #
+        # When multiple +attrs+ are given, returns +true+ if
+        # *any* of them are defined on +self+.  When no +attrs+ are given,
+        # returns +true+ if *any* attribute is overriden.
+        #
+        # Related: #inherited?
+        def overrides?(*attrs)
+          attrs = data.members if attrs.empty?
+          attrs.any? { data[_1] != INHERITED }
         end
 
         # :call-seq:
