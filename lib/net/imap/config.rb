@@ -592,7 +592,7 @@ module Net
         if parent
           if parent.equal?(Config.default)
             inherited_overrides = []
-          elsif parent
+          else
             inherited_overrides = attrs - assigned.keys
             inherited_overrides &= DEFAULT_TO_INHERIT if parent.named_default?
           end
