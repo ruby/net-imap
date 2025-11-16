@@ -563,6 +563,10 @@ module Net
 
       protected
 
+      def named?
+        equal?(Config.global) || named_default?
+      end
+
       def named_default?
         equal?(Config.default) ||
           AttrVersionDefaults::VERSIONS.any? { equal? Config[_1] }
