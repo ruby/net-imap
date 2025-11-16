@@ -349,6 +349,33 @@ class ConfigTest < Net::IMAP::TestCase
     assert child.inherited?(:debug, :idle_response_timeout, :open_timeout)
   end
 
+  test "#overrides?" do
+    base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
+    child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10
+    assert child.overrides?
+    assert child.overrides?(:idle_response_timeout)
+    assert child.overrides?(:idle_response_timeout, :open_timeout)
+    assert child.overrides?(:sasl_ir, :open_timeout)
+    refute child.overrides?(:sasl_ir, :max_response_size)
+    refute child.overrides?(:sasl_ir)
+
+    child.reset(:idle_response_timeout)
+    assert child.overrides?
+    refute child.overrides?(:idle_response_timeout)
+    assert child.overrides?(:idle_response_timeout, :open_timeout)
+    assert child.overrides?(:sasl_ir, :open_timeout)
+    refute child.overrides?(:sasl_ir, :max_response_size)
+    refute child.overrides?(:sasl_ir)
+
+    child.reset
+    refute child.overrides?
+    refute child.overrides?(:idle_response_timeout)
+    refute child.overrides?(:idle_response_timeout, :open_timeout)
+    refute child.overrides?(:sasl_ir, :open_timeout)
+    refute child.overrides?(:sasl_ir, :max_response_size)
+    refute child.overrides?(:sasl_ir)
+  end
+
   test "#reset all attributes" do
     base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
     child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10
