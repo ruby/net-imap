@@ -7,12 +7,12 @@ require_relative "fake_server"
 class IMAPInspectTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
-  def format_inspect(client, details)
+  def format_inspect(client, details, *args)
     "#<Net::IMAP:0x%s %s:%s %s>" % [
       "%08x" % client.__id__, # NOTE: this is different from `super`
       client.host,
       client.port,
-      details,
+      format(details, *args),
     ]
   end
 
@@ -63,6 +63,30 @@ class IMAPInspectTest < Net::IMAP::TestCase
       imap.disconnect
       assert_equal(format_inspect(imap, "TLS (NOT VERIFIED) disconnected"),
                    imap.inspect)
+    end
+  end
+
+  def config_id(config)
+    Kernel.instance_method(:to_s).bind_call(config).match(/0x(\h*)>/)[1]
+  end
+
+  test "#inspect with config overrides" do
+    run_fake_server_in_thread do |server|
+      with_client("localhost", port: server.port, config: 0.5) do |client|
+        assert_equal(
+          format_inspect(
+            client, "PLAINTEXT authenticated config=#<%s:0x%s inherits from %s>",
+            Net::IMAP::Config, config_id(client.config), "Net::IMAP::Config[0.5]"
+          ),
+          client.inspect
+        )
+        client.config.sasl_ir = true
+        assert_equal(
+          format_inspect(client, "PLAINTEXT authenticated config=%p",
+                         client.config),
+          client.inspect
+        )
+      end
     end
   end
 

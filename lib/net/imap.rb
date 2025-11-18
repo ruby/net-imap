@@ -1139,9 +1139,13 @@ module Net
       tls_state = tls_verified? ? "TLS" :
         ssl_ctx ? "TLS (NOT VERIFIED)" :
         "PLAINTEXT"
-      "#<%s:0x%08x %s:%s %s %s>" % [
+      imap_state = disconnected? ? "disconnected" : connection_state.to_sym
+      if config.overrides? || !config.parent.equal?(Config.global)
+        special_config = format " config=%p", config
+      end
+      "#<%s:0x%08x %s:%s %s %s%s>" % [
         self.class.name, __id__, host, port,
-        tls_state, disconnected? ? "disconnected" : connection_state.to_sym
+        tls_state, imap_state, special_config
       ]
     end
 
