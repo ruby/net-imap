@@ -349,6 +349,56 @@ class ConfigTest < Net::IMAP::TestCase
     assert child.inherited?(:debug, :idle_response_timeout, :open_timeout)
   end
 
+  test "#inherits_defaults?" do
+    assert_same true, Config.default.inherits_defaults?
+    assert_same true, Config.default.inherits_defaults?(:sasl_ir, :open_timeout)
+
+    assert_equal true, Config.global.inherits_defaults?
+    Config.version_defaults.each do |name, config|
+      version = config.inherits_defaults?
+      assert_kind_of Rational, version
+      assert_same Config[version], config
+      assert_same version, config.inherits_defaults?(:sasl_ir, :open_timeout)
+    end
+
+    Config.global.debug = false
+    assert_equal nil,  Config.global.inherits_defaults?
+    assert_equal true, Config.global.inherits_defaults?(:sasl_ir, :open_timeout)
+    Config.version_defaults.each do |name, config|
+      assert_equal nil, config.inherits_defaults?
+      version = config.inherits_defaults?(:sasl_ir, :open_timeout)
+      assert_kind_of Rational, version
+      assert_same Config[version], config
+    end
+
+    config = Config.new 0.5
+    assert_equal nil,  config.inherits_defaults?
+    Config.global.reset
+    assert_equal 0.5r, config.inherits_defaults?
+
+    config.debug = false
+    assert_equal false, config.inherits_defaults?
+    assert_equal 0.5r,  config.inherits_defaults?(:sasl_ir, :open_timeout)
+
+    child = config.new debug: true, sasl_ir: true
+    assert_equal false, child.inherits_defaults?
+    assert_equal false, child.inherits_defaults?(:sasl_ir, :open_timeout)
+    assert_equal 0.5r,  child.inherits_defaults?(:open_timeout)
+
+    Config.global.sasl_ir = true
+    Config.global.open_timeout = 111
+    # inherits defaults from 0.5
+    assert_equal false, config.inherits_defaults?
+    assert_equal 0.5r,  config.inherits_defaults?(:sasl_ir, :open_timeout)
+    config.reset
+    assert_equal 0.5r, config.inherits_defaults?
+    # inherits overrides from global
+    config = Config.new
+    assert_equal nil,  config.inherits_defaults?
+    assert_equal nil,  config.inherits_defaults?(:sasl_ir, :open_timeout)
+    assert_equal true, config.inherits_defaults?(:debug)
+  end
+
   test "#overrides?" do
     base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
     child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10
