@@ -74,6 +74,36 @@ module Net
         end
 
         # :call-seq:
+        #   inherits_defaults?(*attrs) -> true | Rational | nil | false
+        #
+        # Returns whether all +attrs+ are inherited from a default config.
+        # When no +attrs+ are given, returns whether *all* attributes are
+        # inherited from a default config.
+        #
+        # Returns +true+ when all attributes inherit from Config.default, the
+        # version number (as a Rational) when all attributes inherit from a
+        # versioned default (see Config@Versioned+defaults), +nil+ if any
+        # attributes inherit from Config.global overrides (but not from
+        # non-global ancestors), or +false+ when any attributes have been
+        # overridden by +self+ or an ancestor (besides global or default
+        # configs),
+        #
+        # Related: #overrides?
+        def inherits_defaults?(*attrs)
+          if equal?(Config.default)
+            true
+          elsif equal?(Config.global)
+            true if inherited?(*attrs)
+          elsif (v = AttrVersionDefaults::VERSIONS.find { equal? Config[_1] })
+            attrs  = DEFAULT_TO_INHERIT if attrs.empty?
+            attrs &= DEFAULT_TO_INHERIT
+            (attrs.empty? || parent.inherits_defaults?(*attrs)) && v
+          else
+            inherited?(*attrs) && parent.inherits_defaults?(*attrs)
+          end
+        end
+
+        # :call-seq:
         #   overrides?(attr)   -> true or false
         #   overrides?(*attrs) -> true or false
         #   overrides?         -> true or false
