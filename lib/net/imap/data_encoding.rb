@@ -157,30 +157,28 @@ module Net
     module NumValidator # :nodoc
       module_function
 
-      # Check is passed argument valid 'number' in RFC 3501 terminology
+      # Check if argument is a valid 'number' according to RFC 3501
+      #     number          = 1*DIGIT
+      #                        ; Unsigned 32-bit integer
+      #                        ; (0 <= n < 4,294,967,296)
       def valid_number?(num)
-        # [RFC 3501]
-        # number          = 1*DIGIT
-        #                    ; Unsigned 32-bit integer
-        #                    ; (0 <= n < 4,294,967,296)
         0 <= num && num <= 0xffff_ffff
       end
 
-      # Check is passed argument valid 'nz_number' in RFC 3501 terminology
+      # Check if argument is a valid 'nz-number' according to RFC 3501
+      #     nz-number       = digit-nz *DIGIT
+      #                        ; Non-zero unsigned 32-bit integer
+      #                        ; (0 < n < 4,294,967,296)
       def valid_nz_number?(num)
-        # [RFC 3501]
-        # nz-number       = digit-nz *DIGIT
-        #                    ; Non-zero unsigned 32-bit integer
-        #                    ; (0 < n < 4,294,967,296)
         0 < num && num <= 0xffff_ffff
       end
 
-      # Check is passed argument valid 'mod_sequence_value' in RFC 4551 terminology
+      # Check if argument is a valid 'mod-sequence-value' according to RFC 4551
+      #     mod-sequence-value  = 1*DIGIT
+      #                            ; Positive unsigned 64-bit integer
+      #                            ; (mod-sequence)
+      #                            ; (1 <= n < 18,446,744,073,709,551,615)
       def valid_mod_sequence_value?(num)
-        # mod-sequence-value  = 1*DIGIT
-        #                        ; Positive unsigned 64-bit integer
-        #                        ; (mod-sequence)
-        #                        ; (1 <= n < 18,446,744,073,709,551,615)
         1 <= num && num < 0xffff_ffff_ffff_ffff
       end
 
@@ -192,7 +190,7 @@ module Net
         raise DataFormatError, msg
       end
 
-      # Ensure argument is 'nz_number' or raise DataFormatError
+      # Ensure argument is 'nz-number' or raise DataFormatError
       def ensure_nz_number(num)
         return num if valid_nz_number?(num)
 
@@ -200,7 +198,7 @@ module Net
         raise DataFormatError, msg
       end
 
-      # Ensure argument is 'mod_sequence_value' or raise DataFormatError
+      # Ensure argument is 'mod-sequence-value' or raise DataFormatError
       def ensure_mod_sequence_value(num)
         return num if valid_mod_sequence_value?(num)
 
