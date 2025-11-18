@@ -507,19 +507,23 @@ class ConfigTest < Net::IMAP::TestCase
     id = config_id(config)
     assert_equal(
       "#<#{Config}:0x#{id} sasl_ir=true " \
-      "inherits from #{Config}.global debug=true " \
-      "inherits from #{Config}.default>",
+      "inherits from #{Config}.global debug=true>",
       config.inspect
     )
 
-    Config.global.reset(:debug)
     nested = Config[0.4].new(sasl_ir: true).new(open_timeout: 60)
     assert_equal(
       "#<#{Config}:0x#{config_id(nested)} open_timeout=60 " \
       "inherits from #{Config}:0x#{config_id(nested.parent)} sasl_ir=true " \
       "inherits from #{Config}[0.4] " \
-      "inherits from #{Config}.global " \
-      "inherits from #{Config}.default>",
+      "inherits from #{Config}.global debug=true>",
+      nested.inspect
+    )
+    Config.global.reset(:debug)
+    assert_equal(
+      "#<#{Config}:0x#{config_id(nested)} open_timeout=60 " \
+      "inherits from #{Config}:0x#{config_id(nested.parent)} sasl_ir=true " \
+      "inherits from #{Config}[0.4]>",
       nested.inspect
     )
 

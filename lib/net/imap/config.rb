@@ -488,40 +488,40 @@ module Net
       # Returns a string representation of overriden config attributes and the
       # inheritance chain.
       #
-      # Attributes overridden by ancestors are also inspected, recursively.
-      # Attributes that are inherited from default configs are not shown (see
-      # Config@Versioned+defaults and Config@Named+defaults).
+      # Overridden attributes are listed after the ancestor config from which
+      # they are inherited.  Attributes that are inherited from default configs
+      # are not shown (see Config@Versioned+defaults and Config@Named+defaults).
       #
       #     # (Line breaks have been added to the example output for legibility.)
       #
-      #     Net::IMAP::Config.new(0.4)
-      #       .new(open_timeout: 10, enforce_logindisabled: true)
+      #     Net::IMAP.debug = true
+      #     c = Net::IMAP::Config.new(sasl_ir: false)
+      #     c.inspect
+      #     #=> "#<Net::IMAP::Config:0x0000006f74caebd8 sasl_ir=false
+      #     #      inherits from Net::IMAP::Config.global debug=true>"
+      #
+      #     c2 = c.new(open_timeout: 10)
+      #     c2.inspect
+      #     #=> "#<Net::IMAP::Config:0x0000006f74d1b558 open_timeout=10
+      #     #      inherits from Net::IMAP::Config:0x0000006f74caebd8 sasl_ir=false
+      #     #      inherits from Net::IMAP::Config.global debug=true>"
+      #
+      # Ancestors of named configs are only shown when they have overrides which
+      # are inherited.
+      #
+      #     config = Net::IMAP::Config
+      #       .new(0.4, open_timeout: 10, sasl_ir: true)
       #       .inspect
-      #     #=> "#<Net::IMAP::Config:0x0000745871125410 open_timeout=10 enforce_logindisabled=true
-      #     #      inherits from Net::IMAP::Config[0.4]
-      #     #      inherits from Net::IMAP::Config.global
-      #     #      inherits from Net::IMAP::Config.default>"
-      #
-      # Non-default attributes are listed after the ancestor config from which
-      # they are inherited.
-      #
-      #     # (Line breaks have been added to the example output for legibility.)
-      #
-      #     config = Net::IMAP::Config.global
-      #       .new(open_timeout: 10, idle_response_timeout: 2)
-      #       .new(enforce_logindisabled: :when_capabilities_cached, sasl_ir: false)
-      #     config.inspect
-      #     #=> "#<Net::IMAP::Config:0x00007ce2a1e20e40 sasl_ir=false enforce_logindisabled=:when_capabilities_cached
-      #     #      inherits from Net::IMAP::Config:0x00007ce2a1e20f80 open_timeout=10 idle_response_timeout=2
-      #     #      inherits from Net::IMAP::Config.global
-      #     #      inherits from Net::IMAP::Config.default>"
+      #     #=> "#<Net::IMAP::Config:0x0000745871125410
+      #     #      open_timeout=10 sasl_ir=true
+      #     #      inherits from Net::IMAP::Config[0.4]>"
       #
       #     Net::IMAP.debug = true
       #     config.inspect
-      #     #=> "#<Net::IMAP::Config:0x00007ce2a1e20e40 sasl_ir=false enforce_logindisabled=:when_capabilities_cached
-      #     #      inherits from Net::IMAP::Config:0x00007ce2a1e20f80 open_timeout=10 idle_response_timeout=2
-      #     #      inherits from Net::IMAP::Config.global debug=true
-      #     #      inherits from Net::IMAP::Config.default>"
+      #     #=> "#<Net::IMAP::Config:0x0000745871125410
+      #     #      open_timeout=10 sasl_ir=true
+      #     #      inherits from Net::IMAP::Config[0.4]
+      #     #      inherits from Net::IMAP::Config.global debug=true>"
       #
       # Use +pp+ (see #pretty_print) to inspect _all_ config attributes,
       # including default values.
@@ -585,18 +585,21 @@ module Net
         name || Kernel.instance_method(:to_s).bind_call(self).delete("<#>")
       end
 
-      def inspect_recursive(attrs = AttrAccessors.struct.members)
+      def inspect_recursive(attrs = AttrAccessors.struct.members, nested: false)
         strings  = [inspect_name]
         assigned = assigned_attrs_hash(attrs)
         strings.concat assigned.map { "%s=%p" % _1 }
         if parent
           if parent.equal?(Config.default)
-            inherited_overrides = []
-          else
-            inherited_overrides = attrs - assigned.keys
-            inherited_overrides &= DEFAULT_TO_INHERIT if parent.named_default?
+            attrs = []
+          elsif parent.named_default?
+            attrs &= DEFAULT_TO_INHERIT
+            attrs -= assigned.keys
           end
-          strings << "inherits from #{parent.inspect_recursive(inherited_overrides)}"
+          if !nested || !named? || (attrs.any? && !parent.inherited?(*attrs))
+            pinspect = parent.inspect_recursive(attrs, nested: true)
+            strings << "inherits from #{pinspect}"
+          end
         end
         strings.join " "
       end
