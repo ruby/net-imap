@@ -332,7 +332,7 @@ module Net
     #   given maximum value and removed all members over that maximum.
     #
     # === Methods for Assigning
-    # These methods add or replace elements in +self+.
+    # These methods add or replace numbers in +self+.
     #
     # <i>Normalized (sorted and coalesced):</i>
     #
@@ -341,8 +341,10 @@ module Net
     # - #add (aliased as #<<): Adds a given element to the set; returns +self+.
     # - #add?: If the given element is not fully included the set, adds it and
     #   returns +self+; otherwise, returns +nil+.
-    # - #merge: Adds all members of the given sets into this set; returns +self+.
-    # - #complement!: Replaces the contents of the set with its own #complement.
+    # - #merge: In-place set #union.  Adds all members of the given sets into
+    #   this set; returns +self+.
+    # - #complement!: In-place set #complement.  Replaces the contents of this
+    #   set with its own #complement; returns +self+.
     #
     # <i>Order preserving:</i>
     #
@@ -355,7 +357,7 @@ module Net
     #   of a given object.
     #
     # === Methods for Deleting
-    # These methods remove elements from +self+, and update #string to be fully
+    # These methods remove numbers from +self+, and update #string to be fully
     # sorted and coalesced.
     #
     # - #clear: Removes all elements in the set; returns +self+.
@@ -363,10 +365,12 @@ module Net
     # - #delete?: If the given element is included in the set, removes it and
     #   returns it; otherwise, returns +nil+.
     # - #delete_at: Removes the number at a given offset.
+    # - #intersect!: In-place set #intersection.  Removes numbers that are not
+    #   in the given set; returns +self+.
     # - #slice!: Removes the number or consecutive numbers at a given offset or
     #   range of offsets.
-    # - #subtract: Removes all members of the given sets from this set; returns
-    #   +self+.
+    # - #subtract: In-place set #difference.  Removes all members of the given
+    #   sets from this set; returns +self+.
     # - #limit!: Replaces <tt>*</tt> with a given maximum value and removes all
     #   members over that maximum; returns +self+.
     #
@@ -873,9 +877,7 @@ module Net
       # * <tt>lhs - (lhs - rhs)</tt>
       # * <tt>lhs - (lhs ^ rhs)</tt>
       # * <tt>lhs ^ (lhs - rhs)</tt>
-      def &(other)
-        remain_frozen dup.subtract SequenceSet.new(other).complement!
-      end
+      def &(other) remain_frozen dup.intersect! other end
       alias intersection :&
 
       # :call-seq:
@@ -1069,8 +1071,8 @@ module Net
         deleted
       end
 
-      # Merges all of the elements that appear in any of the +sets+ into the
-      # set, and returns +self+.
+      # In-place set #union.  Merges all of the elements that appear in any of
+      # the +sets+ into this set, and returns +self+.
       #
       # The +sets+ may be any objects that would be accepted by ::new.
       #
@@ -1083,8 +1085,8 @@ module Net
         normalize!
       end
 
-      # Removes all of the elements that appear in any of the given +sets+ from
-      # the set, and returns +self+.
+      # In-place set #difference.  Removes all of the elements that appear in
+      # any of the given +sets+ from this set, and returns +self+.
       #
       # The +sets+ may be any objects that would be accepted by ::new.
       #
@@ -1595,8 +1597,9 @@ module Net
 
       # :call-seq: complement! -> self
       #
-      # Converts the SequenceSet to its own #complement.  It will contain all
-      # possible values _except_ for those currently in the set.
+      # In-place set #complement.  Replaces the contents of this set with its
+      # own #complement.  It will contain all possible values _except_ for those
+      # currently in the set.
       #
       # Related: #complement
       def complement!
@@ -1608,6 +1611,22 @@ module Net
         if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
         @tuples = flat.each_slice(2).to_a
         normalize!
+      end
+
+      # In-place set #intersection.  Removes any elements that are missing from
+      # +other+ from this set, keeping only the #intersection, and returns
+      # +self+.
+      #
+      # +other+ can be any object that would be accepted by ::new.
+      #
+      #     set = Net::IMAP::SequenceSet.new(1..5)
+      #     set.intersect! [2, 4, 6]
+      #     set #=> Net::IMAP::SequenceSet("2,4")
+      #
+      # Related: #intersection, #intersect?
+      def intersect!(other)
+        modifying!
+        subtract SequenceSet.new(other).complement!
       end
 
       # Returns a new SequenceSet with a normalized string representation.

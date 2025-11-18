@@ -89,6 +89,9 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
       assert_equal intersection, lhs - (lhs - rhs)
       assert_equal intersection, lhs - (lhs ^ rhs)
       assert_equal intersection, lhs ^ (lhs - rhs)
+      mutable = lhs.dup
+      assert_equal intersection, mutable.intersect!(rhs)
+      assert_equal intersection, mutable
     end
   end
 
@@ -168,6 +171,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   data "#merge",       ->{ _1.merge     1 }
   data "#subtract",    ->{ _1.subtract  1 }
   data "#limit!",      ->{ _1.limit! max: 10 }
+  data "#intersect!",  ->{ _1.intersect! SequenceSet[1..100] }
   data "#complement!", :complement!
   data "#normalize!",  :normalize!
   test "frozen error message" do |modification|
