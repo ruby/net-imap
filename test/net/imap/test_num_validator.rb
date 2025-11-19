@@ -9,13 +9,13 @@ class NumValidatorTest < Net::IMAP::TestCase
   TEST_VALUES = {
     -1          => %i[invalid],
 
-    0           => %i[number                             ],
-    1           => %i[number nz-number mod-sequence-value],
-    0x0000_ffff => %i[number nz-number mod-sequence-value],
-    0xffff_ffff => %i[number nz-number mod-sequence-value],
-    0x0000_0001_0000_0000 => %i[       mod-sequence-value],
-    0x0000_ffff_ffff_ffff => %i[       mod-sequence-value],
-    0xffff_ffff_ffff_fffe => %i[       mod-sequence-value],
+    0           => %i[number                              mod-sequence-valzer],
+    1           => %i[number nz-number mod-sequence-value mod-sequence-valzer],
+    0x0000_ffff => %i[number nz-number mod-sequence-value mod-sequence-valzer],
+    0xffff_ffff => %i[number nz-number mod-sequence-value mod-sequence-valzer],
+    0x0000_0001_0000_0000 => %i[       mod-sequence-value mod-sequence-valzer],
+    0x0000_ffff_ffff_ffff => %i[       mod-sequence-value mod-sequence-valzer],
+    0xffff_ffff_ffff_fffe => %i[       mod-sequence-value mod-sequence-valzer],
 
     0xffff_ffff_ffff_ffff => %i[invalid],
   }
@@ -43,6 +43,12 @@ class NumValidatorTest < Net::IMAP::TestCase
   using_test_values_for :"mod-sequence-value" do |label, value, valid|
     test "#valid_mod_sequence_value?(%s) => %p" % [label, valid] do
       assert_equal valid, NumValidator.valid_mod_sequence_value?(value)
+    end
+  end
+
+  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
+    test "#valid_mod_sequence_valzer?(%s) => %p" % [label, valid] do
+      assert_equal valid, NumValidator.valid_mod_sequence_valzer?(value)
     end
   end
 
@@ -81,6 +87,17 @@ class NumValidatorTest < Net::IMAP::TestCase
         assert_equal value, NumValidator.ensure_mod_sequence_value(value)
       else
         assert_format_error do NumValidator.ensure_mod_sequence_value(value) end
+      end
+    end
+  end
+
+  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
+    result = valid ? "=> #{label}" : "raises DataFormatError"
+    test "#ensure_mod_sequence_valzer(%s) %s" % [label, result] do
+      if valid
+        assert_equal value, NumValidator.ensure_mod_sequence_valzer(value)
+      else
+        assert_format_error do NumValidator.ensure_mod_sequence_valzer(value) end
       end
     end
   end

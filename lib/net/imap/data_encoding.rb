@@ -182,6 +182,12 @@ module Net
         1 <= num && num < 0xffff_ffff_ffff_ffff
       end
 
+      # Check if argument is a valid 'mod-sequence-valzer' according to RFC 4551
+      #     mod-sequence-valzer = "0" / mod-sequence-value
+      def valid_mod_sequence_valzer?(num)
+        0 <= num && num < 0xffff_ffff_ffff_ffff
+      end
+
       # Ensure argument is 'number' or raise DataFormatError
       def ensure_number(num)
         return num if valid_number?(num)
@@ -201,6 +207,13 @@ module Net
         return num if valid_mod_sequence_value?(num)
         raise DataFormatError,
           "mod-sequence-value must be non-zero unsigned 64-bit integer: #{num}"
+      end
+
+      # Ensure argument is 'mod-sequence-valzer' or raise DataFormatError
+      def ensure_mod_sequence_valzer(num)
+        return num if valid_mod_sequence_valzer?(num)
+        raise DataFormatError,
+          "mod-sequence-valzer must be unsigned 64-bit integer: #{num}"
       end
 
     end
