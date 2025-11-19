@@ -1921,14 +1921,7 @@ module Net
       end
 
       def import_num(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
-
-      def nz_number(num)
-        String === num && !/\A[1-9]\d*\z/.match?(num) and
-          raise DataFormatError, "%p is not a valid nz-number" % [num]
-        NumValidator.ensure_nz_number Integer num
-      rescue TypeError # To catch errors from Integer()
-        raise DataFormatError, $!.message
-      end
+      def nz_number(num) = NumValidator.coerce_nz_number(num)
 
       ######################################################################{{{2
       # Export methods

@@ -155,6 +155,7 @@ module Net
 
     # Common validators of number and nz_number types
     module NumValidator # :nodoc
+      NUMBER_RE = /\A(?:0|[1-9]\d*)\z/
       module_function
 
       # Check if argument is a valid 'number' according to RFC 3501
@@ -214,6 +215,46 @@ module Net
         return num if valid_mod_sequence_valzer?(num)
         raise DataFormatError,
           "mod-sequence-valzer must be unsigned 64-bit integer: #{num}"
+      end
+
+      # Like #ensure_number, but usable with numeric String input.
+      def coerce_number(num)
+        case num
+        when Integer   then ensure_number num
+        when NUMBER_RE then ensure_number Integer num
+        else
+          raise DataFormatError, "%p is not a valid number" % [num]
+        end
+      end
+
+      # Like #ensure_nz_number, but usable with numeric String input.
+      def coerce_nz_number(num)
+        case num
+        when Integer   then ensure_nz_number num
+        when NUMBER_RE then ensure_nz_number Integer num
+        else
+          raise DataFormatError, "%p is not a valid nz-number" % [num]
+        end
+      end
+
+      # Like #ensure_mod_sequence_value, but usable with numeric String input.
+      def coerce_mod_sequence_value(num)
+        case num
+        when Integer   then ensure_mod_sequence_value num
+        when NUMBER_RE then ensure_mod_sequence_value Integer num
+        else
+          raise DataFormatError, "%p is not a valid mod-sequence-value" % [num]
+        end
+      end
+
+      # Like #ensure_mod_sequence_valzer, but usable with numeric String input.
+      def coerce_mod_sequence_valzer(num)
+        case num
+        when Integer   then ensure_mod_sequence_valzer num
+        when NUMBER_RE then ensure_mod_sequence_valzer Integer num
+        else
+          raise DataFormatError, "%p is not a valid mod-sequence-valzer" % [num]
+        end
       end
 
     end
