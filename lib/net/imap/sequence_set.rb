@@ -954,16 +954,52 @@ module Net
       # Unlike #add, #merge, or #union, the new value is appended to #string.
       # This may result in a #string which has duplicates or is out-of-order.
       #
+      #    set = Net::IMAP::SequenceSet.new
+      #    set.append(1..2)  # => Net::IMAP::SequenceSet("1:2")
+      #    set.append(5)     # => Net::IMAP::SequenceSet("1:2,5")
+      #    set.append(4)     # => Net::IMAP::SequenceSet("1:2,5,4")
+      #    set.append(3)     # => Net::IMAP::SequenceSet("1:2,5,4,3")
+      #    set.append(2)     # => Net::IMAP::SequenceSet("1:2,5,4,3,2")
+      #
+      # If +entry+ is a string, it will be converted into normal form.
+      #
+      #    set = Net::IMAP::SequenceSet("4:5,1:2")
+      #    set.append("6:6") # => Net::IMAP::SequenceSet("4:5,1:2,6")
+      #    set.append("9:8") # => Net::IMAP::SequenceSet("4:5,1:2,6,8:9")
+      #
+      # If +entry+ adjacently follows the last entry, they will coalesced:
+      #    set = Net::IMAP::SequenceSet.new("2,1,9:10")
+      #    set.append(11..12) # => Net::IMAP::SequenceSet("2,1,9:12")
+      #
       # See SequenceSet@Ordered+and+Normalized+sets.
       #
       # Related: #add, #merge, #union
       def append(entry)
         modifying! # short-circuit before input_to_tuple
         tuple = input_to_tuple entry
+        adj = tuple.first - 1
+        if @string.nil? && (@tuples.empty? || tuples.last.last <= adj)
+          # append to elements or coalesce with last element
+          tuple_add tuple
+          return self
+        elsif @string.nil?
+          # generate string for out-of-order append
+          head, comma = normalized_string, ","
+        else
+          # @string already exists... maybe coalesce with last entry
+          head, comma, last_entry = @string.rpartition(",")
+          last_min, last_max = input_to_tuple last_entry
+          if last_max == adj
+            # coalesce with last entry
+            tuple[0] = last_min
+          else
+            # append to existing string
+            head, comma = @string, ","
+          end
+        end
         entry = tuple_to_str tuple
-        string unless empty? # write @string before tuple_add
         tuple_add tuple
-        @string = -(@string ? "#{@string},#{entry}" : entry)
+        @string = -"#{head}#{comma}#{entry}"
         self
       end
 
