@@ -661,15 +661,27 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal "1,5",     SequenceSet.new("1").append("5").string
     assert_equal "*,1",     SequenceSet.new("*").append(1).string
     assert_equal "1:6,4:9", SequenceSet.new("1:6").append("4:9").string
-    assert_equal "1:4,5:*", SequenceSet.new("1:4").append(5..).string
     assert_equal "5:*,1:4", SequenceSet.new("5:*").append(1..4).string
+    # also works when previous string was not normal
+    assert_equal "3:1,8:9", SequenceSet.new("3:1").append("9:8").string
+    # coalesces adjacent entries (when previously normalized)
+    assert_equal "1:9",     SequenceSet.new("1:3").append("4:9").string
+    assert_equal "1:9",     SequenceSet.new("1:3").append("9:4").string
+    assert_equal "1:*",     SequenceSet.new("1:4").append(5..).string
+    # coalesces adjacent entries (when _not_ previously normalized)
+    assert_equal "1:9",     SequenceSet.new("3:1").append("4:9").string
+    assert_equal "4,1:*",   SequenceSet.new("4,1").append(2..).string
+    # assert_equal "3:1,4:9", SequenceSet.new("3:1").append("4:9").string
+    # a non-normal appended string will be normalized
+    assert_equal "1:6,4:9", SequenceSet.new("1:6").append("9:4").string
+    assert_equal "1:6,999", SequenceSet.new("1:6").append("999:999").string
     # also works from empty
     assert_equal "5,1",     SequenceSet.new.append(5).append(1).string
     # also works when *previously* input was non-strings
     assert_equal "*,1",     SequenceSet.new(:*).append(1).string
     assert_equal "1,5",     SequenceSet.new(1).append("5").string
     assert_equal "1:6,4:9", SequenceSet.new(1..6).append(4..9).string
-    assert_equal "1:4,5:*", SequenceSet.new(1..4).append(5..).string
+    assert_equal "1:*",     SequenceSet.new(1..4).append(5..).string
     assert_equal "5:*,1:4", SequenceSet.new(5..).append(1..4).string
   end
 
