@@ -284,6 +284,8 @@ module Net
     #   <tt>*</tt>.
     #
     # <i>Denormalized properties:</i>
+    # - #normalized?: Returns whether #entries are sorted, deduplicated, and
+    #   coalesced, and all #string entries are in normalized form.
     # - #has_duplicates?: Returns whether the ordered entries repeat any
     #   numbers.
     # - #count_duplicates: Returns the count of repeated numbers in the ordered
@@ -1696,6 +1698,53 @@ module Net
         merge(other).subtract(both)
       end
 
+      # Returns whether #string is fully normalized: entries have been sorted,
+      # deduplicated, and coalesced, and all entries are in normal form.  See
+      # SequenceSet@Ordered+and+Normalized+sets.
+      #
+      #   Net::IMAP::SequenceSet["1,3,5"].normalized?  #=> true
+      #   Net::IMAP::SequenceSet["20:30"].normalized?  #=> true
+      #
+      #   Net::IMAP::SequenceSet["3,5,1"].normalized?  #=> false, not sorted
+      #   Net::IMAP::SequenceSet["1,2,3"].normalized?  #=> false, not coalesced
+      #   Net::IMAP::SequenceSet["1:5,2"].normalized?  #=> false, repeated number
+      #
+      #   Net::IMAP::SequenceSet["1:1"].normalized?    #=> false, number as range
+      #   Net::IMAP::SequenceSet["5:1"].normalized?    #=> false, backwards range
+      #
+      # Returns +true+ if (and only if) #string is equal to #normalized_string:
+      #   seqset = Net::IMAP::SequenceSet["1:3,5"]
+      #   seqset.string             #=> "1:3,5"
+      #   seqset.normalized_string  #=> "1:3,5"
+      #   seqset.entries            #=> [1..3, 5]
+      #   seqset.elements           #=> [1..3, 5]
+      #   seqset.normalized?        #=> true
+      #
+      #   seqset = Net::IMAP::SequenceSet["3,1,2"]
+      #   seqset.string             #=> "3,1,2"
+      #   seqset.normalized_string  #=> "1:3"
+      #   seqset.entries            #=> [3, 1, 2]
+      #   seqset.elements           #=> [1..3]
+      #   seqset.normalized?        #=> false
+      #
+      # Can return +false+ even when #entries and #elements are the same:
+      #   seqset = Net::IMAP::SequenceSet["5:1"]
+      #   seqset.string             #=> "5:1"
+      #   seqset.normalized_string  #=> "1:5"
+      #   seqset.entries            #=> [1..5]
+      #   seqset.elements           #=> [1..5]
+      #   seqset.normalized?        #=> false
+      #
+      # Note that empty sets are normalized, even though they are not #valid?:
+      #   seqset = Net::IMAP::SequenceSet.empty
+      #   seqset.normalized?        #=> true
+      #   seqset.valid?             #=> false
+      #
+      # Related: #normalize, #normalize!, #normalized_string
+      def normalized?
+        @string.nil? || normal_string?(@string)
+      end
+
       # Returns a SequenceSet with a normalized string representation: entries
       # have been sorted, deduplicated, and coalesced, and all entries
       # are in normal form.  Returns +self+ for frozen normalized sets, and a
@@ -1706,16 +1755,15 @@ module Net
       #   Net::IMAP::SequenceSet["1:5,3:7,10:9,10:11"].normalize
       #   #=> Net::IMAP::SequenceSet["1:7,9:11"]
       #
-      # Related: #normalize!, #normalized_string
+      # Related: #normalize!, #normalized_string, #normalized?
       def normalize
-        return self if frozen? && (@string.nil? || normal_string?(@string))
-        remain_frozen dup.normalize!
+        frozen? && normalized? ? self : remain_frozen(dup.normalize!)
       end
 
       # Resets #string to be sorted, deduplicated, and coalesced.  Returns
       # +self+.  See SequenceSet@Ordered+and+Normalized+sets.
       #
-      # Related: #normalize, #normalized_string
+      # Related: #normalize, #normalized_string, #normalized?
       def normalize!
         modifying! # redundant check, to normalize the error message for JRuby
         @string = nil
@@ -1731,7 +1779,7 @@ module Net
       #
       # Returns +nil+ when the set is empty.
       #
-      # Related: #normalize!, #normalize, #string, #to_s
+      # Related: #normalize!, #normalize, #string, #to_s, #normalized?
       def normalized_string
         @tuples.empty? ? nil : -@tuples.map { tuple_to_str _1 }.join(",")
       end

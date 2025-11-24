@@ -1299,6 +1299,15 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal data[:normalize], set.normalized_string
   end
 
+  test "#normalized?" do |data|
+    set = SequenceSet.new(data[:input])
+    eql = set.normalized_string == set.string
+    msg = "expect string=%p and normalized_string=%p %s normal" % [
+      set.string, set.normalized_string, eql ? "to be" : "not to be"
+    ]
+    assert set.normalized? == eql, msg
+  end
+
   test "#normalize" do |data|
     set = SequenceSet.new(data[:input])
     assert_equal data[:normalize], set.normalize.string
