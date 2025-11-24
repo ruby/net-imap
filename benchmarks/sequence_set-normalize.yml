@@ -42,7 +42,7 @@ prelude: |
     end
   end
 
-  def init_unsorted_sets(...)
+  def make_unsorted_sets(...)
     init_sets(...)
       .each do |seqset|
         entries = shuffle_entries(seqset)
@@ -51,6 +51,10 @@ prelude: |
           seqset.append entry
         end
       end
+  end
+
+  def init_unsorted_sets(...)
+    make_unsorted_sets(...)
       .tap do maybe_profile("seqset-normalize-unsorted") end
   end
 
@@ -68,12 +72,28 @@ prelude: |
       .join(",")
   end
 
-  def init_abnormal_sets(...)
+  def make_abnormal_sets(...)
     init_sets(...)
       .each do |seqset|
         seqset.string = abnormal_form(seqset)
       end
+  end
+
+  def init_abnormal_sets(...)
+    make_abnormal_sets(...)
       .tap do maybe_profile("seqset-normalize-abnormal") end
+  end
+
+  def init_frozen_unsorted_sets(...)
+    make_unsorted_sets(...)
+      .map(&:freeze)
+      .tap do maybe_profile("seqset-normalize-frozen-unsorted") end
+  end
+
+  def init_frozen_abnormal_sets(...)
+    make_abnormal_sets(...)
+      .map(&:freeze)
+      .tap do maybe_profile("seqset-normalize-frozen-abnormal") end
   end
 
   # warmup (esp. for JIT)
@@ -95,6 +115,12 @@ benchmark:
     script:  $sets.sample.normalize
   - name: "abnormal"
     prelude: $sets = init_abnormal_sets
+    script:  $sets.sample.normalize
+  - name: "frozen unsorted"
+    prelude: $sets = init_frozen_unsorted_sets
+    script:  $sets.sample.normalize
+  - name: "frozen abnormal"
+    prelude: $sets = init_frozen_abnormal_sets
     script:  $sets.sample.normalize
 
 contexts:
