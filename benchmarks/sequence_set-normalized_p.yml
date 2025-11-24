@@ -1,0 +1,116 @@
+---
+prelude: |
+  require "yaml"
+  require "net/imap"
+
+  SAMPLES     = Integer ENV.fetch("BENCHMARK_SAMPLES",      100)
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+  SHUFFLE_PCT = Float   ENV.fetch("BENCHMARK_SHUFFLE_PCT",  0.2)
+  ABNORMAL_PCT = Float  ENV.fetch("BENCHMARK_ABNORMAL_PCT", 0.2)
+
+  def init_sets(count: 100, set_size: INPUT_COUNT, max: MAX_INPUT)
+    Array.new(count) {
+      Net::IMAP::SequenceSet.new(Array.new(set_size) { rand(1..max) })
+    }
+  end
+
+  def init_normal_sets(...)
+    init_sets(...)
+  end
+
+  def init_frozen_normal_sets(...)
+    init_sets(...)
+      .map(&:freeze)
+  end
+
+  def shuffle_entries(seqset)
+    case SHUFFLE_PCT
+    in 1.0... then seqset.entries.shuffle
+    in ...0.0 then raise RangeError, "SHUFFLE_PCT should be positive"
+    else
+      unsorted, entries = seqset.entries.partition { rand < SHUFFLE_PCT }
+      unsorted.each do |entry|
+        entries.insert(rand(0..entries.size), entry)
+      end
+      entries
+    end
+  end
+
+  def init_unsorted_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        entries = shuffle_entries(seqset)
+        seqset.clear
+        entries.each do |entry|
+          seqset.append entry
+        end
+      end
+  end
+
+  def abnormal_form(seqset)
+    seqset.entries
+      .map {|entry|
+        if ABNORMAL_PCT < rand
+          entry.is_a?(Range) ? "#{entry.begin}:#{entry.end || :*}" : entry
+        elsif entry.is_a? Range
+          "#{entry.end || "*"}:#{entry.begin}"
+        else
+          "#{entry}:#{entry}"
+        end
+      }
+      .join(",")
+  end
+
+  def init_abnormal_sets(...)
+    init_sets(...)
+      .each do |seqset|
+        seqset.string = abnormal_form(seqset)
+      end
+  end
+
+  # Benchmark against a naive version that could be used in earlier releases
+  unless Net::IMAP::SequenceSet.instance_methods.include?(:normalized?)
+    class Net::IMAP::SequenceSet
+      def normalized?
+        @string.nil? || @string == normalized_string
+      end
+    end
+  end
+
+  # warmup (esp. for JIT)
+  WARMUP_RUNS.times do
+    init_sets(count: 20, set_size: 100, max: 120).each do |set|
+      set.normalized?
+    end
+  end
+
+benchmark:
+  - name: "normal (#string not called)"
+    prelude: $sets = init_normal_sets
+    script:  $sets.sample.normalized?
+  - name: "normal (#string called)"
+    prelude: $sets = init_normal_sets.tap do _1.each(&:string) end
+    script:  $sets.sample.normalized?
+  - name: "frozen and normal"
+    prelude: $sets = init_frozen_normal_sets
+    script:  $sets.sample.normalized?
+  - name: "unsorted"
+    prelude: $sets = init_unsorted_sets
+    script:  $sets.sample.normalized?
+  - name: "abnormal"
+    prelude: $sets = init_abnormal_sets
+    script:  $sets.sample.normalized?
+
+contexts:
+  # n.b: can't use anything newer as the baseline: it's over 500x faster!
+  - name: v0.5.12
+    gems:
+      net-imap: 0.5.12
+    require: false
+  - name: local
+    prelude: |
+      $LOAD_PATH.unshift "./lib"
+      $allowed_to_profile = true # only profile local code
+    require: false
