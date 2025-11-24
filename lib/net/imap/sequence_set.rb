@@ -1708,7 +1708,7 @@ module Net
       #
       # Related: #normalize!, #normalized_string
       def normalize
-        return self if frozen? && (@string.nil? || @string == normalized_string)
+        return self if frozen? && (@string.nil? || normal_string?(@string))
         remain_frozen dup.normalize!
       end
 
@@ -1907,6 +1907,8 @@ module Net
         return to_enum(__method__, str) unless block_given?
         str&.split(",", -1) do |entry| yield parse_string_entry(entry) end
       end
+
+      def normal_string?(str) normalized_entries? each_parsed_entry str end
 
       def normalized_entries?(entries)
         max = nil
