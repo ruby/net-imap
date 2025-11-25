@@ -20,6 +20,7 @@ changelog:
           - "tests-only"
           - "dependencies"
           - "workflows"
+          - "github_actions"
         authors:
           - "dependabot"
     - title: Miscellaneous
