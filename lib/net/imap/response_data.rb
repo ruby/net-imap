@@ -6,7 +6,6 @@ module Net
     autoload :FetchData,        "#{__dir__}/fetch_data"
     autoload :UIDFetchData,     "#{__dir__}/fetch_data"
     autoload :SearchResult,     "#{__dir__}/search_result"
-    autoload :UIDPlusData,      "#{__dir__}/uidplus_data"
     autoload :AppendUIDData,    "#{__dir__}/uidplus_data"
     autoload :CopyUIDData,      "#{__dir__}/uidplus_data"
     autoload :VanishedData,     "#{__dir__}/vanished_data"
@@ -260,8 +259,8 @@ module Net
     #
     # === +UIDPLUS+ extension
     # See {[RFC4315 §3]}[https://www.rfc-editor.org/rfc/rfc4315#section-3].
-    # * +APPENDUID+, #data is UIDPlusData.  See IMAP#append.
-    # * +COPYUID+, #data is UIDPlusData.  See IMAP#copy.
+    # * +APPENDUID+, #data is AppendUIDData.  See IMAP#append.
+    # * +COPYUID+, #data is CopyUIDData.  See IMAP#copy.
     # * +UIDNOTSTICKY+, #data is +nil+.  See IMAP#select.
     #
     # === +SEARCHRES+ extension
