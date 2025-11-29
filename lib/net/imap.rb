@@ -1518,6 +1518,7 @@ module Net
     # completes.  If the TaggedResponse to #authenticate includes updated
     # capabilities, they will be cached.
     def authenticate(*args, sasl_ir: config.sasl_ir, **props, &callback)
+      sasl_ir = may_depend_on_capabilities_cached?(sasl_ir)
       sasl_adapter.authenticate(*args, sasl_ir: sasl_ir, **props, &callback)
         .tap do state_authenticated! _1 end
     end
@@ -3578,11 +3579,11 @@ module Net
     end
 
     def enforce_logindisabled?
-      if config.enforce_logindisabled == :when_capabilities_cached
-        capabilities_cached?
-      else
-        config.enforce_logindisabled
-      end
+      may_depend_on_capabilities_cached?(config.enforce_logindisabled)
+    end
+
+    def may_depend_on_capabilities_cached?(value)
+      value == :when_capabilities_cached ? capabilities_cached? : value
     end
 
     def expunge_internal(...)
