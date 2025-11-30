@@ -25,14 +25,14 @@ class UIDFetchDataTest < Net::IMAP::TestCase
   end
 
   test "#seqno does not exist" do
-    data = Net::IMAP::UIDFetchData.new(22222)
+    data = pend_if_jruby { Net::IMAP::UIDFetchData.new(22222) } or next
     assert_raise NoMethodError do
       data.seqno
     end
   end
 
   test "#uid replaces #seqno" do
-    data = Net::IMAP::UIDFetchData.new(22222)
+    data = pend_if_jruby { Net::IMAP::UIDFetchData.new(22222) } or next
     assert_equal 22222, data.uid
   end
 
