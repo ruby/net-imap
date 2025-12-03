@@ -1978,10 +1978,10 @@ module Net
         true
       end
 
-      def include_minmax?((min, max)) range_gte_to(min)&.cover?(min..max) end
+      def include_minmax?((min, max)) bsearch_range(min)&.cover?(min..max) end
 
       def intersect_minmax?((min, max))
-        range = range_gte_to(min) and
+        range = bsearch_range(min) and
           range.include?(min) || range.include?(max) || (min..max).cover?(range)
       end
 
@@ -2010,7 +2010,7 @@ module Net
       def tuple_add(tuple)
         modifying!
         min, max = tuple
-        lower, lower_idx = tuple_gte_with_index(min - 1)
+        lower, lower_idx = bsearch_minmax_with_index(min - 1)
         if    lower.nil?              then tuples << [min, max]
         elsif (max + 1) < lower.first then tuples.insert(lower_idx, [min, max])
         else  tuple_coalesce(lower, lower_idx, min, max)
@@ -2024,7 +2024,7 @@ module Net
         lower_idx += 1
         return if lower_idx == tuples.count
         tmax_adj = lower.last + 1
-        upper, upper_idx = tuple_gte_with_index(tmax_adj)
+        upper, upper_idx = bsearch_minmax_with_index(tmax_adj)
         if upper
           tmax_adj < upper.first ? (upper_idx -= 1) : (lower[1] = upper.last)
         end
@@ -2047,7 +2047,7 @@ module Net
       def tuple_subtract(tuple)
         modifying!
         min, max = tuple
-        lower, idx = tuple_gte_with_index(min)
+        lower, idx = bsearch_minmax_with_index(min)
         if    lower.nil?        then nil # case 1.
         elsif max < lower.first then nil # case 2.
         elsif max < lower.last  then tuple_trim_or_split   lower, idx, min, max
@@ -2069,18 +2069,18 @@ module Net
         end
         if tmax == lower.last                           # case 5
           upper_idx = lower_idx
-        elsif (upper, upper_idx = tuple_gte_with_index(tmax + 1))
+        elsif (upper, upper_idx = bsearch_minmax_with_index(tmax + 1))
           upper_idx -= 1                                # cases 7 and 8
           upper[0] = tmax + 1 if upper.first <= tmax    # case 8 (else case 7)
         end
         tuples.slice!(lower_idx..upper_idx)
       end
 
-      def tuple_gte_with_index(num)
+      def bsearch_minmax_with_index(num)
         idx = tuples.bsearch_index { _2 >= num } and [tuples[idx], idx]
       end
 
-      def range_gte_to(num)
+      def bsearch_range(num)
         first, last = tuples.bsearch { _2 >= num }
         first..last if first
       end
