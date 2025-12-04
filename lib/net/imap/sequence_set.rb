@@ -183,7 +183,7 @@ module Net
     #
     # When a set includes <tt>*</tt>, some methods may have surprising behavior.
     #
-    # For example, #complement treats <tt>*</tt> as its own number.  This way,
+    # For example, #complement treats <tt>*</tt> as its own member.  This way,
     # the #intersection of a set and its #complement will always be empty.  And
     # <tt>*</tt> is sorted as greater than any other number in the set.  This is
     # not how an \IMAP server interprets the set: it will convert <tt>*</tt> to
@@ -203,7 +203,7 @@ module Net
     #   (set.limit(max: 4) & (~set).limit(max: 4)).to_a => [4]
     #
     # When counting the number of numbers in a set, <tt>*</tt> will be counted
-    # _except_ when UINT32_MAX is also in the set:
+    # as if it were equal to UINT32_MAX:
     #   UINT32_MAX = 2**32 - 1
     #   Net::IMAP::SequenceSet["*"].count                   => 1
     #   Net::IMAP::SequenceSet[1..UINT32_MAX - 1, :*].count => UINT32_MAX
@@ -211,6 +211,12 @@ module Net
     #   Net::IMAP::SequenceSet["1:*"].count                 => UINT32_MAX
     #   Net::IMAP::SequenceSet[UINT32_MAX, :*].count        => 1
     #   Net::IMAP::SequenceSet[UINT32_MAX..].count          => 1
+    #
+    # Use #cardinality to count the set members wxth <tt>*</tt> counted as a
+    # distinct member:
+    #   Net::IMAP::SequenceSet[1..].cardinality            #=> UINT32_MAX + 1
+    #   Net::IMAP::SequenceSet[UINT32_MAX, :*].cardinality #=> 2
+    #   Net::IMAP::SequenceSet[UINT32_MAX..].cardinality   #=> 2
     #
     # == What's here?
     #
@@ -275,6 +281,8 @@ module Net
     #   occurrence in entries.
     #
     # <i>Set cardinality:</i>
+    # - #cardinality: Returns the number of distinct members in the set.
+    #   <tt>*</tt> is counted as its own member, distinct from UINT32_MAX.
     # - #count (aliased as #size): Returns the count of numbers in the set.
     #   Duplicated numbers are not counted.
     # - #empty?: Returns whether the set has no members.  \IMAP syntax does not
@@ -1336,15 +1344,46 @@ module Net
       # Related: #elements, #ranges, #numbers
       def to_set; Set.new(numbers) end
 
+      # Returns the number of members in the set.
+      #
+      # Unlike #count, <tt>"*"</tt> is considered to be distinct from
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
+      #
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set.count        #=> 10
+      #     set.cardinality  #=> 10
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count        #=> 1
+      #     set.cardinality  #=> 2
+      #
+      #     set = Net::IMAP::SequenceSet[1..]
+      #     set.count        #=> 4294967295
+      #     set.cardinality  #=> 4294967296
+      #
+      # Related: #count, #count_with_duplicates
+      def cardinality = minmaxes.sum(@set_data.count) { _2 - _1 }
+
       # Returns the count of #numbers in the set.
       #
-      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
-      # unsigned integer value).
+      # Unlike #cardinality, <tt>"*"</tt> is considered to be equal to
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
       #
-      # Related: #count_with_duplicates
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set.count        #=> 10
+      #     set.cardinality  #=> 10
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count        #=> 1
+      #     set.cardinality  #=> 2
+      #
+      #     set = Net::IMAP::SequenceSet[1..]
+      #     set.count        #=> 4294967295
+      #     set.cardinality  #=> 4294967296
+      #
+      # Related: #cardinality, #count_with_duplicates
       def count
-        minmaxes.sum(minmaxes.count) { _2 - _1 } +
-          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+        cardinality + (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
       alias size count
@@ -1352,12 +1391,24 @@ module Net
       # Returns the count of numbers in the ordered #entries, including any
       # repeated numbers.
       #
-      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
-      # unsigned integer value).
+      # When #string is normalized, this returns the same as #count.
+      # Like #count, <tt>"*"</tt> is be considered to be equal to
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
       #
-      # When #string is normalized, this behaves the same as #count.
+      # In a range, <tt>"*"</tt> is _not_ considered a duplicate:
+      #     set = Net::IMAP::SequenceSet["4294967295:*"]
+      #     set.count_with_duplicates  #=> 1
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
       #
-      # Related: #entries, #count_duplicates, #has_duplicates?
+      # In a separate entry, <tt>"*"</tt> _is_ considered a duplicate:
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count_with_duplicates  #=> 2
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
+      #
+      # Related: #count, #cardinality, #count_duplicates, #has_duplicates?,
+      # #entries
       def count_with_duplicates
         return count unless @string
         each_entry_minmax.sum {|min, max|
@@ -1382,7 +1433,7 @@ module Net
       #
       # Always returns +false+ when #string is normalized.
       #
-      # Related: #entries, #count_with_duplicates, #count_duplicates?
+      # Related: #entries, #count_with_duplicates, #count_duplicates
       def has_duplicates?
         return false unless @string
         count_with_duplicates != count
