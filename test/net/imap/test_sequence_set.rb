@@ -441,6 +441,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   test "#[start, length]" do
     assert_equal SequenceSet[10..99], SequenceSet.full[9, 90]
     assert_equal 90, SequenceSet.full[9, 90].count
+    assert_equal 90, SequenceSet.full[9, 90].cardinality
     assert_equal SequenceSet[1000..1099],
                  SequenceSet[1..100, 1000..1111][100, 100]
     assert_equal SequenceSet[11, 21, 31, 41],
@@ -1065,6 +1066,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     to_s:       "4294967000:*",
     normalize:  "4294967000:*",
     count:      2**32 - 4_294_967_000,
+    cardinality: 2**32 - 4_294_967_000 + 1,
     complement: "1:4294966999",
   }, keep: true
 
@@ -1143,6 +1145,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     normalize:  "2:*",
     count:      2**32 - 2,
     count_dups: 2**32 - 2,
+    cardinality: 2**32 - 1,
     complement: "1",
   }, keep: true
 
@@ -1180,6 +1183,34 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     normalize:  "1:5,9:11,99,*",
     count:      10,
     complement: "6:8,12:98,100:#{2**32 - 1}",
+  }, keep: true
+
+  data "UINT32_MAX,*", {
+    input:      "#{2**32-1},*",
+    elements:   [2**32 - 1..],
+    entries:    [2**32 - 1, :*],
+    ranges:     [2**32 - 1..],
+    numbers:    RangeError,
+    to_s:       "#{2**32 - 1},*",
+    normalize:  "#{2**32 - 1}:*",
+    count:      1,
+    cardinality: 2,
+    count_dups: 1,
+    complement: "1:#{2**32 - 2}",
+  }, keep: true
+
+  data "UINT32_MAX:*", {
+    input:      "#{2**32-1}:*",
+    elements:   [2**32 - 1..],
+    entries:    [2**32 - 1..],
+    ranges:     [2**32 - 1..],
+    numbers:    RangeError,
+    to_s:       "#{2**32 - 1}:*",
+    normalize:  "#{2**32 - 1}:*",
+    count:      1,
+    cardinality: 2,
+    count_dups: 0,
+    complement: "1:#{2**32 - 2}",
   }, keep: true
 
   data "empty", {
@@ -1327,6 +1358,15 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   test "#count" do |data|
     assert_equal data[:count], SequenceSet.new(data[:input]).count
+  end
+
+  test "#size" do |data|
+    assert_equal data[:count], SequenceSet.new(data[:input]).size
+  end
+
+  test "#cardinality" do |data|
+    expected = data[:cardinality] || data[:count]
+    assert_equal expected, SequenceSet.new(data[:input]).cardinality
   end
 
   test "#count_with_duplicates" do |data|
