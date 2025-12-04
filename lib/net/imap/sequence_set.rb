@@ -1870,6 +1870,9 @@ module Net
       protected
 
       attr_reader :tuples # :nodoc:
+      alias set_data tuples # TODO: rename @tuples => @set_data
+      alias runs set_data
+      alias minmaxes runs
 
       def deep_copy_tuples; @tuples.map { _1.dup } end # :nodoc:
 
