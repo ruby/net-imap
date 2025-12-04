@@ -1763,7 +1763,7 @@ module Net
       #
       # Related: #normalize!, #normalize, #string, #to_s, #normalized?
       def normalized_string
-        -runs.map { export_run _1 }.join(",") unless runs.empty?
+        export_runs(runs) unless runs.empty?
       end
 
       # Returns an inspection string for the SequenceSet.
