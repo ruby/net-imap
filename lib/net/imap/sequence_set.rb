@@ -1256,7 +1256,7 @@ module Net
       def each_entry_tuple(&block)
         return to_enum(__method__) unless block_given?
         if @string
-          @string.split(",") do block.call str_to_tuple _1 end
+          @string.split(",") do block.call parse_minmax _1 end
         else
           @tuples.each(&block)
         end
@@ -1897,7 +1897,7 @@ module Net
         case entry
         when *STARS, Integer then [int = to_tuple_int(entry), int]
         when Range           then range_to_tuple(entry)
-        when String          then str_to_tuple(entry)
+        when String          then parse_minmax(entry)
         else
           raise DataFormatError, "expected number or range, got %p" % [entry]
         end
@@ -1907,7 +1907,7 @@ module Net
         set = input_try_convert set
         case set
         when *STARS, Integer, Range then [input_to_tuple(set)]
-        when String      then str_to_tuples set
+        when String      then parse_runs set
         when SequenceSet then set.tuples
         when Set         then set.map      { [to_tuple_int(_1)] * 2 }
         when Array       then set.flat_map { input_to_tuples _1 }
@@ -1945,10 +1945,12 @@ module Net
       end
 
       def tuple_to_str(tuple) tuple.uniq.map{ from_tuple_int _1 }.join(":") end
-      def str_to_tuples(str) str.split(",", -1).map! { str_to_tuple _1 } end
-      def str_to_tuple(str) parse_string_entry(str).minmax end
+      def parse_runs(str) str.split(",", -1).map! { parse_run _1 } end
+      def parse_minmax(str) parse_entry(str).minmax end
 
-      def parse_string_entry(str)
+      alias parse_run   parse_minmax
+
+      def parse_entry(str)
         raise DataFormatError, "invalid sequence set string" if str.empty?
         str.split(":", 2).map! { to_tuple_int _1 }
       end
@@ -1956,7 +1958,7 @@ module Net
       # yields validated but unsorted [num] or [num, num]
       def each_parsed_entry(str)
         return to_enum(__method__, str) unless block_given?
-        str&.split(",", -1) do |entry| yield parse_string_entry(entry) end
+        str&.split(",", -1) do |entry| yield parse_entry(entry) end
       end
 
       def normal_string?(str) normalized_entries? each_parsed_entry str end
