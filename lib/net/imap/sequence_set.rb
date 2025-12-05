@@ -614,7 +614,7 @@ module Net
           entries = each_parsed_entry(str).to_a
           clear
           if normalized_entries?(entries)
-            @tuples.replace entries.map!(&:minmax)
+            minmaxes.replace entries.map!(&:minmax)
           else
             add_minmaxes entries.map!(&:minmax)
             @string = -str
@@ -732,7 +732,7 @@ module Net
       alias member? include?
 
       # Returns +true+ when the set contains <tt>*</tt>.
-      def include_star?; @tuples.last&.last == STAR_INT end
+      def include_star?; minmaxes.last&.last == STAR_INT end
 
       # Returns +true+ if the set and a given object have any common elements,
       # +false+ otherwise.
@@ -772,7 +772,7 @@ module Net
       def max(count = nil, star: :*)
         if count
           slice(-[count, size].min..) || remain_frozen_empty
-        elsif (val = @tuples.last&.last)
+        elsif (val = minmaxes.last&.last)
           val == STAR_INT ? star : val
         end
       end
@@ -792,7 +792,7 @@ module Net
       def min(count = nil, star: :*)
         if count
           slice(0...count) || remain_frozen_empty
-        elsif (val = @tuples.first&.first)
+        elsif (val = minmaxes.first&.first)
           val != STAR_INT ? val : star
         end
       end
@@ -813,7 +813,7 @@ module Net
       def empty?; @tuples.empty? end
 
       # Returns true if the set contains every possible element.
-      def full?; @tuples == [[1, STAR_INT]] end
+      def full?; minmaxes == [[1, STAR_INT]] end
 
       # :call-seq:
       #   self + other -> sequence set
@@ -991,7 +991,7 @@ module Net
         modifying! # short-circuit before import_minmax
         minmax = import_minmax entry
         adj = minmax.first - 1
-        if @string.nil? && (@tuples.empty? || tuples.last.last <= adj)
+        if @string.nil? && (minmaxes.empty? || minmaxes.last.last <= adj)
           # append to elements or coalesce with last element
           add_minmax minmax
           return self
@@ -1259,7 +1259,7 @@ module Net
         if @string
           @string.split(",") do block.call parse_minmax _1 end
         else
-          @tuples.each(&block)
+          minmaxes.each(&block)
         end
         self
       end
@@ -1282,7 +1282,7 @@ module Net
       # Related: #ranges
       def each_range # :yields: range
         return to_enum(__method__) unless block_given?
-        @tuples.each do |min, max|
+        minmaxes.each do |min, max|
           if    min == STAR_INT then yield :*..
           elsif max == STAR_INT then yield min..
           else                       yield min..max
@@ -1301,7 +1301,7 @@ module Net
       def each_number(&block) # :yields: integer
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
-        runs.each do each_number_in_minmax _1, _2, &block end
+        minmaxes.each do each_number_in_minmax _1, _2, &block end
         self
       end
 
@@ -1343,7 +1343,7 @@ module Net
       #
       # Related: #count_with_duplicates
       def count
-        @tuples.sum(@tuples.count) { _2 - _1 } +
+        minmaxes.sum(minmaxes.count) { _2 - _1 } +
           (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
@@ -1660,7 +1660,7 @@ module Net
         modifying! # short-circuit, and normalize the error message for JRuby
         return replace(self.class.full) if empty?
         return clear                    if full?
-        flat = @tuples.flat_map { [_1 - 1, _2 + 1] }
+        flat = minmaxes.flat_map { [_1 - 1, _2 + 1] }
         if flat.first < 1         then flat.shift else flat.unshift 1        end
         if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
         @tuples = flat.each_slice(2).to_a
@@ -2023,8 +2023,8 @@ module Net
         modifying!
         min, max = minmax
         lower, lower_idx = bsearch_minmax_with_index(min - 1)
-        if    lower.nil?              then tuples << [min, max]
-        elsif (max + 1) < lower.first then tuples.insert(lower_idx, [min, max])
+        if    lower.nil?              then minmaxes << [min, max]
+        elsif (max + 1) < lower.first then minmaxes.insert(lower_idx, [min, max])
         else  add_coalesced_minmax(lower, lower_idx, min, max)
         end
       end
@@ -2034,13 +2034,13 @@ module Net
         lower[0] = [min, lower.first].min
         lower[1] = [max, lower.last].max
         lower_idx += 1
-        return if lower_idx == tuples.count
+        return if lower_idx == minmaxes.count
         tmax_adj = lower.last + 1
         upper, upper_idx = bsearch_minmax_with_index(tmax_adj)
         if upper
           tmax_adj < upper.first ? (upper_idx -= 1) : (lower[1] = upper.last)
         end
-        tuples.slice!(lower_idx..upper_idx)
+        minmaxes.slice!(lower_idx..upper_idx)
       end
 
       #         |====subtracted run=======|
@@ -2069,7 +2069,7 @@ module Net
 
       def trim_or_split_minmax(lower, idx, tmin, tmax)
         if lower.first < tmin # split
-          tuples.insert(idx, [lower.first, tmin - 1])
+          minmaxes.insert(idx, [lower.first, tmin - 1])
         end
         lower[0] = tmax + 1
       end
@@ -2085,7 +2085,7 @@ module Net
           upper_idx -= 1                                # cases 7 and 8
           upper[0] = tmax + 1 if upper.first <= tmax    # case 8 (else case 7)
         end
-        tuples.slice!(lower_idx..upper_idx)
+        minmaxes.slice!(lower_idx..upper_idx)
       end
 
       alias add_runs      add_minmaxes
@@ -2094,11 +2094,11 @@ module Net
       alias subtract_run  subtract_minmax
 
       def bsearch_minmax_with_index(num)
-        idx = tuples.bsearch_index { _2 >= num } and [tuples[idx], idx]
+        idx = minmaxes.bsearch_index { _2 >= num } and [minmaxes[idx], idx]
       end
 
       def bsearch_range(num)
-        first, last = tuples.bsearch { _2 >= num }
+        first, last = minmaxes.bsearch { _2 >= num }
         first..last if first
       end
 
