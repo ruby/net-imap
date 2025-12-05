@@ -810,7 +810,7 @@ module Net
       def valid?; !empty? end
 
       # Returns true if the set contains no elements
-      def empty?; @tuples.empty? end
+      def empty?; runs.empty? end
 
       # Returns true if the set contains every possible element.
       def full?; minmaxes == [[1, STAR_INT]] end
@@ -991,7 +991,7 @@ module Net
         modifying! # short-circuit before import_minmax
         minmax = import_minmax entry
         adj = minmax.first - 1
-        if @string.nil? && (minmaxes.empty? || minmaxes.last.last <= adj)
+        if @string.nil? && (runs.empty? || minmaxes.last.last <= adj)
           # append to elements or coalesce with last element
           add_minmax minmax
           return self
@@ -1833,7 +1833,7 @@ module Net
       end
 
       private def count_entries
-        @string ? @string.count(",") + 1 : @tuples.count
+        @string ? @string.count(",") + 1 : runs.count
       end
 
       ##
@@ -1912,7 +1912,7 @@ module Net
         case set
         when *STARS, Integer, Range then [import_run(set)]
         when String      then parse_runs set
-        when SequenceSet then set.tuples
+        when SequenceSet then set.runs
         when Set         then set.map      { [import_num(_1)] * 2 }
         when Array       then set.flat_map { import_runs _1 }
         when nil         then []
