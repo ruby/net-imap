@@ -698,7 +698,7 @@ module Net
       # object that would be accepted by ::new.
       #
       # Related: #===, #include?, #include_star?, #intersect?
-      def cover?(other) input_to_tuples(other).none? { !include_tuple?(_1) } end
+      def cover?(other) import_runs(other).none? { !include_tuple?(_1) } end
 
       # Returns +true+ when a given number or range is in +self+, and +false+
       # otherwise.  Returns +nil+ when +number+ isn't a valid SequenceSet
@@ -725,8 +725,8 @@ module Net
       #
       # Related: #include_star?, #cover?, #===, #intersect?
       def include?(element)
-        tuple = input_to_tuple element rescue nil
-        !!include_tuple?(tuple) if tuple
+        run = import_run element rescue nil
+        !!include_tuple?(run) if run
       end
 
       alias member? include?
@@ -742,7 +742,7 @@ module Net
       #
       # Related: #intersection, #disjoint?, #cover?, #include?
       def intersect?(other)
-        valid? && input_to_tuples(other).any? { intersect_tuple? _1 }
+        valid? && import_runs(other).any? { intersect_tuple? _1 }
       end
       alias overlap? intersect?
 
@@ -754,7 +754,7 @@ module Net
       #
       # Related: #intersection, #intersect?
       def disjoint?(other)
-        empty? || input_to_tuples(other).none? { intersect_tuple? _1 }
+        empty? || import_runs(other).none? { intersect_tuple? _1 }
       end
 
       # :call-seq:
@@ -953,8 +953,8 @@ module Net
       #
       # Related: #add?, #merge, #union, #append
       def add(element)
-        modifying! # short-circuit before input_to_tuple
-        tuple_add input_to_tuple element
+        modifying! # short-circuit before import_run
+        tuple_add import_run element
         normalize!
       end
       alias << add
@@ -988,12 +988,12 @@ module Net
       #
       # Related: #add, #merge, #union
       def append(entry)
-        modifying! # short-circuit before input_to_tuple
-        tuple = input_to_tuple entry
-        adj = tuple.first - 1
+        modifying! # short-circuit before import_minmax
+        minmax = import_minmax entry
+        adj = minmax.first - 1
         if @string.nil? && (@tuples.empty? || tuples.last.last <= adj)
           # append to elements or coalesce with last element
-          tuple_add tuple
+          tuple_add minmax
           return self
         elsif @string.nil?
           # generate string for out-of-order append
@@ -1001,17 +1001,17 @@ module Net
         else
           # @string already exists... maybe coalesce with last entry
           head, comma, last_entry = @string.rpartition(",")
-          last_min, last_max = input_to_tuple last_entry
+          last_min, last_max = import_minmax last_entry
           if last_max == adj
             # coalesce with last entry
-            tuple[0] = last_min
+            minmax[0] = last_min
           else
             # append to existing string
             head, comma = @string, ","
           end
         end
-        entry = tuple_to_str tuple
-        tuple_add tuple
+        entry = tuple_to_str minmax
+        tuple_add minmax
         @string = -"#{head}#{comma}#{entry}"
         self
       end
@@ -1038,8 +1038,8 @@ module Net
       #
       # Related: #delete?, #delete_at, #subtract, #difference
       def delete(element)
-        modifying! # short-circuit before input_to_tuple
-        tuple_subtract input_to_tuple element
+        modifying! # short-circuit before import_run
+        tuple_subtract import_run element
         normalize!
       end
 
@@ -1076,16 +1076,16 @@ module Net
       #
       # Related: #delete, #delete_at, #subtract, #difference, #disjoint?
       def delete?(element)
-        modifying! # short-circuit before input_to_tuple
-        tuple = input_to_tuple element
-        if tuple.first == tuple.last
-          return unless include_tuple? tuple
-          tuple_subtract tuple
+        modifying! # short-circuit before import_minmax
+        minmax = import_minmax element
+        if minmax.first == minmax.last
+          return unless include_tuple? minmax
+          tuple_subtract minmax
           normalize!
-          from_tuple_int tuple.first
+          from_tuple_int minmax.first
         else
           copy = dup
-          tuple_subtract tuple
+          tuple_subtract minmax
           normalize!
           copy if copy.subtract(self).valid?
         end
@@ -1131,8 +1131,8 @@ module Net
       #
       # Related: #add, #add?, #union
       def merge(*sets)
-        modifying! # short-circuit before input_to_tuples
-        tuples_add input_to_tuples sets
+        modifying! # short-circuit before import_runs
+        tuples_add import_runs sets
         normalize!
       end
 
@@ -1143,7 +1143,8 @@ module Net
       #
       # Related: #difference
       def subtract(*sets)
-        tuples_subtract input_to_tuples sets
+        modifying! # short-circuit before import_runs
+        tuples_subtract import_runs sets
         normalize!
       end
 
@@ -1390,7 +1391,7 @@ module Net
       #
       # Related: #[], #at, #find_ordered_index
       def find_index(number)
-        number = to_tuple_int number
+        number = import_num number
         each_tuple_with_index(@tuples) do |min, max, idx_min|
           number <  min and return nil
           number <= max and return from_tuple_int(idx_min + (number - min))
@@ -1403,7 +1404,7 @@ module Net
       #
       # Related: #find_index
       def find_ordered_index(number)
-        number = to_tuple_int number
+        number = import_num number
         each_tuple_with_index(each_entry_tuple) do |min, max, idx_min|
           if min <= number && number <= max
             return from_tuple_int(idx_min + (number - min))
@@ -1625,7 +1626,7 @@ module Net
       #
       # Related: #limit!
       def limit(max:)
-        max = to_tuple_int(max)
+        max = import_num(max)
         if    empty?                      then self.class.empty
         elsif !include_star? && max < min then self.class.empty
         elsif max(star: STAR_INT) <= max  then frozen? ? self : dup.freeze
@@ -1638,9 +1639,9 @@ module Net
       #
       # Related: #limit
       def limit!(max:)
-        modifying! # short-circuit, and normalize the error message for JRuby
+        modifying! # short-circuit before querying
         star = include_star?
-        max  = to_tuple_int(max)
+        max  = import_num(max)
         tuple_subtract [max + 1, STAR_INT]
         tuple_add      [max,     max     ] if star
         normalize!
@@ -1892,29 +1893,30 @@ module Net
         super
       end
 
-      def input_to_tuple(entry)
-        entry = input_try_convert entry
+      def import_minmax(input)
+        entry = input_try_convert input
         case entry
-        when *STARS, Integer then [int = to_tuple_int(entry), int]
-        when Range           then range_to_tuple(entry)
+        when *STARS, Integer then [int = import_num(entry), int]
+        when Range           then import_range_minmax(entry)
         when String          then parse_minmax(entry)
         else
-          raise DataFormatError, "expected number or range, got %p" % [entry]
+          raise DataFormatError, "expected number or range, got %p" % [input]
         end
       end
+      alias import_run import_minmax
 
-      def input_to_tuples(set)
-        set = input_try_convert set
+      def import_runs(input)
+        set = input_try_convert input
         case set
-        when *STARS, Integer, Range then [input_to_tuple(set)]
+        when *STARS, Integer, Range then [import_run(set)]
         when String      then parse_runs set
         when SequenceSet then set.tuples
-        when Set         then set.map      { [to_tuple_int(_1)] * 2 }
-        when Array       then set.flat_map { input_to_tuples _1 }
+        when Set         then set.map      { [import_num(_1)] * 2 }
+        when Array       then set.flat_map { import_runs _1 }
         when nil         then []
         else
           raise DataFormatError, "expected nz-number, range, '*', Set, Array; " \
-                                 "got %p" % [set]
+                                 "got %p" % [input]
         end
       end
 
@@ -1927,9 +1929,9 @@ module Net
           input
       end
 
-      def range_to_tuple(range)
-        first = to_tuple_int(range.begin || 1)
-        last  = to_tuple_int(range.end   || :*)
+      def import_range_minmax(range)
+        first = import_num(range.begin || 1)
+        last  = import_num(range.end   || :*)
         last -= 1 if range.exclude_end? && range.end && last != STAR_INT
         unless first <= last
           raise DataFormatError, "invalid range for sequence-set: %p" % [range]
@@ -1937,7 +1939,7 @@ module Net
         [first, last]
       end
 
-      def to_tuple_int(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
+      def import_num(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
       def from_tuple_int(num) num == STAR_INT ? :* : num end
 
       def export_string_entries(entries)
@@ -1952,7 +1954,7 @@ module Net
 
       def parse_entry(str)
         raise DataFormatError, "invalid sequence set string" if str.empty?
-        str.split(":", 2).map! { to_tuple_int _1 }
+        str.split(":", 2).map! { import_num _1 }
       end
 
       # yields validated but unsorted [num] or [num, num]
