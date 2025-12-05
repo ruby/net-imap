@@ -548,7 +548,7 @@ module Net
       # Removes all elements and returns self.
       def clear
         modifying! # redundant check, to normalize the error message for JRuby
-        @tuples, @string = [], nil
+        @set_data, @string = [], nil
         self
       end
 
@@ -561,7 +561,7 @@ module Net
         case other
         when SequenceSet then
           modifying! # short circuit before doing any work
-          @tuples = other.deep_copy_tuples
+          @set_data = other.dup_set_data
           @string = other.instance_variable_get(:@string)
         when String      then self.string = other
         else                  clear; merge other
@@ -635,7 +635,7 @@ module Net
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
       def freeze
         return self if frozen?
-        @tuples.each(&:freeze).freeze
+        set_data.each(&:freeze).freeze
         super
       end
 
@@ -657,7 +657,7 @@ module Net
       # Related: #eql?, #normalize
       def ==(other)
         self.class == other.class &&
-          (to_s == other.to_s || tuples == other.tuples)
+          (to_s == other.to_s || set_data == other.set_data)
       end
 
       # :call-seq: eql?(other) -> true or false
@@ -1663,7 +1663,7 @@ module Net
         flat = minmaxes.flat_map { [_1 - 1, _2 + 1] }
         if flat.first < 1         then flat.shift else flat.unshift 1        end
         if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
-        @tuples = flat.each_slice(2).to_a
+        @set_data = flat.each_slice(2).to_a
         normalize!
       end
 
@@ -1866,18 +1866,17 @@ module Net
 
       # For YAML deserialization
       def init_with(coder) # :nodoc:
-        @tuples = []
+        @set_data = []
         self.string = coder['string']
       end
 
       protected
 
-      attr_reader :tuples # :nodoc:
-      alias set_data tuples # TODO: rename @tuples => @set_data
+      attr_reader :set_data # :nodoc:
       alias runs set_data
       alias minmaxes runs
 
-      def deep_copy_tuples; @tuples.map { _1.dup } end # :nodoc:
+      def dup_set_data; set_data.map { _1.dup } end # :nodoc:
 
       private
 
@@ -1886,12 +1885,12 @@ module Net
 
       # frozen clones are shallow copied
       def initialize_clone(other)
-        @tuples = other.deep_copy_tuples unless other.frozen?
+        @set_data = other.dup_set_data unless other.frozen?
         super
       end
 
       def initialize_dup(other)
-        @tuples = other.deep_copy_tuples
+        @set_data = other.dup_set_data
         super
       end
 
