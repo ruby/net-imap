@@ -1010,7 +1010,7 @@ module Net
             head, comma = @string, ","
           end
         end
-        entry = tuple_to_str minmax
+        entry = export_minmax minmax
         tuple_add minmax
         @string = -"#{head}#{comma}#{entry}"
         self
@@ -1082,7 +1082,7 @@ module Net
           return unless include_tuple? minmax
           tuple_subtract minmax
           normalize!
-          from_tuple_int minmax.first
+          export_num minmax.first
         else
           copy = dup
           tuple_subtract minmax
@@ -1236,7 +1236,7 @@ module Net
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        each_entry_tuple do yield tuple_to_entry _1 end
+        each_entry_tuple do yield export_run_entry _1 end
       end
 
       # Yields each number or range (or <tt>:*</tt>) in #elements to the block
@@ -1248,7 +1248,7 @@ module Net
       # Related: #elements, #each_entry
       def each_element # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        @tuples.each do yield tuple_to_entry _1 end
+        runs.each do yield export_run_entry _1 end
         self
       end
 
@@ -1264,13 +1264,14 @@ module Net
         self
       end
 
-      def tuple_to_entry((min, max))
+      def export_minmax_entry((min, max))
         if    min == STAR_INT then :*
         elsif max == STAR_INT then min..
         elsif min == max      then min
         else                       min..max
         end
       end
+      alias export_run_entry export_minmax_entry
 
       public
 
@@ -1299,7 +1300,7 @@ module Net
       def each_number(&block) # :yields: integer
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
-        @tuples.each do each_number_in_tuple _1, _2, &block end
+        runs.each do each_number_in_minmax _1, _2, &block end
         self
       end
 
@@ -1313,10 +1314,10 @@ module Net
       def each_ordered_number(&block)
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
-        each_entry_tuple do each_number_in_tuple _1, _2, &block end
+        each_entry_tuple do each_number_in_minmax _1, _2, &block end
       end
 
-      private def each_number_in_tuple(min, max, &block)
+      private def each_number_in_minmax(min, max, &block)
         if    min == STAR_INT then yield :*
         elsif min == max      then yield min
         elsif max != STAR_INT then (min..max).each(&block)
@@ -1394,7 +1395,7 @@ module Net
         number = import_num number
         each_tuple_with_index(@tuples) do |min, max, idx_min|
           number <  min and return nil
-          number <= max and return from_tuple_int(idx_min + (number - min))
+          number <= max and return export_num(idx_min + (number - min))
         end
         nil
       end
@@ -1407,7 +1408,7 @@ module Net
         number = import_num number
         each_tuple_with_index(each_entry_tuple) do |min, max, idx_min|
           if min <= number && number <= max
-            return from_tuple_int(idx_min + (number - min))
+            return export_num(idx_min + (number - min))
           end
         end
         nil
@@ -1466,11 +1467,11 @@ module Net
         index = Integer(index.to_int)
         if index.negative?
           reverse_each_tuple_with_index(tuples) do |min, max, idx_min, idx_max|
-            idx_min <= index and return from_tuple_int(min + (index - idx_min))
+            idx_min <= index and return export_num(min + (index - idx_min))
           end
         else
           each_tuple_with_index(tuples) do |min, _, idx_min, idx_max|
-            index <= idx_max and return from_tuple_int(min + (index - idx_min))
+            index <= idx_max and return export_num(min + (index - idx_min))
           end
         end
         nil
@@ -1782,7 +1783,7 @@ module Net
       #
       # Related: #normalize!, #normalize, #string, #to_s, #normalized?
       def normalized_string
-        @tuples.empty? ? nil : -@tuples.map { tuple_to_str _1 }.join(",")
+        -runs.map { export_run _1 }.join(",") unless runs.empty?
       end
 
       # Returns an inspection string for the SequenceSet.
@@ -1819,8 +1820,8 @@ module Net
             head = @string[INSPECT_ABRIDGED_HEAD_RE]
             tail = @string[INSPECT_ABRIDGED_TAIL_RE]
           else
-            head = export_string_entries(@tuples.first(INSPECT_TRUNCATE_LEN)) + ","
-            tail = "," + export_string_entries(@tuples.last(INSPECT_TRUNCATE_LEN))
+            head = export_runs(runs.first(INSPECT_TRUNCATE_LEN)) + ","
+            tail = "," + export_runs(runs.last(INSPECT_TRUNCATE_LEN))
           end
           '#<%s %d entries "%s...(%d entries omitted)...%s"%s>' % [
             self.class, count,
@@ -1940,16 +1941,18 @@ module Net
       end
 
       def import_num(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
-      def from_tuple_int(num) num == STAR_INT ? :* : num end
+      def export_num(num) num == STAR_INT ? :* : num end
 
-      def export_string_entries(entries)
-        -entries.map { tuple_to_str _1 }.join(",")
+      def export_minmaxes(minmaxes)
+        -minmaxes.map { export_minmax _1 }.join(",")
       end
 
-      def tuple_to_str(tuple) tuple.uniq.map{ from_tuple_int _1 }.join(":") end
+      def export_minmax(minmax) minmax.uniq.map { export_num _1 }.join(":") end
       def parse_runs(str) str.split(",", -1).map! { parse_run _1 } end
       def parse_minmax(str) parse_entry(str).minmax end
 
+      alias export_runs export_minmaxes
+      alias export_run  export_minmax
       alias parse_run   parse_minmax
 
       def parse_entry(str)
