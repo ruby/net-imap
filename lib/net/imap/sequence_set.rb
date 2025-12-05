@@ -1236,7 +1236,7 @@ module Net
       # Related: #entries, #each_element
       def each_entry(&block) # :yields: integer or range or :*
         return to_enum(__method__) unless block_given?
-        each_entry_tuple do yield export_run_entry _1 end
+        each_entry_run do yield export_run_entry _1 end
       end
 
       # Yields each number or range (or <tt>:*</tt>) in #elements to the block
@@ -1254,7 +1254,7 @@ module Net
 
       private
 
-      def each_entry_tuple(&block)
+      def each_entry_minmax(&block)
         return to_enum(__method__) unless block_given?
         if @string
           @string.split(",") do block.call parse_minmax _1 end
@@ -1263,6 +1263,7 @@ module Net
         end
         self
       end
+      alias each_entry_run each_entry_minmax
 
       def export_minmax_entry((min, max))
         if    min == STAR_INT then :*
@@ -1314,7 +1315,7 @@ module Net
       def each_ordered_number(&block)
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
-        each_entry_tuple do each_number_in_minmax _1, _2, &block end
+        each_entry_minmax do each_number_in_minmax _1, _2, &block end
       end
 
       private def each_number_in_minmax(min, max, &block)
@@ -1359,7 +1360,7 @@ module Net
       # Related: #entries, #count_duplicates, #has_duplicates?
       def count_with_duplicates
         return count unless @string
-        each_entry_tuple.sum {|min, max|
+        each_entry_minmax.sum {|min, max|
           max - min + ((max == STAR_INT && min != STAR_INT) ? 0 : 1)
         }
       end
@@ -1393,7 +1394,7 @@ module Net
       # Related: #[], #at, #find_ordered_index
       def find_index(number)
         number = import_num number
-        each_tuple_with_index(@tuples) do |min, max, idx_min|
+        each_minmax_with_index(minmaxes) do |min, max, idx_min|
           number <  min and return nil
           number <= max and return export_num(idx_min + (number - min))
         end
@@ -1406,7 +1407,7 @@ module Net
       # Related: #find_index
       def find_ordered_index(number)
         number = import_num number
-        each_tuple_with_index(each_entry_tuple) do |min, max, idx_min|
+        each_minmax_with_index(each_entry_minmax) do |min, max, idx_min|
           if min <= number && number <= max
             return export_num(idx_min + (number - min))
           end
@@ -1416,9 +1417,9 @@ module Net
 
       private
 
-      def each_tuple_with_index(tuples)
+      def each_minmax_with_index(minmaxes)
         idx_min = 0
-        tuples.each do |min, max|
+        minmaxes.each do |min, max|
           idx_max = idx_min + (max - min)
           yield min, max, idx_min, idx_max
           idx_min = idx_max + 1
@@ -1426,9 +1427,9 @@ module Net
         idx_min
       end
 
-      def reverse_each_tuple_with_index(tuples)
+      def reverse_each_minmax_with_index(minmaxes)
         idx_max = -1
-        tuples.reverse_each do |min, max|
+        minmaxes.reverse_each do |min, max|
           yield min, max, (idx_min = idx_max - (max - min)), idx_max
           idx_max = idx_min - 1
         end
@@ -1447,7 +1448,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def at(index)
-        lookup_number_by_tuple_index(tuples, index)
+        seek_number_in_minmaxes(minmaxes, index)
       end
 
       # :call-seq: ordered_at(index) -> integer or nil
@@ -1460,17 +1461,17 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def ordered_at(index)
-        lookup_number_by_tuple_index(each_entry_tuple, index)
+        seek_number_in_minmaxes(each_entry_minmax, index)
       end
 
-      private def lookup_number_by_tuple_index(tuples, index)
+      private def seek_number_in_minmaxes(minmaxes, index)
         index = Integer(index.to_int)
         if index.negative?
-          reverse_each_tuple_with_index(tuples) do |min, max, idx_min, idx_max|
+          reverse_each_minmax_with_index(minmaxes) do |min, max, idx_min, idx_max|
             idx_min <= index and return export_num(min + (index - idx_min))
           end
         else
-          each_tuple_with_index(tuples) do |min, _, idx_min, idx_max|
+          each_minmax_with_index(minmaxes) do |min, _, idx_min, idx_max|
             index <= idx_max and return export_num(min + (index - idx_min))
           end
         end
