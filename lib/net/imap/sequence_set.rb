@@ -275,8 +275,10 @@ module Net
     #   occurrence in entries.
     #
     # <i>Set cardinality:</i>
-    # - #count (aliased as #size): Returns the count of numbers in the set.
-    #   Duplicated numbers are not counted.
+    # - #cardinality: Returns the number of distinct members in the set.
+    #   <tt>*</tt> is counted as its own entry, distinct from UINT32_MAX.
+    # - #count (aliased as #size): Returns the count of distinct numbers in the
+    #   set.  <tt>*</tt> is counted as UINT32_MAX.
     # - #empty?: Returns whether the set has no members.  \IMAP syntax does not
     #   allow empty sequence sets.
     # - #valid?: Returns whether the set has any members.
@@ -1336,15 +1338,46 @@ module Net
       # Related: #elements, #ranges, #numbers
       def to_set; Set.new(numbers) end
 
+      # Returns the number of members in the set.
+      #
+      # Unlike #count, <tt>"*"</tt> is considered to be distinct from
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
+      #
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set.count        #=> 10
+      #     set.cardinality  #=> 10
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count        #=> 1
+      #     set.cardinality  #=> 2
+      #
+      #     set = Net::IMAP::SequenceSet[1..]
+      #     set.count        #=> 4294967295
+      #     set.cardinality  #=> 4294967296
+      #
+      # Related: #count, #count_with_duplicates
+      def cardinality = minmaxes.sum(@set_data.count) { _2 - _1 }
+
       # Returns the count of #numbers in the set.
       #
-      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
-      # unsigned integer value).
+      # Unlike #cardinality, <tt>"*"</tt> is considered to be equal to
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
       #
-      # Related: #count_with_duplicates
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set.count        #=> 10
+      #     set.cardinality  #=> 10
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count        #=> 1
+      #     set.cardinality  #=> 2
+      #
+      #     set = Net::IMAP::SequenceSet[1..]
+      #     set.count        #=> 4294967295
+      #     set.cardinality  #=> 4294967296
+      #
+      # Related: #cardinality, #count_with_duplicates
       def count
-        minmaxes.sum(minmaxes.count) { _2 - _1 } +
-          (include_star? && include?(UINT32_MAX) ? -1 : 0)
+        cardinality + (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
       alias size count
@@ -1352,12 +1385,24 @@ module Net
       # Returns the count of numbers in the ordered #entries, including any
       # repeated numbers.
       #
-      # <tt>*</tt> will be counted as <tt>2**32 - 1</tt> (the maximum 32-bit
-      # unsigned integer value).
+      # When #string is normalized, this returns the same as #count.
+      # Like #count, <tt>"*"</tt> is be considered to be equal to
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
       #
-      # When #string is normalized, this behaves the same as #count.
+      # In a range, <tt>"*"</tt> is _not_ considered a duplicate:
+      #     set = Net::IMAP::SequenceSet["4294967295:*"]
+      #     set.count_with_duplicates  #=> 1
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
       #
-      # Related: #entries, #count_duplicates, #has_duplicates?
+      # In a separate entry, <tt>"*"</tt> _is_ considered a duplicate:
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.count_with_duplicates  #=> 2
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
+      #
+      # Related: #count, #cardinality, #count_duplicates, #has_duplicates?,
+      # #entries
       def count_with_duplicates
         return count unless @string
         each_entry_minmax.sum {|min, max|
@@ -1382,7 +1427,7 @@ module Net
       #
       # Always returns +false+ when #string is normalized.
       #
-      # Related: #entries, #count_with_duplicates, #count_duplicates?
+      # Related: #entries, #count_with_duplicates, #count_duplicates
       def has_duplicates?
         return false unless @string
         count_with_duplicates != count
