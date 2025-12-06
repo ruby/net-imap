@@ -23,6 +23,12 @@ prelude: |
       def xor2(other) remain_frozen dup.xor2! other end
       def xor3(other) remain_frozen dup.xor3! other end
 
+      unless instance_methods.include?(:xor!)
+        def xor!(other)
+          replace(self ^ other)
+        end
+      end
+
       # (L | R) - (L & R)
       def xor1!(other)
         modifying!
@@ -69,8 +75,8 @@ prelude: |
   end
 
 benchmark:
-  "      L ^ R":             l, r = sets; l ^ r
-  "      L.xor! R":          l, r = sets; l.xor! r
+  "builtin:          L ^ R": l, r = sets; l ^ r
+  "builtin:       L.xor! R": l, r = sets; l.xor! r
   "      (L | R) - (R & L)": l, r = sets; (l | r) - (r & l)
   "0.5.8 (L | R) - (R & L)": l, r = sets; l.xor0  r
   "dup1  (L | R) - (R & L)": l, r = sets; l.xor1  r
