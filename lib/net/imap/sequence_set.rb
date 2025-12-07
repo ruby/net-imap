@@ -2026,10 +2026,6 @@ module Net
       alias include_run?   include_minmax?
       alias intersect_run? intersect_minmax?
 
-      def bsearch_minmax_with_index(num)
-        idx = bsearch_index(num) and [minmaxes[idx], idx]
-      end
-
       def bsearch_index(num)  = minmaxes.bsearch_index { _2 >= num }
       def bsearch_minmax(num) = minmaxes.bsearch       { _2 >= num }
       def bsearch_range(num)  = (min, max = bsearch_minmax(num)) && (min..max)
@@ -2111,6 +2107,9 @@ module Net
       def min_num                 = minmaxes.first&.first
       def max_num                 = minmaxes.last&.last
 
+      def min_at(idx)             = minmaxes[idx][0]
+      def max_at(idx)             = minmaxes[idx][1]
+
       ######################################################################{{{2
       # Core set data modification primitives
 
@@ -2158,8 +2157,9 @@ module Net
       #   ---------??===lower==|--|==|--|=====upper===|-- join to upper
       def add_minmax(minmax)
         modifying!
-        min, max = minmax
-        (lmin, lmax), lower_idx = bsearch_minmax_with_index(min - 1)
+        min, max   = minmax
+        lower_idx  = bsearch_index(min - 1)
+        lmin, lmax = min_at(lower_idx), max_at(lower_idx) if lower_idx
         if    lmin.nil?        then append_minmax min, max
         elsif (max + 1) < lmin then insert_minmax lower_idx, min, max
         else  add_coalesced_minmax(lower_idx, lmin, lmax, min, max)
@@ -2173,12 +2173,11 @@ module Net
         next_idx = lower_idx + 1
         return if next_idx == runs.count
         tmax_adj = lmax + 1
-        upper, upper_idx = bsearch_minmax_with_index(tmax_adj)
-        if upper
-          if tmax_adj < upper.first
+        if (upper_idx = bsearch_index(tmax_adj))
+          if tmax_adj < min_at(upper_idx)
             upper_idx -= 1
           else
-            set_max_at lower_idx, upper.last
+            set_max_at lower_idx, max_at(upper_idx)
           end
         end
         slice_runs! next_idx..upper_idx
@@ -2199,8 +2198,9 @@ module Net
       # -------??=====lower====|--|====|--|=====upper====|-- 8. delete and trim
       def subtract_minmax(minmax)
         modifying!
-        min, max = minmax
-        (lmin, lmax), idx = bsearch_minmax_with_index(min)
+        min, max   = minmax
+        idx        = bsearch_index(min)
+        lmin, lmax = min_at(idx), max_at(idx) if idx
         if    lmin.nil?  then nil # case 1.
         elsif max < lmin then nil # case 2.
         elsif max < lmax then trim_or_split_minmax  idx, lmin,       min, max
@@ -2212,7 +2212,6 @@ module Net
         set_min_at idx, tmax + 1
         if lmin < tmin # split
           insert_minmax idx, lmin, tmin - 1
-          idx += 1
         end
       end
 
@@ -2223,8 +2222,8 @@ module Net
         end
         if tmax == lmax                                 # case 5
           delete_run_at lower_idx
-        elsif (upper, upper_idx = bsearch_minmax_with_index(tmax + 1))
-          if upper.first <= tmax                        # case 8
+        elsif (upper_idx = bsearch_index(tmax + 1))
+          if min_at(upper_idx) <= tmax                  # case 8
             set_min_at upper_idx, tmax + 1
           end
           slice_runs! lower_idx..upper_idx - 1          # cases 7 and 8
