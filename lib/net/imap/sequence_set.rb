@@ -1953,9 +1953,11 @@ module Net
         self.string = coder['string']
       end
 
+      # :stopdoc:
       protected
 
-      attr_reader :set_data # :nodoc:
+      attr_reader :set_data
+
       alias runs set_data
       alias minmaxes runs
 
