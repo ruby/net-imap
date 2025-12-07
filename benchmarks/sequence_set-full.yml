@@ -1,0 +1,45 @@
+---
+prelude: |
+  require "net/imap"
+
+  INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
+  MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
+  WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+
+  SETS = Array.new(1000) {
+    Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
+  }
+
+  # warmup (esp. for JIT)
+  200.times do
+    Net::IMAP::SequenceSet.full.full?
+    Net::IMAP::SequenceSet.empty.full?
+    SETS.sample.full?
+  end
+
+benchmark:
+  - name: empty
+    prelude: set = Net::IMAP::SequenceSet.empty
+    script: set.full?
+  - name: full
+    prelude: set = Net::IMAP::SequenceSet.full
+    script: set.full?
+  - name: rand
+    script: SETS.sample.full?
+
+contexts:
+  # - name: local
+  #   prelude: |
+  #     $LOAD_PATH.unshift "./lib"
+  - name: v0.5.12
+    gems:
+      net-imap: 0.5.12
+    require: false
+  - name: 0.6.0.dev.g497b6c7c7
+    gems:
+      net-imap: 0.6.0.dev.g497b6c7c7
+    require: false
+  - name: 0.6.0.dev.gfc4e3a782.seqset.full
+    gems:
+      net-imap: 0.6.0.dev.gfc4e3a782.seqset.full
+    require: false

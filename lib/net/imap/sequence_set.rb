@@ -420,6 +420,9 @@ module Net
       STARS     = [:*, ?*, -1].freeze
       private_constant :STARS
 
+      FULL_SET_DATA = [[1, STAR_INT].freeze].freeze
+      private_constant :FULL_SET_DATA
+
       INSPECT_MAX_LEN      = 512
       INSPECT_TRUNCATE_LEN =  16
       private_constant :INSPECT_MAX_LEN, :INSPECT_TRUNCATE_LEN
@@ -825,7 +828,7 @@ module Net
       def empty?; runs.empty? end
 
       # Returns true if the set contains every possible element.
-      def full?; minmaxes == [[1, STAR_INT]] end
+      def full?; set_data == FULL_SET_DATA end
 
       # :call-seq:
       #   self + other -> sequence set
