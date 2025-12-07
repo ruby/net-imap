@@ -2155,17 +2155,22 @@ module Net
       end
 
       def add_coalesced_minmax(lower, lower_idx, min, max)
-        return if lower.first <= min && max <= lower.last
-        lower[0] = [min, lower.first].min
-        lower[1] = [max, lower.last].max
-        lower_idx += 1
-        return if lower_idx == minmaxes.count
-        tmax_adj = lower.last + 1
+        lmin, lmax = lower
+        return if lmin <= min && max <= lmax
+        minmaxes[lower_idx][0] = (lmin = min) if min < lmin
+        minmaxes[lower_idx][1] = (lmax = max) if lmax < max
+        next_idx = lower_idx + 1
+        return if next_idx == runs.count
+        tmax_adj = lmax + 1
         upper, upper_idx = bsearch_minmax_with_index(tmax_adj)
         if upper
-          tmax_adj < upper.first ? (upper_idx -= 1) : (lower[1] = upper.last)
+          if tmax_adj < upper.first
+            upper_idx -= 1
+          else
+            minmaxes[lower_idx][1] = upper.last
+          end
         end
-        minmaxes.slice!(lower_idx..upper_idx)
+        runs.slice!(next_idx..upper_idx)
       end
 
       #         |====subtracted run=======|
@@ -2193,24 +2198,30 @@ module Net
       end
 
       def trim_or_split_minmax(lower, idx, tmin, tmax)
-        if lower.first < tmin # split
-          minmaxes.insert(idx, [lower.first, tmin - 1])
+        lmin, = lower
+        minmaxes[idx][0] = tmax + 1
+        if lmin < tmin # split
+          minmaxes.insert(idx, [lmin, tmin - 1])
+          idx += 1
         end
-        lower[0] = tmax + 1
       end
 
       def trim_or_delete_minmax(lower, lower_idx, tmin, tmax)
-        if lower.first < tmin # trim lower
-          lower[1] = tmin - 1
+        lmin, lmax = lower
+        if lmin < tmin # trim lower
+          lmax = minmaxes[lower_idx][1] = tmin - 1
           lower_idx += 1
         end
-        if tmax == lower.last                           # case 5
-          upper_idx = lower_idx
+        if tmax == lmax                                 # case 5
+          runs.delete_at(lower_idx)
         elsif (upper, upper_idx = bsearch_minmax_with_index(tmax + 1))
-          upper_idx -= 1                                # cases 7 and 8
-          upper[0] = tmax + 1 if upper.first <= tmax    # case 8 (else case 7)
+          if upper.first <= tmax                        # case 8
+            minmaxes[upper_idx][0] = tmax + 1
+          end
+          runs.slice!(lower_idx..upper_idx - 1)         # cases 7 and 8
+        else                                            # case 6
+          runs.slice!(lower_idx..)
         end
-        minmaxes.slice!(lower_idx..upper_idx)
       end
 
       alias add_runs      add_minmaxes
