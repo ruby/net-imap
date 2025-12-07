@@ -1333,7 +1333,7 @@ module Net
       #     set.cardinality  #=> 4294967296
       #
       # Related: #count, #count_with_duplicates
-      def cardinality = minmaxes.sum(@set_data.count) { _2 - _1 }
+      def cardinality = minmaxes.sum(runs.count) { _2 - _1 }
 
       # Returns the count of distinct #numbers in the set.
       #
