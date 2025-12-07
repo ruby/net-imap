@@ -2027,13 +2027,12 @@ module Net
       alias intersect_run? intersect_minmax?
 
       def bsearch_minmax_with_index(num)
-        idx = minmaxes.bsearch_index { _2 >= num } and [minmaxes[idx], idx]
+        idx = bsearch_index(num) and [minmaxes[idx], idx]
       end
 
-      def bsearch_range(num)
-        first, last = minmaxes.bsearch { _2 >= num }
-        first..last if first
-      end
+      def bsearch_index(num)  = minmaxes.bsearch_index { _2 >= num }
+      def bsearch_minmax(num) = minmaxes.bsearch       { _2 >= num }
+      def bsearch_range(num)  = (min, max = bsearch_minmax(num)) && (min..max)
 
       ######################################################################{{{2
       # Number indexing methods
