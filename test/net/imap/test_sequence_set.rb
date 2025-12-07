@@ -1145,6 +1145,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     normalize:  "2:*",
     count:      2**32 - 2,
     count_dups: 2**32 - 2,
+    size:       2**33 - 2,
     cardinality: 2**32 - 1,
     complement: "1",
   }, keep: true
@@ -1196,6 +1197,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     count:      1,
     cardinality: 2,
     count_dups: 1,
+    size:       2,
     complement: "1:#{2**32 - 2}",
   }, keep: true
 
@@ -1210,6 +1212,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     count:      1,
     cardinality: 2,
     count_dups: 0,
+    size:       2,
     complement: "1:#{2**32 - 2}",
   }, keep: true
 
@@ -1361,7 +1364,12 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   end
 
   test "#size" do |data|
-    assert_equal data[:count], SequenceSet.new(data[:input]).size
+    expected = data[:size] || begin
+      dups = data[:count_dups]  || 0
+      card = data[:cardinality] || data[:count]
+      card + dups
+    end
+    assert_equal expected, SequenceSet.new(data[:input]).size
   end
 
   test "#cardinality" do |data|

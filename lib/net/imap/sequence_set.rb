@@ -283,8 +283,8 @@ module Net
     # <i>Set cardinality:</i>
     # - #cardinality: Returns the number of distinct members in the set.
     #   <tt>*</tt> is counted as its own member, distinct from UINT32_MAX.
-    # - #count (aliased as #size): Returns the count of numbers in the set.
-    #   Duplicated numbers are not counted.
+    # - #count: Returns the count of distinct numbers in the set.
+    #   <tt>*</tt> is counted as equal to UINT32_MAX.
     # - #empty?: Returns whether the set has no members.  \IMAP syntax does not
     #   allow empty sequence sets.
     # - #valid?: Returns whether the set has any members.
@@ -296,10 +296,14 @@ module Net
     #   coalesced, and all #string entries are in normalized form.
     # - #has_duplicates?: Returns whether the ordered entries repeat any
     #   numbers.
-    # - #count_duplicates: Returns the count of repeated numbers in the ordered
-    #   entries.
+    # - #size: Returns the total size of all #entries, including repeated
+    #   numbers.  <tt>*</tt> is counted as its own member, distinct from
+    #   UINT32_MAX.
     # - #count_with_duplicates: Returns the count of numbers in the ordered
-    #   entries, including any repeated numbers.
+    #   #entries, including repeated numbers.  <tt>*</tt> is counted as
+    #   equal to UINT32_MAX.
+    # - #count_duplicates: Returns the count of repeated numbers in the ordered
+    #   #entries.  <tt>*</tt> is counted as equal to UINT32_MAX.
     #
     # === Methods for Iterating
     #
@@ -1364,7 +1368,7 @@ module Net
       # Related: #count, #count_with_duplicates
       def cardinality = minmaxes.sum(@set_data.count) { _2 - _1 }
 
-      # Returns the count of #numbers in the set.
+      # Returns the count of distinct #numbers in the set.
       #
       # Unlike #cardinality, <tt>"*"</tt> is considered to be equal to
       # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
@@ -1386,34 +1390,59 @@ module Net
         cardinality + (include_star? && include?(UINT32_MAX) ? -1 : 0)
       end
 
-      alias size count
-
       # Returns the count of numbers in the ordered #entries, including any
       # repeated numbers.
       #
-      # When #string is normalized, this returns the same as #count.
-      # Like #count, <tt>"*"</tt> is be considered to be equal to
-      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
+      # When #string is normalized, this returns the same as #count.  Like
+      # #count, <tt>"*"</tt> is considered to be equal to <tt>2³² - 1</tt> (the
+      # maximum 32-bit unsigned integer value).
       #
       # In a range, <tt>"*"</tt> is _not_ considered a duplicate:
       #     set = Net::IMAP::SequenceSet["4294967295:*"]
       #     set.count_with_duplicates  #=> 1
+      #     set.size                   #=> 2
       #     set.count                  #=> 1
       #     set.cardinality            #=> 2
       #
       # In a separate entry, <tt>"*"</tt> _is_ considered a duplicate:
       #     set = Net::IMAP::SequenceSet["4294967295,*"]
       #     set.count_with_duplicates  #=> 2
+      #     set.size                   #=> 2
       #     set.count                  #=> 1
       #     set.cardinality            #=> 2
       #
-      # Related: #count, #cardinality, #count_duplicates, #has_duplicates?,
-      # #entries
+      # Related: #count, #cardinality, #size, #count_duplicates,
+      # #has_duplicates?, #entries
       def count_with_duplicates
         return count unless @string
         each_entry_minmax.sum {|min, max|
           max - min + ((max == STAR_INT && min != STAR_INT) ? 0 : 1)
         }
+      end
+
+      # Returns the combined size of the ordered #entries, including any
+      # repeated numbers.
+      #
+      # When #string is normalized, this returns the same as #cardinality.
+      # Like #cardinality, <tt>"*"</tt> is considered to be be distinct from
+      # <tt>2³² - 1</tt> (the maximum 32-bit unsigned integer value).
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295:*"]
+      #     set.size                   #=> 2
+      #     set.count_with_duplicates  #=> 1
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
+      #
+      #     set = Net::IMAP::SequenceSet["4294967295,*"]
+      #     set.size                   #=> 2
+      #     set.count_with_duplicates  #=> 2
+      #     set.count                  #=> 1
+      #     set.cardinality            #=> 2
+      #
+      # Related: #cardinality, #count_with_duplicates, #count, #entries
+      def size
+        return cardinality unless @string
+        each_entry_minmax.sum {|min, max| max - min + 1 }
       end
 
       # Returns the count of repeated numbers in the ordered #entries, the
