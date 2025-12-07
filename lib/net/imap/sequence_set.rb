@@ -2159,15 +2159,14 @@ module Net
       def add_minmax(minmax)
         modifying!
         min, max = minmax
-        lower, lower_idx = bsearch_minmax_with_index(min - 1)
-        if    lower.nil?              then append_minmax min, max
-        elsif (max + 1) < lower.first then insert_minmax lower_idx, min, max
-        else  add_coalesced_minmax(lower, lower_idx, min, max)
+        (lmin, lmax), lower_idx = bsearch_minmax_with_index(min - 1)
+        if    lmin.nil?        then append_minmax min, max
+        elsif (max + 1) < lmin then insert_minmax lower_idx, min, max
+        else  add_coalesced_minmax(lower_idx, lmin, lmax, min, max)
         end
       end
 
-      def add_coalesced_minmax(lower, lower_idx, min, max)
-        lmin, lmax = lower
+      def add_coalesced_minmax(lower_idx, lmin, lmax, min, max)
         return if lmin <= min && max <= lmax
         set_min_at lower_idx, (lmin = min) if min < lmin
         set_max_at lower_idx, (lmax = max) if lmax < max
@@ -2201,16 +2200,15 @@ module Net
       def subtract_minmax(minmax)
         modifying!
         min, max = minmax
-        lower, idx = bsearch_minmax_with_index(min)
-        if    lower.nil?        then nil # case 1.
-        elsif max < lower.first then nil # case 2.
-        elsif max < lower.last  then trim_or_split_minmax  lower, idx, min, max
-        else                         trim_or_delete_minmax lower, idx, min, max
+        (lmin, lmax), idx = bsearch_minmax_with_index(min)
+        if    lmin.nil?  then nil # case 1.
+        elsif max < lmin then nil # case 2.
+        elsif max < lmax then trim_or_split_minmax  idx, lmin,       min, max
+        else                  trim_or_delete_minmax idx, lmin, lmax, min, max
         end
       end
 
-      def trim_or_split_minmax(lower, idx, tmin, tmax)
-        lmin, = lower
+      def trim_or_split_minmax(idx, lmin, tmin, tmax)
         set_min_at idx, tmax + 1
         if lmin < tmin # split
           insert_minmax idx, lmin, tmin - 1
@@ -2218,8 +2216,7 @@ module Net
         end
       end
 
-      def trim_or_delete_minmax(lower, lower_idx, tmin, tmax)
-        lmin, lmax = lower
+      def trim_or_delete_minmax(lower_idx, lmin, lmax, tmin, tmax)
         if lmin < tmin # trim lower
           lmax = set_max_at lower_idx, tmin - 1
           lower_idx += 1
