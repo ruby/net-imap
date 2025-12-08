@@ -562,7 +562,7 @@ module Net
 
       # Removes all elements and returns self.
       def clear
-        modifying! # redundant check, to normalize the error message for JRuby
+        modifying! # redundant check (normalizes the error message for JRuby)
         @set_data, @string = [], nil
         self
       end
@@ -1740,7 +1740,7 @@ module Net
       #
       # Related: #complement
       def complement!
-        modifying! # short-circuit, and normalize the error message for JRuby
+        modifying! # short-circuit before querying
         return replace(self.class.full) if empty?
         return clear                    if full?
         flat = minmaxes.flat_map { [_1 - 1, _2 + 1] }
@@ -1762,7 +1762,7 @@ module Net
       #
       # Related: #intersection, #intersect?
       def intersect!(other)
-        modifying!
+        modifying! # short-circuit before processing input
         subtract SequenceSet.new(other).complement!
       end
 
@@ -1851,7 +1851,7 @@ module Net
       #
       # Related: #normalize, #normalized_string, #normalized?
       def normalize!
-        modifying! # redundant check, to normalize the error message for JRuby
+        modifying! # redundant check (normalizes the error message for JRuby)
         @string = nil
         self
       end
