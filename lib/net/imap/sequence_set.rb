@@ -1778,10 +1778,10 @@ module Net
       #
       # Related: #xor, #merge, #subtract
       def xor!(other)
-        modifying!
-        other = IMAP::SequenceSet(other)
-        both = self & other
-        merge(other).subtract(both)
+        modifying! # short-circuit before processing input
+        other = SequenceSet.new(other)
+        copy  = dup
+        merge(other).subtract(other.subtract(copy.complement!))
       end
 
       # Returns whether #string is fully normalized: entries have been sorted,
