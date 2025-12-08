@@ -555,12 +555,17 @@ module Net
       #   combined with set operations (#|, #&, #^, #-, etc) to make new sets.
       #
       # See SequenceSet@Creating+sequence+sets.
-      def initialize(input = nil) input ? replace(input) : clear end
+      def initialize(input = nil)
+        @set_data = new_set_data
+        @string = nil
+        replace(input) unless input.nil?
+      end
 
       # Removes all elements and returns self.
       def clear
         modifying! # redundant check (normalizes the error message for JRuby)
-        @set_data, @string = [], nil
+        set_data.clear
+        @string = nil
         self
       end
 
@@ -647,7 +652,7 @@ module Net
       # Freezes and returns the set.  A frozen SequenceSet is Ractor-safe.
       def freeze
         return self if frozen?
-        set_data.each(&:freeze).freeze
+        freeze_set_data
         super
       end
 
@@ -1841,7 +1846,7 @@ module Net
 
       # For YAML deserialization
       def init_with(coder) # :nodoc:
-        @set_data = []
+        @set_data = new_set_data
         self.string = coder['string']
       end
 
@@ -1852,8 +1857,6 @@ module Net
 
       alias runs set_data
       alias minmaxes runs
-
-      def dup_set_data; set_data.map { _1.dup } end # :nodoc:
 
       private
 
@@ -2094,6 +2097,14 @@ module Net
           end
         end
       end
+
+      ######################################################################{{{2
+      # Core set data create/freeze/dup primitives
+
+      def new_set_data    = []
+      def freeze_set_data = set_data.each(&:freeze).freeze
+      def dup_set_data    = set_data.map { _1.dup }
+      protected :dup_set_data
 
       ######################################################################{{{2
       # Update methods
