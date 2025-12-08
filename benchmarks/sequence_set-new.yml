@@ -7,6 +7,7 @@ prelude: |
   include ProfilingHelper
 
   N_RAND = 100
+  ENV["BENCHMARK_RANDOM_SEED"]&.then {|seed| srand Integer(seed) }
 
   def rand_nums(n, min: 1, max: (n * 1.25).to_i) = Array.new(n) { rand(1..max) }
   def rand_entries(...) = SeqSet[rand_nums(...)].elements

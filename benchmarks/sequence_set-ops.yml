@@ -6,6 +6,7 @@ prelude: |
   INPUT_COUNT = Integer ENV.fetch("BENCHMARK_INPUT_COUNT", 1000)
   MAX_INPUT   = Integer ENV.fetch("BENCHMARK_MAX_INPUT",   1400)
   WARMUP_RUNS = Integer ENV.fetch("BENCHMARK_WARMUP_RUNS",  200)
+  ENV["BENCHMARK_RANDOM_SEED"]&.then {|seed| srand Integer(seed) }
 
   SETS = Array.new(1000) {
     Net::IMAP::SequenceSet[Array.new(INPUT_COUNT) { rand(1..MAX_INPUT) }]
@@ -17,7 +18,7 @@ prelude: |
   end
 
   # warmup (esp. for JIT)
-  200.times do
+  WARMUP_RUNS.times do
     lhs, rhs = sets
     lhs | rhs
     lhs & rhs
