@@ -631,7 +631,7 @@ module Net
           entries = each_parsed_entry(str).to_a
           clear
           if normalized_entries?(entries)
-            minmaxes.replace entries.map!(&:minmax)
+            replace_minmaxes entries.map!(&:minmax)
           else
             add_minmaxes entries.map!(&:minmax)
             @string = -str
@@ -1647,7 +1647,7 @@ module Net
         flat = minmaxes.flat_map { [_1 - 1, _2 + 1] }
         if flat.first < 1         then flat.shift else flat.unshift 1        end
         if STAR_INT   < flat.last then flat.pop   else flat.push    STAR_INT end
-        @set_data = flat.each_slice(2).to_a
+        replace_minmaxes flat.each_slice(2).to_a
         normalize!
       end
 
@@ -2112,6 +2112,18 @@ module Net
       def max_num                 = minmaxes.last&.last
 
       ######################################################################{{{2
+      # Core set data modification primitives
+
+      def set_min_at(idx, min)         = minmaxes[idx][0] = min
+      def set_max_at(idx, max)         = minmaxes[idx][1] = max
+      def replace_minmaxes(other)      = minmaxes.replace(other)
+      def append_minmax(min, max)      = minmaxes << [min, max]
+      def insert_minmax(idx, min, max) = minmaxes.insert idx, [min, max]
+      def delete_run_at(idx)           = runs.delete_at(idx)
+      def slice_runs!(...)             = runs.slice!(...)
+      def truncate_runs!(idx)          = runs.slice!(idx..)
+
+      ######################################################################{{{2
       # Update methods
 
       def modifying!
@@ -2148,8 +2160,8 @@ module Net
         modifying!
         min, max = minmax
         lower, lower_idx = bsearch_minmax_with_index(min - 1)
-        if    lower.nil?              then minmaxes << [min, max]
-        elsif (max + 1) < lower.first then minmaxes.insert(lower_idx, [min, max])
+        if    lower.nil?              then append_minmax min, max
+        elsif (max + 1) < lower.first then insert_minmax lower_idx, min, max
         else  add_coalesced_minmax(lower, lower_idx, min, max)
         end
       end
@@ -2157,8 +2169,8 @@ module Net
       def add_coalesced_minmax(lower, lower_idx, min, max)
         lmin, lmax = lower
         return if lmin <= min && max <= lmax
-        minmaxes[lower_idx][0] = (lmin = min) if min < lmin
-        minmaxes[lower_idx][1] = (lmax = max) if lmax < max
+        set_min_at lower_idx, (lmin = min) if min < lmin
+        set_max_at lower_idx, (lmax = max) if lmax < max
         next_idx = lower_idx + 1
         return if next_idx == runs.count
         tmax_adj = lmax + 1
@@ -2167,10 +2179,10 @@ module Net
           if tmax_adj < upper.first
             upper_idx -= 1
           else
-            minmaxes[lower_idx][1] = upper.last
+            set_max_at lower_idx, upper.last
           end
         end
-        runs.slice!(next_idx..upper_idx)
+        slice_runs! next_idx..upper_idx
       end
 
       #         |====subtracted run=======|
@@ -2199,9 +2211,9 @@ module Net
 
       def trim_or_split_minmax(lower, idx, tmin, tmax)
         lmin, = lower
-        minmaxes[idx][0] = tmax + 1
+        set_min_at idx, tmax + 1
         if lmin < tmin # split
-          minmaxes.insert(idx, [lmin, tmin - 1])
+          insert_minmax idx, lmin, tmin - 1
           idx += 1
         end
       end
@@ -2209,18 +2221,18 @@ module Net
       def trim_or_delete_minmax(lower, lower_idx, tmin, tmax)
         lmin, lmax = lower
         if lmin < tmin # trim lower
-          lmax = minmaxes[lower_idx][1] = tmin - 1
+          lmax = set_max_at lower_idx, tmin - 1
           lower_idx += 1
         end
         if tmax == lmax                                 # case 5
-          runs.delete_at(lower_idx)
+          delete_run_at lower_idx
         elsif (upper, upper_idx = bsearch_minmax_with_index(tmax + 1))
           if upper.first <= tmax                        # case 8
-            minmaxes[upper_idx][0] = tmax + 1
+            set_min_at upper_idx, tmax + 1
           end
-          runs.slice!(lower_idx..upper_idx - 1)         # cases 7 and 8
+          slice_runs! lower_idx..upper_idx - 1          # cases 7 and 8
         else                                            # case 6
-          runs.slice!(lower_idx..)
+          truncate_runs! lower_idx
         end
       end
 
