@@ -749,7 +749,7 @@ module Net
       alias member? include?
 
       # Returns +true+ when the set contains <tt>*</tt>.
-      def include_star?; minmaxes.last&.last == STAR_INT end
+      def include_star?; max_num == STAR_INT end
 
       # Returns +true+ if the set and a given object have any common elements,
       # +false+ otherwise.
@@ -789,7 +789,7 @@ module Net
       def max(count = nil, star: :*)
         if count
           slice(-[count, size].min..) || remain_frozen_empty
-        elsif (val = minmaxes.last&.last)
+        elsif (val = max_num)
           val == STAR_INT ? star : val
         end
       end
@@ -809,7 +809,7 @@ module Net
       def min(count = nil, star: :*)
         if count
           slice(0...count) || remain_frozen_empty
-        elsif (val = minmaxes.first&.first)
+        elsif (val = min_num)
           val != STAR_INT ? val : star
         end
       end
@@ -1008,7 +1008,7 @@ module Net
         modifying! # short-circuit before import_minmax
         minmax = import_minmax entry
         adj = minmax.first - 1
-        if @string.nil? && (runs.empty? || minmaxes.last.last <= adj)
+        if @string.nil? && (runs.empty? || max_num <= adj)
           # append to elements or coalesce with last element
           add_minmax minmax
           return self
@@ -2105,6 +2105,12 @@ module Net
       def freeze_set_data = set_data.each(&:freeze).freeze
       def dup_set_data    = set_data.map { _1.dup }
       protected :dup_set_data
+
+      ######################################################################{{{2
+      # Core set data query/enumeration primitives
+
+      def min_num                 = minmaxes.first&.first
+      def max_num                 = minmaxes.last&.last
 
       ######################################################################{{{2
       # Update methods
