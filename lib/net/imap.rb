@@ -2633,6 +2633,7 @@ module Net
 
     # :call-seq:
     #   uid_fetch(set, attr, changedsince: nil, partial: nil) -> array of FetchData (or UIDFetchData)
+    #   uid_fetch(set, attr, changedsince:, vanished: true, partial: nil) -> array of VanishedData and FetchData (or UIDFetchData)
     #
     # Sends a {UID FETCH command [IMAP4rev1 §6.4.8]}[https://www.rfc-editor.org/rfc/rfc3501#section-6.4.8]
     # to retrieve data associated with a message in the mailbox.
@@ -2648,6 +2649,22 @@ module Net
     #   whether a +UID+ was specified as a message data item to the +FETCH+.
     #
     # +changedsince+ (optional) behaves the same as with #fetch.
+    #
+    # +vanished+ can be used to request a list all of the message UIDs in +set+
+    # that have been expunged since +changedsince+.  Setting +vanished+ to true
+    # prepends a VanishedData object to the returned array.  If the server does
+    # not return a +VANISHED+ response, an empty VanishedData object will still
+    # be added.
+    # <em>The +QRESYNC+ capabability must be enabled.</em>
+    # {[RFC7162]}[https://rfc-editor.org/rfc/rfc7162]
+    #
+    # For example:
+    #
+    #   imap.enable("QRESYNC") # must enable before selecting the mailbox
+    #   imap.select("INBOX")
+    #   # first value in the array is VanishedData
+    #   vanished, *fetched = imap.uid_fetch(301..500, %w[flags],
+    #                                       changedsince: 12345, vanished: true)
     #
     # +partial+ is an optional range to limit the number of results returned.
     # It's useful when +set+ contains an unknown number of messages.
@@ -2680,6 +2697,9 @@ module Net
     # Related: #fetch, FetchData
     #
     # ==== Capabilities
+    #
+    # QRESYNC[https://www.rfc-editor.org/rfc/rfc7162] must be enabled in order
+    # to use the +vanished+ fetch modifier.
     #
     # The server's capabilities must include +PARTIAL+
     # {[RFC9394]}[https://rfc-editor.org/rfc/rfc9394] in order to use the
@@ -2960,9 +2980,8 @@ module Net
     #   See {[RFC7162 §3.1]}[https://www.rfc-editor.org/rfc/rfc7162.html#section-3.1].
     #
     # [+QRESYNC+ {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html]]
-    #   *NOTE:* Enabling QRESYNC will replace +EXPUNGE+ with +VANISHED+, but
-    #   the extension arguments to #select, #examine, and #uid_fetch are not
-    #   supported yet.
+    #   *NOTE:* The +QRESYNC+ argument to #select and #examine is not supported
+    #   yet.
     #
     #   Adds quick resynchronization options to #select, #examine, and
     #   #uid_fetch.  +QRESYNC+ _must_ be explicitly enabled before using any of
@@ -3681,19 +3700,23 @@ module Net
       end
     end
 
-    def fetch_internal(cmd, set, attr, mod = nil, partial: nil, changedsince: nil)
-      if partial && !cmd.start_with?("UID ")
+    def fetch_internal(cmd, set, attr, mod = nil,
+                       partial: nil,
+                       changedsince: nil,
+                       vanished: false)
+      if cmd.start_with?("UID ")
+        if vanished && !changedsince
+          raise ArgumentError, "vanished must be used with changedsince"
+        end
+      elsif vanished
+        raise ArgumentError, "vanished can only be used with uid_fetch"
+      elsif partial
         raise ArgumentError, "partial can only be used with uid_fetch"
       end
       set = SequenceSet[set]
-      if partial
-        mod ||= []
-        mod << "PARTIAL" << PartialRange[partial]
-      end
-      if changedsince
-        mod ||= []
-        mod << "CHANGEDSINCE" << Integer(changedsince)
-      end
+      (mod ||= []) << "PARTIAL"      << PartialRange[partial] if partial
+      (mod ||= []) << "CHANGEDSINCE" << Integer(changedsince) if changedsince
+      (mod ||= []) << "VANISHED"                              if vanished
       case attr
       when String then
         attr = RawData.new(attr)
@@ -3705,7 +3728,7 @@ module Net
 
       args = [cmd, set, attr]
       args << mod if mod
-      send_command_returning_fetch_results(*args)
+      send_command_returning_fetch_results(*args, vanished:)
     end
 
     def store_internal(cmd, set, attr, flags, unchangedsince: nil)
@@ -3716,14 +3739,20 @@ module Net
       send_command_returning_fetch_results(cmd, *args)
     end
 
-    def send_command_returning_fetch_results(...)
+    def send_command_returning_fetch_results(*args, vanished: false)
       synchronize do
         clear_responses("FETCH")
         clear_responses("UIDFETCH")
-        send_command(...)
+        send_command(*args)
         fetches    = clear_responses("FETCH")
         uidfetches = clear_responses("UIDFETCH")
-        uidfetches.any? ? uidfetches : fetches
+        fetches    = uidfetches if uidfetches.any?
+        if vanished
+          vanished = extract_responses("VANISHED", &:earlier?).last ||
+            VanishedData[uids: SequenceSet.empty, earlier: true]
+          fetches = [vanished, *fetches].freeze
+        end
+        fetches
       end
     end
 
