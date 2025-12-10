@@ -420,9 +420,6 @@ module Net
       STARS     = [:*, ?*, -1].freeze
       private_constant :STARS
 
-      FULL_SET_DATA = [[1, STAR_INT].freeze].freeze
-      private_constant :FULL_SET_DATA
-
       INSPECT_MAX_LEN      = 512
       INSPECT_TRUNCATE_LEN =  16
       private_constant :INSPECT_MAX_LEN, :INSPECT_TRUNCATE_LEN
@@ -562,7 +559,7 @@ module Net
 
       # Removes all elements and returns self.
       def clear
-        modifying! # redundant check, to normalize the error message for JRuby
+        modifying! # redundant check (normalizes the error message for JRuby)
         @set_data, @string = [], nil
         self
       end
@@ -1267,30 +1264,6 @@ module Net
         self
       end
 
-      private
-
-      def each_entry_minmax(&block)
-        return to_enum(__method__) unless block_given?
-        if @string
-          @string.split(",") do block.call parse_minmax _1 end
-        else
-          minmaxes.each(&block)
-        end
-        self
-      end
-      alias each_entry_run each_entry_minmax
-
-      def export_minmax_entry((min, max))
-        if    min == STAR_INT then :*
-        elsif max == STAR_INT then min..
-        elsif min == max      then min
-        else                       min..max
-        end
-      end
-      alias export_run_entry export_minmax_entry
-
-      public
-
       # Yields each range in #ranges to the block and returns self.
       # Returns an enumerator when called without a block.
       #
@@ -1331,15 +1304,6 @@ module Net
         return to_enum(__method__) unless block_given?
         raise RangeError, '%s contains "*"' % [self.class] if include_star?
         each_entry_minmax do each_number_in_minmax _1, _2, &block end
-      end
-
-      private def each_number_in_minmax(min, max, &block)
-        if    min == STAR_INT then yield :*
-        elsif min == max      then yield min
-        elsif max != STAR_INT then (min..max).each(&block)
-        else
-          raise RangeError, "#{SequenceSet} cannot enumerate range with '*'"
-        end
       end
 
       # Returns a Set with all of the #numbers in the sequence set.
@@ -1498,29 +1462,6 @@ module Net
         nil
       end
 
-      private
-
-      def each_minmax_with_index(minmaxes)
-        idx_min = 0
-        minmaxes.each do |min, max|
-          idx_max = idx_min + (max - min)
-          yield min, max, idx_min, idx_max
-          idx_min = idx_max + 1
-        end
-        idx_min
-      end
-
-      def reverse_each_minmax_with_index(minmaxes)
-        idx_max = -1
-        minmaxes.reverse_each do |min, max|
-          yield min, max, (idx_min = idx_max - (max - min)), idx_max
-          idx_max = idx_min - 1
-        end
-        idx_max
-      end
-
-      public
-
       # :call-seq: at(index) -> integer or nil
       #
       # Returns the number at the given +index+ in the sorted set, without
@@ -1545,20 +1486,6 @@ module Net
       # Related: #[], #slice, #ordered_at
       def ordered_at(index)
         seek_number_in_minmaxes(each_entry_minmax, index)
-      end
-
-      private def seek_number_in_minmaxes(minmaxes, index)
-        index = Integer(index.to_int)
-        if index.negative?
-          reverse_each_minmax_with_index(minmaxes) do |min, max, idx_min, idx_max|
-            idx_min <= index and return export_num(min + (index - idx_min))
-          end
-        else
-          each_minmax_with_index(minmaxes) do |min, _, idx_min, idx_max|
-            index <= idx_max and return export_num(min + (index - idx_min))
-          end
-        end
-        nil
       end
 
       # :call-seq:
@@ -1608,37 +1535,6 @@ module Net
       end
 
       alias slice :[]
-
-      private
-
-      def slice_length(start, length)
-        start  = Integer(start.to_int)
-        length = Integer(length.to_int)
-        raise ArgumentError, "length must be positive" unless length.positive?
-        last = start + length - 1 unless start.negative? && start.abs <= length
-        slice_range(start..last)
-      end
-
-      def slice_range(range)
-        first = range.begin ||  0
-        last  = range.end   || -1
-        if range.exclude_end?
-          return remain_frozen_empty if last.zero?
-          last -= 1 if range.end && last != STAR_INT
-        end
-        if (first * last).positive? && last < first
-          remain_frozen_empty
-        elsif (min = at(first))
-          max = at(last)
-          max = :* if max.nil?
-          if    max == :*  then self & (min..)
-          elsif min <= max then self & (min..max)
-          else                  remain_frozen_empty
-          end
-        end
-      end
-
-      public
 
       # Returns a copy of +self+ which only contains the numbers above +num+.
       #
@@ -1740,7 +1636,7 @@ module Net
       #
       # Related: #complement
       def complement!
-        modifying! # short-circuit, and normalize the error message for JRuby
+        modifying! # short-circuit before querying
         return replace(self.class.full) if empty?
         return clear                    if full?
         flat = minmaxes.flat_map { [_1 - 1, _2 + 1] }
@@ -1762,7 +1658,7 @@ module Net
       #
       # Related: #intersection, #intersect?
       def intersect!(other)
-        modifying!
+        modifying! # short-circuit before processing input
         subtract SequenceSet.new(other).complement!
       end
 
@@ -1851,7 +1747,7 @@ module Net
       #
       # Related: #normalize, #normalized_string, #normalized?
       def normalize!
-        modifying! # redundant check, to normalize the error message for JRuby
+        modifying! # redundant check (normalizes the error message for JRuby)
         @string = nil
         self
       end
@@ -1915,10 +1811,6 @@ module Net
         end
       end
 
-      private def count_entries
-        @string ? @string.count(",") + 1 : runs.count
-      end
-
       ##
       # :method: to_sequence_set
       # :call-seq: to_sequence_set -> self
@@ -1953,9 +1845,11 @@ module Net
         self.string = coder['string']
       end
 
+      # :stopdoc:
       protected
 
-      attr_reader :set_data # :nodoc:
+      attr_reader :set_data
+
       alias runs set_data
       alias minmaxes runs
 
@@ -1976,6 +1870,9 @@ module Net
         @set_data = other.dup_set_data
         super
       end
+
+      ######################################################################{{{2
+      # Import methods
 
       def import_minmax(input)
         entry = input_try_convert input
@@ -2024,6 +1921,18 @@ module Net
       end
 
       def import_num(obj) STARS.include?(obj) ? STAR_INT : nz_number(obj) end
+
+      def nz_number(num)
+        String === num && !/\A[1-9]\d*\z/.match?(num) and
+          raise DataFormatError, "%p is not a valid nz-number" % [num]
+        NumValidator.ensure_nz_number Integer num
+      rescue TypeError # To catch errors from Integer()
+        raise DataFormatError, $!.message
+      end
+
+      ######################################################################{{{2
+      # Export methods
+
       def export_num(num) num == STAR_INT ? :* : num end
 
       def export_minmaxes(minmaxes)
@@ -2031,12 +1940,34 @@ module Net
       end
 
       def export_minmax(minmax) minmax.uniq.map { export_num _1 }.join(":") end
-      def parse_runs(str) str.split(",", -1).map! { parse_run _1 } end
-      def parse_minmax(str) parse_entry(str).minmax end
 
       alias export_runs export_minmaxes
       alias export_run  export_minmax
-      alias parse_run   parse_minmax
+
+      def export_minmax_entry((min, max))
+        if    min == STAR_INT then :*
+        elsif max == STAR_INT then min..
+        elsif min == max      then min
+        else                       min..max
+        end
+      end
+      alias export_run_entry export_minmax_entry
+
+      def each_number_in_minmax(min, max, &block)
+        if    min == STAR_INT then yield :*
+        elsif min == max      then yield min
+        elsif max != STAR_INT then (min..max).each(&block)
+        else
+          raise RangeError, "#{SequenceSet} cannot enumerate range with '*'"
+        end
+      end
+
+      ######################################################################{{{2
+      # Parse methods
+
+      def parse_runs(str) str.split(",", -1).map! { parse_run _1 } end
+      def parse_minmax(str) parse_entry(str).minmax end
+      alias parse_run parse_minmax
 
       def parse_entry(str)
         raise DataFormatError, "invalid sequence set string" if str.empty?
@@ -2061,6 +1992,27 @@ module Net
         true
       end
 
+      ######################################################################{{{2
+      # Ordered entry methods
+
+      def count_entries
+        @string ? @string.count(",") + 1 : runs.count
+      end
+
+      def each_entry_minmax(&block)
+        return to_enum(__method__) unless block_given?
+        if @string
+          @string.split(",") do block.call parse_minmax _1 end
+        else
+          minmaxes.each(&block)
+        end
+        self
+      end
+      alias each_entry_run each_entry_minmax
+
+      ######################################################################{{{2
+      # Search methods
+
       def include_minmax?((min, max)) bsearch_range(min)&.cover?(min..max) end
 
       def intersect_minmax?((min, max))
@@ -2070,6 +2022,81 @@ module Net
 
       alias include_run?   include_minmax?
       alias intersect_run? intersect_minmax?
+
+      def bsearch_minmax_with_index(num)
+        idx = minmaxes.bsearch_index { _2 >= num } and [minmaxes[idx], idx]
+      end
+
+      def bsearch_range(num)
+        first, last = minmaxes.bsearch { _2 >= num }
+        first..last if first
+      end
+
+      ######################################################################{{{2
+      # Number indexing methods
+
+      def seek_number_in_minmaxes(minmaxes, index)
+        index = Integer(index.to_int)
+        if index.negative?
+          reverse_each_minmax_with_index(minmaxes) do |min, max, idx_min, idx_max|
+            idx_min <= index and return export_num(min + (index - idx_min))
+          end
+        else
+          each_minmax_with_index(minmaxes) do |min, _, idx_min, idx_max|
+            index <= idx_max and return export_num(min + (index - idx_min))
+          end
+        end
+        nil
+      end
+
+      def each_minmax_with_index(minmaxes)
+        idx_min = 0
+        minmaxes.each do |min, max|
+          idx_max = idx_min + (max - min)
+          yield min, max, idx_min, idx_max
+          idx_min = idx_max + 1
+        end
+        idx_min
+      end
+
+      def reverse_each_minmax_with_index(minmaxes)
+        idx_max = -1
+        minmaxes.reverse_each do |min, max|
+          yield min, max, (idx_min = idx_max - (max - min)), idx_max
+          idx_max = idx_min - 1
+        end
+        idx_max
+      end
+
+      def slice_length(start, length)
+        start  = Integer(start.to_int)
+        length = Integer(length.to_int)
+        raise ArgumentError, "length must be positive" unless length.positive?
+        last = start + length - 1 unless start.negative? && start.abs <= length
+        slice_range(start..last)
+      end
+
+      def slice_range(range)
+        first = range.begin ||  0
+        last  = range.end   || -1
+        if range.exclude_end?
+          return remain_frozen_empty if last.zero?
+          last -= 1 if range.end && last != STAR_INT
+        end
+        if (first * last).positive? && last < first
+          remain_frozen_empty
+        elsif (min = at(first))
+          max = at(last)
+          max = :* if max.nil?
+          if    max == :*  then self & (min..)
+          elsif min <= max then self & (min..max)
+          else                  remain_frozen_empty
+          end
+        end
+      end
+
+      ######################################################################{{{2
+      # Update methods
 
       def modifying!
         if frozen?
@@ -2175,29 +2202,18 @@ module Net
       alias subtract_runs subtract_minmaxes
       alias subtract_run  subtract_minmax
 
-      def bsearch_minmax_with_index(num)
-        idx = minmaxes.bsearch_index { _2 >= num } and [minmaxes[idx], idx]
-      end
-
-      def bsearch_range(num)
-        first, last = minmaxes.bsearch { _2 >= num }
-        first..last if first
-      end
-
-      def nz_number(num)
-        String === num && !/\A[1-9]\d*\z/.match?(num) and
-          raise DataFormatError, "%p is not a valid nz-number" % [num]
-        NumValidator.ensure_nz_number Integer num
-      rescue TypeError # To catch errors from Integer()
-        raise DataFormatError, $!.message
-      end
-
+      ######################################################################{{{2
       # intentionally defined after the class implementation
+
+      FULL_SET_DATA = [[1, STAR_INT].freeze].freeze
+      private_constant :FULL_SET_DATA
 
       EMPTY = new.freeze
       FULL  = self["1:*"]
       private_constant :EMPTY, :FULL
 
+      # }}}
+      # vim:foldmethod=marker
     end
   end
 end
