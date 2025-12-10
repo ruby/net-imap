@@ -600,29 +600,6 @@ class IMAPTest < Net::IMAP::TestCase
       end
       assert_empty server.commands
 
-      # MessageSet numbers may be non-zero uint32
-      stderr = EnvUtil.verbose_warning do
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(-1))
-        assert_equal "*", server.commands.pop.args
-
-        assert_raise(Net::IMAP::DataFormatError) do
-          imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(0))
-        end
-        assert_empty server.commands
-
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(1))
-        assert_equal "1", server.commands.pop.args
-
-        imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32 - 1))
-        assert_equal (2**32 - 1).to_s, server.commands.pop.args
-
-        assert_raise(Net::IMAP::DataFormatError) do
-          imap.__send__(:send_command, "TEST", Net::IMAP::MessageSet.new(2**32))
-        end
-        assert_empty server.commands
-      end
-      assert_match(/DEPRECATED:.+MessageSet.+replace.+with.+SequenceSet/, stderr)
-
       # SequenceSet numbers may be non-zero uint3, and -1 is translated to *
       imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(-1))
       assert_equal "*", server.commands.pop.args

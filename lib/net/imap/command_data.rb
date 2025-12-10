@@ -184,19 +184,6 @@ module Net
       end
     end
 
-    # *DEPRECATED*.  Replaced by SequenceSet.
-    class MessageSet < CommandData # :nodoc:
-      def initialize(data:)
-        data = SequenceSet[data]
-        super
-        warn("DEPRECATED: #{MessageSet} should be replaced with #{SequenceSet}.",
-             uplevel: 1, category: :deprecated)
-      end
-
-      def send_data(imap, tag) data.send_data imap, tag end
-      def validate;            data.validate            end
-    end
-
     class ClientID < CommandData # :nodoc:
 
       def send_data(imap, tag)
