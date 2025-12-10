@@ -102,4 +102,56 @@ class NumValidatorTest < Net::IMAP::TestCase
     end
   end
 
+  using_test_values_for :number do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_number(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_number(input)
+        else
+          assert_format_error do NumValidator.coerce_number(input) end
+        end
+      end
+    end
+  end
+
+  using_test_values_for :"nz-number" do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_nz_number(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_nz_number(input)
+        else
+          assert_format_error do NumValidator.coerce_nz_number(input) end
+        end
+      end
+    end
+  end
+
+  using_test_values_for :"mod-sequence-value" do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_mod_sequence_value(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_mod_sequence_value(input)
+        else
+          assert_format_error do NumValidator.coerce_mod_sequence_value(input) end
+        end
+      end
+    end
+  end
+
+  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_mod_sequence_valzer(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_mod_sequence_valzer(input)
+        else
+          assert_format_error do NumValidator.coerce_mod_sequence_valzer(input) end
+        end
+      end
+    end
+  end
+
 end
