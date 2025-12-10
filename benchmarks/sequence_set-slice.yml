@@ -5,7 +5,9 @@ prelude: |
   require "./test/lib/profiling_helper"
   include ProfilingHelper
 
-  def init(label = nil, n:, d: 1.5)
+  ENV["BENCHMARK_RANDOM_SEED"]&.then {|seed| srand Integer(seed) }
+
+  def init(label = nil, n:, d: 1.2)
     n       = n.to_int
     samples = (1e5.to_i / n).ceil.clamp(1..100)
     domain  = 1..(n*d).floor
@@ -15,10 +17,10 @@ prelude: |
       set
     }
     $idxs   = Array.new([10_000, 2 * n].min) { rand(-n..n - 1) }
-    $lens   = Array.new([10_000,     n].min) { rand(1..n) }
+    $lens   = Array.new([10_000,     n].min) { [rand(1..n), 100].min }
     $ranges = Array.new([10_000, n * n].min) {
       start = idx
-      stop  = start.negative? ? rand(start..-1) : rand(start...n)
+      stop  = [start.negative? ? rand(start..-1) : rand(start...n), start + 100].min
       start..stop
     }
     maybe_profile("seqset-slice-#{label}-#{n}") if label
