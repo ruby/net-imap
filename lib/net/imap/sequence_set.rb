@@ -1024,8 +1024,9 @@ module Net
       # Related: #delete, #delete_at, #subtract, #difference, #disjoint?
       def delete?(element)
         modifying! # short-circuit before input_to_tuple
+        element = input_try_convert(element)
         tuple = input_to_tuple element
-        if tuple.first == tuple.last
+        if number_input?(element)
           return unless include_tuple? tuple
           tuple_subtract tuple
           normalize!
@@ -1788,6 +1789,14 @@ module Net
           Integer.try_convert(input) ||
           String.try_convert(input) ||
           input
+      end
+
+      # NOTE: input_try_convert must be called on input first
+      def number_input?(input)
+        case input
+        when *STARS, Integer then true
+        when String          then !input.include?(/[:,]/)
+        end
       end
 
       def range_to_tuple(range)
