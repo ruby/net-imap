@@ -813,13 +813,21 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   test "#delete?" do
     set = SequenceSet.new [5..10, 20]
+    # deleting a number
     assert_nil   set.delete?(11)
     assert_equal SequenceSet[5..10, 20], set
     assert_equal 6, set.delete?(6)
     assert_equal SequenceSet[5, 7..10, 20], set
+    # deleting a range
     assert_equal SequenceSet[9..10, 20],    set.delete?(9..)
     assert_equal SequenceSet[5, 7..8],      set
     assert_nil   set.delete?(11..)
+    set = SequenceSet.new [5..11, 20, 30..40]
+    assert_equal SequenceSet[9..11, 20, 30..33], set.delete?(9..33)
+    assert_equal SequenceSet[5..8, 34..40], set
+    set = SequenceSet.new [5..11, 20, 30..40]
+    # deleting a single-member range
+    assert_equal SequenceSet[9], set.delete?(9..9)
   end
 
   test "#slice!" do
