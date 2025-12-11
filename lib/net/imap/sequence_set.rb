@@ -1098,8 +1098,9 @@ module Net
       # Related: #delete, #delete_at, #subtract, #difference, #disjoint?
       def delete?(element)
         modifying! # short-circuit before import_minmax
+        element = input_try_convert(element)
         minmax = import_minmax element
-        if minmax.first == minmax.last
+        if number_input?(element)
           return unless include_minmax? minmax
           subtract_minmax minmax
           normalize!
@@ -1915,6 +1916,14 @@ module Net
           Integer.try_convert(input) ||
           String.try_convert(input) ||
           input
+      end
+
+      # NOTE: input_try_convert must be called on input first
+      def number_input?(input)
+        case input
+        when *STARS, Integer then true
+        when String          then !input.include?(/[:,]/)
+        end
       end
 
       def import_range_minmax(range)
