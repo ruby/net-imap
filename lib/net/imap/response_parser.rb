@@ -2017,23 +2017,18 @@ module Net
         CopyUID(validity, src_uids, dst_uids)
       end
 
-      def AppendUID(...) DeprecatedUIDPlus(...) || AppendUIDData.new(...) end
-      def CopyUID(...)   DeprecatedUIDPlus(...) || CopyUIDData.new(...)   end
-
       # TODO: remove this code in the v0.6.0 release
       def DeprecatedUIDPlus(validity, src_uids = nil, dst_uids)
         return unless config.parser_use_deprecated_uidplus_data
-        compact_uid_sets = [src_uids, dst_uids].compact
-        count = compact_uid_sets.map { _1.count_with_duplicates }.max
-        max   = config.parser_max_deprecated_uidplus_data_size
-        if count <= max
-          src_uids &&= src_uids.each_ordered_number.to_a
-          dst_uids   = dst_uids.each_ordered_number.to_a
-          UIDPlusData.new(validity, src_uids, dst_uids)
-        elsif config.parser_use_deprecated_uidplus_data != :up_to_max_size
-          parse_error("uid-set is too large: %d > %d", count, max)
-        end
+        warn("#{Config}#parser_use_deprecated_uidplus_data is ignored " \
+             "since v0.6.0.  Disable this warning by setting " \
+             "config.parser_use_deprecated_uidplus_data = false.",
+             category: :deprecated, uplevel: 9)
+        nil
       end
+
+      def AppendUID(...) DeprecatedUIDPlus(...) || AppendUIDData.new(...) end
+      def CopyUID(...)   DeprecatedUIDPlus(...) || CopyUIDData.new(...)   end
 
       ADDRESS_REGEXP = /\G
         \( (?: NIL | #{Patterns::QUOTED_rev2} )  # 1: NAME

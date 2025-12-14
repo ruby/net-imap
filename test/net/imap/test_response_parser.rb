@@ -201,28 +201,40 @@ class ResponseParserTest < Net::IMAP::TestCase
     end
   end
 
+  def assert_deprecated_appenduid_data_warning
+    assert_warn(/#{__FILE__}.*warning.*parser_use_deprecated_uidplus_data is ignored/) do
+      result = yield
+      assert_instance_of Net::IMAP::AppendUIDData, result.data.code.data
+      result
+    end
+  end
+
   test "APPENDUID with parser_use_deprecated_uidplus_data = true" do
     parser = Net::IMAP::ResponseParser.new(config: {
       parser_use_deprecated_uidplus_data:      true,
       parser_max_deprecated_uidplus_data_size: 10_000,
     })
-    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
+    assert_deprecated_appenduid_data_warning do
       parser.parse(
         "A004 OK [APPENDUID 1 10000:20000,1] Done\r\n"
       )
     end
-    response = parser.parse("A004 OK [APPENDUID 1 100:200] Done\r\n")
+    response = assert_deprecated_appenduid_data_warning do
+      parser.parse("A004 OK [APPENDUID 1 100:200] Done\r\n")
+    end
     uidplus  = response.data.code.data
     assert_equal 101, uidplus.assigned_uids.size
     parser.config.parser_max_deprecated_uidplus_data_size = 100
-    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
+    assert_deprecated_appenduid_data_warning do
       parser.parse(
         "A004 OK [APPENDUID 1 100:200] Done\r\n"
       )
     end
-    response = parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
+    response = assert_deprecated_appenduid_data_warning do
+      parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
+    end
     uidplus  = response.data.code.data
-    assert_instance_of Net::IMAP::UIDPlusData, uidplus
+    assert_instance_of Net::IMAP::AppendUIDData, uidplus
     assert_equal 100, uidplus.assigned_uids.size
   end
 
@@ -231,9 +243,13 @@ class ResponseParserTest < Net::IMAP::TestCase
       parser_use_deprecated_uidplus_data:      :up_to_max_size,
       parser_max_deprecated_uidplus_data_size: 100
     })
-    response = parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
-    assert_instance_of Net::IMAP::UIDPlusData, response.data.code.data
-    response = parser.parse("A004 OK [APPENDUID 1 100:200] Done\r\n")
+    response = assert_deprecated_appenduid_data_warning do
+      parser.parse("A004 OK [APPENDUID 1 101:200] Done\r\n")
+    end
+    assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
+    response = assert_deprecated_appenduid_data_warning do
+      parser.parse("A004 OK [APPENDUID 1 100:200] Done\r\n")
+    end
     assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
   end
 
@@ -242,8 +258,10 @@ class ResponseParserTest < Net::IMAP::TestCase
       parser_use_deprecated_uidplus_data:      false,
       parser_max_deprecated_uidplus_data_size: 10_000_000,
     })
-    response = parser.parse("A004 OK [APPENDUID 1 10] Done\r\n")
-    assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
+    assert_warn("") do
+      response = parser.parse("A004 OK [APPENDUID 1 10] Done\r\n")
+      assert_instance_of Net::IMAP::AppendUIDData, response.data.code.data
+    end
   end
 
   test "COPYUID with backwards ranges" do
@@ -276,29 +294,42 @@ class ResponseParserTest < Net::IMAP::TestCase
     end
   end
 
+  def assert_deprecated_copyuid_data_warning(check: true)
+    assert_warn(/#{__FILE__}.*warning.*parser_use_deprecated_uidplus_data is ignored/) do
+      result = yield
+      assert_instance_of Net::IMAP::CopyUIDData, result.data.code.data if check
+      result
+    end
+  end
+
   test "COPYUID with parser_use_deprecated_uidplus_data = true" do
     parser = Net::IMAP::ResponseParser.new(config: {
       parser_use_deprecated_uidplus_data:      true,
       parser_max_deprecated_uidplus_data_size: 10_000,
     })
-    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
-      parser.parse(
-        "A004 OK [copyUID 1 10000:20000,1 1:10001] Done\r\n"
-      )
+    assert_deprecated_copyuid_data_warning(check: false) do
+      assert_raise_with_message Net::IMAP::DataFormatError, /mismatched uid-set sizes/ do
+        parser.parse(
+          "A004 OK [copyUID 1 10000:20000,1 1:10001] Done\r\n"
+        )
+      end
     end
-    response = parser.parse("A004 OK [copyUID 1 100:200 1:101] Done\r\n")
+    response = assert_deprecated_copyuid_data_warning do
+      parser.parse("A004 OK [copyUID 1 100:200 1:101] Done\r\n")
+    end
     uidplus  = response.data.code.data
     assert_equal 101, uidplus.assigned_uids.size
     assert_equal 101, uidplus.source_uids.size
     parser.config.parser_max_deprecated_uidplus_data_size = 100
-    assert_raise_with_message Net::IMAP::ResponseParseError, /uid-set is too large/ do
+    assert_deprecated_copyuid_data_warning do
       parser.parse(
         "A004 OK [copyUID 1 100:200 1:101] Done\r\n"
       )
     end
-    response = parser.parse("A004 OK [copyUID 1 101:200 1:100] Done\r\n")
+    response = assert_deprecated_copyuid_data_warning do
+      parser.parse("A004 OK [copyUID 1 101:200 1:100] Done\r\n")
+    end
     uidplus  = response.data.code.data
-    assert_instance_of Net::IMAP::UIDPlusData, uidplus
     assert_equal 100, uidplus.assigned_uids.size
     assert_equal 100, uidplus.source_uids.size
   end
@@ -308,12 +339,12 @@ class ResponseParserTest < Net::IMAP::TestCase
       parser_use_deprecated_uidplus_data:      :up_to_max_size,
       parser_max_deprecated_uidplus_data_size: 100
     })
-    response = parser.parse("A004 OK [COPYUID 1 101:200 1:100] Done\r\n")
-    copyuid = response.data.code.data
-    assert_instance_of Net::IMAP::UIDPlusData, copyuid
-    response = parser.parse("A004 OK [COPYUID 1 100:200 1:101] Done\r\n")
-    copyuid = response.data.code.data
-    assert_instance_of Net::IMAP::CopyUIDData, copyuid
+    assert_deprecated_copyuid_data_warning do
+      parser.parse("A004 OK [COPYUID 1 101:200 1:100] Done\r\n")
+    end
+    assert_deprecated_copyuid_data_warning do
+      parser.parse("A004 OK [COPYUID 1 100:200 1:101] Done\r\n")
+    end
   end
 
   test "COPYUID with parser_use_deprecated_uidplus_data = false" do

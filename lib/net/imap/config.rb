@@ -360,39 +360,32 @@ module Net
       #
       # Alias for responses_without_block
 
-      # Whether ResponseParser should use the deprecated UIDPlusData or
-      # CopyUIDData for +COPYUID+ response codes, and UIDPlusData or
-      # AppendUIDData for +APPENDUID+ response codes.
+      # **NOTE:** <em>+UIDPlusData+ has been removed since +v0.6.0+, and this
+      # config option only affects deprecation warnings.
+      # This config option will be **removed** in +v0.7.0+.</em>
       #
-      # UIDPlusData stores its data in arrays of numbers, which is vulnerable to
-      # a memory exhaustion denial of service attack from an untrusted or
-      # compromised server.  Set this option to +false+ to completely block this
-      # vulnerability.  Otherwise, parser_max_deprecated_uidplus_data_size
-      # mitigates this vulnerability.
+      # ResponseParser always returns CopyUIDData for +COPYUID+ response codes,
+      # and AppendUIDData for +APPENDUID+ response codes.  Previously, this
+      # option determined when UIDPlusData would be returned instead.
       #
-      # AppendUIDData and CopyUIDData are _mostly_ backward-compatible with
-      # UIDPlusData.  Most applications should be able to upgrade with little
-      # or no changes.
+      # Parser support for +UIDPLUS+ added in +v0.3.2+.
       #
-      # <em>(Parser support for +UIDPLUS+ added in +v0.3.2+.)</em>
+      # Config option added in +v0.4.19+ and +v0.5.6+.
       #
-      # <em>(Config option added in +v0.4.19+ and +v0.5.6+.)</em>
+      # <em>UIDPlusData removed in +v0.6.0+.</em>
       #
-      # <em>UIDPlusData will be removed in +v0.6+ and this config setting will
-      # be ignored.</em>
-      #
-      # ==== Valid options
+      # ==== Options
       #
       # [+true+ <em>(original default)</em>]
-      #    ResponseParser only uses UIDPlusData.
+      #    <em>Since v0.6.0:</em>
+      #    Prints a deprecation warning when parsing +COPYUID+ or +APPENDUID+.
       #
       # [+:up_to_max_size+ <em>(default since +v0.5.6+)</em>]
-      #    ResponseParser uses UIDPlusData when the +uid-set+ size is below
-      #    parser_max_deprecated_uidplus_data_size.  Above that size,
-      #    ResponseParser uses AppendUIDData or CopyUIDData.
+      #    <em>Since v0.6.0:</em>
+      #    Prints a deprecation warning when parsing +COPYUID+ or +APPENDUID+.
       #
-      # [+false+ <em>(planned default for +v0.6+)</em>]
-      #    ResponseParser _only_ uses AppendUIDData and CopyUIDData.
+      # [+false+ <em>(default since +v0.6.0+)</em>]
+      #    This is the only supported option <em>(since v0.6.0)</em>.
       attr_accessor :parser_use_deprecated_uidplus_data, type: Enum[
         true, :up_to_max_size, false
       ], defaults: {
@@ -401,22 +394,22 @@ module Net
         0.6r => false,
       }
 
-      # The maximum +uid-set+ size that ResponseParser will parse into
-      # deprecated UIDPlusData.  This limit only applies when
-      # parser_use_deprecated_uidplus_data is not +false+.
+      # **NOTE:** <em>+UIDPlusData+ has been removed since +v0.6.0+, and this
+      # config option is ignored.
+      # This config option will be **removed** in +v0.7.0+.</em>
       #
-      # <em>(Parser support for +UIDPLUS+ added in +v0.3.2+.)</em>
+      # ResponseParser always returns CopyUIDData for +COPYUID+ response codes,
+      # and AppendUIDData for +APPENDUID+ response codes.  Previously, this
+      # option determined when UIDPlusData would be returned instead.
       #
-      # <em>Support for limiting UIDPlusData to a maximum size was added in
-      # +v0.3.8+, +v0.4.19+, and +v0.5.6+.</em>
+      # Parser support for +UIDPLUS+ added in +v0.3.2+.
       #
-      # <em>UIDPlusData will be removed in +v0.6+.</em>
+      # Support for limiting UIDPlusData to a maximum size was added in
+      # +v0.3.8+, +v0.4.19+, and +v0.5.6+.
+      #
+      # <em>UIDPlusData was removed in +v0.6.0+.</em>
       #
       # ==== Versioned Defaults
-      #
-      # Because this limit guards against a remote server causing catastrophic
-      # memory exhaustion, the versioned default (used by #load_defaults) also
-      # applies to versions without the feature.
       #
       # * +0.3+ and prior: <tt>10,000</tt>
       # * +0.4+: <tt>1,000</tt>
