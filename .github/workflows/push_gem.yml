@@ -35,6 +35,8 @@ jobs:
         with:
           bundler-cache: true
           ruby-version: ruby
+          rubygems: latest
+          bundler: latest
 
       # Release
       - name: Publish to RubyGems
