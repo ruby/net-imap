@@ -4,7 +4,7 @@ source "https://rubygems.org"
 
 gemspec
 
-gem "digest"
+# gem "digest"  # not included as a workaround for #576
 gem "strscan"
 gem "base64"
 
