@@ -788,7 +788,11 @@ module Net
       # Related: #min, #minmax, #slice
       def max(count = nil, star: :*)
         if count
-          slice(-[count, size].min..) || remain_frozen_empty
+          if cardinality <= count
+            frozen? ? self : dup
+          else
+            slice(-count..) || remain_frozen_empty
+          end
         elsif (val = max_num)
           val == STAR_INT ? star : val
         end
