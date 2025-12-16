@@ -787,6 +787,15 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet["678"],     SequenceSet["345,678"].max(1)
     assert_equal SequenceSet["345,678"], SequenceSet["345,678"].max(222)
     assert_equal SequenceSet.empty,      SequenceSet.new.max(5)
+    # with different cardinality (150) vs size (200)
+    set = SequenceSet["101:200,51:150"]
+    assert_equal SequenceSet["52:200"], set.max(149)
+    assert_equal SequenceSet["51:200"], set.max(150)
+    assert_equal SequenceSet["51:200"], set.max(200)
+    # with different cardinality (2**32) vs count (2**32 - 1)
+    set = SequenceSet[1..]
+    assert_equal SequenceSet["2:*"], set.max(2**32 - 1)
+    assert_equal SequenceSet["1:*"], set.max(2**32)
   end
 
   test "#minmax" do
