@@ -755,7 +755,13 @@ module Net
       # Related: #min, #minmax, #slice
       def max(count = nil, star: :*)
         if count
-          slice(-[count, size].min..) || remain_frozen_empty
+          # n.b: #cardinality has not been backported to 0.5
+          cardinality = @tuples.sum(@tuples.count) { _2 - _1 }
+          if cardinality <= count
+            frozen? ? self : dup
+          else
+            slice(-count..) || remain_frozen_empty
+          end
         elsif (val = @tuples.last&.last)
           val == STAR_INT ? star : val
         end
