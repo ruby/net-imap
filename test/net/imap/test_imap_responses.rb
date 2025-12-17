@@ -151,13 +151,17 @@ class IMAPResponsesTest < Net::IMAP::TestCase
         assert_equal [], imap.responses["FAKE"]
       end
       assert_empty stderr
-      # opt-in to future behavior
+      # default behavior since 0.6.0
       imap.config.responses_without_block = :frozen_dup
       stderr = EnvUtil.verbose_warning do
         assert imap.responses.frozen?
         assert imap.responses["CAPABILITY"].frozen?
         assert_equal(%w[IMAP4REV1 NAMESPACE MOVE IDLE UTF8=ACCEPT],
                      imap.responses["CAPABILITY"].last)
+        imap.responses do |r|
+          refute r.frozen?
+          refute r.values.any?(&:frozen?)
+        end
       end
       assert_empty stderr
     end
