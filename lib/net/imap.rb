@@ -2691,7 +2691,7 @@ module Net
           warn(RESPONSES_DEPRECATION_MSG, uplevel: 1)
         when :frozen_dup
           synchronize {
-            responses = @responses.transform_values(&:freeze)
+            responses = @responses.transform_values { _1.dup.freeze }
             responses.default_proc = nil
             responses.default = [].freeze
             return responses.freeze
