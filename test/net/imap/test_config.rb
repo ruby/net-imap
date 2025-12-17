@@ -151,6 +151,10 @@ class ConfigTest < Net::IMAP::TestCase
       end
       assert_same Config.global, config.parent
     end
+    assert_raise(NameError) do Config.method(:version_defaults=) end
+    assert_raise(NameError) do
+      Config::AttrVersionDefaults.method(:version_defaults=)
+    end
   end
 
   test "Config[:default] and Config[:current] both hold default config" do
