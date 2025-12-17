@@ -24,7 +24,7 @@ module Net
         VERSIONS = ((0.0r..FUTURE_VERSION) % 0.1r).to_a.freeze
 
         # See Config.version_defaults.
-        singleton_class.attr_accessor :version_defaults
+        singleton_class.attr_reader :version_defaults
 
         @version_defaults = Hash.new {|h, k|
           # NOTE: String responds to both so the order is significant.
