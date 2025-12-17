@@ -631,6 +631,7 @@ module Net
         to_h.reject {|k,v| DEFAULT_TO_INHERIT.include?(k) }
       end
 
+      Struct   = AttrAccessors.struct
       @default = AttrVersionDefaults.compile_default!
       @global  = default.new
       AttrVersionDefaults.compile_version_defaults!

@@ -27,24 +27,23 @@ module Net
 
         def self.attr_accessor(name) # :nodoc: internal API
           name = name.to_sym
+          raise ArgumentError, "already defined #{name}" if attributes.include?(name)
+          attributes << name
           def_delegators :data, name, :"#{name}="
         end
 
-        def self.attributes
-          instance_methods.grep(/=\z/).map { _1.to_s.delete_suffix("=").to_sym }
-        end
-        private_class_method :attributes
+        # An array of Config attribute names
+        singleton_class.attr_reader :attributes
+        @attributes = []
 
         def self.struct # :nodoc: internal API
-          unless defined?(self::Struct)
-            const_set :Struct, Struct.new(*attributes)
-          end
-          self::Struct
+          attributes.freeze
+          Struct.new(*attributes)
         end
 
         def initialize # :notnew:
           super()
-          @data = AttrAccessors.struct.new
+          @data = Config::Struct.new
         end
 
         # Freezes the internal attributes struct, in addition to +self+.

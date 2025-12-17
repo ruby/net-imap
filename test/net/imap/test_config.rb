@@ -363,7 +363,7 @@ class ConfigTest < Net::IMAP::TestCase
     expected = {
       debug: false, open_timeout: 30, idle_response_timeout: 5, sasl_ir: true,
     }
-    attributes = Config::AttrAccessors::Struct.members
+    attributes = Config::Struct.members
     default_hash = Config.default.to_h
     assert_equal expected, default_hash.slice(*expected.keys)
     assert_equal attributes, default_hash.keys
