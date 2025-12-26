@@ -2373,34 +2373,80 @@ module Net
       def slice_runs!(...)             = runs.slice!(...)
       def truncate_runs!(idx)          = runs.slice!(idx..)
 
-      # Memoizes `SequenceSet#cardinality`.  Also memoizes when `#freeze` is
-      # called, a tradeoff which penalizes freezing and frozen set creation.
+      # NOTE: Use of *any* other Array mutator methods besides these <em>will
+      # break the cardinality cache</em>.
       #
-      # TODO: maintain @cardinality when mutating @set_data
       # TODO: store @set_data as some sort of order statistic tree
       module CardinalityCache # :nodoc:
+        attr_reader :cardinality
+
         def initialize(...)
+          @cardinality = 0
           super
-          @cardinality = nil
         end
 
-        def cardinality
-          return @cardinality if @cardinality
-          calculated = super
-          @cardinality = calculated unless frozen?
-          calculated
-        end
-
-        def freeze
-          cardinality unless frozen? || @cardinality
-          super
+        def clear
+          result = super
+          @cardinality = 0
+          result
         end
 
         private
 
-        def modifying!
+        def delete_run_at(idx)
+          result = super or return
+          @cardinality -= (result.last - result.first).succ
+          result
+        end
+
+        def insert_minmax(idx, min, max)
+          result = super
+          @cardinality += (max - min).succ
+          result
+        end
+
+        def append_minmax(min, max)
+          result = super
+          @cardinality += (max - min).succ
+          result
+        end
+
+        def replace_minmaxes(minmaxes)
+          result = super
+          @cardinality = sum_runs_size(runs)
+          result
+        end
+
+        def slice_runs!(...)
+          sliced = super or return
+          if runs.size <= sliced.size
+            @cardinality = sum_runs_size(runs)
+          else
+            @cardinality -= sum_runs_size(sliced)
+          end
+          sliced
+        end
+
+        def truncate_runs!(idx)
+          sliced = super or return
+          if runs.size <= sliced.size
+            @cardinality = sum_runs_size(runs)
+          else
+            @cardinality -= sum_runs_size(sliced)
+          end
+          sliced
+        end
+
+        def set_min_at(idx, min)
+          old_min = min_at(idx) or raise RangeError, "No run at index"
+          @cardinality -= min - old_min
           super
-          @cardinality = nil
+        end
+
+        def set_max_at(idx, max)
+          old_max = max_at(idx) or raise RangeError, "No run at index"
+          @cardinality += max - old_max
+          super
         end
       end
       prepend CardinalityCache
