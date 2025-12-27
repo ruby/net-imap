@@ -21,6 +21,7 @@ jobs:
         os: [ ubuntu-latest, macos-latest, windows-latest ]
         experimental: [false]
         include:
+          - { ruby: jruby-head,       os: ubuntu-latest,  experimental: true }
           - { ruby: truffleruby-head, os: ubuntu-latest,  experimental: true }
     runs-on: ${{ matrix.os }}
     continue-on-error: ${{ matrix.experimental }}

@@ -174,30 +174,32 @@ module Net
           end
         end
 
-        # anonymous class
-        list = klass[value: 1, tail: [2, 3, 4]]
-        seen = "#<data #{klass.inspect}:...>"
-        assert_equal(
-          "#<data value=1, head=nil," \
-          " tail=#<data value=2, head=#{seen}," \
-          " tail=#<data value=3, head=#{seen}," \
-          " tail=#<data value=4, head=#{seen}," \
-          " tail=nil>>>>",
-          list.inspect
-        )
+        pend_if_jruby do
+          # anonymous class
+          list = klass[value: 1, tail: [2, 3, 4]]
+          seen = "#<data #{klass.inspect}:...>"
+          assert_equal(
+            "#<data value=1, head=nil," \
+            " tail=#<data value=2, head=#{seen}," \
+            " tail=#<data value=3, head=#{seen}," \
+            " tail=#<data value=4, head=#{seen}," \
+            " tail=nil>>>>",
+            list.inspect
+          )
 
-        # named class
-        Object.const_set(:DoubleLinkList, klass)
-        list = DoubleLinkList[value: 1, tail: [2, 3, 4]]
-        seen = "#<data DoubleLinkList:...>"
-        assert_equal(
-          "#<data DoubleLinkList value=1, head=nil," \
-          " tail=#<data DoubleLinkList value=2, head=#{seen}," \
-          " tail=#<data DoubleLinkList value=3, head=#{seen}," \
-          " tail=#<data DoubleLinkList value=4, head=#{seen}," \
-          " tail=nil>>>>",
-          list.inspect
-        )
+          # named class
+          Object.const_set(:DoubleLinkList, klass)
+          list = DoubleLinkList[value: 1, tail: [2, 3, 4]]
+          seen = "#<data DoubleLinkList:...>"
+          assert_equal(
+            "#<data DoubleLinkList value=1, head=nil," \
+            " tail=#<data DoubleLinkList value=2, head=#{seen}," \
+            " tail=#<data DoubleLinkList value=3, head=#{seen}," \
+            " tail=#<data DoubleLinkList value=4, head=#{seen}," \
+            " tail=nil>>>>",
+            list.inspect
+          )
+        end
       ensure
         Object.instance_eval { remove_const(:DoubleLinkList) } rescue nil
       end
@@ -362,7 +364,9 @@ module Net
       end
 
       def test_subclass_class_method
-        assert_equal :ok, InheritsClassMethod.inherited_class_method
+        pend_if_jruby do
+          assert_equal :ok, InheritsClassMethod.inherited_class_method
+        end
       end
 
       class AbstractWithOverride < Data
