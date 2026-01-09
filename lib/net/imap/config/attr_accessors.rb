@@ -33,7 +33,6 @@ module Net
         def self.attributes
           instance_methods.grep(/=\z/).map { _1.to_s.delete_suffix("=").to_sym }
         end
-        private_class_method :attributes
 
         def self.struct # :nodoc: internal API
           unless defined?(self::Struct)

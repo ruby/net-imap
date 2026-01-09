@@ -88,7 +88,7 @@ class ConfigTest < Net::IMAP::TestCase
     assert_equal true, global.debug?
     global.reset(:debug)
     assert_equal false, global.debug?
-    refute global.frozen?
+    assert global.frozen?
   end
 
   test "Net::IMAP.config" do
@@ -154,6 +154,16 @@ class ConfigTest < Net::IMAP::TestCase
     assert_raise(NameError) do Config.method(:version_defaults=) end
     assert_raise(NameError) do
       Config::AttrVersionDefaults.method(:version_defaults=)
+    end
+  end
+
+  if defined?(Ractor)
+    test ".global is deeply frozen (and Ractor shareable)" do
+      assert Ractor.shareable?(Config.global)
+    end
+
+    test ".version_defaults is deeply frozen (and Ractor shareable)" do
+      assert Ractor.shareable? Config.version_defaults
     end
   end
 
