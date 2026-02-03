@@ -2027,13 +2027,18 @@ module Net
         CopyUID(validity, src_uids, dst_uids)
       end
 
+      PARSER_PATH = File.expand_path(__FILE__).delete_suffix(".rb")
+
       # TODO: remove this code in the v0.6.0 release
       def DeprecatedUIDPlus(validity, src_uids = nil, dst_uids)
         return unless config.parser_use_deprecated_uidplus_data
+        uplevel = caller_locations
+          .find_index { !_1.path.start_with?(PARSER_PATH) }
+          &.succ
         warn("#{Config}#parser_use_deprecated_uidplus_data is ignored " \
              "since v0.6.0.  Disable this warning by setting " \
              "config.parser_use_deprecated_uidplus_data = false.",
-             category: :deprecated, uplevel: 9)
+             category: :deprecated, uplevel:)
         nil
       end
 
