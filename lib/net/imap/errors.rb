@@ -134,6 +134,11 @@ module Net
           end
         end
         msg
+      rescue => error
+        msg ||= super.dup
+        msg << "\n  BUG in %s#%s: %s" % [self.class, __method__,
+                                         error.detailed_message]
+        msg
       end
 
       def processed_string = string && pos && string[...pos]
