@@ -99,8 +99,14 @@ module Net
 
       # When +parser_state+ is true, debug info about the parser state is
       # included.  Defaults to the value of Net::IMAP.debug.
+      #
+      # When +parser_backtrace+ is true, a simplified backtrace is included,
+      # containing only frames which belong to methods in parser_class.  Most
+      # parser method names are based on rules in the IMAP grammar.
       def detailed_message(parser_state: Net::IMAP.debug,
+                           parser_backtrace: false,
                            **)
+        return super unless parser_state || parser_backtrace
         msg = super.dup
         if parser_state && (string || pos || lex_state || token)
           msg << "\n  processed : %p" % processed_string
@@ -112,6 +118,19 @@ module Net
             msg << "%p => %p" % [token.symbol, token.value]
           else
             msg << "nil"
+          end
+        end
+        if parser_backtrace
+          backtrace_locations&.each_with_index do |loc, idx|
+            next  if    loc.base_label.include? "parse_error"
+            break if    loc.base_label == "parse"
+            next unless loc.label.include?(parser_class.name)
+            msg << "\n  caller[%2d]: %-30s (%s:%d)" % [
+              idx,
+              loc.base_label,
+              File.basename(loc.path, ".rb"),
+              loc.lineno
+            ]
           end
         end
         msg

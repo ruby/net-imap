@@ -219,17 +219,8 @@ module Net
           raise exception format(fmt, *args)
         rescue ResponseParseError => error
           if config.debug?
-            warn error.detailed_message(parser_state: true)
-            local_path = File.dirname(__dir__)
-            caller_locations(1..20).each_with_index do |cloc, idx|
-              next unless cloc.path&.start_with?(local_path)
-              warn "  caller[%2d]: %-30s (%s:%d)" % [
-                idx,
-                cloc.base_label,
-                File.basename(cloc.path, ".rb"),
-                cloc.lineno
-              ]
-            end
+            warn error.detailed_message(parser_state: true,
+                                        parser_backtrace: true)
           end
           raise
         end
