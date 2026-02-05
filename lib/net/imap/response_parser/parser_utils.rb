@@ -221,8 +221,14 @@ module Net
           message, parser_state:, parser_class: self.class
         )
 
-        def current_state = [@lex_state, @pos, @token]
-        def parser_state  = [@str, *current_state]
+        # This can be used to backtrack after a parse error, and re-attempt to
+        # parse using a fallback.
+        #
+        # NOTE: Reckless backtracking could lead to O(n²) situations, so this
+        # should very rarely be used.  Ideally, fallbacks should not backtrack.
+        def restore_state(state) = (@lex_state, @pos, @token = state)
+        def current_state        = [@lex_state, @pos, @token]
+        def parser_state         = [@str, *current_state]
 
       end
     end
