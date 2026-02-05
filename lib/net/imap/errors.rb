@@ -96,6 +96,30 @@ module Net
         @token     = token
         super(message)
       end
+
+      # When +parser_state+ is true, debug info about the parser state is
+      # included.  Defaults to the value of Net::IMAP.debug.
+      def detailed_message(parser_state: Net::IMAP.debug,
+                           **)
+        msg = super.dup
+        if parser_state && (string || pos || lex_state || token)
+          msg << "\n  processed : %p" % processed_string
+          msg << "\n  remaining : %p" % remaining_string
+          msg << "\n  pos       : %p" % pos
+          msg << "\n  lex_state : %p" % lex_state
+          msg << "\n  token     : "
+          if token
+            msg << "%p => %p" % [token.symbol, token.value]
+          else
+            msg << "nil"
+          end
+        end
+        msg
+      end
+
+      def processed_string = string && pos && string[...pos]
+      def remaining_string = string && pos && string[pos..]
+
     end
 
     # Superclass of all errors used to encapsulate "fail" responses

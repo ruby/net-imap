@@ -216,16 +216,11 @@ module Net
         end
 
         def parse_error(fmt, *args)
-          error = exception format(fmt, *args)
+          raise exception format(fmt, *args)
+        rescue ResponseParseError => error
           if config.debug?
+            warn error.detailed_message(parser_state: true)
             local_path = File.dirname(__dir__)
-            tok = @token ? "%s: %p" % [@token.symbol, @token.value] : "nil"
-            warn "%s %s: %s"        % [self.class, __method__, error.message]
-            warn "  tokenized : %s" % [@str[...@pos].dump]
-            warn "  remaining : %s" % [@str[@pos..].dump]
-            warn "  @lex_state: %s" % [@lex_state]
-            warn "  @pos      : %d" % [@pos]
-            warn "  @token    : %s" % [tok]
             caller_locations(1..20).each_with_index do |cloc, idx|
               next unless cloc.path&.start_with?(local_path)
               warn "  caller[%2d]: %-30s (%s:%d)" % [
@@ -236,7 +231,7 @@ module Net
               ]
             end
           end
-          raise error
+          raise
         end
 
         def exception(message) = ResponseParseError.new(
