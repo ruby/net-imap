@@ -51,7 +51,51 @@ module Net
     end
 
     # Error raised when a response from the server is non-parsable.
+    #
+    # NOTE: Parser attributes are provided for debugging and inspection only.
+    # Their names and semantics may change incompatibly in any release.
     class ResponseParseError < Error
+      # Net::IMAP::ResponseParser, unless a custom parser produced the error.
+      attr_reader :parser_class
+
+      # The full raw response string which was being parsed.
+      attr_reader :string
+
+      # The parser's byte position in #string when the error was raised.
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :pos
+
+      # The parser's lex state
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :lex_state
+
+      # The last lexed token
+      #
+      # May be +nil+ when the parser has accepted the last token and peeked at
+      # the next byte without generating a token.
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :token
+
+      def initialize(message = "unspecified parse error",
+                     parser_class: Net::IMAP::ResponseParser,
+                     parser_state: nil,
+                     string:    parser_state&.at(0), # see ParserUtils#parser_state
+                     lex_state: parser_state&.at(1), # see ParserUtils#parser_state
+                     pos:       parser_state&.at(2), # see ParserUtils#parser_state
+                     token:     parser_state&.at(3)) # see ParserUtils#parser_state
+        @parser_class = parser_class
+        @string    = string
+        @pos       = pos
+        @lex_state = lex_state
+        @token     = token
+        super(message)
+      end
     end
 
     # Superclass of all errors used to encapsulate "fail" responses

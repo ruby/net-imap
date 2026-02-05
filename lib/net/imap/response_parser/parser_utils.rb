@@ -216,11 +216,11 @@ module Net
         end
 
         def parse_error(fmt, *args)
-          msg = format(fmt, *args)
+          error = exception format(fmt, *args)
           if config.debug?
             local_path = File.dirname(__dir__)
             tok = @token ? "%s: %p" % [@token.symbol, @token.value] : "nil"
-            warn "%s %s: %s"        % [self.class, __method__, msg]
+            warn "%s %s: %s"        % [self.class, __method__, error.message]
             warn "  tokenized : %s" % [@str[...@pos].dump]
             warn "  remaining : %s" % [@str[@pos..].dump]
             warn "  @lex_state: %s" % [@lex_state]
@@ -236,8 +236,15 @@ module Net
               ]
             end
           end
-          raise ResponseParseError, msg
+          raise error
         end
+
+        def exception(message) = ResponseParseError.new(
+          message, parser_state:, parser_class: self.class
+        )
+
+        def current_state = [@lex_state, @pos, @token]
+        def parser_state  = [@str, *current_state]
 
       end
     end
