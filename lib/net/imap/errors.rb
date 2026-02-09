@@ -116,9 +116,12 @@ module Net
       # containing only frames for methods in parser_class (since ruby 3.4) or
       # which have "net/imap/response_parser" in the path (before ruby 3.4).
       # Most parser method names are based on rules in the IMAP grammar.
+      #
+      # When +highlight+ is not explicitly set, highlights may be enabled
+      # automatically, based on +TERM+ and +FORCE_COLOR+ environment variables.
       def detailed_message(parser_state: Net::IMAP.debug,
                            parser_backtrace: false,
-                           highlight: false,
+                           highlight: default_highlight_from_env,
                            **)
         return super unless parser_state || parser_backtrace
         msg = super.dup
@@ -161,6 +164,12 @@ module Net
       def processed_string = string && pos && string[...pos]
       def remaining_string = string && pos && string[pos..]
 
+      private
+
+      def default_highlight_from_env
+        (ENV["FORCE_COLOR"] || "") !~ /\A(?:0|)\z/ ||
+          (ENV["TERM"] || "") !~ /\A(?:dumb|unknown|)\z/i
+      end
     end
 
     # Superclass of all errors used to encapsulate "fail" responses
