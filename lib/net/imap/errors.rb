@@ -51,7 +51,99 @@ module Net
     end
 
     # Error raised when a response from the server is non-parsable.
+    #
+    # NOTE: Parser attributes are provided for debugging and inspection only.
+    # Their names and semantics may change incompatibly in any release.
     class ResponseParseError < Error
+      # Net::IMAP::ResponseParser, unless a custom parser produced the error.
+      attr_reader :parser_class
+
+      # The full raw response string which was being parsed.
+      attr_reader :string
+
+      # The parser's byte position in #string when the error was raised.
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :pos
+
+      # The parser's lex state
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :lex_state
+
+      # The last lexed token
+      #
+      # May be +nil+ when the parser has accepted the last token and peeked at
+      # the next byte without generating a token.
+      #
+      # _NOTE:_ This attribute is provided for debugging and inspection only.
+      # Its name and semantics may change incompatibly in any release.
+      attr_reader :token
+
+      def initialize(message = "unspecified parse error",
+                     parser_class: Net::IMAP::ResponseParser,
+                     parser_state: nil,
+                     string:    parser_state&.at(0), # see ParserUtils#parser_state
+                     lex_state: parser_state&.at(1), # see ParserUtils#parser_state
+                     pos:       parser_state&.at(2), # see ParserUtils#parser_state
+                     token:     parser_state&.at(3)) # see ParserUtils#parser_state
+        @parser_class = parser_class
+        @string    = string
+        @pos       = pos
+        @lex_state = lex_state
+        @token     = token
+        super(message)
+      end
+
+      # When +parser_state+ is true, debug info about the parser state is
+      # included.  Defaults to the value of Net::IMAP.debug.
+      #
+      # When +parser_backtrace+ is true, a simplified backtrace is included,
+      # containing only frames which belong to methods in parser_class.  Most
+      # parser method names are based on rules in the IMAP grammar.
+      def detailed_message(parser_state: Net::IMAP.debug,
+                           parser_backtrace: false,
+                           **)
+        return super unless parser_state || parser_backtrace
+        msg = super.dup
+        if parser_state && (string || pos || lex_state || token)
+          msg << "\n  processed : %p" % processed_string
+          msg << "\n  remaining : %p" % remaining_string
+          msg << "\n  pos       : %p" % pos
+          msg << "\n  lex_state : %p" % lex_state
+          msg << "\n  token     : "
+          if token
+            msg << "%p => %p" % [token.symbol, token.value]
+          else
+            msg << "nil"
+          end
+        end
+        if parser_backtrace
+          backtrace_locations&.each_with_index do |loc, idx|
+            next  if    loc.base_label.include? "parse_error"
+            break if    loc.base_label == "parse"
+            next unless loc.label.include?(parser_class.name)
+            msg << "\n  caller[%2d]: %-30s (%s:%d)" % [
+              idx,
+              loc.base_label,
+              File.basename(loc.path, ".rb"),
+              loc.lineno
+            ]
+          end
+        end
+        msg
+      rescue => error
+        msg ||= super.dup
+        msg << "\n  BUG in %s#%s: %s" % [self.class, __method__,
+                                         error.detailed_message]
+        msg
+      end
+
+      def processed_string = string && pos && string[...pos]
+      def remaining_string = string && pos && string[pos..]
+
     end
 
     # Superclass of all errors used to encapsulate "fail" responses
