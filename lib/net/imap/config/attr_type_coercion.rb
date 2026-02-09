@@ -45,7 +45,7 @@ module Net
         else
           def self.safe(&b) nil.instance_eval(&b).freeze end
         end
-        private_class_method :safe
+        # private_class_method :safe
 
         Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
         Types[:boolean] = Boolean = safe{-> {!!_1}}

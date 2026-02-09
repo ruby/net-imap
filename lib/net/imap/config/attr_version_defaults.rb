@@ -26,14 +26,15 @@ module Net
         # See Config.version_defaults.
         singleton_class.attr_reader :version_defaults
 
-        @version_defaults = Hash.new {|h, k|
+        @version_defaults = {}
+        version_defaults.default_proc = AttrTypeCoercion.safe {->(h, k){
           # NOTE: String responds to both so the order is significant.
           # And ignore non-numeric conversion to zero, because: "wat!?".to_r == 0
           (h.fetch(k.to_r, nil) || h.fetch(k.to_f, nil) if k.is_a?(Numeric)) ||
-            (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
-            (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
-            (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
-        }
+          (h.fetch(k.to_sym, nil) if k.respond_to?(:to_sym)) ||
+          (h.fetch(k.to_r,   nil) if k.respond_to?(:to_r) && k.to_r != 0r) ||
+          (h.fetch(k.to_f,   nil) if k.respond_to?(:to_f) && k.to_f != 0.0)
+        }}
 
         # :stopdoc: internal APIs only
 

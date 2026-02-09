@@ -4,6 +4,7 @@ require_relative "config/attr_accessors"
 require_relative "config/attr_inheritance"
 require_relative "config/attr_type_coercion"
 require_relative "config/attr_version_defaults"
+require_relative "config/global"
 
 module Net
   class IMAP
@@ -632,7 +633,7 @@ module Net
       end
 
       @default = AttrVersionDefaults.compile_default!
-      @global  = default.new
+      @global  = Global.setup!
       AttrVersionDefaults.compile_version_defaults!
 
     end
