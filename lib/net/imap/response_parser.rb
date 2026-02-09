@@ -38,6 +38,11 @@ module Net
         @lex_state = EXPR_BEG
         @token = nil
         return response
+      rescue ResponseParseError => error
+        if config.debug?
+          warn error.detailed_message(parser_state: true, parser_backtrace: true)
+        end
+        raise
       end
 
       private

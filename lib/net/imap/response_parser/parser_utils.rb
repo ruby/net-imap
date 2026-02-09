@@ -215,15 +215,7 @@ module Net
           @token = nil
         end
 
-        def parse_error(fmt, *args)
-          raise exception format(fmt, *args)
-        rescue ResponseParseError => error
-          if config.debug?
-            warn error.detailed_message(parser_state: true,
-                                        parser_backtrace: true)
-          end
-          raise
-        end
+        def parse_error(fmt, *args) = raise exception format(fmt, *args)
 
         def exception(message) = ResponseParseError.new(
           message, parser_state:, parser_class: self.class
