@@ -12,6 +12,15 @@ class IMAPErrorsTest < Net::IMAP::TestCase
   BOLD           = SGR 1
   BOLD_UNDERLINE = SGR 1, 4
 
+  setup do
+    @term_env_vars = ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"]
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, nil
+  end
+
+  teardown do
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = @term_env_vars
+  end
+
   test "ResponseParseError" do
     # The first examples don't add parser state, so this makes no difference.
     # It affects the last example, which has parser state.
@@ -64,7 +73,8 @@ class IMAPErrorsTest < Net::IMAP::TestCase
       "#{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}",
       err.detailed_message(highlight: true, parser_state: false)
     )
-    assert_equal(<<~MSG.strip, err.detailed_message)
+
+    expected_no_hl = <<~MSG.strip
       #{msg} (#{name})
         processed : "tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""
         remaining : "] done\\r\\n"
@@ -72,7 +82,7 @@ class IMAPErrorsTest < Net::IMAP::TestCase
         lex_state : :EXPR_BEG
         token     : :QUOTED => "Microsoft.Exchange.Error: foo"
     MSG
-    assert_equal(<<~MSG.strip, err.detailed_message(highlight: true))
+    expected_no_color = <<~MSG.strip
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
         processed : #{BOLD}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
         remaining : #{BOLD_UNDERLINE}"] done\\r\\n"#{RESET}
@@ -80,6 +90,29 @@ class IMAPErrorsTest < Net::IMAP::TestCase
         lex_state : #{BOLD}:EXPR_BEG#{RESET}
         token     : #{BOLD}:QUOTED#{RESET} => #{BOLD}"Microsoft.Exchange.Error: foo"#{RESET}
     MSG
+
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, "0"
+    assert_equal(expected_no_hl,    err.detailed_message)
+    assert_equal(expected_no_color, err.detailed_message(highlight: true))
+
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", "1", nil
+    assert_equal(expected_no_hl,    err.detailed_message)
+    assert_equal(expected_no_color, err.detailed_message(highlight: true))
+
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "xterm", nil, nil
+    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", nil, "1"
+    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "unknown", "1", "1"
+    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+
+    # reset to nil
+    ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, nil
 
     # `parser_state` defaults to `Net::IMAP.debug`:
     Net::IMAP.debug = false
