@@ -59,8 +59,22 @@ module Net
       ESC_NO_HL = Hash.new("").freeze
       private_constant :ESC_NO_HL
 
+      # Translates hash[:"/foo"] to hash[:reset] when hash.key?(:foo), else ""
+      #
+      # TODO: DRY this up with Config::AttrTypeCoercion.safe
+      if defined?(::Ractor.shareable_proc)
+        default_highlight = Ractor.shareable_proc {|hash, key|
+          %r{\A/(.+)} =~ key && hash.key?($1.to_sym) ? hash[:reset] : ""
+        }
+      else
+        default_highlight = nil.instance_eval { Proc.new {|hash, key|
+          %r{\A/(.+)} =~ key && hash.key?($1.to_sym) ? hash[:reset] : ""
+        } }
+        ::Ractor.make_shareable(default_highlight) if defined?(::Ractor)
+      end
+
       # ANSI highlights, but no colors
-      ESC_NO_COLOR = Hash.new("").update(
+      ESC_NO_COLOR = Hash.new(&default_highlight).update(
         reset: "\e[m",
         val:   "\e[1m",   # bold
         alt:   "\e[1;4m", # bold and underlined
@@ -142,12 +156,12 @@ module Net
         hl  = ->str { str % esc }
         val = ->str, val { val.nil? ? "nil" : str % esc % val }
         if parser_state && (string || pos || lex_state || token)
-          msg << "\n  processed : " << val["%{val}%%p%{reset}", processed_string]
-          msg << "\n  remaining : " << val["%{alt}%%p%{reset}", remaining_string]
-          msg << "\n  pos       : " << val["%{val}%%p%{reset}", pos]
-          msg << "\n  lex_state : " << val["%{val}%%p%{reset}", lex_state]
+          msg << "\n  processed : " << val["%{val}%%p%{/val}", processed_string]
+          msg << "\n  remaining : " << val["%{alt}%%p%{/alt}", remaining_string]
+          msg << "\n  pos       : " << val["%{val}%%p%{/val}", pos]
+          msg << "\n  lex_state : " << val["%{val}%%p%{/val}", lex_state]
           msg << "\n  token     : " << val[
-            "%{val}%%<symbol>p%{reset} => %{val}%%<value>p%{reset}", token&.to_h
+            "%{val}%%<symbol>p%{/val} => %{val}%%<value>p%{/val}", token&.to_h
           ]
         end
         if parser_backtrace
@@ -161,7 +175,7 @@ module Net
             end
             msg << "\n  %s: %s (%s:%d)" % [
               "caller[%2d]" % idx,
-              hl["%{val}%%-30s%{reset}"] % loc.base_label,
+              hl["%{val}%%-30s%{/val}"] % loc.base_label,
               File.basename(loc.path, ".rb"), loc.lineno
             ]
           end

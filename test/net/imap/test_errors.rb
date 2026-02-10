@@ -172,6 +172,15 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     assert_include color_hl, "caller[ 1]: #{CYAN}%-30s#{RESET} (" % "msg_att"
   end
 
+  if defined?(::Ractor)
+    %i[ESC_NO_HL ESC_NO_COLOR ESC_COLORS].each do |name|
+      test "ResponseParseError::#{name} is Ractor shareable" do
+        value = Net::IMAP::ResponseParseError.const_get(name)
+        assert Ractor.shareable? value
+      end
+    end
+  end
+
   test "ResponseTooLargeError" do
     err = Net::IMAP::ResponseTooLargeError.new
     assert_nil err.bytes_read
