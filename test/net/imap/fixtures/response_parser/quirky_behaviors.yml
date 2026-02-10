@@ -31,6 +31,33 @@
         unparsed_data: "froopy snood"
       raw_data: "* 86 NOOP froopy snood\r\n"
 
+  "Microsoft Exchange issues an invalid resp-text-code":
+    comment: |
+      net-imap issue: https://github.com/ruby/net-imap/issues/597
+
+      Microsoft Exchange is issuing an invalid resp-text-code, but net-imap
+      should fallback to `resp-text = text` when resp-text-code fails to parse.
+    :debug: false # current version of backtracking still prints parse_errors
+    :response: "RUBY0001 OK [Error=\"Microsoft.Exchange.Data.Storage.WrongServerException:
+      Cross Server access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"
+      AuthResultFromPopImapEnd=0 Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
+      MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM
+      Service=Imap4] AUTHENTICATE completed.\r\n"
+    :expected: !ruby/struct:Net::IMAP::TaggedResponse
+      tag:  RUBY0001
+      name: OK
+      data: '[Error="Microsoft.Exchange.Data.Storage.WrongServerException: Cross Server
+        access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+        AuthResultFromPopImapEnd=0
+        Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
+        MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM Service=Imap4]
+        AUTHENTICATE completed.'
+      raw_data: "RUBY0001 OK [Error=\"Microsoft.Exchange.Data.Storage.WrongServerException:
+        Cross Server access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"
+        AuthResultFromPopImapEnd=0 Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
+        MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM Service=Imap4] AUTHENTICATE
+        completed.\r\n"
+
   outlook.com puts an extra SP in ENVELOPE address lists:
     comment: |
       An annoying bug from outlook.com.  They've had the bug for years, and

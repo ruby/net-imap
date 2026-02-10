@@ -1888,12 +1888,17 @@ module Net
       # We leniently re-interpret this as
       #   resp-text       = ["[" resp-text-code "]" [SP [text]] / [text]
       def resp_text
+        state = current_state
         if lbra?
           code = resp_text_code; rbra
           ResponseText.new(code, SP? && text? || "")
         else
           ResponseText.new(nil, text? || "")
         end
+      rescue ResponseParseError => error
+        raise if /\buid-set\b/i.match? error.message
+        restore_state state
+        text
       end
 
       # RFC3501 (See https://www.rfc-editor.org/errata/rfc3501):
