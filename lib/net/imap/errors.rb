@@ -67,6 +67,14 @@ module Net
       ).freeze
       private_constant :ESC_NO_COLOR
 
+      # ANSI highlights, with color
+      ESC_COLORS = Hash.new(&default_highlight).update(
+        reset: "\e[m",
+        val:   "\e[36;40m",   # cyan on black (to ensure contrast)
+        alt:   "\e[1;33;40m", # bold; yellow on black
+      ).freeze
+      private_constant :ESC_COLORS
+
       # Net::IMAP::ResponseParser, unless a custom parser produced the error.
       attr_reader :parser_class
 
@@ -119,13 +127,18 @@ module Net
       #
       # When +highlight+ is not explicitly set, highlights may be enabled
       # automatically, based on +TERM+ and +FORCE_COLOR+ environment variables.
+      #
+      # By default, +highlight+ uses colors from the basic ANSI palette.  When
+      # +highlight_no_color+ is true or the +NO_COLOR+ environment variable is
+      # not empty, only monochromatic highlights are used: bold, underline, etc.
       def detailed_message(parser_state: Net::IMAP.debug,
                            parser_backtrace: false,
                            highlight: default_highlight_from_env,
+                           highlight_no_color: (ENV["NO_COLOR"] || "") != "",
                            **)
         return super unless parser_state || parser_backtrace
         msg = super.dup
-        esc = highlight ? ESC_NO_COLOR : ESC_NO_HL
+        esc = !highlight ? ESC_NO_HL : highlight_no_color ? ESC_NO_COLOR : ESC_COLORS
         hl  = ->str { str % esc }
         val = ->str, val { val.nil? ? "nil" : str % esc % val }
         if parser_state && (string || pos || lex_state || token)

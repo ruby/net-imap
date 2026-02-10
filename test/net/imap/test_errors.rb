@@ -11,6 +11,8 @@ class IMAPErrorsTest < Net::IMAP::TestCase
   RESET          = SGR "" # could also use 0
   BOLD           = SGR 1
   BOLD_UNDERLINE = SGR 1, 4
+  BOLD_YELLOW    = SGR 1, 33, 40
+  CYAN           = SGR 36, 40
 
   setup do
     @term_env_vars = ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"]
@@ -90,26 +92,41 @@ class IMAPErrorsTest < Net::IMAP::TestCase
         lex_state : #{BOLD}:EXPR_BEG#{RESET}
         token     : #{BOLD}:QUOTED#{RESET} => #{BOLD}"Microsoft.Exchange.Error: foo"#{RESET}
     MSG
+    expected_color_hl = <<~MSG.strip
+      #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
+        processed : #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        remaining : #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        pos       : #{CYAN}45#{RESET}
+        lex_state : #{CYAN}:EXPR_BEG#{RESET}
+        token     : #{CYAN}:QUOTED#{RESET} => #{CYAN}"Microsoft.Exchange.Error: foo"#{RESET}
+    MSG
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, "0"
     assert_equal(expected_no_hl,    err.detailed_message)
-    assert_equal(expected_no_color, err.detailed_message(highlight: true))
+    assert_equal(expected_color_hl, err.detailed_message(highlight: true))
+    assert_equal(expected_no_color, err.detailed_message(highlight: true,
+                                                         highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", "1", nil
     assert_equal(expected_no_hl,    err.detailed_message)
     assert_equal(expected_no_color, err.detailed_message(highlight: true))
+    assert_equal(expected_color_hl, err.detailed_message(highlight: true,
+                                                         highlight_no_color: false))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "xterm", nil, nil
-    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_color_hl, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_no_color, err.detailed_message(highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", nil, "1"
-    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_color_hl, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_no_color, err.detailed_message(highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "unknown", "1", "1"
     assert_equal(expected_no_color, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_color_hl, err.detailed_message(highlight_no_color: false))
 
     # reset to nil
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, nil
@@ -135,10 +152,10 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     MSG
     assert_equal(<<~MSG.strip, err.detailed_message(highlight: true, parser_state: true))
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
-        processed : #{BOLD}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
-        remaining : #{BOLD_UNDERLINE}"] done\\r\\n"#{RESET}
-        pos       : #{BOLD}45#{RESET}
-        lex_state : #{BOLD}:EXPR_BEG#{RESET}
+        processed : #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        remaining : #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        pos       : #{CYAN}45#{RESET}
+        lex_state : #{CYAN}:EXPR_BEG#{RESET}
         token     : nil
     MSG
 
@@ -147,9 +164,12 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     parser = Net::IMAP::ResponseParser.new
     error  = parser.parse("* 123 FETCH (UNKNOWN ...)\r\n") rescue $!
     no_hl    = error.detailed_message(parser_backtrace: true)
-    no_color = error.detailed_message(parser_backtrace: true, highlight: true)
+    color_hl = error.detailed_message(parser_backtrace: true, highlight: true)
+    no_color = error.detailed_message(parser_backtrace: true, highlight: true,
+                                      highlight_no_color: true)
     assert_include no_hl,    "caller[ 1]: %-30s ("          % "msg_att"
     assert_include no_color, "caller[ 1]: #{BOLD}%-30s#{RESET} (" % "msg_att"
+    assert_include color_hl, "caller[ 1]: #{CYAN}%-30s#{RESET} (" % "msg_att"
   end
 
   test "ResponseTooLargeError" do
