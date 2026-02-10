@@ -12,7 +12,11 @@ class IMAPErrorsTest < Net::IMAP::TestCase
   BOLD           = SGR 1
   BOLD_UNDERLINE = SGR 1, 4
   BOLD_YELLOW    = SGR 1, 33, 40
+  YELLOW         = SGR    33, 40
+  BLUE           = SGR 34
   CYAN           = SGR 36, 40
+  MAGENTA_DARK   = SGR 35
+  MAGENTA        = SGR 95
 
   setup do
     @term_env_vars = ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"]
@@ -94,11 +98,11 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     MSG
     expected_color_hl = <<~MSG.strip
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
-        processed : #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
-        remaining : #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
-        pos       : #{CYAN}45#{RESET}
-        lex_state : #{CYAN}:EXPR_BEG#{RESET}
-        token     : #{CYAN}:QUOTED#{RESET} => #{CYAN}"Microsoft.Exchange.Error: foo"#{RESET}
+        #{MAGENTA}processed #{RESET}: #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        #{MAGENTA}remaining #{RESET}: #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        #{MAGENTA}pos       #{RESET}: #{CYAN  }45#{RESET}
+        #{MAGENTA}lex_state #{RESET}: #{YELLOW}:EXPR_BEG#{RESET}
+        #{MAGENTA}token     #{RESET}: #{YELLOW}:QUOTED#{RESET} => #{CYAN}"Microsoft.Exchange.Error: foo"#{RESET}
     MSG
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, "0"
@@ -152,11 +156,11 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     MSG
     assert_equal(<<~MSG.strip, err.detailed_message(highlight: true, parser_state: true))
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
-        processed : #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
-        remaining : #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
-        pos       : #{CYAN}45#{RESET}
-        lex_state : #{CYAN}:EXPR_BEG#{RESET}
-        token     : nil
+        #{MAGENTA}processed #{RESET}: #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        #{MAGENTA}remaining #{RESET}: #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        #{MAGENTA}pos       #{RESET}: #{CYAN  }45#{RESET}
+        #{MAGENTA}lex_state #{RESET}: #{YELLOW}:EXPR_BEG#{RESET}
+        #{MAGENTA}token     #{RESET}: #{MAGENTA_DARK}nil#{RESET}
     MSG
 
     # with parser_backtrace
@@ -169,7 +173,9 @@ class IMAPErrorsTest < Net::IMAP::TestCase
                                       highlight_no_color: true)
     assert_include no_hl,    "caller[ 1]: %-30s ("          % "msg_att"
     assert_include no_color, "caller[ 1]: #{BOLD}%-30s#{RESET} (" % "msg_att"
-    assert_include color_hl, "caller[ 1]: #{CYAN}%-30s#{RESET} (" % "msg_att"
+    assert_include color_hl,
+      "#{MAGENTA}caller[#{RESET}#{BLUE} 1#{RESET}#{MAGENTA}]#{RESET}: " \
+      "#{BOLD}%-30s#{RESET} (" % "msg_att"
   end
 
   if defined?(::Ractor)

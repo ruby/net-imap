@@ -78,14 +78,21 @@ module Net
         reset: "\e[m",
         val:   "\e[1m",   # bold
         alt:   "\e[1;4m", # bold and underlined
+        sym:   "\e[1m",   # bold
+        label: "\e[1m",   # bold
       ).freeze
       private_constant :ESC_NO_COLOR
 
       # ANSI highlights, with color
       ESC_COLORS = Hash.new(&default_highlight).update(
         reset: "\e[m",
+        key:   "\e[95m",      # bright magenta
+        idx:   "\e[34m",      # blue
         val:   "\e[36;40m",   # cyan on black (to ensure contrast)
         alt:   "\e[1;33;40m", # bold; yellow on black
+        sym:   "\e[33;40m",   # yellow on black
+        label: "\e[1m",       # bold
+        nil:   "\e[35m",      # magenta
       ).freeze
       private_constant :ESC_COLORS
 
@@ -154,14 +161,14 @@ module Net
         msg = super.dup
         esc = !highlight ? ESC_NO_HL : highlight_no_color ? ESC_NO_COLOR : ESC_COLORS
         hl  = ->str { str % esc }
-        val = ->str, val { val.nil? ? "nil" : str % esc % val }
+        val = ->str, val { hl[val.nil? ? "%{nil}%%p%{/nil}" : str] % val }
         if parser_state && (string || pos || lex_state || token)
-          msg << "\n  processed : " << val["%{val}%%p%{/val}", processed_string]
-          msg << "\n  remaining : " << val["%{alt}%%p%{/alt}", remaining_string]
-          msg << "\n  pos       : " << val["%{val}%%p%{/val}", pos]
-          msg << "\n  lex_state : " << val["%{val}%%p%{/val}", lex_state]
-          msg << "\n  token     : " << val[
-            "%{val}%%<symbol>p%{/val} => %{val}%%<value>p%{/val}", token&.to_h
+          msg << hl["\n  %{key}processed %{/key}: "] << val["%{val}%%p%{/val}", processed_string]
+          msg << hl["\n  %{key}remaining %{/key}: "] << val["%{alt}%%p%{/alt}", remaining_string]
+          msg << hl["\n  %{key}pos       %{/key}: "] << val["%{val}%%p%{/val}", pos]
+          msg << hl["\n  %{key}lex_state %{/key}: "] << val["%{sym}%%p%{/sym}", lex_state]
+          msg << hl["\n  %{key}token     %{/key}: "] << val[
+            "%{sym}%%<symbol>p%{/sym} => %{val}%%<value>p%{/val}", token&.to_h
           ]
         end
         if parser_backtrace
@@ -174,8 +181,8 @@ module Net
               next unless loc.path&.include?("net/imap/response_parser")
             end
             msg << "\n  %s: %s (%s:%d)" % [
-              "caller[%2d]" % idx,
-              hl["%{val}%%-30s%{/val}"] % loc.base_label,
+              hl["%{key}caller[%{/key}%{idx}%%2d%{/idx}%{key}]%{/key}"] % idx,
+              hl["%{label}%%-30s%{/label}"] % loc.base_label,
               File.basename(loc.path, ".rb"), loc.lineno
             ]
           end
