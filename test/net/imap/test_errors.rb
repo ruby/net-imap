@@ -88,6 +88,15 @@ class IMAPErrorsTest < Net::IMAP::TestCase
       "#{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}",
       err.detailed_message(highlight: true)
     )
+
+    # with parser_backtrace
+    Net::IMAP.debug = false
+    parser = Net::IMAP::ResponseParser.new
+    error  = parser.parse("* 123 FETCH (UNKNOWN ...)\r\n") rescue $!
+    no_hl    = error.detailed_message(parser_backtrace: true)
+    no_color = error.detailed_message(parser_backtrace: true, highlight: true)
+    assert_include no_hl,    "caller[ 1]: %-30s ("          % "msg_att"
+    assert_include no_color, "caller[ 1]: %-30s ("          % "msg_att"
   end
 
   test "ResponseTooLargeError" do

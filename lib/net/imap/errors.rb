@@ -101,8 +101,9 @@ module Net
       # included.  Defaults to the value of Net::IMAP.debug.
       #
       # When +parser_backtrace+ is true, a simplified backtrace is included,
-      # containing only frames which belong to methods in parser_class.  Most
-      # parser method names are based on rules in the IMAP grammar.
+      # containing only frames for methods in parser_class (since ruby 3.4) or
+      # which have "net/imap/response_parser" in the path (before ruby 3.4).
+      # Most parser method names are based on rules in the IMAP grammar.
       def detailed_message(parser_state: Net::IMAP.debug,
                            parser_backtrace: false,
                            **)
@@ -124,7 +125,11 @@ module Net
           backtrace_locations&.each_with_index do |loc, idx|
             next  if    loc.base_label.include? "parse_error"
             break if    loc.base_label == "parse"
-            next unless loc.label.include?(parser_class.name)
+            if loc.label.include?("#") # => Class#method, since ruby 3.4
+              next unless loc.label&.include?(parser_class.name)
+            else
+              next unless loc.path&.include?("net/imap/response_parser")
+            end
             msg << "\n  caller[%2d]: %-30s (%s:%d)" % [
               idx,
               loc.base_label,
