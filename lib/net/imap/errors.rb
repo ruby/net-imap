@@ -55,6 +55,18 @@ module Net
     # NOTE: Parser attributes are provided for debugging and inspection only.
     # Their names and semantics may change incompatibly in any release.
     class ResponseParseError < Error
+      # returns "" for all highlights
+      ESC_NO_HL = Hash.new("").freeze
+      private_constant :ESC_NO_HL
+
+      # ANSI highlights, but no colors
+      ESC_NO_COLOR = Hash.new("").update(
+        reset: "\e[m",
+        val:   "\e[1m",   # bold
+        alt:   "\e[1;4m", # bold and underlined
+      ).freeze
+      private_constant :ESC_NO_COLOR
+
       # Net::IMAP::ResponseParser, unless a custom parser produced the error.
       attr_reader :parser_class
 
@@ -106,20 +118,21 @@ module Net
       # Most parser method names are based on rules in the IMAP grammar.
       def detailed_message(parser_state: Net::IMAP.debug,
                            parser_backtrace: false,
+                           highlight: false,
                            **)
         return super unless parser_state || parser_backtrace
         msg = super.dup
+        esc = highlight ? ESC_NO_COLOR : ESC_NO_HL
+        hl  = ->str { str % esc }
+        val = ->str, val { val.nil? ? "nil" : str % esc % val }
         if parser_state && (string || pos || lex_state || token)
-          msg << "\n  processed : %p" % processed_string
-          msg << "\n  remaining : %p" % remaining_string
-          msg << "\n  pos       : %p" % pos
-          msg << "\n  lex_state : %p" % lex_state
-          msg << "\n  token     : "
-          if token
-            msg << "%p => %p" % [token.symbol, token.value]
-          else
-            msg << "nil"
-          end
+          msg << "\n  processed : " << val["%{val}%%p%{reset}", processed_string]
+          msg << "\n  remaining : " << val["%{alt}%%p%{reset}", remaining_string]
+          msg << "\n  pos       : " << val["%{val}%%p%{reset}", pos]
+          msg << "\n  lex_state : " << val["%{val}%%p%{reset}", lex_state]
+          msg << "\n  token     : " << val[
+            "%{val}%%<symbol>p%{reset} => %{val}%%<value>p%{reset}", token&.to_h
+          ]
         end
         if parser_backtrace
           backtrace_locations&.each_with_index do |loc, idx|
@@ -130,11 +143,10 @@ module Net
             else
               next unless loc.path&.include?("net/imap/response_parser")
             end
-            msg << "\n  caller[%2d]: %-30s (%s:%d)" % [
-              idx,
-              loc.base_label,
-              File.basename(loc.path, ".rb"),
-              loc.lineno
+            msg << "\n  %s: %s (%s:%d)" % [
+              "caller[%2d]" % idx,
+              hl["%{val}%%-30s%{reset}"] % loc.base_label,
+              File.basename(loc.path, ".rb"), loc.lineno
             ]
           end
         end

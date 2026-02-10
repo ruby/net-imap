@@ -74,11 +74,11 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     MSG
     assert_equal(<<~MSG.strip, err.detailed_message(highlight: true))
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
-        processed : "tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""
-        remaining : "] done\\r\\n"
-        pos       : 45
-        lex_state : :EXPR_BEG
-        token     : :QUOTED => "Microsoft.Exchange.Error: foo"
+        processed : #{BOLD}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        remaining : #{BOLD_UNDERLINE}"] done\\r\\n"#{RESET}
+        pos       : #{BOLD}45#{RESET}
+        lex_state : #{BOLD}:EXPR_BEG#{RESET}
+        token     : #{BOLD}:QUOTED#{RESET} => #{BOLD}"Microsoft.Exchange.Error: foo"#{RESET}
     MSG
 
     # `parser_state` defaults to `Net::IMAP.debug`:
@@ -89,6 +89,26 @@ class IMAPErrorsTest < Net::IMAP::TestCase
       err.detailed_message(highlight: true)
     )
 
+    # with a nil token
+    parser_state = [string, :EXPR_BEG, 45, nil]
+    err = Net::IMAP::ResponseParseError.new(msg, string:, parser_state:)
+    assert_equal(<<~MSG.strip, err.detailed_message(parser_state: true))
+      #{msg} (#{name})
+        processed : "tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""
+        remaining : "] done\\r\\n"
+        pos       : 45
+        lex_state : :EXPR_BEG
+        token     : nil
+    MSG
+    assert_equal(<<~MSG.strip, err.detailed_message(highlight: true, parser_state: true))
+      #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
+        processed : #{BOLD}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        remaining : #{BOLD_UNDERLINE}"] done\\r\\n"#{RESET}
+        pos       : #{BOLD}45#{RESET}
+        lex_state : #{BOLD}:EXPR_BEG#{RESET}
+        token     : nil
+    MSG
+
     # with parser_backtrace
     Net::IMAP.debug = false
     parser = Net::IMAP::ResponseParser.new
@@ -96,7 +116,7 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     no_hl    = error.detailed_message(parser_backtrace: true)
     no_color = error.detailed_message(parser_backtrace: true, highlight: true)
     assert_include no_hl,    "caller[ 1]: %-30s ("          % "msg_att"
-    assert_include no_color, "caller[ 1]: %-30s ("          % "msg_att"
+    assert_include no_color, "caller[ 1]: #{BOLD}%-30s#{RESET} (" % "msg_att"
   end
 
   test "ResponseTooLargeError" do
