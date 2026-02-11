@@ -1898,7 +1898,7 @@ module Net
       rescue ResponseParseError => error
         raise if /\buid-set\b/i.match? error.message
         restore_state state
-        text
+        ResponseText.new(nil, text? || "")
       end
 
       # RFC3501 (See https://www.rfc-editor.org/errata/rfc3501):
