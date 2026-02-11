@@ -1888,16 +1888,16 @@ module Net
       # We leniently re-interpret this as
       #   resp-text       = ["[" resp-text-code "]" [SP [text]] / [text]
       def resp_text
-        state = current_state
-        if lbra?
-          code = resp_text_code; rbra
-          ResponseText.new(code, SP? && text? || "")
-        else
-          ResponseText.new(nil, text? || "")
+        begin
+          state = current_state
+          if lbra?
+            code = resp_text_code; rbra
+            return ResponseText.new(code, SP? && text? || "")
+          end
+        rescue ResponseParseError => error
+          raise if /\buid-set\b/i.match? error.message
+          restore_state state
         end
-      rescue ResponseParseError => error
-        raise if /\buid-set\b/i.match? error.message
-        restore_state state
         ResponseText.new(nil, text? || "")
       end
 
