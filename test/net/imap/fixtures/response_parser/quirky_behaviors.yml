@@ -37,21 +37,20 @@
 
       Microsoft Exchange is issuing an invalid resp-text-code, but net-imap
       should fallback to `resp-text = text` when resp-text-code fails to parse.
-    :debug: false # current version of backtracking still prints parse_errors
     :response: "RUBY0001 OK [Error=\"Microsoft.Exchange.Data.Storage.WrongServerException:
       Cross Server access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"
       AuthResultFromPopImapEnd=0 Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
       MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM
       Service=Imap4] AUTHENTICATE completed.\r\n"
     :expected: !ruby/struct:Net::IMAP::TaggedResponse
-      tag:  RUBY0001
+      tag: RUBY0001
       name: OK
-      data: '[Error="Microsoft.Exchange.Data.Storage.WrongServerException: Cross Server
-        access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-        AuthResultFromPopImapEnd=0
-        Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
-        MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM Service=Imap4]
-        AUTHENTICATE completed.'
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code:
+        text: '[Error="Microsoft.Exchange.Data.Storage.WrongServerException: Cross Server
+          access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" AuthResultFromPopImapEnd=0
+          Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM
+          Service=Imap4] AUTHENTICATE completed.'
       raw_data: "RUBY0001 OK [Error=\"Microsoft.Exchange.Data.Storage.WrongServerException:
         Cross Server access is not allowed for mailbox xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx\"
         AuthResultFromPopImapEnd=0 Proxy=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM:1993:SSL
