@@ -4072,6 +4072,9 @@ module Net
   end
 end
 
+# TODO: remove after TruffleRuby and JRuby bugs are fixed
+require_relative "imap/data_polyfill"
+
 require_relative "imap/errors"
 require_relative "imap/config"
 require_relative "imap/command_data"
