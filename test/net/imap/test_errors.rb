@@ -11,6 +11,12 @@ class IMAPErrorsTest < Net::IMAP::TestCase
   RESET          = SGR "" # could also use 0
   BOLD           = SGR 1
   BOLD_UNDERLINE = SGR 1, 4
+  BOLD_YELLOW    = SGR 1, 33, 40
+  YELLOW         = SGR    33, 40
+  BLUE           = SGR 34
+  CYAN           = SGR 36, 40
+  MAGENTA_DARK   = SGR 35
+  MAGENTA        = SGR 95
 
   setup do
     @term_env_vars = ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"]
@@ -90,26 +96,41 @@ class IMAPErrorsTest < Net::IMAP::TestCase
         lex_state : #{BOLD}:EXPR_BEG#{RESET}
         token     : #{BOLD}:QUOTED#{RESET} => #{BOLD}"Microsoft.Exchange.Error: foo"#{RESET}
     MSG
+    expected_color_hl = <<~MSG.strip
+      #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
+        #{MAGENTA}processed #{RESET}: #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        #{MAGENTA}remaining #{RESET}: #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        #{MAGENTA}pos       #{RESET}: #{CYAN  }45#{RESET}
+        #{MAGENTA}lex_state #{RESET}: #{YELLOW}:EXPR_BEG#{RESET}
+        #{MAGENTA}token     #{RESET}: #{YELLOW}:QUOTED#{RESET} => #{CYAN}"Microsoft.Exchange.Error: foo"#{RESET}
+    MSG
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, "0"
     assert_equal(expected_no_hl,    err.detailed_message)
-    assert_equal(expected_no_color, err.detailed_message(highlight: true))
+    assert_equal(expected_color_hl, err.detailed_message(highlight: true))
+    assert_equal(expected_no_color, err.detailed_message(highlight: true,
+                                                         highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", "1", nil
     assert_equal(expected_no_hl,    err.detailed_message)
     assert_equal(expected_no_color, err.detailed_message(highlight: true))
+    assert_equal(expected_color_hl, err.detailed_message(highlight: true,
+                                                         highlight_no_color: false))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "xterm", nil, nil
-    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_color_hl, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_no_color, err.detailed_message(highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "dumb", nil, "1"
-    assert_equal(expected_no_color, err.detailed_message)
+    assert_equal(expected_color_hl, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_no_color, err.detailed_message(highlight_no_color: true))
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = "unknown", "1", "1"
     assert_equal(expected_no_color, err.detailed_message)
     assert_equal(expected_no_hl,    err.detailed_message(highlight: false))
+    assert_equal(expected_color_hl, err.detailed_message(highlight_no_color: false))
 
     # reset to nil
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, nil
@@ -135,11 +156,11 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     MSG
     assert_equal(<<~MSG.strip, err.detailed_message(highlight: true, parser_state: true))
       #{BOLD}#{msg} (#{BOLD_UNDERLINE}#{name}#{RESET}#{BOLD})#{RESET}
-        processed : #{BOLD}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
-        remaining : #{BOLD_UNDERLINE}"] done\\r\\n"#{RESET}
-        pos       : #{BOLD}45#{RESET}
-        lex_state : #{BOLD}:EXPR_BEG#{RESET}
-        token     : nil
+        #{MAGENTA}processed #{RESET}: #{CYAN}"tag OK [Error=\\"Microsoft.Exchange.Error: foo\\""#{RESET}
+        #{MAGENTA}remaining #{RESET}: #{BOLD_YELLOW}"] done\\r\\n"#{RESET}
+        #{MAGENTA}pos       #{RESET}: #{CYAN  }45#{RESET}
+        #{MAGENTA}lex_state #{RESET}: #{YELLOW}:EXPR_BEG#{RESET}
+        #{MAGENTA}token     #{RESET}: #{MAGENTA_DARK}nil#{RESET}
     MSG
 
     # with parser_backtrace
@@ -147,9 +168,23 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     parser = Net::IMAP::ResponseParser.new
     error  = parser.parse("* 123 FETCH (UNKNOWN ...)\r\n") rescue $!
     no_hl    = error.detailed_message(parser_backtrace: true)
-    no_color = error.detailed_message(parser_backtrace: true, highlight: true)
+    color_hl = error.detailed_message(parser_backtrace: true, highlight: true)
+    no_color = error.detailed_message(parser_backtrace: true, highlight: true,
+                                      highlight_no_color: true)
     assert_include no_hl,    "caller[ 1]: %-30s ("          % "msg_att"
     assert_include no_color, "caller[ 1]: #{BOLD}%-30s#{RESET} (" % "msg_att"
+    assert_include color_hl,
+      "#{MAGENTA}caller[#{RESET}#{BLUE} 1#{RESET}#{MAGENTA}]#{RESET}: " \
+      "#{BOLD}%-30s#{RESET} (" % "msg_att"
+  end
+
+  if defined?(::Ractor)
+    %i[ESC_NO_HL ESC_NO_COLOR ESC_COLORS].each do |name|
+      test "ResponseParseError::#{name} is Ractor shareable" do
+        value = Net::IMAP::ResponseParseError.const_get(name)
+        assert Ractor.shareable? value
+      end
+    end
   end
 
   test "ResponseTooLargeError" do

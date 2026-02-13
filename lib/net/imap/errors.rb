@@ -59,13 +59,42 @@ module Net
       ESC_NO_HL = Hash.new("").freeze
       private_constant :ESC_NO_HL
 
+      # Translates hash[:"/foo"] to hash[:reset] when hash.key?(:foo), else ""
+      #
+      # TODO: DRY this up with Config::AttrTypeCoercion.safe
+      if defined?(::Ractor.shareable_proc)
+        default_highlight = Ractor.shareable_proc {|hash, key|
+          %r{\A/(.+)} =~ key && hash.key?($1.to_sym) ? hash[:reset] : ""
+        }
+      else
+        default_highlight = nil.instance_eval { Proc.new {|hash, key|
+          %r{\A/(.+)} =~ key && hash.key?($1.to_sym) ? hash[:reset] : ""
+        } }
+        ::Ractor.make_shareable(default_highlight) if defined?(::Ractor)
+      end
+
       # ANSI highlights, but no colors
-      ESC_NO_COLOR = Hash.new("").update(
+      ESC_NO_COLOR = Hash.new(&default_highlight).update(
         reset: "\e[m",
         val:   "\e[1m",   # bold
         alt:   "\e[1;4m", # bold and underlined
+        sym:   "\e[1m",   # bold
+        label: "\e[1m",   # bold
       ).freeze
       private_constant :ESC_NO_COLOR
+
+      # ANSI highlights, with color
+      ESC_COLORS = Hash.new(&default_highlight).update(
+        reset: "\e[m",
+        key:   "\e[95m",      # bright magenta
+        idx:   "\e[34m",      # blue
+        val:   "\e[36;40m",   # cyan on black (to ensure contrast)
+        alt:   "\e[1;33;40m", # bold; yellow on black
+        sym:   "\e[33;40m",   # yellow on black
+        label: "\e[1m",       # bold
+        nil:   "\e[35m",      # magenta
+      ).freeze
+      private_constant :ESC_COLORS
 
       # Net::IMAP::ResponseParser, unless a custom parser produced the error.
       attr_reader :parser_class
@@ -119,22 +148,27 @@ module Net
       #
       # When +highlight+ is not explicitly set, highlights may be enabled
       # automatically, based on +TERM+ and +FORCE_COLOR+ environment variables.
+      #
+      # By default, +highlight+ uses colors from the basic ANSI palette.  When
+      # +highlight_no_color+ is true or the +NO_COLOR+ environment variable is
+      # not empty, only monochromatic highlights are used: bold, underline, etc.
       def detailed_message(parser_state: Net::IMAP.debug,
                            parser_backtrace: false,
                            highlight: default_highlight_from_env,
+                           highlight_no_color: (ENV["NO_COLOR"] || "") != "",
                            **)
         return super unless parser_state || parser_backtrace
         msg = super.dup
-        esc = highlight ? ESC_NO_COLOR : ESC_NO_HL
+        esc = !highlight ? ESC_NO_HL : highlight_no_color ? ESC_NO_COLOR : ESC_COLORS
         hl  = ->str { str % esc }
-        val = ->str, val { val.nil? ? "nil" : str % esc % val }
+        val = ->str, val { hl[val.nil? ? "%{nil}%%p%{/nil}" : str] % val }
         if parser_state && (string || pos || lex_state || token)
-          msg << "\n  processed : " << val["%{val}%%p%{reset}", processed_string]
-          msg << "\n  remaining : " << val["%{alt}%%p%{reset}", remaining_string]
-          msg << "\n  pos       : " << val["%{val}%%p%{reset}", pos]
-          msg << "\n  lex_state : " << val["%{val}%%p%{reset}", lex_state]
-          msg << "\n  token     : " << val[
-            "%{val}%%<symbol>p%{reset} => %{val}%%<value>p%{reset}", token&.to_h
+          msg << hl["\n  %{key}processed %{/key}: "] << val["%{val}%%p%{/val}", processed_string]
+          msg << hl["\n  %{key}remaining %{/key}: "] << val["%{alt}%%p%{/alt}", remaining_string]
+          msg << hl["\n  %{key}pos       %{/key}: "] << val["%{val}%%p%{/val}", pos]
+          msg << hl["\n  %{key}lex_state %{/key}: "] << val["%{sym}%%p%{/sym}", lex_state]
+          msg << hl["\n  %{key}token     %{/key}: "] << val[
+            "%{sym}%%<symbol>p%{/sym} => %{val}%%<value>p%{/val}", token&.to_h
           ]
         end
         if parser_backtrace
@@ -147,8 +181,8 @@ module Net
               next unless loc.path&.include?("net/imap/response_parser")
             end
             msg << "\n  %s: %s (%s:%d)" % [
-              "caller[%2d]" % idx,
-              hl["%{val}%%-30s%{reset}"] % loc.base_label,
+              hl["%{key}caller[%{/key}%{idx}%%2d%{/idx}%{key}]%{/key}"] % idx,
+              hl["%{label}%%-30s%{/label}"] % loc.base_label,
               File.basename(loc.path, ".rb"), loc.lineno
             ]
           end
