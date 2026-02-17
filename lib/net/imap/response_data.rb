@@ -75,7 +75,15 @@ module Net
     #
     # Net::IMAP::UnparsedData represents data for unknown response types or
     # unknown extensions to response types without a well-defined extension
-    # grammar.
+    # grammar.  UnparsedData represents the portion of the response which the
+    # parser has skipped over, without attempting to parse it.
+    #
+    #    parser = Net::IMAP::ResponseParser.new
+    #    response = parser.parse "* X-UNKNOWN-TYPE can't parse this\r\n"
+    #    response => Net::IMAP::UntaggedResponse(
+    #      name: "X-UNKNOWN-TYPE",
+    #      data: Net::IMAP::UnparsedData(unparsed_data: "can't parse this"),
+    #    )
     #
     # See also: UnparsedNumericResponseData, ExtensionData, IgnoredResponse
     class UnparsedData < Struct.new(:unparsed_data)
@@ -93,7 +101,16 @@ module Net
     # Net::IMAP::UnparsedNumericResponseData represents data for unhandled
     # response types with a numeric prefix.  See the documentation for #number.
     #
-    # See also: UnparsedData, ExtensionData, IgnoredResponse
+    #    parser = Net::IMAP::ResponseParser.new
+    #    response = parser.parse "* 123 X-UNKNOWN-TYPE can't parse this\r\n"
+    #    response => Net::IMAP::UntaggedResponse(
+    #      name: "X-UNKNOWN-TYPE",
+    #      data: Net::IMAP::UnparsedNumericData(
+    #        number: 123,
+    #        unparsed_data: "can't parse this"
+    #      ),
+    #    )
+    #
     class UnparsedNumericResponseData < Struct.new(:number, :unparsed_data)
       ##
       # method: number
