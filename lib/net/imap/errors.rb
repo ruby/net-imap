@@ -172,18 +172,11 @@ module Net
           ]
         end
         if parser_backtrace
-          backtrace_locations&.each_with_index do |loc, idx|
-            next  if    loc.base_label.include? "parse_error"
-            break if    loc.base_label == "parse"
-            if loc.label.include?("#") # => Class#method, since ruby 3.4
-              next unless loc.label&.include?(parser_class.name)
-            else
-              next unless loc.path&.include?("net/imap/response_parser")
-            end
+          normalized_parser_backtrace.each do |idx, path, lineno, label, base_label|
             msg << "\n  %s: %s (%s:%d)" % [
               hl["%{key}caller[%{/key}%{idx}%%2d%{/idx}%{key}]%{/key}"] % idx,
-              hl["%{label}%%-30s%{/label}"] % loc.base_label,
-              File.basename(loc.path, ".rb"), loc.lineno
+              hl["%{label}%%-30s%{/label}"] % base_label,
+              File.basename(path, ".rb"), lineno
             ]
           end
         end
@@ -198,12 +191,56 @@ module Net
       def processed_string = string && pos && string[...pos]
       def remaining_string = string && pos && string[pos..]
 
+      # Returns true when all attributes are equal, except for #backtrace and
+      # #backtrace_locations which are replaced with #parser_methods.  This
+      # allows deserialized errors to be compared.
+      def ==(other)
+        return false if self.class != other.class
+        methods       = parser_methods
+        other_methods = other.parser_methods
+        message     == other.message &&
+          methods   == other_methods &&
+          string    == other.string &&
+          pos       == other.pos &&
+          lex_state == other.lex_state &&
+          token     == other.token
+      end
+
+      # Lists the methods (from #backtrace_locations or #backtrace) called on
+      # parser_class (since ruby 3.4) or which have "net/imap/response_parser"
+      # in the path (before ruby 3.4).  Most parser method names are based on
+      # rules in the IMAP grammar.
+      def parser_methods = normalized_parser_backtrace.map(&:last)
+
       private
+
+      def normalized_parser_backtrace
+        normalize_backtrace
+          .take_while {|_, _, _, _, base_label| base_label != "parse" }
+          .reject {|_, _, _, _, base_label| base_label.nil? }
+          .reject {|_, _, _, _, base_label| base_label.include? "parse_error" }
+          .select {|_, path, _, label, _|
+            if label.include?("#") # => Class#method, since ruby 3.4
+              label.include?(parser_class.name)
+            else
+              path.include?("net/imap/response_parser")
+            end
+          }
+      end
+
+      def normalize_backtrace
+        (backtrace_locations&.each_with_index&.map {|loc, idx|
+          [idx, loc.path, loc.lineno, loc.label, loc.base_label]
+        } || backtrace&.each_with_index&.map {|bt, idx|
+          [idx, *bt.match(/\A(\S+):(\d+):in [`'](.*?([\w]+[?!]?))'\z/)&.captures]
+        } || [])
+      end
 
       def default_highlight_from_env
         (ENV["FORCE_COLOR"] || "") !~ /\A(?:0|)\z/ ||
           (ENV["TERM"] || "") !~ /\A(?:dumb|unknown|)\z/i
       end
+
     end
 
     # Superclass of all errors used to encapsulate "fail" responses
