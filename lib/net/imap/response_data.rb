@@ -85,13 +85,69 @@ module Net
     #      data: Net::IMAP::UnparsedData(unparsed_data: "can't parse this"),
     #    )
     #
-    # See also: UnparsedNumericResponseData, ExtensionData, IgnoredResponse
+    # See also: UnparsedNumericResponseData, ExtensionData, IgnoredResponse,
+    # InvalidParseData.
     class UnparsedData < Struct.new(:unparsed_data)
       ##
       # method: unparsed_data
       # :call-seq: unparsed_data -> string
       #
       # The unparsed data
+    end
+
+    # **Note:** This represents an intentionally _unstable_ API.  Where
+    # instances of this class are returned, future releases may return a
+    # different (incompatible) object <em>without deprecation or warning</em>.
+    #
+    # When the response parser encounters a recoverable error,
+    # Net::IMAP::InvalidParseData represents that portion of the response which
+    # could not be parsed, allowing the parser to parse the remainder of the
+    # response.  InvalidParseData is always associated with a ResponseParseError
+    # which has been rescued.
+    #
+    # This could be caused by a malformed server response, by a bug in
+    # Net::IMAP::ResponseParser, or by an unsupported extension to the response
+    # syntax.  For example, if a server supports +UIDPLUS+, but sends an invalid
+    # +COPYUID+ response code:
+    #
+    #    parser = Net::IMAP::ResponseParser.new
+    #    parsed = parser.parse "* OK [COPYUID 701  ] copied one message\r\n"
+    #    parsed => {
+    #      data: Net::IMAP::ResponseText(
+    #        code: Net::IMAP::ResponseCode(
+    #          name: "COPYUID",
+    #          data: Net::IMAP::InvalidParseData(
+    #            parse_error: Net::IMAP::ResponseParseError,
+    #            unparsed_data: "701  ",
+    #            parsed_data: nil,
+    #          )
+    #        )
+    #      )
+    #    }
+    #
+    # In this example, although <tt>[COPYUID 701  ]</tt> uses valid syntax for a
+    # _generic_ ResponseCode, it is _invalid_ syntax for a +COPYUID+ response
+    # code.
+    #
+    # See also: UnparsedData, ExtensionData
+    class InvalidParseData < Data.define(:parse_error, :unparsed_data, :parsed_data)
+      ##
+      # method: parse_error
+      # :call-seq: parse_error -> ResponseParseError
+      #
+      # Returns the rescued ResponseParseError.
+
+      ##
+      # method: unparsed_data
+      # :call-seq: unparsed_data -> string
+      #
+      # Returns the raw string which was skipped over by the parser.
+
+      ##
+      # method: parsed_data
+      #
+      # May return a partial parse result for unparsed_data, which had already
+      # been parsed before the parse_error.
     end
 
     # **Note:** This represents an intentionally _unstable_ API.  Where
@@ -111,6 +167,7 @@ module Net
     #      ),
     #    )
     #
+    # See also: UnparsedData, ExtensionData, IgnoredResponse, InvalidParseData
     class UnparsedNumericResponseData < Struct.new(:number, :unparsed_data)
       ##
       # method: number
@@ -341,9 +398,10 @@ module Net
     #
     # Response codes are backwards compatible:  Servers are allowed to send new
     # response codes even if the client has not enabled the extension that
-    # defines them.  When Net::IMAP does not know how to parse response
-    # code text, #data returns the unparsed string.
-    #
+    # defines them.  When ResponseParser does not know how to parse the response
+    # code data, #data may return the unparsed string, ExtensionData, or
+    # UnparsedData.  When ResponseParser attempts but fails to parse the
+    # response code data, #data returns InvalidParseData.
     class ResponseCode < Struct.new(:name, :data)
       ##
       # method: name
@@ -358,8 +416,13 @@ module Net
       #
       # Returns the parsed response code data, e.g: an array of capabilities
       # strings, an array of character set strings, a list of permanent flags,
-      # an Integer, etc.  The response #code determines what form the response
-      # code data can take.
+      # an Integer, etc.  The response #name determines what form the response
+      # code #data can take.
+      #
+      # When ResponseParser does not know how to parse the response code data,
+      # #data may return the unparsed string, ExtensionData, or UnparsedData.
+      # When ResponseParser attempts but fails to parse the response code data,
+      # #data returns InvalidParseData.
     end
 
     # MailboxList represents the data of an untagged +LIST+ response, for a

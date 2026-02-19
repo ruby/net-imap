@@ -1961,6 +1961,7 @@ module Net
       #   resp-text-code   =/ "UIDREQUIRED"
       def resp_text_code
         name = resp_text_code__name
+        state = current_state
         data =
           case name
           when "CAPABILITY"         then resp_code__capability
@@ -1983,8 +1984,18 @@ module Net
           when "MAILBOXID"          then SP!; parens__objectid     # RFC8474: OBJECTID
           when "UIDREQUIRED"        then                           # RFC9586: UIDONLY
           else
+            state = nil # don't backtrack
             SP? and text_chars_except_rbra
           end
+        peek_rbra? or
+          parse_error("expected resp-text-code %p to be complete", name)
+        ResponseCode.new(name, data)
+      rescue Net::IMAP::ResponseParseError => parse_error
+        raise unless state
+        raise if parse_error.message.include?("uid-set")
+        restore_state state
+        unparsed_data = SP? && text_chars_except_rbra
+        data = InvalidParseData[parse_error:, unparsed_data:, parsed_data: data]
         ResponseCode.new(name, data)
       end
 

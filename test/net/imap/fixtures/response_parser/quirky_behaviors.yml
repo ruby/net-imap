@@ -57,6 +57,160 @@
         MailboxBE=XXXXXXXXXXXXX.EURXXXX.PROD.OUTLOOK.COM Service=Imap4] AUTHENTICATE
         completed.\r\n"
 
+  "Outlook.com and Microsoft 365 can send an invalid COPYUID response code":
+    comment: |
+      Although this is a buggy COPYUID response from the server, it's still a
+      valid *generic* `resp-text-code`.  We should always successfully parse
+      `resp-text-code` when it begins with a valid `atom SP`, even if that means
+      using UnparsedData or some other similar class to wrap the invalid or
+      unparsable payload that follows.
+    :response: "* OK [COPYUID 701  ]\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: COPYUID
+          data: !ruby/data:Net::IMAP::InvalidParseData
+            parse_error: !ruby/exception:Net::IMAP::ResponseParseError
+              message: unexpected token SPACE (expected ATOM or NUMBER or STAR)
+              parser_class: !ruby/class 'Net::IMAP::ResponseParser'
+              string: "* OK [COPYUID 701  ]\r\n"
+              pos: 19
+              lex_state: :EXPR_BEG
+              token: !ruby/struct:Net::IMAP::ResponseParser::Token
+                symbol: :SPACE
+                value: " "
+              backtrace:
+              - "lib/net/imap/response_parser/parser_utils.rb:218:in `parse_error'"
+              - "lib/net/imap/response_parser/parser_utils.rb:127:in `combine_adjacent'"
+              - "lib/net/imap/response_parser.rb:499:in `sequence_set'"
+              - "lib/net/imap/response_parser.rb:2180:in `uid_set'"
+              - "lib/net/imap/response_parser.rb:2034:in `resp_code_copy__data'"
+              - "lib/net/imap/response_parser.rb:1973:in `resp_text_code'"
+              - "lib/net/imap/response_parser.rb:1894:in `resp_text'"
+              - "lib/net/imap/response_parser.rb:820:in `resp_cond_state'"
+              - "lib/net/imap/response_parser.rb:824:in `resp_cond_state__untagged'"
+              - "lib/net/imap/response_parser.rb:740:in `response_data'"
+              - "lib/net/imap/response_parser.rb:687:in `response'"
+              - "lib/net/imap/response_parser.rb:40:in `parse'"
+              - "test/net/imap/net_imap_test_helpers.rb ... ignoring 3 frames"
+              - "/gems/test-unit-3.7.3/lib/test/unit/... ignoring 42 frames"
+            unparsed_data: '701  '
+            parsed_data:
+        text: ""
+      raw_data: "* OK [COPYUID 701  ]\r\n"
+
+  "Extra resp-text-code payload":
+    comment: |
+      `resp-text-code` should parse when its payload continues unexpectedly.
+    :response: "* OK [COPYUID 1 1:10 101:110 extra junk] bad\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: COPYUID
+          data: !ruby/data:Net::IMAP::InvalidParseData
+            parse_error: !ruby/exception:Net::IMAP::ResponseParseError
+              message: expected resp-text-code "COPYUID" to be complete
+              backtrace:
+              - "lib/net/imap/response_parser/parser_utils.rb:218:in 'Net::IMAP::ResponseParser::ParserUtils#parse_error'"
+              - "lib/net/imap/response_parser.rb:1981:in 'Net::IMAP::ResponseParser#resp_text_code'"
+              - "lib/net/imap/response_parser.rb:1894:in 'Net::IMAP::ResponseParser#resp_text'"
+              - "lib/net/imap/response_parser.rb:820:in 'Net::IMAP::ResponseParser#resp_cond_state'"
+              - "lib/net/imap/response_parser.rb:824:in 'Net::IMAP::ResponseParser#resp_cond_state__untagged'"
+              - "lib/net/imap/response_parser.rb:740:in 'Net::IMAP::ResponseParser#response_data'"
+              - "lib/net/imap/response_parser.rb:687:in 'Net::IMAP::ResponseParser#response'"
+              - "lib/net/imap/response_parser.rb:40:in 'Net::IMAP::ResponseParser#parse'"
+              - "test/net/imap/net_imap_test_helpers.rb ... ignoring 3 frames"
+              - "/gems/test-unit-3.7.3/lib/test/unit/... ignoring 42 frames"
+              parser_class: !ruby/class 'Net::IMAP::ResponseParser'
+              string: "* OK [COPYUID 1 1:10 101:110 extra junk] bad\r\n"
+              pos: 29
+              lex_state: :EXPR_BEG
+              token: !ruby/struct:Net::IMAP::ResponseParser::Token
+                symbol: :SPACE
+                value: " "
+            unparsed_data: 1 1:10 101:110 extra junk
+            parsed_data: !ruby/data:Net::IMAP::CopyUIDData
+              uidvalidity: 1
+              source_uids: !ruby/object:Net::IMAP::SequenceSet
+                string: '1:10'
+              assigned_uids: !ruby/object:Net::IMAP::SequenceSet
+                string: 101:110
+        text: bad
+      raw_data: "* OK [COPYUID 1 1:10 101:110 extra junk] bad\r\n"
+
+  "Missing resp-text-code payload":
+    comment: |
+      `resp-text-code` should parse even when its expected payload is missing.
+    :response: "* OK [COPYUID] missing\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: COPYUID
+          data: !ruby/data:Net::IMAP::InvalidParseData
+            parse_error: !ruby/exception:Net::IMAP::ResponseParseError
+              message: unexpected RBRA (expected " ")
+              backtrace:
+              - "lib/net/imap/response_parser/parser_utils.rb:218:in 'Net::IMAP::ResponseParser::ParserUtils#parse_error'"
+              - "lib/net/imap/response_parser/parser_utils.rb:54:in 'Net::IMAP::ResponseParser#SP!'"
+              - "lib/net/imap/response_parser.rb:1973:in 'Net::IMAP::ResponseParser#resp_text_code'"
+              - "lib/net/imap/response_parser.rb:1894:in 'Net::IMAP::ResponseParser#resp_text'"
+              - "lib/net/imap/response_parser.rb:820:in 'Net::IMAP::ResponseParser#resp_cond_state'"
+              - "lib/net/imap/response_parser.rb:824:in 'Net::IMAP::ResponseParser#resp_cond_state__untagged'"
+              - "lib/net/imap/response_parser.rb:740:in 'Net::IMAP::ResponseParser#response_data'"
+              - "lib/net/imap/response_parser.rb:687:in 'Net::IMAP::ResponseParser#response'"
+              - "lib/net/imap/response_parser.rb:40:in 'Net::IMAP::ResponseParser#parse'"
+              - "test/net/imap/net_imap_test_helpers.rb ... ignoring 3 frames"
+              - "/gems/test-unit-3.7.3/lib/test/unit/... ignoring 42 frames"
+              parser_class: !ruby/class 'Net::IMAP::ResponseParser'
+              string: "* OK [COPYUID] missing\r\n"
+              pos: 14
+              lex_state: :EXPR_BEG
+              token: !ruby/struct:Net::IMAP::ResponseParser::Token
+                symbol: :RBRA
+                value: "]"
+            unparsed_data:
+            parsed_data:
+        text: missing
+      raw_data: "* OK [COPYUID] missing\r\n"
+
+  "Unexpected resp-text-code payload":
+    comment: |
+      `resp-text-code` should parse even when a payload is unexpectedly present.
+    :response: "* OK [CLOSED shouldn't be anything here] mailbox closed\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: OK
+      data: !ruby/struct:Net::IMAP::ResponseText
+        code: !ruby/struct:Net::IMAP::ResponseCode
+          name: CLOSED
+          data: !ruby/data:Net::IMAP::InvalidParseData
+            parse_error: !ruby/exception:Net::IMAP::ResponseParseError
+              message: expected resp-text-code "CLOSED" to be complete
+              backtrace:
+              - "lib/net/imap/response_parser/parser_utils.rb:218:in 'Net::IMAP::ResponseParser::ParserUtils#parse_error'"
+              - "lib/net/imap/response_parser.rb:1981:in 'Net::IMAP::ResponseParser#resp_text_code'"
+              - "lib/net/imap/response_parser.rb:1894:in 'Net::IMAP::ResponseParser#resp_text'"
+              - "lib/net/imap/response_parser.rb:820:in 'Net::IMAP::ResponseParser#resp_cond_state'"
+              - "lib/net/imap/response_parser.rb:824:in 'Net::IMAP::ResponseParser#resp_cond_state__untagged'"
+              - "lib/net/imap/response_parser.rb:740:in 'Net::IMAP::ResponseParser#response_data'"
+              - "lib/net/imap/response_parser.rb:687:in 'Net::IMAP::ResponseParser#response'"
+              - "lib/net/imap/response_parser.rb:40:in 'Net::IMAP::ResponseParser#parse'"
+              - "test/net/imap/net_imap_test_helpers.rb ... ignoring 3 frames"
+              - "/gems/test-unit-3.7.3/lib/test/unit/... ignoring 42 frames"
+              parser_class: !ruby/class 'Net::IMAP::ResponseParser'
+              string: "* OK [CLOSED shouldn't be anything here] mailbox closed\r\n"
+              pos: 13
+              lex_state: :EXPR_BEG
+              token: !ruby/struct:Net::IMAP::ResponseParser::Token
+                symbol: :SPACE
+                value: " "
+            unparsed_data: shouldn't be anything here
+            parsed_data:
+        text: mailbox closed
+      raw_data: "* OK [CLOSED shouldn't be anything here] mailbox closed\r\n"
+
   outlook.com puts an extra SP in ENVELOPE address lists:
     comment: |
       An annoying bug from outlook.com.  They've had the bug for years, and
