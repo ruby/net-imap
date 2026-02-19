@@ -78,9 +78,12 @@ module Net
       put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
-    def send_literal(str, tag = nil)
+    def send_binary_literal(str, tag) = send_literal(str, tag, binary: true)
+
+    def send_literal(str, tag = nil, binary: false)
       synchronize do
-        put_string("{" + str.bytesize.to_s + "}" + CRLF)
+        prefix = "~" if binary
+        put_string("#{prefix}{#{str.bytesize}}\r\n")
         @continued_command_tag = tag
         @continuation_request_exception = nil
         begin
@@ -159,12 +162,21 @@ module Net
 
       def validate
         if data.include?("\0")
-          raise DataFormatError, "NULL byte not allowed in #{self.class}."
+          raise DataFormatError, "NULL byte not allowed in #{self.class}.  " \
+            "Use #{Literal8} or a null-safe encoding."
         end
       end
 
       def send_data(imap, tag)
         imap.__send__(:send_literal, data, tag)
+      end
+    end
+
+    class Literal8 < Literal # :nodoc:
+      def validate = nil # all bytes are okay
+
+      def send_data(imap, tag)
+        imap.__send__(:send_binary_literal, data, tag)
       end
     end
 
