@@ -622,6 +622,34 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  def test_send_symbol_as_flag
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+
+      imap.__send__(:send_command, "TEST", :Seen, :Flagged)
+      assert_equal "\\Seen \\Flagged", server.commands.pop.args
+
+      # symbol may not contain atom-specials
+      [
+        :"with_parens()",
+        :"with_list_wildcards*",
+        :"with_list_wildcards%",
+        :"with_resp_special]",
+        :"with\0null",
+        :"with\x7fcontrol_char",
+        :'"with_quoted_specials"',
+        :"with_quoted_specials\\",
+        :"with\rCR",
+        :"with\nLF",
+      ].each do |symbol|
+        assert_raise_with_message(Net::IMAP::DataFormatError, /\bflag\b/i) do
+          imap.__send__(:send_command, "TEST", symbol)
+        end
+        assert_empty server.commands
+      end
+    end
+  end
+
   test("send PartialRange args") do
     with_fake_server do |server, imap|
       server.on "TEST", &:done_ok

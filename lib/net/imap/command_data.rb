@@ -27,6 +27,7 @@ module Net
         end
       when Time, Date, DateTime
       when Symbol
+        Flag.validate(data)
       else
         data.validate
       end
@@ -47,7 +48,7 @@ module Net
       when Date
         send_date_data(data)
       when Symbol
-        send_symbol_data(data)
+        Flag[data].send_data(self, tag)
       else
         data.send_data(self, tag)
       end
@@ -138,11 +139,13 @@ module Net
     def send_date_data(date) put_string Net::IMAP.encode_date(date) end
     def send_time_data(time) put_string Net::IMAP.encode_time(time) end
 
-    def send_symbol_data(symbol)
-      put_string("\\" + symbol.to_s)
-    end
-
     CommandData = Data.define(:data) do # :nodoc:
+      def self.validate(...)
+        data = new(...)
+        data.validate
+        data
+      end
+
       def send_data(imap, tag)
         raise NoMethodError, "#{self.class} must implement #{__method__}"
       end
@@ -158,8 +161,26 @@ module Net
     end
 
     class Atom < CommandData # :nodoc:
+      def initialize(**)
+        super
+        validate
+      end
+
+      def validate
+        data.to_s.ascii_only? \
+          or raise DataFormatError, "#{self.class} must be ASCII only"
+        data.match?(ResponseParser::Patterns::ATOM_SPECIALS) \
+          and raise DataFormatError, "#{self.class} must not contain atom-specials"
+      end
+
       def send_data(imap, tag)
-        imap.__send__(:put_string, data)
+        imap.__send__(:put_string, data.to_s)
+      end
+    end
+
+    class Flag < Atom # :nodoc:
+      def send_data(imap, tag)
+        imap.__send__(:put_string, "\\#{data}")
       end
     end
 

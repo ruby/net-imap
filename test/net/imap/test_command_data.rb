@@ -6,6 +6,8 @@ require "test/unit"
 class CommandDataTest < Net::IMAP::TestCase
   DataFormatError = Net::IMAP::DataFormatError
 
+  Atom = Net::IMAP::Atom
+  Flag = Net::IMAP::Flag
   Literal = Net::IMAP::Literal
   Literal8 = Net::IMAP::Literal8
 
@@ -58,6 +60,66 @@ class CommandDataTest < Net::IMAP::TestCase
 
   setup do
     @imap = FakeCommandWriter.new
+  end
+
+  test "Atom" do
+    imap.send_data(Atom[:INBOX], Atom["INBOX"], Atom["etc"])
+    assert_equal [
+      Output.put_string("INBOX"),
+      Output.put_string("INBOX"),
+      Output.put_string("etc"),
+    ], imap.output
+
+    imap.clear
+    # atom may not contain atom-specials
+    [
+      "with_parens()",
+      "with_list_wildcards*",
+      "with_list_wildcards%",
+      "with_resp_special]",
+      "with\0null",
+      "with\x7fcontrol_char",
+      '"with_quoted_specials"',
+      "with_quoted_specials\\",
+      "with\rCR",
+      "with\nLF",
+    ].each do |symbol|
+      assert_raise_with_message(Net::IMAP::DataFormatError, /\batom\b/i) do
+        imap.send_data Atom[symbol]
+      end
+    end
+    assert_empty imap.output
+  end
+
+  test "Flag" do
+    imap.send_data(Flag[:Seen], Flag[:Flagged],
+                   Flag["Deleted"], Flag["Answered"])
+    assert_equal [
+      Output.put_string("\\Seen"),
+      Output.put_string("\\Flagged"),
+      Output.put_string("\\Deleted"),
+      Output.put_string("\\Answered"),
+    ], imap.output
+
+    imap.clear
+    # symbol may not contain atom-specials
+    [
+      :"with_parens()",
+      :"with_list_wildcards*",
+      :"with_list_wildcards%",
+      :"with_resp_special]",
+      :"with\0null",
+      :"with\x7fcontrol_char",
+      :'"with_quoted_specials"',
+      :"with_quoted_specials\\",
+      :"with\rCR",
+      :"with\nLF",
+    ].each do |symbol|
+      assert_raise_with_message(Net::IMAP::DataFormatError, /\bflag\b/i) do
+        imap.send_data Flag[symbol]
+      end
+    end
+    assert_empty imap.output
   end
 
   test "Literal" do
