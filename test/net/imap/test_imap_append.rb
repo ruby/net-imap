@@ -5,6 +5,8 @@ require "test/unit"
 require_relative "fake_server"
 
 class IMAPAppendTest < Net::IMAP::TestCase
+  TEST_FIXTURE_PATH = File.join(__dir__, "fixtures/response_parser")
+
   include Net::IMAP::FakeServer::TestHelper
 
   test "#append" do
@@ -91,6 +93,30 @@ class IMAPAppendTest < Net::IMAP::TestCase
       assert_equal("RUBY0002 LOGOUT\r\n", requests[1])
     ensure
       imap.disconnect if imap
+    end
+  end
+
+  test "#append with binary data" do
+    png = File.binread(File.join(TEST_FIXTURE_PATH, "ruby.png"))
+    mail = <<~EOF.b.gsub(/\n/, "\r\n")
+      From: nick@example.com
+      To: shugo@example.com
+      Subject: Binary append support
+      MIME-Version: 1.0
+      Content-Transfer-Encoding: binary
+      Content-Type: image/png
+
+    EOF
+    mail << png
+    mail.freeze
+    with_fake_server do |server, imap|
+      server.on "APPEND", &:done_ok
+
+      time = Time.new(2026, 2, 20, 10, 00, in: "-0500")
+      imap.append "Drafts", mail, %i[Draft Seen], time
+      assert_equal 'Drafts (\\Draft \\Seen) "20-Feb-2026 10:00:00 -0500" ' \
+                   "~{#{mail.bytesize}}\r\n#{mail}",
+                   server.commands.pop.args
     end
   end
 

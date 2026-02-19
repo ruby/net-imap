@@ -486,9 +486,7 @@ module Net
   # IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051].
   # - Updates #fetch and #uid_fetch with the +BINARY+, +BINARY.PEEK+, and
   #   +BINARY.SIZE+ items.  See FetchData#binary and FetchData#binary_size.
-  #
-  # >>>
-  #   *NOTE:* The binary extension the #append command is _not_ supported yet.
+  # - Updates #append to allow binary messages containing +NULL+ bytes.
   #
   # ==== RFC3691: +UNSELECT+
   # Folded into IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051] and also included
@@ -2044,6 +2042,11 @@ module Net
     #
     # ==== Capabilities
     #
+    # If +BINARY+ [RFC3516[https://www.rfc-editor.org/rfc/rfc3516.html]] is
+    # supported by the server, +message+ may contain +NULL+ characters and
+    # be sent as a binary literal.  Otherwise, binary message parts must be
+    # encoded appropriately (for example, +base64+).
+    #
     # If +UIDPLUS+ [RFC4315[https://www.rfc-editor.org/rfc/rfc4315.html]] is
     # supported and the destination supports persistent UIDs, the server's
     # response should include an +APPENDUID+ response code with AppendUIDData.
@@ -2054,12 +2057,11 @@ module Net
     # TODO: add MULTIAPPEND support
     #++
     def append(mailbox, message, flags = nil, date_time = nil)
+      message = StringFormatter.literal_or_literal8(message, name: "message")
       args = []
-      if flags
-        args.push(flags)
-      end
+      args.push(flags)     if flags
       args.push(date_time) if date_time
-      args.push(Literal.new(message))
+      args.push(message)
       send_command("APPEND", mailbox, *args)
     end
 
