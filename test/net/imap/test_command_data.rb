@@ -7,6 +7,7 @@ class CommandDataTest < Test::Unit::TestCase
   DataFormatError = Net::IMAP::DataFormatError
 
   Literal = Net::IMAP::Literal
+  Literal8 = Net::IMAP::Literal8
 
   # simplistic emulation of Output = Data.define(:name, :args)
   class Output
@@ -68,6 +69,7 @@ class CommandDataTest < Test::Unit::TestCase
     def_printer :send_date_data
     def_printer :send_quoted_string
     def_printer :send_literal
+    def_printer :send_binary_literal
   end
 
   test "Literal" do
@@ -82,6 +84,15 @@ class CommandDataTest < Test::Unit::TestCase
       imap.send_data Literal["contains NULL char: \0"]
     end
     assert_empty imap.output
+  end
+
+  test "Literal8" do
+    imap = FakeCommandWriter.new
+    imap.send_data Literal8["foo\r\nbar"], Literal8["foo\0bar"]
+    assert_equal [
+      Output.send_binary_literal("foo\r\nbar", TAG),
+      Output.send_binary_literal("foo\0bar", TAG),
+    ], imap.output
   end
 
 end
