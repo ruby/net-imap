@@ -147,6 +147,21 @@ module Net
     end
 
     class Literal < CommandData # :nodoc:
+      def initialize(data:)
+        data = -String(data.to_str).b or
+          raise DataFormatError, "#{self.class} expects string input"
+        super
+        validate
+      end
+
+      def bytesize = data.bytesize
+
+      def validate
+        if data.include?("\0")
+          raise DataFormatError, "NULL byte not allowed in #{self.class}."
+        end
+      end
+
       def send_data(imap, tag)
         imap.__send__(:send_literal, data, tag)
       end

@@ -1,0 +1,64 @@
+# frozen_string_literal: true
+
+require "net/imap"
+require "test/unit"
+
+class CommandDataTest < Net::IMAP::TestCase
+  DataFormatError = Net::IMAP::DataFormatError
+
+  Literal = Net::IMAP::Literal
+  Output = Data.define(:name, :args)
+  TAG = Module.new.freeze
+
+  class FakeCommandWriter
+    def self.def_printer(name)
+      unless Net::IMAP.instance_methods.include?(name) ||
+          Net::IMAP.private_instance_methods.include?(name)
+        raise NoMethodError, "#{name} is not a method on Net::IMAP"
+      end
+      define_method(name) do |*args|
+        output << Output[name:, args:]
+      end
+      Output.define_singleton_method(name) do |*args|
+        new(name:, args:)
+      end
+    end
+
+    attr_reader :output
+
+    def initialize
+      @output = []
+    end
+
+    def clear = @output.clear
+    def validate(*data) = data.each(&:validate)
+    def send_data(*data, tag: TAG)
+      validate(*data)
+      data.each do _1.send_data(self, tag) end
+    end
+
+    def_printer :put_string
+    def_printer :send_string_data
+    def_printer :send_number_data
+    def_printer :send_list_data
+    def_printer :send_time_data
+    def_printer :send_date_data
+    def_printer :send_quoted_string
+    def_printer :send_literal
+  end
+
+  test "Literal" do
+    imap = FakeCommandWriter.new
+    imap.send_data Literal["foo\r\nbar"]
+    assert_equal [
+      Output.send_literal("foo\r\nbar", TAG),
+    ], imap.output
+
+    imap.clear
+    assert_raise_with_message(Net::IMAP::DataFormatError, /\bNULL byte\b/i) do
+      imap.send_data Literal["contains NULL char: \0"]
+    end
+    assert_empty imap.output
+  end
+
+end
