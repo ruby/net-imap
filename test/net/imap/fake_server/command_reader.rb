@@ -10,7 +10,7 @@ class Net::IMAP::FakeServer
 
     def initialize(socket)
       @socket = socket
-      @last_comma0 = nil
+      @last_command = nil
     end
 
     def get_command
