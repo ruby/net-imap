@@ -7,16 +7,16 @@ require_relative "fake_server"
 class IMAPAppendTest < Net::IMAP::TestCase
   include Net::IMAP::FakeServer::TestHelper
 
-  def test_append
+  test "#append" do
     server = create_tcp_server
     port = server.addr[1]
-    mail = <<EOF.gsub(/\n/, "\r\n")
-From: shugo@example.com
-To: matz@example.com
-Subject: hello
+    mail = <<~EOF.gsub(/\n/, "\r\n")
+      From: shugo@example.com
+      To: matz@example.com
+      Subject: hello
 
-hello world
-EOF
+      hello world
+    EOF
     requests = []
     received_mail = nil
     start_server do
@@ -53,16 +53,16 @@ EOF
     end
   end
 
-  def test_append_fail
+  test "#append failed with 'NO'" do
     server = create_tcp_server
     port = server.addr[1]
-    mail = <<EOF.gsub(/\n/, "\r\n")
-From: shugo@example.com
-To: matz@example.com
-Subject: hello
+    mail = <<~EOF.gsub(/\n/, "\r\n")
+      From: shugo@example.com
+      To: matz@example.com
+      Subject: hello
 
-hello world
-EOF
+      hello world
+    EOF
     requests = []
     start_server do
       sock = server.accept
