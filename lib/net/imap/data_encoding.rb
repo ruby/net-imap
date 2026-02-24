@@ -174,6 +174,22 @@ module Net
         0 < num && num <= 0xffff_ffff
       end
 
+      # Check if argument is a valid 'number64' according to RFC 9051
+      #     number64        = 1*DIGIT
+      #                        ; Unsigned 63-bit integer
+      #                        ; (0 <= n <= 9,223,372,036,854,775,807)
+      def valid_number64?(num)
+        0 <= num && num <= 0x7fff_ffff_ffff_ffff
+      end
+
+      # Check if argument is a valid 'number64' according to RFC 9051
+      #     number64        = 1*DIGIT
+      #                        ; Unsigned 63-bit integer
+      #                        ; (0 <= n <= 9,223,372,036,854,775,807)
+      def valid_nz_number64?(num)
+        0 < num && num <= 0x7fff_ffff_ffff_ffff
+      end
+
       # Check if argument is a valid 'mod-sequence-value' according to RFC 4551
       #     mod-sequence-value  = 1*DIGIT
       #                            ; Positive unsigned 64-bit integer
@@ -201,6 +217,20 @@ module Net
         return num if valid_nz_number?(num)
         raise DataFormatError,
           "nz-number must be non-zero unsigned 32-bit integer: #{num}"
+      end
+
+      # Ensure argument is 'number64' or raise DataFormatError
+      def ensure_number64(num)
+        return num if valid_number64?(num)
+        raise DataFormatError,
+          "number64 must be unsigned 63-bit integer: #{num}"
+      end
+
+      # Ensure argument is 'nz-number64' or raise DataFormatError
+      def ensure_nz_number64(num)
+        return num if valid_nz_number64?(num)
+        raise DataFormatError,
+          "nz-number64 must be non-zero unsigned 63-bit integer: #{num}"
       end
 
       # Ensure argument is 'mod-sequence-value' or raise DataFormatError
@@ -234,6 +264,26 @@ module Net
         when NUMBER_RE then ensure_nz_number Integer num
         else
           raise DataFormatError, "%p is not a valid nz-number" % [num]
+        end
+      end
+
+      # Like #ensure_number64, but usable with numeric String input.
+      def coerce_number64(num)
+        case num
+        when Integer   then ensure_number64 num
+        when NUMBER_RE then ensure_number64 Integer num
+        else
+          raise DataFormatError, "%p is not a valid number64" % [num]
+        end
+      end
+
+      # Like #ensure_nz_number64, but usable with numeric String input.
+      def coerce_nz_number64(num)
+        case num
+        when Integer   then ensure_nz_number64 num
+        when NUMBER_RE then ensure_nz_number64 Integer num
+        else
+          raise DataFormatError, "%p is not a valid nz-number64" % [num]
         end
       end
 
