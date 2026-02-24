@@ -51,5 +51,5 @@ RDoc::Task.new do |doc|
   doc.rdoc_dir   = "doc"
   doc.rdoc_files = FileList.new %w[lib/**/*.rb *.rdoc *.md]
   doc.options << "--template-stylesheets" << "docs/styles.css"
-  # doc.generator  = "hanna"
+  doc.generator  = "darkfish" # TODO: fix issues with aliki
 end
