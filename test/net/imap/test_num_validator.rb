@@ -9,13 +9,15 @@ class NumValidatorTest < Net::IMAP::TestCase
   TEST_VALUES = {
     -1          => %i[invalid],
 
-    0           => %i[number                              mod-sequence-valzer],
-    1           => %i[number nz-number mod-sequence-value mod-sequence-valzer],
-    0x0000_ffff => %i[number nz-number mod-sequence-value mod-sequence-valzer],
-    0xffff_ffff => %i[number nz-number mod-sequence-value mod-sequence-valzer],
-    0x0000_0001_0000_0000 => %i[       mod-sequence-value mod-sequence-valzer],
-    0x0000_ffff_ffff_ffff => %i[       mod-sequence-value mod-sequence-valzer],
-    0xffff_ffff_ffff_fffe => %i[       mod-sequence-value mod-sequence-valzer],
+    0           => %i[number           number64                                mod-sequence-valzer],
+    1           => %i[number nz-number number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0x0000_ffff => %i[number nz-number number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0xffff_ffff => %i[number nz-number number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0x0000_0001_0000_0000 => %i[       number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0x0000_ffff_ffff_ffff => %i[       number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0x7fff_ffff_ffff_ffff => %i[       number64 nz-number64 mod-sequence-value mod-sequence-valzer],
+    0x8000_0000_0000_0000 => %i[                            mod-sequence-value mod-sequence-valzer],
+    0xffff_ffff_ffff_fffe => %i[                            mod-sequence-value mod-sequence-valzer],
 
     0xffff_ffff_ffff_ffff => %i[invalid],
   }
@@ -37,6 +39,18 @@ class NumValidatorTest < Net::IMAP::TestCase
   using_test_values_for :"nz-number" do |label, value, valid|
     test "#valid_nz_number?(%s) => %p" % [label, valid] do
       assert_equal valid, NumValidator.valid_nz_number?(value)
+    end
+  end
+
+  using_test_values_for :number64 do |label, value, valid|
+    test "#valid_number64?(%s) => %p" % [label, valid] do
+      assert_equal valid, NumValidator.valid_number64?(value)
+    end
+  end
+
+  using_test_values_for :"nz-number64" do |label, value, valid|
+    test "#valid_nz_number64?(%s) => %p" % [label, valid] do
+      assert_equal valid, NumValidator.valid_nz_number64?(value)
     end
   end
 
@@ -76,6 +90,28 @@ class NumValidatorTest < Net::IMAP::TestCase
         assert_equal value, NumValidator.ensure_nz_number(value)
       else
         assert_format_error do NumValidator.ensure_nz_number(value) end
+      end
+    end
+  end
+
+  using_test_values_for :number64 do |label, value, valid|
+    result = valid ? "=> #{label}" : "raises DataFormatError"
+    test "#ensure_number64(%s) %s" % [label, result] do
+      if valid
+        assert_equal value, NumValidator.ensure_number64(value)
+      else
+        assert_format_error do NumValidator.ensure_number64(value) end
+      end
+    end
+  end
+
+  using_test_values_for :"nz-number64" do |label, value, valid|
+    result = valid ? "=> #{label}" : "raises DataFormatError"
+    test "#ensure_nz_number64(%s) %s" % [label, result] do
+      if valid
+        assert_equal value, NumValidator.ensure_nz_number64(value)
+      else
+        assert_format_error do NumValidator.ensure_nz_number64(value) end
       end
     end
   end
@@ -123,6 +159,32 @@ class NumValidatorTest < Net::IMAP::TestCase
           assert_equal value, NumValidator.coerce_nz_number(input)
         else
           assert_format_error do NumValidator.coerce_nz_number(input) end
+        end
+      end
+    end
+  end
+
+  using_test_values_for :number64 do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_number64(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_number64(input)
+        else
+          assert_format_error do NumValidator.coerce_number64(input) end
+        end
+      end
+    end
+  end
+
+  using_test_values_for :"nz-number64" do |label, value, valid|
+    result = valid ? "=> #{value}" : "raises DataFormatError"
+    [value, value.to_s].each do |input|
+      test "#coerce_nz_number64(%p) %s" % [input, result] do
+        if valid
+          assert_equal value, NumValidator.coerce_nz_number64(input)
+        else
+          assert_format_error do NumValidator.coerce_nz_number64(input) end
         end
       end
     end
