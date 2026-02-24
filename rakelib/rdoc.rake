@@ -12,17 +12,6 @@ module RDoc::Generator
       end
     end
 
-    # See https://github.com/ruby/rdoc/pull/936
-    module FixSectionComments
-      def markup(text)
-        @store ||= @parent&.store
-        super
-      end
-      def description; markup comment end
-      def comment;     super || @comments&.first end
-      def parse(_comment_location = nil) super() end
-    end
-
     # render "[label] data" lists as tables.  adapted from "hanna-nouveau" gem.
     module LabelListTable
       def list_item_start(list_item, list_type)
@@ -49,10 +38,6 @@ end
 
 class RDoc::AnyMethod
   prepend RDoc::Generator::NetIMAP::RemoveRedundantParens
-end
-
-class RDoc::Context::Section
-  prepend RDoc::Generator::NetIMAP::FixSectionComments
 end
 
 class RDoc::Markup::ToHtml
