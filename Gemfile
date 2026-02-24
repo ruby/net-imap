@@ -11,7 +11,7 @@ gem "psych", ">= 5.3.0" # 5.2.5 for Data serialization, 5.3.0 for TruffleRuby
 
 gem "irb"
 gem "rake"
-gem "rdoc"
+gem "rdoc", ">= 7.2.0"
 gem "test-unit"
 gem "test-unit-ruby-core", git: "https://github.com/ruby/test-unit-ruby-core"
 
