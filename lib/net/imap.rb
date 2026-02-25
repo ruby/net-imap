@@ -2094,6 +2094,14 @@ module Net
     #
     # ===== Search criteria
     #
+    # >>>
+    #   When +criteria+ is an Array, elements in the array will be validated and
+    #   formatted.  When +criteria+ is a String, it will be sent <em>with
+    #   minimal validation and no encoding or formatting</em>.
+    #
+    #   <em>*WARNING:* Although CRLF is prohibited, this is vulnerable to other
+    #   types of attribute injection attack if unvetted user input is used.</em>
+    #
     # For a full list of search criteria,
     # see [{IMAP4rev1 §6.4.4}[https://www.rfc-editor.org/rfc/rfc3501.html#section-6.4.4]],
     # or  [{IMAP4rev2 §6.4.4}[https://www.rfc-editor.org/rfc/rfc9051.html#section-6.4.4]],
@@ -2181,6 +2189,13 @@ module Net
     #
     # +attr+ is a list of attributes to fetch; see the documentation
     # for FetchData for a list of valid attributes.
+    # >>>
+    #   When +attr+ is a String, it will be sent <em>with minimal validation and
+    #   no encoding or formatting</em>.  When +attr+ is an Array, each String in
+    #   +attr+ will be sent this way.
+    #
+    #   <em>*WARNING:* Although CRLF is prohibited, this is vulnerable to other
+    #   types of attribute injection attack if unvetted user input is used.</em>
     #
     # +changedsince+ is an optional integer mod-sequence.  It limits results to
     # messages with a mod-sequence greater than +changedsince+.
