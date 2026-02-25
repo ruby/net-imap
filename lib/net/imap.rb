@@ -462,6 +462,9 @@ module Net
   #   +LITERAL-+, and +SPECIAL-USE+.</em>
   #
   # ==== RFC2087: +QUOTA+
+  # +NOTE:+ Only the +STORAGE+ quota resource type is currently supported.
+  # - Obsoleted by <tt>QUOTA=RES-*</tt> [RFC9208[https://www.rfc-editor.org/rfc/rfc9208]],
+  #   although the commands are backward compatible.
   # - #getquota: returns the resource usage and limits for a quota root
   # - #getquotaroot: returns the list of quota roots for a mailbox, as well as
   #   their resource usage and limits.
@@ -577,6 +580,16 @@ module Net
   # - Updates #fetch and #uid_fetch with the +EMAILID+ and +THREADID+ items.
   #   See FetchData#emailid and FetchData#emailid.
   # - Updates #status with support for the +MAILBOXID+ status attribute.
+  #
+  # ==== RFC9208: <tt>QUOTA=RES-*</tt>
+  # +NOTE:+ Only the +STORAGE+ quota resource type is currently supported.
+  # - Obsoletes the +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+  #   extension and provides strict semantics for different resource types.
+  # - #getquota: returns the resource usage and limits for a quota root
+  # - #getquotaroot: returns the list of quota roots for a mailbox, as well as
+  #   their resource usage and limits.
+  # - #setquota: sets the resource limits for a given quota root.
+  # - Updates #status with <tt>"DELETED"</tt> and +DELETED-STORAGE+ attributes.
   #
   # ==== RFC9394: +PARTIAL+
   # - Updates #search, #uid_search with the +PARTIAL+ return option which adds
@@ -698,13 +711,12 @@ module Net
   #
   # === \IMAP Extensions
   #
-  # [QUOTA[https://www.rfc-editor.org/rfc/rfc9208]]::
-  #   Melnikov, A., "IMAP QUOTA Extension", RFC 9208, DOI 10.17487/RFC9208,
-  #   March 2022, <https://www.rfc-editor.org/info/rfc9208>.
+  # [QUOTA[https://www.rfc-editor.org/rfc/rfc2087]]::
+  #   Myers, J., "IMAP4 QUOTA extension", RFC 2087, DOI 10.17487/RFC2087,
+  #   January 1997, <https://www.rfc-editor.org/info/rfc2087>.
   #
-  #   <em>Note: obsoletes</em>
-  #   RFC-2087[https://www.rfc-editor.org/rfc/rfc2087]<em> (January 1997)</em>.
-  #   <em>Net::IMAP does not fully support the RFC9208 updates yet.</em>
+  #   *NOTE*: _obsoleted_ by RFC9208[https://www.rfc-editor.org/rfc/rfc9208]
+  #   (March 2022).
   # [IDLE[https://www.rfc-editor.org/rfc/rfc2177]]::
   #   Leiba, B., "IMAP4 IDLE command", RFC 2177, DOI 10.17487/RFC2177,
   #   June 1997, <https://www.rfc-editor.org/info/rfc2177>.
@@ -756,6 +768,11 @@ module Net
   #   Gondwana, B., Ed., "IMAP Extension for Object Identifiers",
   #   RFC 8474, DOI 10.17487/RFC8474, September 2018,
   #   <https://www.rfc-editor.org/info/rfc8474>.
+  # [{QUOTA=RES-*}[https://www.rfc-editor.org/rfc/rfc9208]]::
+  #   Melnikov, A., "IMAP QUOTA Extension", RFC 9208, DOI 10.17487/RFC9208,
+  #   March 2022, <https://www.rfc-editor.org/info/rfc9208>.
+  #
+  #   Obsoletes RFC2087[https://www.rfc-editor.org/rfc/rfc2087].
   # [PARTIAL[https://www.rfc-editor.org/info/rfc9394]]::
   #   Melnikov, A., Achuthan, A., Nagulakonda, V., and L. Alves,
   #   "IMAP PARTIAL Extension for Paged SEARCH and FETCH", RFC 9394,
@@ -769,6 +786,7 @@ module Net
   #
   # === IANA registries
   # * {IMAP Capabilities}[http://www.iana.org/assignments/imap4-capabilities]
+  #   * {IMAP Quota Resource Types}[http://www.iana.org/assignments/imap4-capabilities#imap-capabilities-2]
   # * {IMAP Response Codes}[https://www.iana.org/assignments/imap-response-codes/imap-response-codes.xhtml]
   # * {IMAP Mailbox Name Attributes}[https://www.iana.org/assignments/imap-mailbox-name-attributes/imap-mailbox-name-attributes.xhtml]
   # * {IMAP and JMAP Keywords}[https://www.iana.org/assignments/imap-jmap-keywords/imap-jmap-keywords.xhtml]
@@ -779,8 +797,8 @@ module Net
   # * {GSSAPI/Kerberos/SASL Service Names}[https://www.iana.org/assignments/gssapi-service-names/gssapi-service-names.xhtml]:
   #   +imap+
   # * {Character sets}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
+  #
   # ==== For currently unsupported features:
-  # * {IMAP Quota Resource Types}[http://www.iana.org/assignments/imap4-capabilities#imap-capabilities-2]
   # * {LIST-EXTENDED options and responses}[https://www.iana.org/assignments/imap-list-extended/imap-list-extended.xhtml]
   # * {IMAP METADATA Server Entry and Mailbox Entry Registries}[https://www.iana.org/assignments/imap-metadata/imap-metadata.xhtml]
   # * {IMAP ANNOTATE Extension Entries and Attributes}[https://www.iana.org/assignments/imap-annotate-extension/imap-annotate-extension.xhtml]
@@ -1828,12 +1846,18 @@ module Net
     # to both admin and user.  If this mailbox exists, it returns an array
     # containing objects of type MailboxQuotaRoot and MailboxQuota.
     #
+    # *NOTE:* Currently, Net::IMAP only supports +QUOTA+ responses with a single
+    # resource type.  This is usually +STORAGE+, but you may need to verify this
+    # with UntaggedResponse#raw_data.
+    #
     # Related: #getquota, #setquota, MailboxQuotaRoot, MailboxQuota
     #
     # ==== Capabilities
     #
-    # The server's capabilities must include +QUOTA+
-    # [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]].
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # capability, or a capability prefixed with <tt>QUOTA=RES-*</tt>
+    # {[RFC9208]}[https://www.rfc-editor.org/rfc/rfc9208] for each supported
+    # resource type.
     def getquotaroot(mailbox)
       synchronize do
         send_command("GETQUOTAROOT", mailbox)
@@ -1845,41 +1869,55 @@ module Net
     end
 
     # Sends a {GETQUOTA command [RFC2087 §4.2]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.2]
-    # along with specified +mailbox+.  If this mailbox exists, then an array
-    # containing a MailboxQuota object is returned.  This command is generally
-    # only available to server admin.
+    # for the +quota_root+.  If this quota root exists, then an array
+    # containing a MailboxQuota object is returned.
+    #
+    # The names of quota roots that are applicable to a particular mailbox can
+    # be discovered with #getquotaroot.
+    #
+    # *NOTE:* Currently, Net::IMAP only supports +QUOTA+ responses with a single
+    # resource type.  This is usually +STORAGE+, but you may need to verify this
+    # with UntaggedResponse#raw_data.
     #
     # Related: #getquotaroot, #setquota, MailboxQuota
     #
     # ==== Capabilities
     #
-    # The server's capabilities must include +QUOTA+
-    # [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]].
-    def getquota(mailbox)
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # capability, or a capability prefixed with <tt>QUOTA=RES-*</tt>
+    # {[RFC9208]}[https://www.rfc-editor.org/rfc/rfc9208] for each supported
+    # resource type.
+    def getquota(quota_root)
       synchronize do
-        send_command("GETQUOTA", mailbox)
+        send_command("GETQUOTA", quota_root)
         clear_responses("QUOTA")
       end
     end
 
     # Sends a {SETQUOTA command [RFC2087 §4.1]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.1]
-    # along with the specified +mailbox+ and +quota+.  If +quota+ is nil, then
-    # +quota+ will be unset for that mailbox.  Typically one needs to be logged
-    # in as a server admin for this to work.
+    # along with the specified +quota_root+ and +storage_limit+.  If
+    # +storage_limit+ is +nil+, resource limits are unset for that quota root.
+    # Otherwise, it sets the +STORAGE+ resource limit.
+    #
+    # Typically one needs to be logged in as a server admin for this to work.
+    #
+    # *NOTE:* Currently, Net::IMAP only supports setting +STORAGE+ quota limits.
     #
     # Related: #getquota, #getquotaroot
     #
     # ==== Capabilities
     #
-    # The server's capabilities must include +QUOTA+
-    # [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]].
-    def setquota(mailbox, quota)
-      if quota.nil?
-        data = '()'
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # capability, or a capability prefixed with <tt>QUOTA=RES-*</tt>
+    # {[RFC9208]}[https://www.rfc-editor.org/rfc/rfc9208] for each supported
+    # resource type.
+    def setquota(quota_root, storage_limit)
+      if storage_limit.nil?
+        list = '()'
       else
-        data = '(STORAGE ' + quota.to_s + ')'
+        list = '(STORAGE ' + storage_limit.to_s + ')'
       end
-      send_command("SETQUOTA", mailbox, RawData.new(data))
+      send_command("SETQUOTA", quota_root, RawData.new(list))
     end
 
     # Sends a {SETACL command [RFC4314 §3.1]}[https://www.rfc-editor.org/rfc/rfc4314#section-3.1]
@@ -1986,7 +2024,10 @@ module Net
     # <tt>STATUS=SIZE</tt>
     # {[RFC8483]}[https://www.rfc-editor.org/rfc/rfc8483.html].
     #
-    # +DELETED+ requires the server's capabilities to include +IMAP4rev2+.
+    # +DELETED+ must be supported when the server's capabilities includes
+    # +IMAP4rev2+.
+    # or <tt>QUOTA=RES-MESSAGES</tt>
+    # {[RFC9208]}[https://www.rfc-editor.org/rfc/rfc9208.html].
     #
     # +HIGHESTMODSEQ+ requires the server's capabilities to include +CONDSTORE+
     # {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
