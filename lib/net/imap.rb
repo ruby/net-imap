@@ -2345,11 +2345,11 @@ module Net
     #     Encoded as an \IMAP date (see ::encode_date).
     #
     # [When +criteria+ is a String]
-    #   +criteria+ will be sent directly to the server <em>without any
-    #   validation or encoding</em>.
+    #   +criteria+ will be sent to the server <em>with minimal validation and no
+    #   encoding or formatting</em>.
     #
-    #   <em>*WARNING:* This is vulnerable to injection attacks when external
-    #   inputs are used.</em>
+    #   <em>*WARNING:* Although CRLF is prohibited, this is vulnerable to other
+    #   types of attribute injection attack if unvetted user input is used.</em>
     #
     # ==== Supported return options
     #
@@ -2670,6 +2670,13 @@ module Net
     #
     # +attr+ is a list of attributes to fetch; see FetchStruct documentation for
     # a list of supported attributes.
+    # >>>
+    #   When +attr+ is a String, it will be sent <em>with minimal validation and
+    #   no encoding or formatting</em>.  When +attr+ is an Array, each String in
+    #   +attr+ will be sent this way.
+    #
+    #   <em>*WARNING:* Although CRLF is prohibited, this is vulnerable to other
+    #   types of attribute injection attack if unvetted user input is used.</em>
     #
     # +changedsince+ is an optional integer mod-sequence.  It limits results to
     # messages with a mod-sequence greater than +changedsince+.
