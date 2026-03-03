@@ -61,9 +61,9 @@ imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_i
   else
     imap.copy(message_id, "Mail/sent-apr03")
     imap.store(message_id, "+FLAGS", [:Deleted])
+    imap.expunge
   end
 end
-imap.expunge
 ```
 
 ## Development
