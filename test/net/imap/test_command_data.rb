@@ -50,8 +50,13 @@ class CommandDataTest < Net::IMAP::TestCase
     def_printer :send_binary_literal
   end
 
+  attr_reader :imap
+
+  setup do
+    @imap = FakeCommandWriter.new
+  end
+
   test "Literal" do
-    imap = FakeCommandWriter.new
     imap.send_data Literal["foo\r\nbar"]
     assert_equal [
       Output.send_literal("foo\r\nbar", TAG),
@@ -65,7 +70,6 @@ class CommandDataTest < Net::IMAP::TestCase
   end
 
   test "Literal8" do
-    imap = FakeCommandWriter.new
     imap.send_data Literal8["foo\r\nbar"], Literal8["foo\0bar"]
     assert_equal [
       Output.send_binary_literal("foo\r\nbar", TAG),
