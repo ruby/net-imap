@@ -1811,7 +1811,11 @@ module Net
     # Sends a {SETQUOTA command [RFC2087 §4.1]}[https://www.rfc-editor.org/rfc/rfc2087#section-4.1]
     # along with the specified +quota_root+ and +storage_limit+.  If
     # +storage_limit+ is +nil+, resource limits are unset for that quota root.
-    # Otherwise, it sets the +STORAGE+ resource limit.
+    # If +storage_limit+ is a number, it sets the +STORAGE+ resource limit.
+    #
+    #   imap.setquota "#user/alice", 100
+    #   imap.getquota "#user/alice"
+    #   # => [#<struct Net::IMAP::MailboxQuota mailbox="#user/alice" usage=54 quota=100>]
     #
     # Typically one needs to be logged in as a server admin for this to work.
     #
@@ -1827,11 +1831,11 @@ module Net
     # for each supported resource type.
     def setquota(quota_root, storage_limit)
       if storage_limit.nil?
-        list = '()'
+        list = []
       else
-        list = '(STORAGE ' + storage_limit.to_s + ')'
+        list = ["STORAGE", Integer(storage_limit)]
       end
-      send_command("SETQUOTA", quota_root, RawData.new(list))
+      send_command("SETQUOTA", quota_root, list)
     end
 
     # Sends a {SETACL command [RFC4314 §3.1]}[https://www.rfc-editor.org/rfc/rfc4314#section-3.1]

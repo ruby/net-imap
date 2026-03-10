@@ -43,6 +43,10 @@ class IMAPQuotaTest < Test::Unit::TestCase
       rcvd_cmd = server.commands.pop
       assert_equal "SETQUOTA",            rcvd_cmd.name
       assert_equal '"" ()',               rcvd_cmd.args
+
+      assert_raise_with_message(ArgumentError, /invalid value for Integer/) do
+        imap.setquota "INBOX", "512 620"
+      end
     end
   end
 end
