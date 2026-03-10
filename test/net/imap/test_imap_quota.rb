@@ -28,6 +28,15 @@ class IMAPQuotaTest < Net::IMAP::TestCase
       rcvd_cmd = server.commands.pop
       assert_equal "SETQUOTA",            rcvd_cmd.name
       assert_equal '"" ()',               rcvd_cmd.args
+
+      assert_raise_with_message(Net::IMAP::DataFormatError,
+                                "512.0 is not a valid number64") do
+        imap.setquota "INBOX", 512.0
+      end
+      assert_raise_with_message(Net::IMAP::DataFormatError,
+                                '"512 620" is not a valid number64') do
+        imap.setquota "INBOX", "512 620"
+      end
     end
   end
 end
