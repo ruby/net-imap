@@ -650,6 +650,35 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  def test_raw_data
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+
+      imap.__send__(:send_command, "TEST", Net::IMAP::RawData.new("foo bar"))
+      assert_equal "foo bar", server.commands.pop.args
+
+      imap.__send__(:send_command, "TEST",
+                    Net::IMAP::RawData.new("{3}\r\nfoo"),
+                    Net::IMAP::RawData.new("~{4}\r\n\0bar"))
+      assert_equal "{3}\r\nfoo ~{4}\r\n\0bar", server.commands.pop.args
+
+      # RawData must pass basic validation before sending command
+      [
+        "with \0 NULL",
+        "with \r CR",
+        "with \n LF",
+        "with \r\n CRLF",
+        "{1234}\r\nliteral is too small",
+        "{1}\r\n\0 literal contains NULL",
+      ].each do |data|
+        assert_raise(Net::IMAP::DataFormatError) do
+          imap.__send__(:send_command, "TEST", Net::IMAP::RawData[data:])
+        end
+        assert_empty server.commands
+      end
+    end
+  end
+
   test("send PartialRange args") do
     with_fake_server do |server, imap|
       server.on "TEST", &:done_ok
