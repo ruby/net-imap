@@ -3808,7 +3808,7 @@ module Net
         params = (Hash.try_convert(ssl) || {}).freeze
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
-        context.freeze
+        context.setup
         [params, context]
       else
         false
