@@ -691,6 +691,8 @@ module Net
         CRLF!
         EOF!
         resp
+      rescue SystemStackError => error
+        raise exception(error.message), cause: error
       end
 
       # RFC3501 & RFC9051:

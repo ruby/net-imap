@@ -201,6 +201,26 @@ class ResponseParserTest < Net::IMAP::TestCase
     end
   end
 
+  test "deeply nested BODYSTRUCTURE raises ResponseParseError instead of SystemStackError" do
+    parser = Net::IMAP::ResponseParser.new
+
+    def parser.body
+      raise SystemStackError, "stack level too deep"
+    end unless ENV["TEST_RESPONSE_PARSER_STACK_LEVEL"] == "original"
+
+    depth = 10_000
+    leaf = '("TEXT" "PLAIN" NIL NIL NIL "7BIT" 1 1)'
+    bodystructure = depth.times.reduce(leaf) { |part, _| "(#{part} \"MIXED\")" }
+    response = "* 1 FETCH (BODYSTRUCTURE #{bodystructure})\r\n"
+
+    err = assert_raise(Net::IMAP::ResponseParseError) do
+      parser.parse(response)
+    end
+
+    assert_match(/stack level too deep/i, err.message)
+    assert_instance_of(SystemStackError, err.cause)
+  end
+
   def assert_deprecated_appenduid_data_warning
     assert_warn(/#{__FILE__}.*warning.*parser_use_deprecated_uidplus_data is ignored/) do
       result = yield
