@@ -1014,9 +1014,11 @@ module Net
     # unsolicited untagged response immeditely _after_ #starttls completes.
     #
     def starttls(options = {}, verify = true)
+      handled = false
       error = nil
       ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
+          handled = true
           begin
             # for backward compatibility
             certs = options.to_str
@@ -1031,6 +1033,13 @@ module Net
       if error
         disconnect
         raise error
+      end
+      unless handled
+        disconnect
+        raise InvalidResponseError,
+              "STARTTLS handler was bypassed, although server responded %p" % [
+                ok.raw_data.chomp
+              ]
       end
       ok
     end
