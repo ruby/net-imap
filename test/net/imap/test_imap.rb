@@ -113,6 +113,40 @@ class IMAPTest < Test::Unit::TestCase
         imap
       end
     end
+
+    def test_starttls_stripping_ok_sent_before_response
+      # to coordinate between threads (better than sleep)
+      server_to_client, client_to_server = Queue.new, Queue.new
+      imap = nil
+      server = create_tcp_server
+      port = server.addr[1]
+      start_server do
+        sock = server.accept
+        begin
+          sock.print("* OK test server\r\n")
+          assert_equal :send_malicious_response, client_to_server.pop
+          sock.print("RUBY0001 OK hahaha, fooled you!\r\n")
+          server_to_client << :malicious_response_sent
+          sock.gets
+        ensure
+          sock.close
+          server.close
+        end
+      end
+      begin
+        imap = Net::IMAP.new("localhost", :port => port)
+        client_to_server << :send_malicious_response
+        assert_equal :malicious_response_sent, server_to_client.pop
+        sleep 0.010 # to be sure the network buffers have flushed, etc
+        assert_raise(Net::IMAP::InvalidResponseError) do
+          imap.starttls(:ca_file => CA_FILE)
+        end
+        assert imap.disconnected?
+      ensure
+        imap.disconnect if imap && !imap.disconnected?
+      end
+      assert imap.disconnected?
+    end
   end
 
   def start_server
