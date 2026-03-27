@@ -2311,6 +2311,7 @@ module Net
           put_string(" ")
           send_data(i, tag)
         end
+        guard_against_tagged_response_skipping_handler!(tag)
         put_string(CRLF)
         if cmd == "LOGOUT"
           @logout_command_tag = tag
@@ -2326,6 +2327,17 @@ module Net
           end
         end
       end
+    rescue InvalidResponseError
+      disconnect
+      raise
+    end
+
+    def guard_against_tagged_response_skipping_handler!(tag)
+      return unless (resp = @tagged_responses[tag])&.name&.upcase == "OK"
+      raise(InvalidResponseError,
+            "Server sent tagged 'OK' before command was finished: %p. " \
+            "This could indicate a malicious server or client-side " \
+            "command injection. Disconnecting." % [resp.raw_data.chomp])
     end
 
     def generate_tag
