@@ -1312,9 +1312,11 @@ module Net
     #
     def starttls(**options)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options)
+      handled = false
       error = nil
       ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
+          handled = true
           clear_cached_capabilities
           clear_responses
           start_tls_session
@@ -1325,6 +1327,13 @@ module Net
       if error
         disconnect
         raise error
+      end
+      unless handled
+        disconnect
+        raise InvalidResponseError,
+              "STARTTLS handler was bypassed, although server responded %p" % [
+                ok.raw_data.chomp
+              ]
       end
       ok
     end
