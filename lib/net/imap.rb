@@ -3508,7 +3508,7 @@ module Net
         raise BadResponseError, resp
       else
         disconnect
-        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw.chomp]
+        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
       end
     end
 
