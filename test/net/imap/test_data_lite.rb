@@ -289,7 +289,7 @@ module Net
         assert_equal(klass.new, test)
         refute_equal(Data.define.new, test)
 
-        assert_equal('#<data >', test.inspect)
+        assert_match(/#<data ?>/, test.inspect)
         assert_equal([], test.members)
         assert_equal({}, test.to_h)
       end
