@@ -75,6 +75,20 @@ class IMAPTest < Test::Unit::TestCase
   end
 
   if defined?(OpenSSL::SSL)
+    def test_starttls_unknown_ca
+      imap = nil
+      ex = nil
+      starttls_test do |port|
+        imap = Net::IMAP.new("localhost", port: port)
+        begin
+          imap.starttls
+        rescue => ex
+        end
+        imap
+      end
+      assert_kind_of(OpenSSL::SSL::SSLError, ex)
+    end
+
     def test_starttls
       imap = nil
       starttls_test do |port|
@@ -1004,6 +1018,7 @@ EOF
         sock.gets
         sock.print("* BYE terminating connection\r\n")
         sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      rescue OpenSSL::SSL::SSLError
       ensure
         sock.close
         server.close

@@ -1014,7 +1014,8 @@ module Net
     # unsolicited untagged response immeditely _after_ #starttls completes.
     #
     def starttls(options = {}, verify = true)
-      send_command("STARTTLS") do |resp|
+      error = nil
+      ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
           begin
             # for backward compatibility
@@ -1024,7 +1025,14 @@ module Net
           end
           start_tls_session(options)
         end
+      rescue Exception => error
+        raise # note that the error backtrace is in the receiver_thread
       end
+      if error
+        disconnect
+        raise error
+      end
+      ok
     end
 
     # :call-seq:
