@@ -95,6 +95,14 @@ module Net
             raise ArgumentError, "min_iterations must be positive"
 
           @cnonce = cnonce || SecureRandom.base64(32)
+
+          # These attrs are set from the server challenges
+          @server_first_message = @snonce = @salt = @iterations = nil
+          @server_error = nil
+
+          # These values are created and cached in response to server challenges
+          @client_first_message_bare = nil
+          @client_final_message_without_proof = nil
         end
 
         # Authentication identity: the identity that matches the #password.
