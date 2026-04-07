@@ -12,22 +12,24 @@ class CommandDataTest < Test::Unit::TestCase
   # simplistic emulation of Output = Data.define(:name, :args)
   class Output
     class << self
-      def new(_name = nil, _args = nil, name: _name, args: _args)
+      def new(_name = nil, _args = nil, _kw = nil, name: _name, args: _args, kwargs: _kw)
         raise ArgumentError, "missing name" unless name
         raise ArgumentError, "missing args" unless args
-        super(name: name, args: args)
+        super(name: name, args: args, kwargs: kwargs)
       end
       alias :[] :new
     end
 
-    attr_reader :name, :args
+    attr_reader :name, :args, :kwargs
 
-    def initialize(name:, args:)
-      @name, @args = name, args
+    def initialize(name:, args:, kwargs:)
+      @name, @args, @kwargs = name, args, kwargs
       freeze
     end
 
-    def to_h(&block) block ? to_h.to_h(&block) : { name: name, args: args } end
+    def to_h(&block)
+      block ? to_h.to_h(&block) : { name: name, args: args, kwargs: kwargs }
+    end
     def ==(other)   Output === other && to_h  ==  other.to_h  end
     def eql?(other) Output === other && to_h.eql?(other.to_h) end
   end
@@ -40,11 +42,15 @@ class CommandDataTest < Test::Unit::TestCase
           Net::IMAP.private_instance_methods.include?(name)
         raise NoMethodError, "#{name} is not a method on Net::IMAP"
       end
-      define_method(name) do |*args|
-        output << Output[name, args]
+      define_method(name) do |*args, **kwargs|
+        kwargs = kwargs.compact
+        kwargs = nil if kwargs.empty?
+        output << Output[name: name, args: args, kwargs: kwargs]
       end
-      Output.define_singleton_method(name) do |*args|
-        new(name, args)
+      Output.define_singleton_method(name) do |*args, **kwargs|
+        kwargs = kwargs.compact
+        kwargs = nil if kwargs.empty?
+        new(name: name, args: args, kwargs: kwargs)
       end
     end
 
@@ -80,8 +86,12 @@ class CommandDataTest < Test::Unit::TestCase
 
   test "Literal" do
     imap.send_data Literal["foo\r\nbar"]
+    imap.send_data Literal["foo\r\nbar", false]
+    imap.send_data Literal["foo\r\nbar", true]
     assert_equal [
       Output.send_literal("foo\r\nbar", TAG),
+      Output.send_literal("foo\r\nbar", TAG, non_sync: false),
+      Output.send_literal("foo\r\nbar", TAG, non_sync: true),
     ], imap.output
 
     imap.clear
@@ -93,9 +103,13 @@ class CommandDataTest < Test::Unit::TestCase
 
   test "Literal8" do
     imap.send_data Literal8["foo\r\nbar"], Literal8["foo\0bar"]
+    imap.send_data Literal8["foo\0bar", false]
+    imap.send_data Literal8["foo\0bar", true]
     assert_equal [
       Output.send_binary_literal("foo\r\nbar", TAG),
       Output.send_binary_literal("foo\0bar", TAG),
+      Output.send_binary_literal("foo\0bar", TAG, non_sync: false),
+      Output.send_binary_literal("foo\0bar", TAG, non_sync: true),
     ], imap.output
   end
 

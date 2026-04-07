@@ -675,13 +675,30 @@ class IMAPTest < Test::Unit::TestCase
       assert_equal "{10}\r\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01",
         server.commands.pop.args
 
-      send_args.call("literal",   Net::IMAP::Literal["\r"],
-                     "literal8",  Net::IMAP::Literal8["\0" * 6],
+      buff = bytes = nil
+      server.literal_acceptor = proc { buff, bytes = _1, _2; false }
+      send_args.call("nonsync",
+                     Net::IMAP::Literal[data: "\x01\x02\x03", non_sync: true])
+      assert_equal "nonsync {3+}\r\n\x01\x02\03".b, server.commands.pop.args
+      assert_nil buff
+      assert_nil bytes
+
+      server.literal_acceptor = proc { true }
+      send_args.call("literal",   Net::IMAP::Literal["\r",       false],
+                     "literal",   Net::IMAP::Literal["αβγδε",      nil],
+                     "literal+",  Net::IMAP::Literal["αβγδε",     true],
+                     "literal8",  Net::IMAP::Literal8["\0",      false],
+                     "literal8",  Net::IMAP::Literal8["\0" * 6,    nil],
+                     "literal8+", Net::IMAP::Literal8["\0" * 8,   true],
                      "done")
       assert_equal("literal"   " {1}\r\n\r "                 \
+                   "literal"   " {10}\r\nαβγδε "             \
+                   "literal+"  " {10+}\r\nαβγδε "            \
+                   "literal8"  " ~{1}\r\n\0 "                \
                    "literal8"  " ~{6}\r\n\0\0\0\0\0\0 "      \
-                    "done".b,
-                    server.commands.pop.args)
+                   "literal8+" " ~{8+}\r\n\0\0\0\0\0\0\0\0 " \
+                   "done".b,
+                   server.commands.pop.args)
     end
   end
 

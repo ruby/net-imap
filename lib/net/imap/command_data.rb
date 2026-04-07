@@ -77,12 +77,23 @@ module Net
       put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
-    def send_binary_literal(str, tag) send_literal(str, tag, binary: true) end
+    def send_binary_literal(*a, **kw) send_literal(*a, **kw, binary: true) end
 
-    def send_literal(str, tag = nil, binary: false)
+    # `non_sync` is an optional tri-state flag:
+    # * `true`  -> Force non-synchronizing `LITERAL+`/`LITERAL-` behavior.
+    #   TODO: raise or warn when capabilities don't allow non_sync.
+    # * `false` -> Force normal synchronizing literal behavior.
+    # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
+    #   TODO: Dynamic, based on capabilities and bytesize.
+    def send_literal(str, tag = nil, binary: false, non_sync: nil)
       synchronize do
         prefix = "~" if binary
-        put_string("#{prefix}{#{str.bytesize}}\r\n")
+        plus = "+" if non_sync
+        put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
+        if non_sync
+          put_string(str)
+          return
+        end
         @continued_command_tag = tag
         @continuation_request_exception = nil
         begin
@@ -178,12 +189,32 @@ module Net
       end
     end
 
-    class Literal < CommandData # :nodoc:
-      def initialize(data:)
+    class Literal # :nodoc:
+      class << self
+        def new(_data = nil, _non_sync = nil, data: _data, non_sync: _non_sync)
+          super(data: data, non_sync: non_sync)
+        end
+        alias :[] :new
+      end
+
+      attr_reader :data, :non_sync
+
+      def to_h(&block) block ? to_h.to_h(&block) : { data: data, non_sync: non_sync } end
+      def ==(other)   self.class === other && to_h  ==  other.to_h  end
+      def eql?(other) self.class === other && to_h.eql?(other.to_h) end
+
+      def initialize(data:, non_sync: nil)
         data = -String(data.to_str).b or
           raise DataFormatError, "#{self.class} expects string input"
-        super
+        @data, @non_sync = data, non_sync
         validate
+        freeze
+      end
+
+      def self.validate(...)
+        data = new(...)
+        data.validate
+        data
       end
 
       def bytesize; data.bytesize end
@@ -196,7 +227,7 @@ module Net
       end
 
       def send_data(imap, tag)
-        imap.__send__(:send_literal, @data, tag)
+        imap.__send__(:send_literal, data, tag, non_sync: non_sync)
       end
     end
 
@@ -204,7 +235,7 @@ module Net
       def validate; nil end # all bytes are okay
 
       def send_data(imap, tag)
-        imap.__send__(:send_binary_literal, data, tag)
+        imap.__send__(:send_binary_literal, data, tag, non_sync: non_sync)
       end
     end
 
