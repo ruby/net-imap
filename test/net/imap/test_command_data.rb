@@ -9,7 +9,7 @@ class CommandDataTest < Net::IMAP::TestCase
   Literal = Net::IMAP::Literal
   Literal8 = Net::IMAP::Literal8
 
-  Output = Net::IMAP::Data.define(:name, :args)
+  Output = Net::IMAP::Data.define(:name, :args, :kwargs)
   TAG = Module.new.freeze
 
   class FakeCommandWriter
@@ -18,11 +18,15 @@ class CommandDataTest < Net::IMAP::TestCase
           Net::IMAP.private_instance_methods.include?(name)
         raise NoMethodError, "#{name} is not a method on Net::IMAP"
       end
-      define_method(name) do |*args|
-        output << Output[name:, args:]
+      define_method(name) do |*args, **kwargs|
+        kwargs = kwargs.compact
+        kwargs = nil if kwargs.empty?
+        output << Output[name:, args:, kwargs:]
       end
-      Output.define_singleton_method(name) do |*args|
-        new(name:, args:)
+      Output.define_singleton_method(name) do |*args, **kwargs|
+        kwargs = kwargs.compact
+        kwargs = nil if kwargs.empty?
+        new(name:, args:, kwargs:)
       end
     end
 
@@ -58,8 +62,12 @@ class CommandDataTest < Net::IMAP::TestCase
 
   test "Literal" do
     imap.send_data Literal["foo\r\nbar"]
+    imap.send_data Literal["foo\r\nbar", false]
+    imap.send_data Literal["foo\r\nbar", true]
     assert_equal [
       Output.send_literal("foo\r\nbar", TAG),
+      Output.send_literal("foo\r\nbar", TAG, non_sync: false),
+      Output.send_literal("foo\r\nbar", TAG, non_sync: true),
     ], imap.output
 
     imap.clear
@@ -71,9 +79,13 @@ class CommandDataTest < Net::IMAP::TestCase
 
   test "Literal8" do
     imap.send_data Literal8["foo\r\nbar"], Literal8["foo\0bar"]
+    imap.send_data Literal8["foo\0bar", false]
+    imap.send_data Literal8["foo\0bar", true]
     assert_equal [
       Output.send_binary_literal("foo\r\nbar", TAG),
       Output.send_binary_literal("foo\0bar", TAG),
+      Output.send_binary_literal("foo\0bar", TAG, non_sync: false),
+      Output.send_binary_literal("foo\0bar", TAG, non_sync: true),
     ], imap.output
   end
 
