@@ -100,6 +100,9 @@ module Net
           @server_first_message = @snonce = @salt = @iterations = nil
           @server_error = nil
 
+          # Memoized after @salt and @iterations have been sent.
+          @salted_password = @client_key = @server_key = nil
+
           # These values are created and cached in response to server challenges
           @client_first_message_bare = nil
           @client_final_message_without_proof = nil
@@ -155,6 +158,15 @@ module Net
         # Net::IMAP::NoResponseError.
         attr_reader :server_error
 
+        # Memoized ScramAlgorithm#salted_password (needs #salt and #iterations)
+        def salted_password = @salted_password ||= compute_salted { super }
+
+        # Memoized ScramAlgorithm#client_key (needs #salt and #iterations)
+        def client_key = @client_key ||= compute_salted { super }
+
+        # Memoized ScramAlgorithm#server_key (needs #salt and #iterations)
+        def server_key = @server_key ||= compute_salted { super }
+
         # Returns a new OpenSSL::Digest object, set to the appropriate hash
         # function for the chosen mechanism.
         #
@@ -193,6 +205,13 @@ module Net
         def done?; @state == :done end
 
         private
+
+        # Checks for +salt+ and +iterations+ before yielding
+        def compute_salted
+          salt       in String  or raise Error, "unknown salt"
+          iterations in Integer or raise Error, "unknown iterations"
+          yield
+        end
 
         # Need to store this for auth_message
         attr_reader :server_first_message
