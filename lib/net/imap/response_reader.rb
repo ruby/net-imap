@@ -8,6 +8,7 @@ module Net
 
       def initialize(client, sock)
         @client, @sock = client, sock
+        @buff = @literal_size = nil
       end
 
       def read_response_buffer
@@ -15,13 +16,13 @@ module Net
         catch :eof do
           while true
             read_line
-            break unless (@literal_size = get_literal_size)
+            break unless literal_size
             read_literal
           end
         end
         buff
       ensure
-        @buff = nil
+        @buff = @literal_size = nil
       end
 
       private
@@ -30,16 +31,18 @@ module Net
 
       def bytes_read          = buff.bytesize
       def empty?              = buff.empty?
-      def done?               = line_done? && !get_literal_size
+      def done?               = line_done? && !literal_size
       def line_done?          = buff.end_with?(CRLF)
 
-      def get_literal_size
+      def get_literal_size(buff)
         buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n) && $1.to_i
       end
 
       def read_line
-        buff << (@sock.gets(CRLF, read_limit) or throw :eof)
+        line = (@sock.gets(CRLF, read_limit) or throw :eof)
+        buff << line
         max_response_remaining! unless line_done?
+        @literal_size = get_literal_size(line)
       end
 
       def read_literal
