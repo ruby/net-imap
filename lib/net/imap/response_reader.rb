@@ -4,6 +4,8 @@ module Net
   class IMAP
     # See https://www.rfc-editor.org/rfc/rfc9051#section-2.2.2
     class ResponseReader # :nodoc:
+      include NumValidator
+
       attr_reader :client
 
       def initialize(client, sock)
@@ -46,7 +48,10 @@ module Net
       def line_done?          = buff.end_with?(CRLF)
 
       def get_literal_size(buff)
-        buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n) && $1.to_i
+        buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n) &&
+          coerce_number64($1)
+      rescue DataFormatError
+        raise DataFormatError, format("invalid response literal size (%s)", $1)
       end
 
       def read_line

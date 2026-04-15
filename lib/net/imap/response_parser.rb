@@ -2212,10 +2212,7 @@ module Net
             if $1
               return Token.new(T_SPACE, $+)
             elsif $2
-              len = $+.to_i
-              val = @str[@pos, len]
-              @pos += len
-              return Token.new(T_LITERAL8, val)
+              literal_token($+, T_LITERAL8)
             elsif $3 && $7
               # greedily match ATOM, prefixed with NUMBER, NIL, or PLUS.
               return Token.new(T_ATOM, $3)
@@ -2243,10 +2240,7 @@ module Net
             elsif $15
               return Token.new(T_RBRA, $+)
             elsif $16
-              len = $+.to_i
-              val = @str[@pos, len]
-              @pos += len
-              return Token.new(T_LITERAL, val)
+              literal_token($+)
             elsif $17
               return Token.new(T_PERCENT, $+)
             elsif $18
@@ -2272,10 +2266,7 @@ module Net
             elsif $4
               return Token.new(T_QUOTED, Patterns.unescape_quoted($+))
             elsif $5
-              len = $+.to_i
-              val = @str[@pos, len]
-              @pos += len
-              return Token.new(T_LITERAL, val)
+              literal_token($+)
             elsif $6
               return Token.new(T_LPAR, $+)
             elsif $7
@@ -2290,6 +2281,15 @@ module Net
         else
           parse_error("invalid @lex_state - %s", @lex_state.inspect)
         end
+      rescue DataFormatError => error
+        parse_error error.message
+      end
+
+      def literal_token(len, type = T_LITERAL)
+        len = NumValidator.coerce_number64 len
+        val = @str[@pos, len]
+        @pos += len
+        Token.new(type, val)
       end
 
     end

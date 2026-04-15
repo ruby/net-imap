@@ -7,6 +7,22 @@
       data:
       raw_data: "* NOOP\r\n"
 
+  "literal numeric formatted with zero-prefix":
+    :response: "* 20367 FETCH (BODY[HEADER.FIELDS (Foo)] {012}\r\nFoo: bar\r\n\r\n)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: FETCH
+      data: !ruby/struct:Net::IMAP::FetchData
+        seqno: 20367
+        attr:
+          BODY[HEADER.FIELDS (Foo)]: "Foo: bar\r\n\r\n"
+      raw_data: "* 20367 FETCH (BODY[HEADER.FIELDS (Foo)] {012}\r\nFoo: bar\r\n\r\n)\r\n"
+
+  "invalid literal numeric format (too large)":
+    :test_type: :assert_parse_failure
+    :message: "number64 must be unsigned 63-bit integer: 99999999999999999999"
+    :response:
+      "* 20367 FETCH (BODY[] {99999999999999999999}\r\nwon't parse this)\r\n"
+
   test_invalid_noop_response_with_unparseable_data:
     :response: "* NOOP froopy snood\r\n"
     :expected: !ruby/struct:Net::IMAP::IgnoredResponse
