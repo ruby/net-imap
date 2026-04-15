@@ -32,7 +32,10 @@ module Net
       def empty?;           buff.empty?                           end
       def done?;            line_done? && !get_literal_size       end
       def line_done?;       buff.end_with?(CRLF)                  end
-      def get_literal_size; buff.rindex(/\{(\d+)\}\r\n\z/n) && $1.to_i end
+
+      def get_literal_size
+        buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n) && $1.to_i
+      end
 
       def read_line
         buff << (@sock.gets(CRLF, read_limit) or throw :eof)
