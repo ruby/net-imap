@@ -65,4 +65,87 @@ class SASLScamCacheTest < Net::IMAP::TestCase
     assert cache.sufficient?
   end
 
+  %w[inspect to_s].each do |method|
+    test "##{method}" do
+      cache = SASL::ScramCache.new
+      assert_equal(
+        "#<struct #{SASL::ScramCache} " \
+        "salt=nil, iterations=nil, salted_password=nil, " \
+        "client_key=nil, server_key=nil>",
+        cache.public_send(method)
+      )
+      cache.salt = salt = "saltysaltsalt"
+      cache.iterations = 100_000
+      assert_equal(
+        "#<struct #{SASL::ScramCache} " \
+        "salt=#{salt.inspect}, iterations=100000, " \
+        "salted_password=nil, client_key=nil, server_key=nil>",
+        cache.public_send(method)
+      )
+      cache.salted_password = "this should be filtered!!"
+      assert_equal(
+        "#<struct #{SASL::ScramCache} " \
+        "salt=#{salt.inspect}, iterations=100000, " \
+        "salted_password=#<FILTERED 25 bytes>, client_key=nil, server_key=nil>",
+        cache.public_send(method)
+      )
+      cache.client_key = "filter!"
+      cache.server_key = "this!"
+      assert_equal(
+        "#<struct #{SASL::ScramCache} " \
+        "salt=#{salt.inspect}, iterations=100000, " \
+        "salted_password=#<FILTERED 25 bytes>, " \
+        "client_key=#<FILTERED 7 bytes>, " \
+        "server_key=#<FILTERED 5 bytes>>",
+        cache.public_send(method)
+      )
+      cache.salted_password = nil
+      assert_equal(
+        "#<struct #{SASL::ScramCache} " \
+        "salt=#{salt.inspect}, iterations=100000, " \
+        "salted_password=nil, " \
+        "client_key=#<FILTERED 7 bytes>, " \
+        "server_key=#<FILTERED 5 bytes>>",
+        cache.public_send(method)
+      )
+    end
+  end
+
+  test "#pretty_print" do
+    width = 80
+    cache = SASL::ScramCache.new
+    PP.pp cache, (output = String.new), width
+    assert_equal(<<~PP, output)
+      #<struct #{SASL::ScramCache}
+       salt=nil,
+       iterations=nil,
+       salted_password=nil,
+       client_key=nil,
+       server_key=nil>
+    PP
+    cache.salt = salt = "saltosaltersaltin"
+    cache.iterations = 100_000
+    PP.pp cache, (output = String.new), width
+    assert_equal(<<~PP, output)
+      #<struct #{SASL::ScramCache}
+       salt=#{salt.inspect},
+       iterations=100000,
+       salted_password=nil,
+       client_key=nil,
+       server_key=nil>
+    PP
+    cache.salted_password = "this should be filtered!!"
+    cache.client_key = Object.new
+    cache.server_key = 123.5
+    PP.pp cache, (output = String.new), width
+    assert_equal(<<~PP, output)
+      #<struct #{SASL::ScramCache}
+       salt=#{salt.inspect},
+       iterations=100000,
+       salted_password=#<FILTERED 25 bytes>,
+       client_key=#<FILTERED Object>,
+       server_key=#<FILTERED Float>>
+    PP
+  end
+
 end

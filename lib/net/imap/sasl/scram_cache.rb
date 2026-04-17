@@ -58,6 +58,50 @@ module Net
           self.iterations      = iterations
           self
         end
+
+        # Returns a string representation with the cached secrets filtered out.
+        def inspect
+          format "#<struct %s %s>", self.class, members
+            .map { [_1, filtered_inspect(_1)].join("=") }
+            .join(", ")
+        end
+        alias to_s inspect
+
+        # Pretty prints a representation with the cached secrets filtered out.
+        def pretty_print(q)
+          q.group(1, sprintf("#<struct %s", PP.mcall(self, Kernel, :class).name), '>') {
+            q.seplist(PP.mcall(self, Struct, :members), lambda { q.text "," }) {|member|
+              q.breakable
+              q.text member.to_s
+              q.text '='
+              q.group(1) {
+                q.breakable ''
+                if secret_member?(member)
+                  q.text filtered_inspect(member)
+                else
+                  q.pp self[member]
+                end
+              }
+            }
+          }
+        end
+
+        private
+
+        def secret_member?(member)
+          member in :salted_password | :client_key | :server_key
+        end
+
+        def filtered_inspect(member)
+          value = self[member]
+          return value.inspect unless secret_member?(member)
+          case value
+          in String then format "#<FILTERED %d bytes>", value.bytesize
+          in nil    then "nil"
+          else           format "#<FILTERED %s>", value.class
+          end
+        end
+
       end
 
     end
