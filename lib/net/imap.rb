@@ -3071,7 +3071,7 @@ module Net
     end
 
     def store_internal(cmd, set, attr, flags, unchangedsince: nil)
-      attr = RawData.new(attr) if attr.instance_of?(String)
+      attr = Atom.new(attr) if attr.instance_of?(String)
       args = [MessageSet.new(set)]
       args << ["UNCHANGEDSINCE", Integer(unchangedsince)] if unchangedsince
       args << attr << flags
