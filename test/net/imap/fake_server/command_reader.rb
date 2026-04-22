@@ -7,10 +7,12 @@ class Net::IMAP::FakeServer
 
   class CommandReader
     attr_reader :last_command
+    attr_accessor :literal_acceptor
 
     def initialize(socket)
       @socket = socket
-      @last_comma0 = nil
+      @last_command = nil
+      @literal_acceptor = proc {|buff, size| true }
     end
 
     def get_command
@@ -19,8 +21,17 @@ class Net::IMAP::FakeServer
         s = socket.gets("\r\n") or break
         buf << s
         break unless /\{(\d+)(\+)?\}\r\n\z/n =~ buf
-        $2 or socket.print "+ Continue\r\n"
-        buf << socket.read(Integer($1))
+        bytes = Integer($1)
+        if $2
+          buf << socket.read(bytes)
+        elsif literal_acceptor[buf, bytes]
+          socket.print "+ Continue\r\n"
+          buf << socket.read(bytes)
+        else
+          partial = partial_parse(buf)
+          socket.print "#{partial.tag} NO #{bytes} byte literal rejected\r\n"
+          buf = "".b
+        end
       end
       throw :eof if buf.empty?
       @last_command = parse(buf)
@@ -43,6 +54,7 @@ class Net::IMAP::FakeServer
         Command.new $1, $2, $3, buf # TODO...
       end
     end
+    alias partial_parse parse
 
     # TODO: this is not the correct regexp, and literals aren't handled either
     def scan_astrings(str)

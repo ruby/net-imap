@@ -77,9 +77,23 @@ module Net
       put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
-    def send_literal(str, tag = nil)
+    def send_binary_literal(*a, **kw) send_literal(*a, **kw, binary: true) end
+
+    # `non_sync` is an optional tri-state flag:
+    # * `true`  -> Force non-synchronizing `LITERAL+`/`LITERAL-` behavior.
+    #   TODO: raise or warn when capabilities don't allow non_sync.
+    # * `false` -> Force normal synchronizing literal behavior.
+    # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
+    #   TODO: Dynamic, based on capabilities and bytesize.
+    def send_literal(str, tag = nil, binary: false, non_sync: nil)
       synchronize do
-        put_string("{" + str.bytesize.to_s + "}" + CRLF)
+        prefix = "~" if binary
+        plus = "+" if non_sync
+        put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
+        if non_sync
+          put_string(str)
+          return
+        end
         @continued_command_tag = tag
         @continuation_request_exception = nil
         begin
@@ -119,33 +133,44 @@ module Net
       put_string("\\" + symbol.to_s)
     end
 
-    class RawData # :nodoc:
+    # simplistic emulation of CommandData = Data.define(:data)
+    class CommandData # :nodoc:
+      class << self
+        def new(arg = nil, data: arg) super(data: data) end
+        alias :[] :new
+      end
+
+      def initialize(data:)
+        @data = data
+        freeze
+      end
+
+      attr_reader :data
+
+      def to_h(&block) block ? to_h.to_h(&block) : { data: data } end
+      def ==(other)   self.class === other && to_h  ==  other.to_h  end
+      def eql?(other) self.class === other && to_h.eql?(other.to_h) end
+
+      # following class definition goes beyond the basic Data.define(:data)
+      ##
+
       def send_data(imap, tag)
-        imap.__send__(:put_string, @data)
+        raise NoMethodError, "#{self.class} must implement #{__method__}"
       end
 
       def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
       end
     end
 
-    class Atom # :nodoc:
+    class RawData < CommandData # :nodoc:
       def send_data(imap, tag)
         imap.__send__(:put_string, @data)
       end
+    end
 
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
+    class Atom < CommandData # :nodoc:
+      def send_data(imap, tag)
+        imap.__send__(:put_string, @data)
       end
     end
 
@@ -165,17 +190,52 @@ module Net
     end
 
     class Literal # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:send_literal, @data, tag)
+      class << self
+        def new(_data = nil, _non_sync = nil, data: _data, non_sync: _non_sync)
+          super(data: data, non_sync: non_sync)
+        end
+        alias :[] :new
       end
+
+      attr_reader :data, :non_sync
+
+      def to_h(&block) block ? to_h.to_h(&block) : { data: data, non_sync: non_sync } end
+      def ==(other)   self.class === other && to_h  ==  other.to_h  end
+      def eql?(other) self.class === other && to_h.eql?(other.to_h) end
+
+      def initialize(data:, non_sync: nil)
+        data = -String(data.to_str).b or
+          raise DataFormatError, "#{self.class} expects string input"
+        @data, @non_sync = data, non_sync
+        validate
+        freeze
+      end
+
+      def self.validate(...)
+        data = new(...)
+        data.validate
+        data
+      end
+
+      def bytesize; data.bytesize end
 
       def validate
+        if data.include?("\0")
+          raise DataFormatError, "NULL byte not allowed in #{self.class}.  " \
+            "Use #{Literal8} or a null-safe encoding."
+        end
       end
 
-      private
+      def send_data(imap, tag)
+        imap.__send__(:send_literal, data, tag, non_sync: non_sync)
+      end
+    end
 
-      def initialize(data)
-        @data = data
+    class Literal8 < Literal # :nodoc:
+      def validate; nil end # all bytes are okay
+
+      def send_data(imap, tag)
+        imap.__send__(:send_binary_literal, data, tag, non_sync: non_sync)
       end
     end
 
