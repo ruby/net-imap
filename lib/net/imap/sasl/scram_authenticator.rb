@@ -159,13 +159,13 @@ module Net
         attr_reader :server_error
 
         # Memoized ScramAlgorithm#salted_password (needs #salt and #iterations)
-        def salted_password = @salted_password ||= compute_salted { super }
+        def salted_password; @salted_password ||= compute_salted { super } end
 
         # Memoized ScramAlgorithm#client_key (needs #salt and #iterations)
-        def client_key = @client_key ||= compute_salted { super }
+        def client_key; @client_key ||= compute_salted { super } end
 
         # Memoized ScramAlgorithm#server_key (needs #salt and #iterations)
-        def server_key = @server_key ||= compute_salted { super }
+        def server_key; @server_key ||= compute_salted { super } end
 
         # Returns a new OpenSSL::Digest object, set to the appropriate hash
         # function for the chosen mechanism.
@@ -208,8 +208,8 @@ module Net
 
         # Checks for +salt+ and +iterations+ before yielding
         def compute_salted
-          salt       in String  or raise Error, "unknown salt"
-          iterations in Integer or raise Error, "unknown iterations"
+          String === salt        or raise Error, "unknown salt"
+          Integer === iterations or raise Error, "unknown iterations"
           yield
         end
 
