@@ -213,6 +213,65 @@ class AuthenticatorsTest < Net::IMAP::TestCase
     assert authenticator.done?
   end
 
+  def test_scram_min_iterations
+    # i=1000, below default of 4096
+    authenticator = scram_sha1("user", "pencil",
+                               cnonce: "fyko+d2lbbFgONRv9qkxdawL")
+    assert_equal         4_096, authenticator.min_iterations
+    assert_equal 2_147_483_647, authenticator.max_iterations
+    authenticator.process(nil)
+    assert_raise_with_message(Net::IMAP::SASL::Error, /too few iterations/) do
+      authenticator.process(
+        "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j," \
+        "s=QSXCR+Q6sek8bf92," \
+        "i=1000")
+    end
+
+    # i=4096, below configured 100,000
+    authenticator = scram_sha256("user", "pencil",
+                                 cnonce: "rOprNGfwEbeRWgbNEkqO",
+                                 min_iterations: 100_000)
+    assert_equal       100_000, authenticator.min_iterations
+    assert_equal 2_147_483_647, authenticator.max_iterations
+    authenticator.process(nil)
+    assert_raise_with_message(Net::IMAP::SASL::Error, /too few iterations/) do
+      authenticator.process(
+        "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+        "s=W22ZaJ0SNY7soEsUEjb6gQ==," \
+        "i=4096")
+    end
+  end
+
+  def test_scram_max_iterations
+    # i=1000, below default of 4096
+    authenticator = scram_sha1("user", "pencil",
+                               cnonce: "fyko+d2lbbFgONRv9qkxdawL",
+                               max_iterations: 1_000_000)
+    assert_equal     4_096, authenticator.min_iterations
+    assert_equal 1_000_000, authenticator.max_iterations
+    authenticator.process(nil)
+    assert_raise_with_message(Net::IMAP::SASL::Error, /too many iterations/) do
+      authenticator.process(
+        "r=fyko+d2lbbFgONRv9qkxdawL3rfcNHYJY1ZVvWVs7j," \
+        "s=QSXCR+Q6sek8bf92," \
+        "i=2147483647")
+    end
+
+    # i=4096, below configured 100,000
+    authenticator = scram_sha256("user", "pencil",
+                                 cnonce: "rOprNGfwEbeRWgbNEkqO",
+                                 max_iterations: 100_000)
+    assert_equal   4_096, authenticator.min_iterations
+    assert_equal 100_000, authenticator.max_iterations
+    authenticator.process(nil)
+    assert_raise_with_message(Net::IMAP::SASL::Error, /too many iterations/) do
+      authenticator.process(
+        "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+        "s=W22ZaJ0SNY7soEsUEjb6gQ==," \
+        "i=2147483647")
+    end
+  end
+
   # ----------------------
   # XOAUTH2
   # ----------------------
