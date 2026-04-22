@@ -119,33 +119,44 @@ module Net
       put_string("\\" + symbol.to_s)
     end
 
-    class RawData # :nodoc:
+    # simplistic emulation of CommandData = Data.define(:data)
+    class CommandData # :nodoc:
+      class << self
+        def new(arg = nil, data: arg) super(data: data) end
+        alias :[] :new
+      end
+
+      def initialize(data:)
+        @data = data
+        freeze
+      end
+
+      attr_reader :data
+
+      def to_h(&block) block ? to_h.to_h(&block) : { data: data } end
+      def ==(other)   self.class === other && to_h  ==  other.to_h  end
+      def eql?(other) self.class === other && to_h.eql?(other.to_h) end
+
+      # following class definition goes beyond the basic Data.define(:data)
+      ##
+
       def send_data(imap, tag)
-        imap.__send__(:put_string, @data)
+        raise NoMethodError, "#{self.class} must implement #{__method__}"
       end
 
       def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
       end
     end
 
-    class Atom # :nodoc:
+    class RawData < CommandData # :nodoc:
       def send_data(imap, tag)
         imap.__send__(:put_string, @data)
       end
+    end
 
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
+    class Atom < CommandData # :nodoc:
+      def send_data(imap, tag)
+        imap.__send__(:put_string, @data)
       end
     end
 
@@ -164,18 +175,9 @@ module Net
       end
     end
 
-    class Literal # :nodoc:
+    class Literal < CommandData # :nodoc:
       def send_data(imap, tag)
         imap.__send__(:send_literal, @data, tag)
-      end
-
-      def validate
-      end
-
-      private
-
-      def initialize(data)
-        @data = data
       end
     end
 
