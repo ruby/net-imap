@@ -295,6 +295,14 @@ module Net
     #   because the server doesn't allow deletion of mailboxes with children.
     #   #data is +nil+.
     #
+    # ==== <tt>QUOTA=RES-*</tt> response codes
+    # See {[RFC9208]}[https://www.rfc-editor.org/rfc/rfc9208.html#section-4.3].
+    # * +OVERQUOTA+ (also in RFC5530[https://www.rfc-editor.org/rfc/rfc5530]),
+    #   with a tagged +NO+ response to an +APPEND+/+COPY+/+MOVE+ command when
+    #   the command would put the target mailbox over any quota, and with an
+    #   untagged +NO+ when a mailbox exceeds a soft quota (which may be caused
+    #   be external events).  #data is +nil+.
+    #
     # ==== +CONDSTORE+ extension
     # See {[RFC7162]}[https://www.rfc-editor.org/rfc/rfc7162.html].
     # * +NOMODSEQ+, when selecting a mailbox that does not support
@@ -369,12 +377,24 @@ module Net
     # Net::IMAP#getquotaroot returns an array containing both MailboxQuotaRoot
     # and MailboxQuota objects.
     #
+    # ==== Required capability
+    #
+    # Requires +QUOTA+ [RFC2087[https://www.rfc-editor.org/rfc/rfc2087]]
+    # or <tt>QUOTA=RES-STORAGE</tt>
+    # [RFC9208[https://www.rfc-editor.org/rfc/rfc9208]] capability.
     class MailboxQuota < Struct.new(:mailbox, :usage, :quota)
       ##
       # method: mailbox
       # :call-seq: mailbox -> string
       #
-      # The mailbox with the associated quota.
+      # The quota root with the associated quota.
+      #
+      # NOTE: this was mistakenly named "mailbox".  But the quota root's name may
+      # differ from the mailbox.  A single quota root may cover multiple
+      # mailboxes, and a single mailbox may be governed by multiple quota roots.
+
+      # The quota root with the associated quota.
+      alias quota_root mailbox
 
       ##
       # method: usage
@@ -386,7 +406,7 @@ module Net
       # method: quota
       # :call-seq: quota -> Integer
       #
-      # Quota limit imposed on the mailbox.
+      # Storage limit imposed on the mailbox.
       #
     end
 
