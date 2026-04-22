@@ -700,40 +700,53 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
-  def test_send_literal
-    server = create_tcp_server
-    port = server.addr[1]
-    requests = []
-    literal = nil
-    start_server do
-      sock = server.accept
-      begin
-        sock.print("* OK test server\r\n")
-        line = sock.gets
-        requests.push(line)
-        size = line.slice(/{(\d+)}\r\n/, 1).to_i
-        sock.print("+ Ready for literal data\r\n")
-        literal = sock.read(size)
-        requests.push(sock.gets)
-        sock.print("RUBY0001 OK TEST completed\r\n")
-        sock.gets
-        sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0002 OK LOGOUT completed\r\n")
-      ensure
-        sock.close
-        server.close
+  test("send literal args") do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      send_args = ->(*args) do
+        imap.__send__(:send_command, "TEST", *args)
       end
-    end
-    begin
-      imap = Net::IMAP.new(server_addr, :port => port)
-      imap.__send__(:send_command, "TEST", ["\xDE\xAD\xBE\xEF".b])
-      assert_equal(2, requests.length)
-      assert_equal("RUBY0001 TEST ({4}\r\n", requests[0])
-      assert_equal("\xDE\xAD\xBE\xEF".b, literal)
-      assert_equal(")\r\n", requests[1])
-      imap.logout
-    ensure
-      imap.disconnect
+      send_args.call ["\xDE\xAD\xBE\xEF".b]
+      assert_equal "({4}\r\n\xDE\xAD\xBE\xEF)".b, server.commands.pop.args
+
+      buff = bytes = nil
+      server.literal_acceptor = proc { buff, bytes = _1, _2; false }
+      assert_raise(Net::IMAP::NoResponseError) do
+        send_args.call Net::IMAP::Literal["\x01" * 10]
+      end
+      assert_match(/TEST \{10\}\r\n\z/, buff)
+      assert_equal 10, bytes
+      assert_empty server.commands
+
+      server.literal_acceptor = proc { true }
+      send_args.call Net::IMAP::Literal["\x01" * 10]
+      assert_equal "{10}\r\n\x01\x01\x01\x01\x01\x01\x01\x01\x01\x01",
+        server.commands.pop.args
+
+      buff = bytes = nil
+      server.literal_acceptor = proc { buff, bytes = _1, _2; false }
+      send_args.call("nonsync",
+                     Net::IMAP::Literal[data: "\x01\x02\x03", non_sync: true])
+      assert_equal "nonsync {3+}\r\n\x01\x02\03".b, server.commands.pop.args
+      assert_nil buff
+      assert_nil bytes
+
+      server.literal_acceptor = proc { true }
+      send_args.call("literal",   Net::IMAP::Literal["\r",       false],
+                     "literal",   Net::IMAP::Literal["αβγδε",      nil],
+                     "literal+",  Net::IMAP::Literal["αβγδε",     true],
+                     "literal8",  Net::IMAP::Literal8["\0",      false],
+                     "literal8",  Net::IMAP::Literal8["\0" * 6,    nil],
+                     "literal8+", Net::IMAP::Literal8["\0" * 8,   true],
+                     "done")
+      assert_equal("literal"   " {1}\r\n\r "                 \
+                   "literal"   " {10}\r\nαβγδε "             \
+                   "literal+"  " {10+}\r\nαβγδε "            \
+                   "literal8"  " ~{1}\r\n\0 "                \
+                   "literal8"  " ~{6}\r\n\0\0\0\0\0\0 "      \
+                   "literal8+" " ~{8+}\r\n\0\0\0\0\0\0\0\0 " \
+                   "done".b,
+                   server.commands.pop.args)
     end
   end
 

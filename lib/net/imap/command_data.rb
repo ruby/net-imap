@@ -5,6 +5,8 @@ require "date"
 require_relative "errors"
 require_relative "data_lite"
 
+# :enddoc:
+
 module Net
   class IMAP < Protocol
 
@@ -78,9 +80,23 @@ module Net
       put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
     end
 
-    def send_literal(str, tag = nil)
+    def send_binary_literal(*a, **kw); send_literal(*a, **kw, binary: true) end
+
+    # `non_sync` is an optional tri-state flag:
+    # * `true`  -> Force non-synchronizing `LITERAL+`/`LITERAL-` behavior.
+    #   TODO: raise or warn when capabilities don't allow non_sync.
+    # * `false` -> Force normal synchronizing literal behavior.
+    # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
+    #   TODO: Dynamic, based on capabilities and bytesize.
+    def send_literal(str, tag = nil, binary: false, non_sync: nil)
       synchronize do
-        put_string("{" + str.bytesize.to_s + "}" + CRLF)
+        prefix = "~" if binary
+        plus = "+" if non_sync
+        put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
+        if non_sync
+          put_string(str)
+          return
+        end
         @continued_command_tag = tag
         @continuation_request_exception = nil
         begin
@@ -147,9 +163,39 @@ module Net
       end
     end
 
-    class Literal < CommandData # :nodoc:
+    class Literal < Data.define(:data, :non_sync) # :nodoc:
+      def self.validate(...)
+        data = new(...)
+        data.validate
+        data
+      end
+
+      def initialize(data:, non_sync: nil)
+        data = -String(data.to_str).b or
+          raise DataFormatError, "#{self.class} expects string input"
+        super
+        validate
+      end
+
+      def bytesize; data.bytesize end
+
+      def validate
+        if data.include?("\0")
+          raise DataFormatError, "NULL byte not allowed in #{self.class}.  " \
+            "Use #{Literal8} or a null-safe encoding."
+        end
+      end
+
       def send_data(imap, tag)
-        imap.__send__(:send_literal, data, tag)
+        imap.__send__(:send_literal, data, tag, non_sync:)
+      end
+    end
+
+    class Literal8 < Literal # :nodoc:
+      def validate; nil end # all bytes are okay
+
+      def send_data(imap, tag)
+        imap.__send__(:send_binary_literal, data, tag, non_sync:)
       end
     end
 

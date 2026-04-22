@@ -22,6 +22,9 @@ class Net::IMAP::FakeServer
     def on(...) router.on(...) end
     def unsolicited(...) writer.untagged(...) end
 
+    def literal_acceptor =   reader.literal_acceptor
+    def literal_acceptor=(v) reader.literal_acceptor = v end
+
     def run
       writer.greeting
       catch(:eof) do

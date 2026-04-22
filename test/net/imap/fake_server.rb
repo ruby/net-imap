@@ -103,6 +103,10 @@ class Net::IMAP::FakeServer
   # See CommandRouter#on
   def on(...) connection&.on(...) end
 
+  # See CommandRouter#literal_acceptor
+  def literal_acceptor = connection&.literal_acceptor
+  def literal_acceptor=(v); connection.literal_acceptor = v end
+
   # See Connection#unsolicited
   def unsolicited(...) @mutex.synchronize { connection&.unsolicited(...) } end
 
