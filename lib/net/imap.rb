@@ -739,7 +739,7 @@ module Net
   # * {Character sets}[https://www.iana.org/assignments/character-sets/character-sets.xhtml]
   #
   class IMAP < Protocol
-    VERSION = "0.3.9"
+    VERSION = "0.3.10"
 
     autoload :ResponseReader, File.expand_path("imap/response_reader", __dir__)
 
