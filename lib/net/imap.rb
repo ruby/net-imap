@@ -1412,9 +1412,11 @@ module Net
     #
     def starttls(**options)
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(options)
+      handled = false
       error = nil
       ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
+          handled = true
           clear_cached_capabilities
           clear_responses
           start_tls_session
@@ -1425,6 +1427,13 @@ module Net
       if error
         disconnect
         raise error
+      end
+      unless handled
+        disconnect
+        raise InvalidResponseError,
+              "STARTTLS handler was bypassed, although server responded %p" % [
+                ok.raw_data.chomp
+              ]
       end
       ok
     end
@@ -3132,6 +3141,7 @@ module Net
 
       synchronize do
         tag = Thread.current[:net_imap_tag] = generate_tag
+        guard_against_tagged_response_skipping_handler!(tag, "IDLE")
         put_string("#{tag} IDLE#{CRLF}")
 
         begin
@@ -3596,6 +3606,7 @@ module Net
           put_string(" ")
           send_data(i, tag)
         end
+        guard_against_tagged_response_skipping_handler!(tag, cmd)
         put_string(CRLF)
         if cmd == "LOGOUT"
           @logout_command_tag = tag
@@ -3611,6 +3622,19 @@ module Net
           end
         end
       end
+    rescue InvalidResponseError
+      disconnect
+      raise
+    end
+
+    def guard_against_tagged_response_skipping_handler!(tag, cmd)
+      return unless (resp = @tagged_responses[tag])&.name&.upcase == "OK"
+      raise InvalidResponseError, format(
+        "Received tagged 'OK' to incomplete %s command (tag=%s).  " \
+        "This could indicate a malicious server, a man-in-the-middle, or " \
+        "client-side command injection.  Disconnecting.",
+        cmd, tag
+      )
     end
 
     def generate_tag
