@@ -5,5 +5,5 @@ source "https://rubygems.org"
 gemspec
 
 gem "rake"
-gem "rdoc"
+gem "rdoc", "<7.2" # incompatible with ruby 2.6
 gem "test-unit"

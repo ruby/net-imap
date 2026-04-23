@@ -1014,8 +1014,11 @@ module Net
     # unsolicited untagged response immeditely _after_ #starttls completes.
     #
     def starttls(options = {}, verify = true)
-      send_command("STARTTLS") do |resp|
+      handled = false
+      error = nil
+      ok = send_command("STARTTLS") do |resp|
         if resp.kind_of?(TaggedResponse) && resp.name == "OK"
+          handled = true
           begin
             # for backward compatibility
             certs = options.to_str
@@ -1024,7 +1027,21 @@ module Net
           end
           start_tls_session(options)
         end
+      rescue Exception => error
+        raise # note that the error backtrace is in the receiver_thread
       end
+      if error
+        disconnect
+        raise error
+      end
+      unless handled
+        disconnect
+        raise InvalidResponseError,
+              "STARTTLS handler was bypassed, although server responded %p" % [
+                ok.raw_data.chomp
+              ]
+      end
+      ok
     end
 
     # :call-seq:
@@ -2294,6 +2311,7 @@ module Net
           put_string(" ")
           send_data(i, tag)
         end
+        guard_against_tagged_response_skipping_handler!(tag)
         put_string(CRLF)
         if cmd == "LOGOUT"
           @logout_command_tag = tag
@@ -2309,6 +2327,17 @@ module Net
           end
         end
       end
+    rescue InvalidResponseError
+      disconnect
+      raise
+    end
+
+    def guard_against_tagged_response_skipping_handler!(tag)
+      return unless (resp = @tagged_responses[tag])&.name&.upcase == "OK"
+      raise(InvalidResponseError,
+            "Server sent tagged 'OK' before command was finished: %p. " \
+            "This could indicate a malicious server or client-side " \
+            "command injection. Disconnecting." % [resp.raw_data.chomp])
     end
 
     def generate_tag

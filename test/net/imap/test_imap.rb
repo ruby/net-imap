@@ -75,6 +75,20 @@ class IMAPTest < Test::Unit::TestCase
   end
 
   if defined?(OpenSSL::SSL)
+    def test_starttls_unknown_ca
+      imap = nil
+      ex = nil
+      starttls_test do |port|
+        imap = Net::IMAP.new("localhost", port: port)
+        begin
+          imap.starttls
+        rescue => ex
+        end
+        imap
+      end
+      assert_kind_of(OpenSSL::SSL::SSLError, ex)
+    end
+
     def test_starttls
       imap = nil
       starttls_test do |port|
@@ -98,6 +112,40 @@ class IMAPTest < Test::Unit::TestCase
         end
         imap
       end
+    end
+
+    def test_starttls_stripping_ok_sent_before_response
+      # to coordinate between threads (better than sleep)
+      server_to_client, client_to_server = Queue.new, Queue.new
+      imap = nil
+      server = create_tcp_server
+      port = server.addr[1]
+      start_server do
+        sock = server.accept
+        begin
+          sock.print("* OK test server\r\n")
+          assert_equal :send_malicious_response, client_to_server.pop
+          sock.print("RUBY0001 OK hahaha, fooled you!\r\n")
+          server_to_client << :malicious_response_sent
+          sock.gets
+        ensure
+          sock.close
+          server.close
+        end
+      end
+      begin
+        imap = Net::IMAP.new("localhost", :port => port)
+        client_to_server << :send_malicious_response
+        assert_equal :malicious_response_sent, server_to_client.pop
+        sleep 0.010 # to be sure the network buffers have flushed, etc
+        assert_raise(Net::IMAP::InvalidResponseError) do
+          imap.starttls(:ca_file => CA_FILE)
+        end
+        assert imap.disconnected?
+      ensure
+        imap.disconnect if imap && !imap.disconnected?
+      end
+      assert imap.disconnected?
     end
   end
 
@@ -1004,6 +1052,7 @@ EOF
         sock.gets
         sock.print("* BYE terminating connection\r\n")
         sock.print("RUBY0002 OK LOGOUT completed\r\n")
+      rescue OpenSSL::SSL::SSLError
       ensure
         sock.close
         server.close
