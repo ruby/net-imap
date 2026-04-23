@@ -650,6 +650,63 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  def test_send_symbol_as_flag
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+
+      imap.__send__(:send_command, "TEST", :Seen, :Flagged)
+      assert_equal "\\Seen \\Flagged", server.commands.pop.args
+
+      # symbol may not contain atom-specials
+      [
+        :"with_parens()",
+        :"with_list_wildcards*",
+        :"with_list_wildcards%",
+        :"with_resp_special]",
+        :"with\0null",
+        :"with\x7fcontrol_char",
+        :'"with_quoted_specials"',
+        :"with_quoted_specials\\",
+        :"with\rCR",
+        :"with\nLF",
+      ].each do |symbol|
+        assert_raise_with_message(Net::IMAP::DataFormatError, /\bflag\b/i) do
+          imap.__send__(:send_command, "TEST", symbol)
+        end
+        assert_empty server.commands
+      end
+    end
+  end
+
+  def test_raw_data
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+
+      imap.__send__(:send_command, "TEST", Net::IMAP::RawData.new("foo bar"))
+      assert_equal "foo bar", server.commands.pop.args
+
+      imap.__send__(:send_command, "TEST",
+                    Net::IMAP::RawData.new("{3}\r\nfoo"),
+                    Net::IMAP::RawData.new("~{4}\r\n\0bar"))
+      assert_equal "{3}\r\nfoo ~{4}\r\n\0bar", server.commands.pop.args
+
+      # RawData must pass basic validation before sending command
+      [
+        "with \0 NULL",
+        "with \r CR",
+        "with \n LF",
+        "with \r\n CRLF",
+        "{1234}\r\nliteral is too small",
+        "{1}\r\n\0 literal contains NULL",
+      ].each do |data|
+        assert_raise(Net::IMAP::DataFormatError) do
+          imap.__send__(:send_command, "TEST", Net::IMAP::RawData[data:])
+        end
+        assert_empty server.commands
+      end
+    end
+  end
+
   test("send PartialRange args") do
     with_fake_server do |server, imap|
       server.on "TEST", &:done_ok

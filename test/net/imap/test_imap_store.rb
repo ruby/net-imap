@@ -72,9 +72,9 @@ class IMAPStoreTest < Net::IMAP::TestCase
   test "#uid_store with changedsince" do
     with_fake_server select: "inbox" do |server, imap|
       server.on("UID STORE", &:done_ok)
-      imap.uid_store 1..-1, "FLAGS", %i[Deleted], unchangedsince: 987
+      imap.uid_store 1..-1, "+FLAGS.SILENT", %i[Deleted], unchangedsince: 987
       assert_equal(
-        "RUBY0002 UID STORE 1:* (UNCHANGEDSINCE 987) FLAGS (\\Deleted)",
+        "RUBY0002 UID STORE 1:* (UNCHANGEDSINCE 987) +FLAGS.SILENT (\\Deleted)",
         server.commands.pop.raw.strip
       )
     end

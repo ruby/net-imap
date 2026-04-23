@@ -28,6 +28,7 @@ module Net
         end
       when Time, Date, DateTime
       when Symbol
+        Flag.validate(data)
       else
         data.validate
       end
@@ -48,7 +49,7 @@ module Net
       when Date
         send_date_data(data)
       when Symbol
-        send_symbol_data(data)
+        Flag[data].send_data(self, tag)
       else
         data.send_data(self, tag)
       end
@@ -132,11 +133,13 @@ module Net
     def send_date_data(date) put_string Net::IMAP.encode_date(date) end
     def send_time_data(time) put_string Net::IMAP.encode_time(time) end
 
-    def send_symbol_data(symbol)
-      put_string("\\" + symbol.to_s)
-    end
-
     CommandData = Data.define(:data) do # :nodoc:
+      def self.validate(...)
+        data = new(...)
+        data.validate
+        data
+      end
+
       def send_data(imap, tag)
         raise NoMethodError, "#{self.class} must implement #{__method__}"
       end
@@ -145,15 +148,109 @@ module Net
       end
     end
 
+    # Represents IMAP +text+ data, which may contain any 7-bit ASCII character,
+    # except for +NULL+, +CR+, or +LF+.  +text+ is extended to allow any
+    # multibyte +UTF-8+ character when either +UTF8=ACCEPT+ or +IMAP4rev2+ have
+    # been enabled, or when the server supports only +IMAP4rev2+ and not earlier
+    # IMAP revisions, or when the server advertises +UTF8=ONLY+.
+    #
+    # NOTE: The current implementation does not validate whether the connection
+    # currently supports UTF-8.  Future versions may change.
+    #
+    # The string's bytes must be valid ASCII or valid UTF-8.  The string's
+    # reported encoding is ignored, but the string is _not_ transcoded.
+    class RawText < CommandData # :nodoc:
+      def initialize(data:)
+        data = String(data.to_str)
+        data = if data.encoding in Encoding::ASCII | Encoding::UTF_8
+          -data
+        elsif data.ascii_only?
+          -(data.dup.force_encoding("ASCII"))
+        else
+          -(data.dup.force_encoding("UTF-8"))
+        end
+        super
+        validate
+      end
+
+      def validate
+        if data.include?("\0")
+          raise DataFormatError, "NULL byte must be binary literal encoded"
+        elsif !data.valid_encoding?
+          raise DataFormatError, "invalid UTF-8 must be literal encoded"
+        elsif /[\r\n]/.match?(data)
+          raise DataFormatError, "CR and LF bytes must be literal encoded"
+        end
+      end
+
+      def ascii_only? = data.ascii_only?
+
+      def send_data(imap, tag) = imap.__send__(:put_string, data)
+    end
+
     class RawData < CommandData # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:put_string, data)
+      def initialize(data:)
+        data = split_parts(data)
+        super
+        validate
+      end
+
+      def send_data(imap, tag) = data.each do _1.send_data(imap, tag) end
+
+      def validate
+        return unless data.last in RawText(data: text)
+        if text.rindex(/~?\{[1-9]\d*\+?\}\z/n)
+          raise DataFormatError, "RawData cannot end with literal continuation"
+        end
+      end
+
+      private
+
+      def split_parts(data)
+        data = data.b # dups and ensures BINARY encoding
+        parts = []
+        while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n)
+          text, binary, bytesize, non_sync, data = $`, !!$1, $2, !!$3, $'
+          bytesize = Integer bytesize, 10
+          parts << RawText[text] unless text.empty?
+          parts << extract_literal(data, binary:, bytesize:, non_sync:)
+          data[0, bytesize] = ""
+        end
+        parts << RawText[data] unless data.empty?
+        parts
+      end
+
+      def extract_literal(data, binary:, bytesize:, non_sync:)
+        if data.bytesize < bytesize
+          raise DataFormatError, "Too few bytes in string for literal, " \
+            "expected: %s, remaining: %s" % [bytesize, data.bytesize]
+        end
+        literal = data.byteslice(0, bytesize)
+        (binary ? Literal8 : Literal).new(data: literal, non_sync:)
       end
     end
 
     class Atom < CommandData # :nodoc:
+      def initialize(**)
+        super
+        validate
+      end
+
+      def validate
+        data.to_s.ascii_only? \
+          or raise DataFormatError, "#{self.class} must be ASCII only"
+        data.match?(ResponseParser::Patterns::ATOM_SPECIALS) \
+          and raise DataFormatError, "#{self.class} must not contain atom-specials"
+      end
+
       def send_data(imap, tag)
-        imap.__send__(:put_string, data)
+        imap.__send__(:put_string, data.to_s)
+      end
+    end
+
+    class Flag < Atom # :nodoc:
+      def send_data(imap, tag)
+        imap.__send__(:put_string, "\\#{data}")
       end
     end
 
