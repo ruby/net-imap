@@ -365,6 +365,23 @@ class CommandDataTest < Net::IMAP::TestCase
       raw = RawData.new(data: " {123} ")
       assert_equal [RawText[" {123} "]], raw.data
     end
+
+    data(
+      "simple raw text"     => 'hello "world"',
+      "text, literal, text" => "OK {5}\r\nhello {5}\r\nworld",
+      "empty literals"      => "{0}\r\n{0+}\r\n~{0}\r\n~{0+}\r\n",
+      "binary and regular"  => "foo ~{7}\r\n\0bar\r\nbaz {4}\r\nquux",
+    )
+    test ".split" do |string|
+      assert_equal(RawData[string].data, RawData.split(string))
+    end
+
+    test ".split allows final literal prefix" do
+      assert_equal [RawText["text {123}"]],     RawData.split("text {123}")
+      assert_equal [RawText["text+ {123+}"]],   RawData.split("text+ {123+}")
+      assert_equal [RawText["~text ~{123}"]],   RawData.split("~text ~{123}")
+      assert_equal [RawText["~text+ ~{123+}"]], RawData.split("~text+ ~{123+}")
+    end
   end
 
 end
