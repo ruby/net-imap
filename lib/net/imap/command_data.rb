@@ -209,7 +209,16 @@ module Net
 
     class RawData < CommandData # :nodoc:
       def initialize(data:)
-        data = split_parts(data)
+        case data
+        when String
+          data = split_parts(data)
+        when Array
+          unless data.all? { |part| RawText === part || Literal === part }
+            raise TypeError, "expected String or Array[#{RawText} | #{Literal}]"
+          end
+        else
+          raise TypeError, "expected String or Array[#{RawText} | #{Literal}]"
+        end
         super
         validate
       end
