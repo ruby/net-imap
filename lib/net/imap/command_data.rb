@@ -211,7 +211,7 @@ module Net
       def initialize(data:)
         case data
         when String
-          data = split_parts(data)
+          data = self.class.split(data)
         when Array
           unless data.all? { |part| RawText === part || Literal === part }
             raise TypeError, "expected String or Array[#{RawText} | #{Literal}]"
@@ -233,9 +233,11 @@ module Net
         end
       end
 
-      private
-
-      def split_parts(data)
+      # Splits an input +string+ into an array of RawText and Literal/Literal8.
+      #
+      # NOTE: unlike RawData#validate, this does not prevent the final RawText
+      # from ending with a literal prefix.
+      def self.split(data)
         data = data.b # dups and ensures BINARY encoding
         parts = []
         while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n)
@@ -252,7 +254,7 @@ module Net
         parts
       end
 
-      def extract_literal(data, binary:, bytesize:, non_sync:)
+      def self.extract_literal(data, binary:, bytesize:, non_sync:)
         if data.bytesize < bytesize
           raise DataFormatError, "Too few bytes in string for literal, " \
             "expected: %s, remaining: %s" % [bytesize, data.bytesize]
@@ -260,6 +262,7 @@ module Net
         literal = data.byteslice(0, bytesize)
         (binary ? Literal8 : Literal).new(data: literal, non_sync: non_sync)
       end
+      private_class_method :extract_literal
     end
 
     class Atom < CommandData # :nodoc:
