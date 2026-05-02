@@ -156,36 +156,38 @@ module Net
       end
     end
 
-    # Represents IMAP +text+ data, which may contain any 7-bit ASCII character,
-    # except for +NULL+, +CR+, or +LF+.  +text+ is extended to allow any
-    # multibyte +UTF-8+ character when either +UTF8=ACCEPT+ or +IMAP4rev2+ have
-    # been enabled, or when the server supports only +IMAP4rev2+ and not earlier
-    # IMAP revisions, or when the server advertises +UTF8=ONLY+.
+    # Represents IMAP +text+ data, which covers everything in the IMAP grammar,
+    # except for +literal+, +literal8+, and the concluding +CRLF+.
     #
-    # NOTE: The current implementation does not validate whether the connection
-    # currently supports UTF-8.  Future versions may change.
+    # +data+ may contain any 7-bit ASCII character except +NULL+, +CR+, or +LF+.
+    # Any multibyte +UTF-8+ character is also allowed when the connection
+    # supports UTF8: either +UTF8=ACCEPT+ or +IMAP4rev2+ have been enabled, or
+    # the server supports only +IMAP4rev2+ and not earlier IMAP revisions, or
+    # the server advertises +UTF8=ONLY+.
+    #
+    # NOTE: This does not verify whether the connection supports UTF-8, but that
+    # may change in future versions.
     #
     # The string's bytes must be valid ASCII or valid UTF-8.  The string's
     # reported encoding is ignored, but the string is _not_ transcoded.
     class RawText < CommandData # :nodoc:
       def initialize(data:)
         data = String(data.to_str)
-        data = if data.encoding in Encoding::ASCII | Encoding::UTF_8
-          -data
-        elsif data.ascii_only?
-          -(data.dup.force_encoding("ASCII"))
-        else
-          -(data.dup.force_encoding("UTF-8"))
+        unless data.encoding in Encoding::ASCII | Encoding::UTF_8
+          data = data.dup.force_encoding(data.ascii_only? ? "ASCII" : "UTF-8")
         end
+        data = -data
         super
         validate
       end
 
       def validate
-        if data.include?("\0")
-          raise DataFormatError, "NULL byte must be binary literal encoded"
+        if !(data.encoding in Encoding::ASCII | Encoding::UTF_8)
+          raise DataFormatError, "must use ASCII or UTF-8 encoding"
         elsif !data.valid_encoding?
           raise DataFormatError, "invalid UTF-8 must be literal encoded"
+        elsif data.include?("\0")
+          raise DataFormatError, "NULL byte must be binary literal encoded"
         elsif /[\r\n]/.match?(data)
           raise DataFormatError, "CR and LF bytes must be literal encoded"
         end
