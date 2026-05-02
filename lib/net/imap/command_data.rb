@@ -150,8 +150,8 @@ module Net
       end
     end
 
-    # Represents IMAP +text+ data, which covers everything in the IMAP grammar,
-    # except for +literal+, +literal8+, and the concluding +CRLF+.
+    # Represents IMAP +text+ or +quoted+ data, which share the same
+    # validations of decoded #data, and differ only in how they are formatted.
     #
     # +data+ may contain any 7-bit ASCII character except +NULL+, +CR+, or +LF+.
     # Any multibyte +UTF-8+ character is also allowed when the connection
@@ -164,7 +164,7 @@ module Net
     #
     # The string's bytes must be valid ASCII or valid UTF-8.  The string's
     # reported encoding is ignored, but the string is _not_ transcoded.
-    class RawText < CommandData # :nodoc:
+    class ValidNonLiteralData < CommandData
       def initialize(data:)
         data = String(data.to_str)
         unless data.encoding in Encoding::ASCII | Encoding::UTF_8
@@ -189,7 +189,17 @@ module Net
 
       def ascii_only? = data.ascii_only?
 
-      def send_data(imap, tag) = imap.__send__(:put_string, data)
+      def send_data(imap, tag = nil) = imap.__send__(:put_string, formatted)
+    end
+
+    # Represents IMAP +text+ data, which covers everything in the IMAP grammar,
+    # except for +literal+, +literal8+, and the concluding +CRLF+.
+    #
+    # NOTE: The current implementation does not verify that the connection
+    # supports UTF-8.  Future versions may validate this.
+    class RawText < ValidNonLiteralData # :nodoc:
+      # raw: no formatting necessary
+      alias formatted data
     end
 
     class RawData < CommandData # :nodoc:
@@ -268,10 +278,13 @@ module Net
       end
     end
 
-    class QuotedString < CommandData # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:send_quoted_string, data)
-      end
+    # Represents a IMAP +quoted+ string, which can encode any valid ASCII or
+    # UTF-8 string, unless it contains any +CR+, +LF+, or +NULL+ bytes.
+    #
+    # NOTE: The current implementation does not verify that the connection
+    # supports UTF-8.  Future versions may validate this.
+    class QuotedString < ValidNonLiteralData # :nodoc:
+      def formatted = %("#{data.gsub(/["\\]/, "\\\\\\&")}")
     end
 
     class Literal < Data.define(:data, :non_sync) # :nodoc:
