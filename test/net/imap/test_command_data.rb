@@ -156,19 +156,53 @@ class CommandDataTest < Net::IMAP::TestCase
   end
 
   class RawTextTest < CommandDataTest
-    test "basic ASCII string" do
-      imap.send_data RawText.new('foo "bar" (baz)')
-      assert_equal [Output.put_string('foo "bar" (baz)')], imap.output
+    test "allows ASCII strings with no specials" do
+      imap.send_data(
+        RawText["INBOX"],
+        RawText["etc"]
+      )
+      assert_equal [
+        Output.put_string("INBOX"),
+        Output.put_string("etc"),
+      ], imap.output
+      imap.clear
     end
 
-    test "allows IMAP atom-special symbols" do
-      imap.send_data RawText.new('foo "bar" (baz)')
-      imap.send_data RawText.new("(){}[]%*\"\\")
-      imap.send_data RawText.new("(((((((((((((((( unbalanced ]]]]]]]]]]]]]")
+    test "allows atom specials" do
+      [
+        "  with  spaces  in  string  ",
+        "with_parens()",
+        "with_list_wildcards*",
+        "with_list_wildcards%",
+        "with_resp_special]",
+        "with\x7fcontrol_char",
+        %{(){}[]%*'},
+      ].each do |string|
+        imap.send_data RawText[string]
+      end
       assert_equal [
-        Output.put_string('foo "bar" (baz)'),
-        Output.put_string("(){}[]%*\"\\"),
-        Output.put_string("(((((((((((((((( unbalanced ]]]]]]]]]]]]]"),
+        Output.put_string("  with  spaces  in  string  "),
+        Output.put_string("with_parens()"),
+        Output.put_string("with_list_wildcards*"),
+        Output.put_string("with_list_wildcards%"),
+        Output.put_string("with_resp_special]"),
+        Output.put_string("with\x7fcontrol_char"),
+        Output.put_string(%{(){}[]%*'}),
+      ], imap.output
+    end
+
+    test "allows quoted specials" do
+      [
+        '"with" "quoted" "specials"',
+        '\\with\\quoted\\specials\\',
+        %{(){}[]%*"'\\},
+      ].each do |string|
+        imap.send_data RawText[string]
+      end
+      assert_equal [
+        Output.put_string('"with" "quoted" "specials"'),
+        Output.put_string('\\with\\quoted\\specials\\'),
+        Output.put_string(%{(){}[]%*"'\\}),
       ], imap.output
     end
 
@@ -184,6 +218,15 @@ class CommandDataTest < Net::IMAP::TestCase
       imap.send_data text
       assert_equal [
         Output.put_string("beep\b beep\b escape!\e delete this:\x1f"),
+      ], imap.output
+    end
+
+    test "allows valid UTF-8 multibyte chars" do
+      imap.send_data RawText.new("föó bär")
+      imap.send_data RawText.new("ほげ ふが ぴよ")
+      assert_equal [
+        Output.put_string("föó bär"),
+        Output.put_string("ほげ ふが ぴよ"),
       ], imap.output
     end
 
