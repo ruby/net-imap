@@ -77,9 +77,7 @@ module Net
       end
     end
 
-    def send_quoted_string(str)
-      put_string('"' + str.gsub(/["\\]/, "\\\\\\&") + '"')
-    end
+    def send_quoted_string(str) = QuotedString.new(data: str).send_data(self)
 
     def send_binary_literal(*, **) = send_literal(*, **, binary: true)
 
