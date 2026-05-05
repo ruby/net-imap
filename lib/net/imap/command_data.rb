@@ -110,8 +110,9 @@ module Net
       end
     end
 
+    # NOTE: +num+ should already be an Integer
     def send_number_data(num)
-      put_string(num.to_s)
+      put_string(Integer(num).to_s)
     end
 
     def send_list_data(list, tag = nil)
