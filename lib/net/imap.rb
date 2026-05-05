@@ -1160,14 +1160,27 @@ module Net
     #   imap.logout
     #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS logout>"
     #
+    #   imap = Net::IMAP.new(hostname, ssl: false)
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:143 PLAINTEXT not_authenticated>"
+    #
+    #   imap.starttls verify_mode: OpenSSL::SSL::VERIFY_NONE
+    #   imap.inspect #=> "#<Net::IMAP imap.example.net:993 TLS (NOT VERIFIED) not_authenticated>"
+    #
     def inspect
-      tls_state = tls_verified? ? "TLS" :
-        ssl_ctx ? "TLS (NOT VERIFIED)" :
-        "PLAINTEXT"
       conn_state = disconnected? ? "disconnected" : connection_state.to_sym
       "#<%s:0x%08x %s:%s %s %s>" % [
-        self.class.name, __id__, host, port, tls_state, conn_state
+        self.class.name, __id__, host, port, inspect_tls_state, conn_state
       ]
+    end
+
+    private def inspect_tls_state
+      if tls_verified?
+        "TLS"
+      elsif ssl_ctx && @sock.kind_of?(OpenSSL::SSL::SSLSocket)
+        "TLS (#{@sock.session ? "NOT VERIFIED" : "NOT ESTABLISHED"})"
+      else
+        "PLAINTEXT#{" (TLS NOT STARTED)" if ssl_ctx}"
+      end
     end
 
     # Returns true after the TLS negotiation has completed and the remote
