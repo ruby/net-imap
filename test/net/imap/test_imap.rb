@@ -128,7 +128,8 @@ class IMAPTest < Net::IMAP::TestCase
       assert_equal false, initial_verified
       assert_equal false, initial_params
       assert_equal nil,   initial_ctx
-      assert_equal true, imap.tls_verified?
+      assert_equal true,  imap.tls_verified?
+      assert_include imap.inspect, " TLS disconnected"
       assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
     rescue SystemCallError
       skip $!
@@ -164,6 +165,7 @@ class IMAPTest < Net::IMAP::TestCase
       end
 
       assert_equal false, imap.tls_verified?
+      assert_include imap.inspect, " PLAINTEXT (TLS NOT STARTED) "
       assert_equal({ca_file: CA_FILE},        imap.ssl_ctx_params)
       assert_equal(CA_FILE,                   imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
@@ -201,6 +203,7 @@ class IMAPTest < Net::IMAP::TestCase
         imap.disconnect if imap && !imap.disconnected?
       end
       assert_equal false, imap.tls_verified?
+      assert_include imap.inspect, " PLAINTEXT (TLS NOT STARTED) "
       assert_equal({ca_file: CA_FILE},        imap.ssl_ctx_params)
       assert_equal(CA_FILE,                   imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
