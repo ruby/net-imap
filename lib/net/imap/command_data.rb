@@ -16,14 +16,15 @@ module Net
       when nil
       when String
       when Integer
-        NumValidator.ensure_number(data)
+        # Covers modseq-valzer, which is the largest valid IMAP integer
+        if data.negative?
+          raise DataFormatError, "Integer argument must be unsigned: #{data}"
+        elsif 0xffff_ffff_ffff_ffff < data
+          raise DataFormatError, "Integer argument must fit in 64 bits: #{data}"
+        end
       when Array
-        if data[0] == 'CHANGEDSINCE'
-          NumValidator.ensure_mod_sequence_value(data[1])
-        else
-          data.each do |i|
-            validate_data(i)
-          end
+        data.each do |i|
+          validate_data(i)
         end
       when Time, Date, DateTime
       when Symbol
