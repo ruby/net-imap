@@ -634,7 +634,7 @@ class IMAPTest < Net::IMAP::TestCase
     assert_equal(993, Net::IMAP.default_imaps_port)
   end
 
-  def test_send_invalid_number
+  def test_send_integer
     with_fake_server do |server, imap|
       server.on "TEST", &:done_ok
 
@@ -650,10 +650,22 @@ class IMAPTest < Net::IMAP::TestCase
       imap.__send__(:send_command, "TEST", 2**32 - 1)
       assert_equal (2**32 - 1).to_s, server.commands.pop.args
 
+      imap.__send__(:send_command, "TEST", 2**32)
+      assert_equal (2**32).to_s, server.commands.pop.args
+
+      imap.__send__(:send_command, "TEST", 2**64 - 1)
+      assert_equal (2**64 - 1).to_s, server.commands.pop.args
+
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", 2**32)
+        imap.__send__(:send_command, "TEST", 2**64)
       end
       assert_empty server.commands
+    end
+  end
+
+  def test_send_sequence_set
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
 
       # SequenceSet numbers may be non-zero uint3, and -1 is translated to *
       imap.__send__(:send_command, "TEST", Net::IMAP::SequenceSet.new(-1))
