@@ -240,7 +240,7 @@ module Net
       def validate
         return unless RawText === data.last
         text = data.last.data
-        if text.rindex(/~?\{[1-9]\d*\+?\}\z/n)
+        if text.rindex(/\{\d+\+?\}\z/n)
           raise DataFormatError, "RawData cannot end with literal continuation"
         end
       end
