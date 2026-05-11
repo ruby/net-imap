@@ -89,8 +89,9 @@ module Net
     # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
     #   TODO: Dynamic, based on capabilities and bytesize.
     def send_literal(str, tag = nil, binary: false, non_sync: nil)
+      bytesize = str.bytesize
       synchronize do
-        if non_sync && !non_sync_literal_allowed?(str.bytesize)
+        if non_sync && !non_sync_literal_allowed?(bytesize)
           # TODO: check in Printer, so we don't need to close the connection.
           @sock.close
           raise DataFormatError, "Connection closed: " \
@@ -98,7 +99,7 @@ module Net
         end
         prefix = "~" if binary
         plus = "+" if non_sync
-        put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
+        put_string("#{prefix}{#{bytesize}#{plus}}\r\n")
         if non_sync
           put_string(str)
           return
