@@ -83,12 +83,19 @@ module Net
 
     # `non_sync` is an optional tri-state flag:
     # * `true`  -> Force non-synchronizing `LITERAL+`/`LITERAL-` behavior.
-    #   TODO: raise or warn when capabilities don't allow non_sync.
+    #   NOTE: raises DataFormatError when server doesn't support
+    #   non-synchronizing literal, or literal is too large for LITERAL-.
     # * `false` -> Force normal synchronizing literal behavior.
     # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
     #   TODO: Dynamic, based on capabilities and bytesize.
     def send_literal(str, tag = nil, binary: false, non_sync: nil)
       synchronize do
+        if non_sync && !non_sync_literal_allowed?(str.bytesize)
+          # TODO: check in Printer, so we don't need to close the connection.
+          @sock.close
+          raise DataFormatError, "Connection closed: " \
+            "Cannot send non-synchronizing literal without known server support"
+        end
         prefix = "~" if binary
         plus = "+" if non_sync
         put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
@@ -109,6 +116,15 @@ module Net
         end
       end
     end
+
+    def non_sync_literal_allowed?(bytesize)
+      return unless capabilities_cached?
+      return "+" if capable?("LITERAL+")
+      return "-" if capable_literal_minus? && bytesize <= 4096
+      false
+    end
+
+    def capable_literal_minus?; capable?("LITERAL-") || capable?("IMAP4rev2") end
 
     # NOTE: +num+ should already be an Integer
     def send_number_data(num)
