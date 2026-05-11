@@ -6,10 +6,12 @@ class Net::IMAP::FakeServer
   CommandParseError = Class.new(RuntimeError)
 
   class CommandReader
+    attr_reader :config
     attr_reader :last_command
     attr_accessor :literal_acceptor
 
-    def initialize(socket)
+    def initialize(socket, config:)
+      @config = config
       @socket = socket
       @last_command = nil
       @literal_acceptor = proc {|buff, size| true }
@@ -35,8 +37,11 @@ class Net::IMAP::FakeServer
       end
       throw :eof if buf.empty?
       @last_command = parse(buf)
-    rescue CommandParseError => err
-      raise IOError, err.message if socket.eof? && !buf.end_with?("\r\n")
+    rescue CommandParseError
+      if config.ignore_abrupt_eof? && socket.eof? && !buf.end_with?("\r\n")
+        throw :eof
+      end
+      raise
     end
 
     private

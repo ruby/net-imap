@@ -12,7 +12,7 @@ class Net::IMAP::FakeServer
       @config = server.config
       @socket = Socket.new tcp_socket, config: config
       @state  = ConnectionState.new socket: socket, config: config
-      @reader = CommandReader.new  socket
+      @reader = CommandReader.new  socket, config: config
       @writer = ResponseWriter.new socket, config: config, state: state
       @router = CommandRouter.new  writer, config: config, state: state
     end
