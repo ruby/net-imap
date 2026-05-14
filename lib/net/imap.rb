@@ -2255,6 +2255,7 @@ module Net
     # provided as an array or a string.
     # See {"Argument translation"}[rdoc-ref:#search@Argument+translation]
     # and {"Search criteria"}[rdoc-ref:#search@Search+criteria], below.
+    # <em>Please note</em> the warning for when +criteria+ is a String.
     #
     # +return+ options control what kind of information is returned about
     # messages matching the search +criteria+.  Specifying +return+ should force
@@ -2665,7 +2666,8 @@ module Net
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
-    # See #search for documentation of parameters.
+    # See #search for documentation of parameters.  <em>Please note</em> the
+    # warning for when +criteria+ is a String.
     #
     # ==== Capabilities
     #
@@ -2751,7 +2753,8 @@ module Net
     # {SequenceSet[...]}[rdoc-ref:SequenceSet@Creating+sequence+sets].
     # (For message sequence numbers, use #fetch instead.)
     #
-    # +attr+ behaves the same as with #fetch.
+    # +attr+ behaves the same as with #fetch.  <em>Please note</em> the #fetch
+    # warning on the +attr+ argument.
     # >>>
     #   *Note:* Servers _MUST_ implicitly include the +UID+ message data item as
     #   part of any +FETCH+ response caused by a +UID+ command, regardless of
@@ -2963,8 +2966,10 @@ module Net
 
     # Sends a {SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox for messages that match +search_keys+ and return an
-    # array of message sequence numbers, sorted by +sort_keys+.  +search_keys+
-    # are interpreted the same as for #search.
+    # array of message sequence numbers, sorted by +sort_keys+.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     #--
     # TODO: describe +sort_keys+
@@ -2989,8 +2994,10 @@ module Net
 
     # Sends a {UID SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox for messages that match +search_keys+ and return an
-    # array of unique identifiers, sorted by +sort_keys+.  +search_keys+ are
-    # interpreted the same as for #search.
+    # array of unique identifiers, sorted by +sort_keys+.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # Related: #sort, #search, #uid_search, #thread, #uid_thread
     #
@@ -3004,8 +3011,10 @@ module Net
 
     # Sends a {THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox and return message sequence numbers in threaded
-    # format, as a ThreadMember tree.  +search_keys+ are interpreted the same as
-    # for #search.
+    # format, as a ThreadMember tree.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # The supported algorithms are:
     #
@@ -3030,6 +3039,9 @@ module Net
     # Sends a {UID THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # Related: #thread, #search, #uid_search, #sort, #uid_sort
     #
