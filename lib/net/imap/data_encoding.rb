@@ -155,7 +155,8 @@ module Net
 
     # Common validators of number and nz_number types
     module NumValidator # :nodoc
-      NUMBER_RE = /\A(?:0|[1-9]\d*)\z/
+      NUMBER_RE = /\A\d+\z/
+      NZ_NUMBER_RE = /\A[1-9]\d*\z/
       module_function
 
       # Check if argument is a valid 'number' according to RFC 3501
@@ -251,7 +252,7 @@ module Net
       def coerce_number(num)
         case num
         when Integer   then ensure_number num
-        when NUMBER_RE then ensure_number Integer num
+        when NUMBER_RE then ensure_number num.to_i
         else
           raise DataFormatError, "%p is not a valid number" % [num]
         end
@@ -260,8 +261,8 @@ module Net
       # Like #ensure_nz_number, but usable with numeric String input.
       def coerce_nz_number(num)
         case num
-        when Integer   then ensure_nz_number num
-        when NUMBER_RE then ensure_nz_number Integer num
+        when Integer      then ensure_nz_number num
+        when NZ_NUMBER_RE then ensure_nz_number num.to_i
         else
           raise DataFormatError, "%p is not a valid nz-number" % [num]
         end
@@ -271,7 +272,7 @@ module Net
       def coerce_number64(num)
         case num
         when Integer   then ensure_number64 num
-        when NUMBER_RE then ensure_number64 Integer num
+        when NUMBER_RE then ensure_number64 num.to_i
         else
           raise DataFormatError, "%p is not a valid number64" % [num]
         end
@@ -280,8 +281,8 @@ module Net
       # Like #ensure_nz_number64, but usable with numeric String input.
       def coerce_nz_number64(num)
         case num
-        when Integer   then ensure_nz_number64 num
-        when NUMBER_RE then ensure_nz_number64 Integer num
+        when Integer      then ensure_nz_number64 num
+        when NZ_NUMBER_RE then ensure_nz_number64 num.to_i
         else
           raise DataFormatError, "%p is not a valid nz-number64" % [num]
         end
@@ -291,7 +292,7 @@ module Net
       def coerce_mod_sequence_value(num)
         case num
         when Integer   then ensure_mod_sequence_value num
-        when NUMBER_RE then ensure_mod_sequence_value Integer num
+        when NUMBER_RE then ensure_mod_sequence_value num.to_i
         else
           raise DataFormatError, "%p is not a valid mod-sequence-value" % [num]
         end
@@ -301,7 +302,7 @@ module Net
       def coerce_mod_sequence_valzer(num)
         case num
         when Integer   then ensure_mod_sequence_valzer num
-        when NUMBER_RE then ensure_mod_sequence_valzer Integer num
+        when NUMBER_RE then ensure_mod_sequence_valzer num.to_i
         else
           raise DataFormatError, "%p is not a valid mod-sequence-valzer" % [num]
         end

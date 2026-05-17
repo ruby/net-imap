@@ -9,6 +9,9 @@ class NumValidatorTest < Net::IMAP::TestCase
   TEST_VALUES = {
     -1          => %i[invalid],
 
+    {"000"=> 0} => %i[number           number64                                mod-sequence-valzer],
+    {"011"=>11} => %i[number           number64             mod-sequence-value mod-sequence-valzer],
+
     0           => %i[number           number64                                mod-sequence-valzer],
     1           => %i[number nz-number number64 nz-number64 mod-sequence-value mod-sequence-valzer],
     0x0000_ffff => %i[number nz-number number64 nz-number64 mod-sequence-value mod-sequence-valzer],
@@ -26,14 +29,20 @@ class NumValidatorTest < Net::IMAP::TestCase
 
   def self.each_integer_test_value_for(type)
     TEST_VALUES.each do |value, types|
-      yield value, types.include?(type)
+      yield value, types.include?(type) if Integer === value
     end
   end
 
   def self.each_coercible_test_value_for(type)
-    each_integer_test_value_for(type) do |value, valid|
-      [value, value.to_s].each do |input|
-        yield input, valid, value
+    TEST_VALUES.each do |value, types|
+      valid = types.include?(type)
+      case value
+      in Integer
+        [value, value.to_s].each do |input|
+          yield input, valid, value
+        end
+      in Hash if value.to_a in [[String => input, Integer => coerced]]
+        yield input, valid, coerced
       end
     end
   end
