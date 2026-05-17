@@ -24,11 +24,17 @@ class NumValidatorTest < Net::IMAP::TestCase
 
   TYPES = TEST_VALUES.values.flatten.uniq - [:invalid]
 
-  def self.each_test_value_for(type)
+  def self.each_integer_test_value_for(type)
     TEST_VALUES.each do |value, types|
-      label = value if value < 1
-      label ||= "0x" + ("%016x" % value).chars.each_slice(4).map(&:join).join(?_)
-      yield label, value, types.include?(type)
+      yield value, types.include?(type)
+    end
+  end
+
+  def self.each_coercible_test_value_for(type)
+    each_integer_test_value_for(type) do |value, valid|
+      [value, value.to_s].each do |input|
+        yield input, valid, value
+      end
     end
   end
 
@@ -39,44 +45,46 @@ class NumValidatorTest < Net::IMAP::TestCase
     end
   end
 
+  def self.test_method_invocation(method, input, result: nil, error: nil)
+    label = ->(value) {
+      case value
+      in String                     then value.dump
+      in true | false | nil         then value.to_s
+      in Integer if value.negative? then value.to_s
+      in Integer
+        "0x" + ("%016x" % value).chars.each_slice(4).map(&:join).join(?_)
+      end
+    }
+    if error
+      test "#%s(%s) raises %s" % [method, label[input], error.name] do
+        assert_raise error do NumValidator.public_send(method, input) end
+      end
+    else
+      test "#%s(%s) => %s" % [method, label[input], label.(result)] do
+        assert_equal result, NumValidator.public_send(method, input)
+      end
+    end
+  end
+
   # Test valid_{type}?(input), e.g:
   #   #ensure_nz_number(0x0000_0000_ffff_ffff) => true
   #   #ensure_nz_number(0x0000_0001_0000_0000) => false
-  def self.define_test_for_valid_predicate(method, label, value, valid)
-    test "#%s(%s) => %p" % [method, label, valid] do
-      assert_equal valid, NumValidator.public_send(method, value)
-    end
-  end
-
   each_num_validator_type_method(:valid, "?") do |type, method|
-    each_test_value_for type do |label, value, valid|
-      define_test_for_valid_predicate(method, label, value, valid)
-    end
-  end
-
-  def assert_format_error
-    assert_raise Net::IMAP::DataFormatError do
-      yield
+    each_integer_test_value_for type do |value, valid|
+      test_method_invocation(method, value, result: valid)
     end
   end
 
   # Test ensure_{type}(input), e.g:
   #   #ensure_nz_number(0x0000_0000_ffff_ffff) => 0x0000_0000_ffff_ffff
   #   #ensure_nz_number(0x0000_0001_0000_0000) raises DataFormatError
-  def self.define_test_for_ensure(method, label, value, valid)
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#%s(%s) %s" % [method, label, result] do
-      if valid
-        assert_equal value, NumValidator.public_send(method, value)
-      else
-        assert_format_error do NumValidator.public_send(method, value) end
-      end
-    end
-  end
-
   each_num_validator_type_method(:ensure) do |type, method|
-    each_test_value_for type do |label, value, valid|
-      define_test_for_ensure(method, label, value, valid)
+    each_integer_test_value_for type do |value, valid|
+      if valid
+        test_method_invocation(method, value, result: value)
+      else
+        test_method_invocation(method, value, error: Net::IMAP::DataFormatError)
+      end
     end
   end
 
@@ -85,22 +93,13 @@ class NumValidatorTest < Net::IMAP::TestCase
   #   #coerce_number64("9223372036854775808") raises DataFormatError
   #   #coerce_number64(0x7fff_ffff_ffff_ffff) => 9223372036854775807
   #   #coerce_number64(0x8000_0000_0000_0000) raises DataFormatError
-  def self.define_test_for_coerce(method, label, value, valid)
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#%s(%p) %s" % [method, input, result] do
-        if valid
-          assert_equal value, NumValidator.public_send(method, input)
-        else
-          assert_format_error do NumValidator.public_send(method, input) end
-        end
-      end
-    end
-  end
-
   each_num_validator_type_method(:coerce) do |type, method|
-    each_test_value_for type do |label, value, valid|
-      define_test_for_coerce(method, label, value, valid)
+    each_coercible_test_value_for type do |value, valid, coerced|
+      if valid
+        test_method_invocation(method, value, result: coerced)
+      else
+        test_method_invocation(method, value, error: Net::IMAP::DataFormatError)
+      end
     end
   end
 
