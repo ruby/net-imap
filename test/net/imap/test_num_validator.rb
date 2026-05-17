@@ -22,7 +22,9 @@ class NumValidatorTest < Net::IMAP::TestCase
     0xffff_ffff_ffff_ffff => %i[invalid],
   }
 
-  def self.using_test_values_for(type)
+  TYPES = TEST_VALUES.values.flatten.uniq - [:invalid]
+
+  def self.each_test_value_for(type)
     TEST_VALUES.each do |value, types|
       label = value if value < 1
       label ||= "0x" + ("%016x" % value).chars.each_slice(4).map(&:join).join(?_)
@@ -30,39 +32,25 @@ class NumValidatorTest < Net::IMAP::TestCase
     end
   end
 
-  using_test_values_for :number do |label, value, valid|
-    test "#valid_number?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_number?(value)
+  def self.each_num_validator_type_method(prefix, suffix = "")
+    TYPES.each do |type|
+      method_name = "#{prefix}_#{type}#{suffix}".tr(?-, ?_)
+      yield type, method_name
     end
   end
 
-  using_test_values_for :"nz-number" do |label, value, valid|
-    test "#valid_nz_number?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_nz_number?(value)
+  # Test valid_{type}?(input), e.g:
+  #   #ensure_nz_number(0x0000_0000_ffff_ffff) => true
+  #   #ensure_nz_number(0x0000_0001_0000_0000) => false
+  def self.define_test_for_valid_predicate(method, label, value, valid)
+    test "#%s(%s) => %p" % [method, label, valid] do
+      assert_equal valid, NumValidator.public_send(method, value)
     end
   end
 
-  using_test_values_for :number64 do |label, value, valid|
-    test "#valid_number64?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_number64?(value)
-    end
-  end
-
-  using_test_values_for :"nz-number64" do |label, value, valid|
-    test "#valid_nz_number64?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_nz_number64?(value)
-    end
-  end
-
-  using_test_values_for :"mod-sequence-value" do |label, value, valid|
-    test "#valid_mod_sequence_value?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_mod_sequence_value?(value)
-    end
-  end
-
-  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
-    test "#valid_mod_sequence_valzer?(%s) => %p" % [label, valid] do
-      assert_equal valid, NumValidator.valid_mod_sequence_valzer?(value)
+  each_num_validator_type_method(:valid, "?") do |type, method|
+    each_test_value_for type do |label, value, valid|
+      define_test_for_valid_predicate(method, label, value, valid)
     end
   end
 
@@ -72,147 +60,47 @@ class NumValidatorTest < Net::IMAP::TestCase
     end
   end
 
-  using_test_values_for :number do |label, value, valid|
+  # Test ensure_{type}(input), e.g:
+  #   #ensure_nz_number(0x0000_0000_ffff_ffff) => 0x0000_0000_ffff_ffff
+  #   #ensure_nz_number(0x0000_0001_0000_0000) raises DataFormatError
+  def self.define_test_for_ensure(method, label, value, valid)
     result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_number(%s) %s" % [label, result] do
+    test "#%s(%s) %s" % [method, label, result] do
       if valid
-        assert_equal value, NumValidator.ensure_number(value)
+        assert_equal value, NumValidator.public_send(method, value)
       else
-        assert_format_error do NumValidator.ensure_number(value) end
+        assert_format_error do NumValidator.public_send(method, value) end
       end
     end
   end
 
-  using_test_values_for :"nz-number" do |label, value, valid|
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_nz_number(%s) %s" % [label, result] do
-      if valid
-        assert_equal value, NumValidator.ensure_nz_number(value)
-      else
-        assert_format_error do NumValidator.ensure_nz_number(value) end
-      end
+  each_num_validator_type_method(:ensure) do |type, method|
+    each_test_value_for type do |label, value, valid|
+      define_test_for_ensure(method, label, value, valid)
     end
   end
 
-  using_test_values_for :number64 do |label, value, valid|
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_number64(%s) %s" % [label, result] do
-      if valid
-        assert_equal value, NumValidator.ensure_number64(value)
-      else
-        assert_format_error do NumValidator.ensure_number64(value) end
-      end
-    end
-  end
-
-  using_test_values_for :"nz-number64" do |label, value, valid|
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_nz_number64(%s) %s" % [label, result] do
-      if valid
-        assert_equal value, NumValidator.ensure_nz_number64(value)
-      else
-        assert_format_error do NumValidator.ensure_nz_number64(value) end
-      end
-    end
-  end
-
-  using_test_values_for :"mod-sequence-value" do |label, value, valid|
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_mod_sequence_value(%s) %s" % [label, result] do
-      if valid
-        assert_equal value, NumValidator.ensure_mod_sequence_value(value)
-      else
-        assert_format_error do NumValidator.ensure_mod_sequence_value(value) end
-      end
-    end
-  end
-
-  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
-    result = valid ? "=> #{label}" : "raises DataFormatError"
-    test "#ensure_mod_sequence_valzer(%s) %s" % [label, result] do
-      if valid
-        assert_equal value, NumValidator.ensure_mod_sequence_valzer(value)
-      else
-        assert_format_error do NumValidator.ensure_mod_sequence_valzer(value) end
-      end
-    end
-  end
-
-  using_test_values_for :number do |label, value, valid|
+  # Test coerce_{type}(input), e.g:
+  #   #coerce_number64("9223372036854775807") => 9223372036854775807
+  #   #coerce_number64("9223372036854775808") raises DataFormatError
+  #   #coerce_number64(0x7fff_ffff_ffff_ffff) => 9223372036854775807
+  #   #coerce_number64(0x8000_0000_0000_0000) raises DataFormatError
+  def self.define_test_for_coerce(method, label, value, valid)
     result = valid ? "=> #{value}" : "raises DataFormatError"
     [value, value.to_s].each do |input|
-      test "#coerce_number(%p) %s" % [input, result] do
+      test "#%s(%p) %s" % [method, input, result] do
         if valid
-          assert_equal value, NumValidator.coerce_number(input)
+          assert_equal value, NumValidator.public_send(method, input)
         else
-          assert_format_error do NumValidator.coerce_number(input) end
+          assert_format_error do NumValidator.public_send(method, input) end
         end
       end
     end
   end
 
-  using_test_values_for :"nz-number" do |label, value, valid|
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#coerce_nz_number(%p) %s" % [input, result] do
-        if valid
-          assert_equal value, NumValidator.coerce_nz_number(input)
-        else
-          assert_format_error do NumValidator.coerce_nz_number(input) end
-        end
-      end
-    end
-  end
-
-  using_test_values_for :number64 do |label, value, valid|
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#coerce_number64(%p) %s" % [input, result] do
-        if valid
-          assert_equal value, NumValidator.coerce_number64(input)
-        else
-          assert_format_error do NumValidator.coerce_number64(input) end
-        end
-      end
-    end
-  end
-
-  using_test_values_for :"nz-number64" do |label, value, valid|
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#coerce_nz_number64(%p) %s" % [input, result] do
-        if valid
-          assert_equal value, NumValidator.coerce_nz_number64(input)
-        else
-          assert_format_error do NumValidator.coerce_nz_number64(input) end
-        end
-      end
-    end
-  end
-
-  using_test_values_for :"mod-sequence-value" do |label, value, valid|
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#coerce_mod_sequence_value(%p) %s" % [input, result] do
-        if valid
-          assert_equal value, NumValidator.coerce_mod_sequence_value(input)
-        else
-          assert_format_error do NumValidator.coerce_mod_sequence_value(input) end
-        end
-      end
-    end
-  end
-
-  using_test_values_for :"mod-sequence-valzer" do |label, value, valid|
-    result = valid ? "=> #{value}" : "raises DataFormatError"
-    [value, value.to_s].each do |input|
-      test "#coerce_mod_sequence_valzer(%p) %s" % [input, result] do
-        if valid
-          assert_equal value, NumValidator.coerce_mod_sequence_valzer(input)
-        else
-          assert_format_error do NumValidator.coerce_mod_sequence_valzer(input) end
-        end
-      end
+  each_num_validator_type_method(:coerce) do |type, method|
+    each_test_value_for type do |label, value, valid|
+      define_test_for_coerce(method, label, value, valid)
     end
   end
 
