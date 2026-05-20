@@ -12,6 +12,12 @@ class IMAPFetchTest < Net::IMAP::TestCase
       assert_raise_with_message(ArgumentError, /\Apartial.*uid_fetch/) do
         imap.fetch(1, "FAST", partial: 1..10)
       end
+      assert_raise_with_message(ArgumentError, /\Avanished.*uid_fetch/) do
+        imap.fetch(1, "FAST", changedsince: 1234, vanished: true)
+      end
+      assert_raise_with_message(ArgumentError, /\Avanished.*changedsince/) do
+        imap.uid_fetch(1, "FAST", vanished: true)
+      end
     end
   end
 
@@ -104,6 +110,61 @@ class IMAPFetchTest < Net::IMAP::TestCase
       imap.uid_fetch 1.., "FAST", partial: 1..20, changedsince: 1234
       assert_equal("RUBY0006 UID FETCH 1:* FAST (PARTIAL 1:20 CHANGEDSINCE 1234)",
                    server.commands.pop.raw.strip)
+    end
+  end
+
+  test "#uid_fetch with changedsince and vanished" do
+    with_fake_server select: "inbox" do |server, imap|
+      server.on("UID FETCH") do |resp|
+        resp.untagged "VANISHED (EARLIER) 300:310,405,411"
+        resp.untagged "1 FETCH (UID 404 MODSEQ (65402) FLAGS (\\Seen))"
+        resp.untagged "2 FETCH (UID 406 MODSEQ (75403) FLAGS (\\Deleted))"
+        resp.untagged "4 FETCH (UID 408 MODSEQ (29738) " \
+                      "FLAGS ($NoJunk $AutoJunk $MDNSent))"
+        resp.done_ok
+      end
+      # vanished: true changes the output to begin with VanishedData
+      vanished, *fetched = imap.uid_fetch(300..500, %w[FLAGS],
+                                          changedsince: 12345, vanished: true)
+      assert_equal(
+        "RUBY0002 UID FETCH 300:500 (FLAGS) (CHANGEDSINCE 12345 VANISHED)",
+        server.commands.pop.raw.strip
+      )
+      assert_equal Net::IMAP::VanishedData["300:310,405,411", true], vanished
+      expected = [
+        [1, 404, 65402, %i[Seen]],
+        [2, 406, 75403, %i[Deleted]],
+        [4, 408, 29738, %w[$NoJunk $AutoJunk $MDNSent]],
+      ]
+      assert_equal expected.size, fetched.size
+      fetched.zip(expected).each do |fetch, (seqno, uid, modseq, flags)|
+        assert_instance_of Net::IMAP::FetchData, fetch
+        assert_equal seqno,  fetch.seqno
+        assert_equal uid,    fetch.uid
+        assert_equal modseq, fetch.modseq
+        assert_equal flags,  fetch.flags
+      end
+
+      # without VANISHED
+      server.on("UID FETCH") do |resp|
+        resp.untagged "1 FETCH (UID 404 MODSEQ (65402) FLAGS (\\Seen))"
+        resp.untagged "2 FETCH (UID 406 MODSEQ (75403) FLAGS (\\Deleted))"
+        resp.untagged "4 FETCH (UID 408 MODSEQ (29738) " \
+                      "FLAGS ($NoJunk $AutoJunk $MDNSent))"
+        resp.done_ok
+      end
+      vanished, *fetched = imap.uid_fetch(300..500, %w[FLAGS],
+                                          changedsince: 12345, vanished: true)
+      assert_equal(Net::IMAP::VanishedData[Net::IMAP::SequenceSet.empty, true],
+                   vanished)
+      assert_equal expected.size, fetched.size
+      fetched.zip(expected).each do |fetch, (seqno, uid, modseq, flags)|
+        assert_instance_of Net::IMAP::FetchData, fetch
+        assert_equal seqno,  fetch.seqno
+        assert_equal uid,    fetch.uid
+        assert_equal modseq, fetch.modseq
+        assert_equal flags,  fetch.flags
+      end
     end
   end
 
