@@ -109,6 +109,7 @@ class CommandDataTest < Test::Unit::TestCase
       "with_quoted_specials\\",
       "with\rCR",
       "with\nLF",
+      "", # empty
     ].each do |symbol|
       assert_raise_with_message(Net::IMAP::DataFormatError, /\batom\b/i) do
         imap.send_data Atom[symbol]
@@ -140,6 +141,7 @@ class CommandDataTest < Test::Unit::TestCase
       :"with_quoted_specials\\",
       :"with\rCR",
       :"with\nLF",
+      :"", # empty
     ].each do |symbol|
       assert_raise_with_message(Net::IMAP::DataFormatError, /\bflag\b/i) do
         imap.send_data Flag[symbol]
