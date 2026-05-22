@@ -241,6 +241,8 @@ module Net
           or raise DataFormatError, "#{self.class} must be ASCII only"
         data.match?(ResponseParser::Patterns::ATOM_SPECIALS) \
           and raise DataFormatError, "#{self.class} must not contain atom-specials"
+        data.empty? \
+          and raise DataFormatError, "#{self.class} must not be empty"
       end
 
       def send_data(imap, tag)
