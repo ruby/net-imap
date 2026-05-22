@@ -27,6 +27,14 @@ class IMAPEnableTest < Net::IMAP::TestCase
       assert_equal %w[CONDSTORE],   result1
       assert_equal %w[UTF8=ACCEPT], result2
       assert_equal [],              result3
+
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.enable "injection\r\ninjected logout"
+      end
+      assert_empty cmdq
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.enable "foo", "", "bar"
+      end
     end
   end
 
