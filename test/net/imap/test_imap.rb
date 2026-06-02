@@ -195,7 +195,7 @@ class IMAPTest < Net::IMAP::TestCase
         client_to_server << :send_malicious_response
         assert_equal :malicious_response_sent, server_to_client.pop
         sleep 0.010 # to be sure the network buffers have flushed, etc
-        assert_raise(Net::IMAP::InvalidResponseError) do
+        assert_raise(Net::IMAP::InvalidTaggedResponseError) do
           imap.starttls(:ca_file => CA_FILE)
         end
         assert imap.disconnected?

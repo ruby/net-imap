@@ -279,13 +279,78 @@ module Net
     #
     # This is different from UnknownResponseError: the response has been
     # rejected.  Although it may be parsable, the server is forbidden from
-    # sending it in the current context.  The client should automatically
+    # sending it in the current context.
+    #
+    # This could be caused by a bug in the server or in Net::IMAP.  Or it
+    # might indicate a malicious server, a man-in-the-middle attack, or
+    # client-side command injection.  So the client should automatically
     # disconnect, abruptly (without logout).
     #
     # Note that InvalidResponseError does not inherit from ResponseError: it
     # can be raised before the response is fully parsed.  A related
     # ResponseParseError or ResponseError may be the #cause.
     class InvalidResponseError < Error
+    end
+
+    # Error raised when the server sends a tagged #response that is invalid for
+    # the #command #state.
+    #
+    # This could be caused by a bug in the server or in Net::IMAP.  Or it
+    # might indicate a malicious server, a man-in-the-middle attack, or
+    # client-side command injection, so the client should disconnect
+    # automatically and abruptly (without logout).
+    class InvalidTaggedResponseError < InvalidResponseError
+      # A symbol representing the state of the matching tagged command.
+      #
+      # +:unknown+::
+      #   #response does not match any known command (#command will be +nil+).
+      # +:unstarted+::
+      #   Any tagged #response is invalid before #command starts sending.
+      # +:incomplete+::
+      #   A tagged +OK+ #response is invalid before #command is fully sent.
+      # +:completed+::
+      #   Multiple tagged responses were received for the same command.
+      #
+      # NOTE: Command state is neither anticipated nor remembered indefinitely.
+      # +:unknown+ is used before the matching command is called and after the
+      # it is forgotten.
+      #
+      # NOTE: This version of Net::IMAP does not detect or raise an exception
+      # for all of these states.
+      attr_reader :state
+
+      # Metadata about the matching IMAP command.
+      #
+      # Returns +nil+ when #state is +:unknown+.
+      #
+      # NOTE: The non-nil return type is an unstable API, for debug only.  It
+      # may be changed by any release, without warning or deprecation.
+      attr_reader :command
+
+      # The TaggedResponse which triggered this error
+      attr_reader :response
+
+      def initialize(state, response:, command: nil)
+        response => TaggedResponse[tag:, name: status]
+        case [state, status, command]
+        in :unknown,                _,    nil
+        in :incomplete,             "OK", {tag: ^tag, name:}
+        in :unstarted | :completed, _,    {tag: ^tag, name:}
+        end
+        @state, @command, @response = state, command, response
+        cmd_desc = name ? "#{state} #{name}" : state
+        super "Received tagged #{status} to #{cmd_desc} command (tag=#{tag})"
+      rescue NoMatchingPatternError => err
+        raise ArgumentError, err.message
+      end
+
+      def detailed_message(**)
+        "#{message}.\n" \
+          "Disconnecting: This could indicate a malicious server, a " \
+          "man-in-the-middle attack, a client-side command injection, or " \
+          "a bug in net-imap.\n" \
+          "response.data=#{response.data.inspect}"
+      end
     end
 
     # Error raised upon an unknown response from the server.
