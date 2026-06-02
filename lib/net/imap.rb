@@ -3202,8 +3202,8 @@ module Net
       synchronize do
         tag = Thread.current[:net_imap_tag] = generate_tag
         command = Command[tag:, name: "IDLE"]
-        finish_sending_command(command)
         put_string("#{tag} IDLE#{CRLF}")
+        finish_sending_command(command)
 
         begin
           add_response_handler(&response_handler)
@@ -3220,6 +3220,9 @@ module Net
             response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
         end
+      rescue InvalidResponseError
+        disconnect
+        raise
       end
 
       return response

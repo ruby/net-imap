@@ -184,6 +184,12 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     end
   end
 
+  def assert_stream_closed_error
+    assert_raise_with_message(IOError, /\A(?:stream closed|closed stream)\z/) do
+      yield
+    end
+  end
+
   def pend_if(condition, *args, &block)
     if condition
       pend(*args, &block)
