@@ -210,6 +210,57 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  # Similar to STARTTLS stripping test, but checks other commands too
+  data(
+    "IDLE"   => ->imap do imap.idle(1) do end end,
+    "NOOP"   => ->imap do imap.noop end,
+    "SELECT" => ->imap do imap.select("inbox") end,
+  )
+  test "premature tagged OK response" do |cmd|
+    timeout = 5
+    timeout *= EnvUtil.timeout_scale || 1 if defined?(EnvUtil.timeout_scale)
+    Timeout.timeout(timeout) do
+      server_to_client = Queue.new
+      client_to_server = Queue.new
+      rcvr_to_client   = Queue.new
+      server = create_tcp_server
+      port = server.addr[1]
+      start_server do
+        sock = server.accept
+        begin
+          sock.print("* OK test server\r\n")
+          assert_equal :send_malicious_responses, client_to_server.pop
+          sock.print("RUBY0001 OK invalid\r\n")
+          sock.print("RUBY0002 OK false\r\n")
+          sock.print("RUBY0003 OK tricky\r\n")
+          server_to_client << :sent_malicious_responses
+          sock.gets
+        ensure
+          sock.close
+          server.close
+        end
+      end
+      begin
+        imap = Net::IMAP.new(server_addr, port:)
+        i = 0
+        imap.add_response_handler do |resp|
+          rcvr_to_client << (i += 1)
+        end
+        client_to_server << :send_malicious_responses
+        assert_equal :sent_malicious_responses, server_to_client.pop
+        assert_equal [1, 2, 3], 3.times.map { rcvr_to_client.pop }
+        # should respond this way for _any_ command
+        assert_raise(Net::IMAP::InvalidTaggedResponseError) do cmd.(imap) end
+        assert imap.disconnected?
+        assert_stream_closed_error do cmd.(imap) end
+        assert_stream_closed_error do cmd.(imap) end
+        assert_stream_closed_error do cmd.(imap) end
+      ensure
+        imap.disconnect if imap
+      end
+    end
+  end
+
   def start_server
     th = Thread.new do
       yield
