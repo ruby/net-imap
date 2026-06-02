@@ -3568,8 +3568,8 @@ module Net
             end
           end
         rescue Exception => e
-          @exception = e
           synchronize do
+            @exception = e
             @tagged_response_arrival.broadcast
             @continuation_request_arrival.broadcast
           end
