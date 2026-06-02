@@ -3566,9 +3566,7 @@ module Net
             @response_handlers.each do |handler|
               handler.call(resp)
             end
-          end
-        rescue Exception => e
-          synchronize do
+          rescue Exception => e
             @exception = e
             @tagged_response_arrival.broadcast
             @continuation_request_arrival.broadcast
