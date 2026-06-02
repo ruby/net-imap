@@ -3252,8 +3252,8 @@ module Net
       response = nil
 
       synchronize do
-        tag = Thread.current[:net_imap_tag] = generate_tag
-        command = Command[tag:, name: "IDLE"]
+        command = start_command(name: "IDLE")
+        tag = Thread.current[:net_imap_tag] = command.tag # TODO: remove this
         put_string("#{tag} IDLE#{CRLF}")
         finish_sending_command(command)
 
@@ -3687,8 +3687,8 @@ module Net
     def send_command(cmd, *args, &block)
       args.each do validate_data _1 end
       synchronize do
-        tag = generate_tag
-        command = Command[tag:, name: cmd]
+        command = start_command(name: cmd)
+        tag = command.tag
         put_string(tag + " " + cmd)
         args.each do |i|
           put_string(" ")
@@ -3708,6 +3708,15 @@ module Net
         disconnect
         raise
       end
+    end
+
+    def start_command(**)
+      raise IOError, "closed stream" if disconnected?
+      command = Command.new(**, tag: generate_tag)
+      if (response = @tagged_responses[command.tag])
+        raise InvalidTaggedResponseError.new(:unstarted, command:, response:)
+      end
+      command
     end
 
     # NOTE: This must be synchronized with sending the command's final CRLF and
