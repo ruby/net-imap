@@ -229,8 +229,7 @@ class IMAPErrorsTest < Net::IMAP::TestCase
     end
 
     response = Net::IMAP::TaggedResponse[
-      tag: "RUBY0001", name: "NO",
-      data: Net::IMAP::ResponseText[code: nil, text: "cheating"]
+      "RUBY0001", "NO", Net::IMAP::ResponseText[nil, "cheating"]
     ]
     assert_raise(ArgumentError) do
       Net::IMAP::InvalidTaggedResponseError.new(:unstarted, response:)
@@ -256,8 +255,7 @@ class IMAPErrorsTest < Net::IMAP::TestCase
                  err.detailed_message)
 
     response = Net::IMAP::TaggedResponse[
-      tag: "RUBY0001", name: "OK",
-      data: Net::IMAP::ResponseText[code: nil, text: "cheating"]
+      "RUBY0001", "OK", Net::IMAP::ResponseText[code: nil, text: "cheating"]
     ]
     command = Net::IMAP::Command[tag: "RUBY0001", name: "STARTTLS"]
     err = Net::IMAP::InvalidTaggedResponseError.new(:incomplete, response:, command:)
