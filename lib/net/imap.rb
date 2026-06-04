@@ -3573,6 +3573,7 @@ module Net
           end
         end
       end
+    ensure
       synchronize do
         @receiver_thread_terminating = true
         @tagged_response_arrival.broadcast
@@ -3580,9 +3581,8 @@ module Net
         if @idle_done_cond
           @idle_done_cond.signal
         end
+        state_logout!
       end
-    ensure
-      state_logout!
     end
 
     def get_response
