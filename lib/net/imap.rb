@@ -3679,10 +3679,10 @@ module Net
         ensure
           remove_response_handler(block) if block
         end
+      rescue InvalidResponseError
+        disconnect
+        raise
       end
-    rescue InvalidResponseError
-      disconnect
-      raise
     end
 
     # NOTE: This must be synchronized with sending the command's final CRLF and
