@@ -1190,22 +1190,24 @@ module Net
 
     # Disconnects from the server.
     #
-    # Waits for receiver thread to close before returning.  Slow or stuck
-    # response handlers can cause #disconnect to hang until they complete.
+    # Waits for receiver thread to close before returning, except when called
+    # from inside the connection mutex such as from a response handler.  Slow or
+    # stuck response handlers can cause #disconnect to hang until they complete.
     #
     # Related: #logout, #logout!
     def disconnect
       in_logout_state = try_state_logout?
       return if disconnected?
+      in_receiver_thread = Thread.current == @receiver_thread
       begin
         @sock.to_io.shutdown
       rescue Errno::ENOTCONN
         # ignore `Errno::ENOTCONN: Socket is not connected' on some platforms.
       rescue Exception => e
-        @receiver_thread.raise(e)
+        @receiver_thread.raise(e) unless in_receiver_thread
       end
       @sock.close
-      @receiver_thread.join
+      @receiver_thread.join unless mon_owned? || in_receiver_thread
       raise e if e
     ensure
       # Try again after shutting down the receiver thread.  With no reciever
