@@ -3517,9 +3517,6 @@ module Net
     def receive_responses
       connection_closed = false
       until connection_closed
-        synchronize do
-          @exception = nil
-        end
         begin
           resp = get_response
         rescue Exception => e
@@ -3570,6 +3567,8 @@ module Net
             @exception = e
             @tagged_response_arrival.broadcast
             @continuation_request_arrival.broadcast
+          ensure
+            @exception = nil unless connection_closed
           end
         end
       end
