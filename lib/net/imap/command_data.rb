@@ -141,6 +141,9 @@ module Net
     def send_date_data(date) put_string Net::IMAP.encode_date(date) end
     def send_time_data(time) put_string Net::IMAP.encode_time(time) end
 
+    # NOTE: Currently for internal use only.  The API is expected to change.
+    Command = Data.define(:tag, :name) # :nodoc:
+
     CommandData = Data.define(:data) do # :nodoc:
       def self.validate(...)
         data = new(...)

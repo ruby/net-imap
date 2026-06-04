@@ -219,4 +219,50 @@ class IMAPErrorsTest < Net::IMAP::TestCase
                  "exceeds max_response_size (1200B)", err.message)
   end
 
+  test "InvalidTaggedResponseError" do
+    assert_raise(ArgumentError) do Net::IMAP::InvalidTaggedResponseError.new end
+    assert_raise(ArgumentError) do
+      Net::IMAP::InvalidTaggedResponseError.new("foo", response: nil)
+    end
+    assert_raise(ArgumentError) do
+      Net::IMAP::InvalidTaggedResponseError.new(:unknown, response: nil)
+    end
+
+    response = Net::IMAP::TaggedResponse[
+      "RUBY0001", "NO", Net::IMAP::ResponseText[nil, "cheating"]
+    ]
+    assert_raise(ArgumentError) do
+      Net::IMAP::InvalidTaggedResponseError.new(:unstarted, response:)
+    end
+
+    err = Net::IMAP::InvalidTaggedResponseError.new(:unknown, response:)
+    assert_match(/tagged NO to unknown command.*tag=RUBY0001\b/i, err.message)
+    assert_match(/\bdisconnecting\b/i, err.detailed_message)
+    assert_match(/response.data=#<struct Net::IMAP::ResponseText.+cheating.*>/i,
+                 err.detailed_message)
+
+    command = Net::IMAP::Command[tag: "mismatch", name: "NOOP"]
+    assert_raise(ArgumentError) do
+      Net::IMAP::InvalidTaggedResponseError.new(:unstarted, response:, command:)
+    end
+
+    command = Net::IMAP::Command[tag: "RUBY0001", name: "NOOP"]
+    err = Net::IMAP::InvalidTaggedResponseError.new(:unstarted, response:, command:)
+    assert_match(/tagged NO to unstarted NOOP command.*tag=RUBY0001\b/i,
+                 err.message)
+    assert_match(/\bdisconnecting\b/i, err.detailed_message)
+    assert_match(/response.data=#<struct Net::IMAP::ResponseText.+cheating.*>/i,
+                 err.detailed_message)
+
+    response = Net::IMAP::TaggedResponse[
+      "RUBY0001", "OK", Net::IMAP::ResponseText[code: nil, text: "cheating"]
+    ]
+    command = Net::IMAP::Command[tag: "RUBY0001", name: "STARTTLS"]
+    err = Net::IMAP::InvalidTaggedResponseError.new(:incomplete, response:, command:)
+    assert_match(/tagged OK to incomplete STARTTLS command.*tag=RUBY0001\b/i,
+                 err.message)
+    assert_match(/\bdisconnecting\b/i, err.detailed_message)
+    assert_match(/response.data=#<struct Net::IMAP::ResponseText.+cheating.*>/i,
+                 err.detailed_message)
+  end
 end
