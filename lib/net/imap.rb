@@ -3574,13 +3574,13 @@ module Net
       end
     ensure
       synchronize do
+        state_logout!
         @receiver_thread_terminating = true
         @tagged_response_arrival.broadcast
         @continuation_request_arrival.broadcast
         if @idle_done_cond
           @idle_done_cond.signal
         end
-        state_logout!
       end
     end
 
