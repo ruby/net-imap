@@ -1055,15 +1055,16 @@ module Net
     # Related: #logout, #logout!
     def disconnect
       return if disconnected?
+      in_receiver_thread = Thread.current == @receiver_thread
       begin
         @sock.to_io.shutdown
       rescue Errno::ENOTCONN
         # ignore `Errno::ENOTCONN: Socket is not connected' on some platforms.
       rescue Exception => e
-        @receiver_thread.raise(e)
+        @receiver_thread.raise(e) unless in_receiver_thread
       end
       @sock.close
-      @receiver_thread.join
+      @receiver_thread.join unless mon_owned? || in_receiver_thread
       raise e if e
     end
 
