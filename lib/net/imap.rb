@@ -3661,10 +3661,8 @@ module Net
     end
 
     def send_command(cmd, *args, &block)
+      args.each do validate_data _1 end
       synchronize do
-        args.each do |i|
-          validate_data(i)
-        end
         tag = generate_tag
         command = Command[tag:, name: cmd]
         put_string(tag + " " + cmd)
