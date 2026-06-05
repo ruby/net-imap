@@ -3587,34 +3587,6 @@ module Net
       state_logout!
     end
 
-    def get_tagged_response(tag, cmd, timeout = nil)
-      if timeout
-        deadline = Time.now + timeout
-      end
-      until @tagged_responses.key?(tag)
-        raise @exception if @exception
-        if timeout
-          timeout = deadline - Time.now
-          if timeout <= 0
-            return nil
-          end
-        end
-        @tagged_response_arrival.wait(timeout)
-      end
-      resp = @tagged_responses.delete(tag)
-      case resp.name
-      when /\A(?:OK)\z/ni
-        return resp
-      when /\A(?:NO)\z/ni
-        raise NoResponseError, resp
-      when /\A(?:BAD)\z/ni
-        raise BadResponseError, resp
-      else
-        disconnect
-        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
-      end
-    end
-
     def get_response
       buff = @reader.read_response_buffer
       return nil if buff.length == 0
@@ -3690,6 +3662,34 @@ module Net
     def finish_sending_command(command)
       if (response = @tagged_responses[command.tag])&.name&.casecmp?("OK")
         raise InvalidTaggedResponseError.new(:incomplete, command:, response:)
+      end
+    end
+
+    def get_tagged_response(tag, cmd, timeout = nil)
+      if timeout
+        deadline = Time.now + timeout
+      end
+      until @tagged_responses.key?(tag)
+        raise @exception if @exception
+        if timeout
+          timeout = deadline - Time.now
+          if timeout <= 0
+            return nil
+          end
+        end
+        @tagged_response_arrival.wait(timeout)
+      end
+      resp = @tagged_responses.delete(tag)
+      case resp.name
+      when /\A(?:OK)\z/ni
+        return resp
+      when /\A(?:NO)\z/ni
+        raise NoResponseError, resp
+      when /\A(?:BAD)\z/ni
+        raise BadResponseError, resp
+      else
+        disconnect
+        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
       end
     end
 
