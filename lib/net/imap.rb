@@ -3212,7 +3212,7 @@ module Net
           @idle_done_cond.wait(timeout)
           @idle_done_cond = nil
           if @receiver_thread_terminating
-            raise @exception || Net::IMAP::Error.new("connection closed")
+            reraise @exception || Net::IMAP::Error.new("connection closed")
           end
         ensure
           remove_response_handler(response_handler)
@@ -3670,7 +3670,7 @@ module Net
         deadline = Time.now + timeout
       end
       until @tagged_responses.key?(tag)
-        raise @exception if @exception
+        reraise @exception
         if timeout
           timeout = deadline - Time.now
           if timeout <= 0
@@ -3690,6 +3690,31 @@ module Net
       else
         disconnect
         raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
+      end
+    end
+
+    # Raises a copy of +exception+ with an updated +backtrace+ and +cause+, or
+    # returns +nil+ when +exception+ is falsey.
+    #
+    # +backtrace+ is set to reflect the current caller.
+    #
+    # +cause+ is set to the original exception, _if_ the original has its own
+    # backtrace or cause.  Otherwise, the original was never raised and the
+    # default cause is used.
+    #
+    # This is meant for exceptions that may have been created by another thread.
+    # Raising them directly gives a misleading backtrace, making it hard to
+    # discover where the errors originate.  Although it is sometimes more
+    # appropriate to raise a wrapping exception, that changes the API and forces
+    # updates to users' `rescue` pattern matching.
+    def reraise(exception)
+      return unless exception
+      copy = exception.dup
+      copy.set_backtrace nil
+      if exception.cause || exception.backtrace
+        raise copy, cause: exception
+      else
+        raise copy
       end
     end
 
