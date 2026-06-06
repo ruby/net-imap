@@ -216,7 +216,7 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
       assert_raise(expected, &block)
     end
     stack = caller
-    assert_equal stack, error.backtrace.last(stack.size)
+    assert_equal stack, error.backtrace&.last(stack.size)
     error
   end
 

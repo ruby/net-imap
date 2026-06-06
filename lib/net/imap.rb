@@ -3710,7 +3710,14 @@ module Net
     def reraise(exception)
       return unless exception
       copy = exception.dup
-      copy.set_backtrace nil
+      # NOTE: set_backtrace(caller_locations) doesn't work for CRuby <= 3.3.
+      #   and set_backtrace(nil) doesn't work for TruffleRuby 34.0.0:
+      #   https://github.com/truffleruby/truffleruby/issues/4296
+      if RUBY_ENGINE == "truffleruby"
+        copy.set_backtrace caller_locations
+      else
+        copy.set_backtrace nil
+      end
       if exception.cause || exception.backtrace
         raise copy, cause: exception
       else
