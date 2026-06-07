@@ -42,6 +42,8 @@ class Net::IMAP::FakeServer
         end
         socket&.close unless socket&.closed?
       end
+    rescue Errno::EPIPE, Errno::ECONNRESET
+      raise unless config.ignore_abrupt_eof?
     end
 
     private

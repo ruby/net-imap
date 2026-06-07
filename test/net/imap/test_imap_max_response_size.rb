@@ -22,7 +22,7 @@ class IMAPMaxResponseSizeTest < Net::IMAP::TestCase
   test "#max_response_size closes connection for too long line" do
     Net::IMAP.config.max_response_size = 10
     run_fake_server_in_thread(preauth: false, ignore_io_error: true) do |server|
-      assert_raise_with_message(
+      assert_local_raise(
         Net::IMAP::ResponseTooLargeError, /exceeds max_response_size .*\b10B\b/
       ) do
         with_client("localhost", port: server.port) do
@@ -40,9 +40,10 @@ class IMAPMaxResponseSizeTest < Net::IMAP::TestCase
       server.on("NOOP") do |resp|
         resp.untagged("1 FETCH (BODY[] {1000}\r\n" + "a" * 1000 + ")")
       end
-      assert_raise_with_message(
+      assert_reraised(
         Net::IMAP::ResponseTooLargeError,
-        /\d+B read \+ 1000B literal.* exceeds max_response_size .*\b50B\b/
+        /\d+B read \+ 1000B literal.* exceeds max_response_size .*\b50B\b/,
+        imap: client
       ) do
         client.noop
         fail "should not get here (FETCH literal longer than max_response_size)"

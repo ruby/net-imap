@@ -72,4 +72,16 @@ class IMAPResponseHandlersTest < Net::IMAP::TestCase
     end
   end
 
+  test "error raised in response handler blocks later handlers" do
+    with_fake_server do |server, imap|
+      seen = []
+      imap.add_response_handler do seen << {first: _1.name} end
+      imap.add_response_handler do raise "ohno" end
+      imap.add_response_handler do seen << {last: _1.name} end
+
+      imap.noop
+      assert_equal [{first: "OK"}], seen
+    end
+  end
+
 end

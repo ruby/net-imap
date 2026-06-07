@@ -62,6 +62,17 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     end
   end
 
+  def wait_for_receiver_thread_terminating(imap, timeout: 0.5, interval: 0.001)
+    deadline = Time.now + timeout
+    loop do
+      break if imap.instance_exec {
+        synchronize { @receiver_thread_terminating }
+      }
+      break :deadline if deadline < Time.now
+      sleep interval
+    end
+  end
+
   # assert_linear_performance didn't fail reliably until "n" was far too high,
   # even though the problem was very obvious at lower "n" values, by looking at
   # the mean (plus stddev) rather than the max (plus variance-based "safety
@@ -185,9 +196,43 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
   end
 
   def assert_stream_closed_error
-    assert_raise_with_message(IOError, /\A(?:stream closed|closed stream)\z/) do
+    assert_local_raise(IOError, /\A(?:stream closed|closed stream)\z/) do
       yield
     end
+  end
+
+  # Combines +assert_raise+ and +assert_raise_with_message+ with an assertion
+  # that the backtrace matches the caller.
+  def assert_local_raise(expected, message = nil)
+    error = nil
+    block = -> do
+      yield
+    rescue expected => error
+      raise
+    end
+    if message
+      assert_raise_with_message(expected, message, &block)
+    else
+      assert_raise(expected, &block)
+    end
+    stack = caller
+    assert_equal stack, error.backtrace&.last(stack.size)
+    error
+  end
+
+  # Combines +assert_local_raise+ with an assertion that the exception's cause
+  # is in the receiver thread.
+  #
+  # Must be called at least once while the receiver_thread is still running, so
+  # it can capture the top of the stacktrace.  After that, it'll continue to use
+  # the same stacktrace.
+  def assert_reraised(*args, imap: nil, &block)
+    @rcvr_thread_trace ||= imap.instance_variable_get(:@receiver_thread)
+      &.backtrace&.last(2)
+    error = assert_local_raise(*args, &block)
+    refute_nil @rcvr_thread_trace, "receiver thread not running?"
+    size = @rcvr_thread_trace.size
+    assert_equal @rcvr_thread_trace, error.cause&.backtrace.last(size)
   end
 
   def pend_if(condition, *args, &block)

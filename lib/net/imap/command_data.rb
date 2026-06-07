@@ -102,8 +102,7 @@ module Net
         @continuation_request_exception = nil
         begin
           @continuation_request_arrival.wait
-          e = @continuation_request_exception || @exception
-          raise e if e
+          reraise @continuation_request_exception || @exception
           put_string(str)
         ensure
           @continued_command_tag = nil

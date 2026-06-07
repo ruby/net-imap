@@ -42,6 +42,9 @@ class Net::IMAP::FakeServer
         throw :eof
       end
       raise
+    rescue Errno::EPIPE, Errno::ECONNRESET
+      throw :eof if config.ignore_abrupt_eof?
+      raise
     end
 
     private

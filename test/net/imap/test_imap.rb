@@ -13,7 +13,7 @@ class IMAPTest < Net::IMAP::TestCase
 
   if defined?(OpenSSL::SSL::SSLError)
     def test_imaps_unknown_ca
-      assert_raise(OpenSSL::SSL::SSLError) do
+      assert_local_raise(OpenSSL::SSL::SSLError) do
         imaps_test do |port|
           begin
             Net::IMAP.new("localhost",
@@ -81,7 +81,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_imaps_post_connection_check
-      assert_raise(OpenSSL::SSL::SSLError) do
+      assert_local_raise(OpenSSL::SSL::SSLError) do
         imaps_test do |port|
           # server_addr is different from the hostname in the certificate,
           # so the following code should raise a SSLError.
@@ -156,7 +156,7 @@ class IMAPTest < Net::IMAP::TestCase
       end
       begin
         imap = Net::IMAP.new("localhost", :port => port)
-        assert_raise(Net::IMAP::InvalidResponseError) do
+        assert_reraised(Net::IMAP::InvalidResponseError, imap:) do
           imap.starttls(:ca_file => CA_FILE)
         end
         assert imap.disconnected?
@@ -195,7 +195,7 @@ class IMAPTest < Net::IMAP::TestCase
         client_to_server << :send_malicious_response
         assert_equal :malicious_response_sent, server_to_client.pop
         sleep 0.010 # to be sure the network buffers have flushed, etc
-        assert_raise(Net::IMAP::InvalidTaggedResponseError) do
+        assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
           imap.starttls(:ca_file => CA_FILE)
         end
         assert imap.disconnected?
@@ -250,7 +250,9 @@ class IMAPTest < Net::IMAP::TestCase
         assert_equal :sent_malicious_responses, server_to_client.pop
         assert_equal [1, 2, 3], 3.times.map { rcvr_to_client.pop }
         # should respond this way for _any_ command
-        assert_raise(Net::IMAP::InvalidTaggedResponseError) do cmd.(imap) end
+        assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
+          cmd.(imap)
+        end
         assert imap.disconnected?
         assert_stream_closed_error do cmd.(imap) end
         assert_stream_closed_error do cmd.(imap) end
@@ -286,11 +288,73 @@ class IMAPTest < Net::IMAP::TestCase
     end
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
-      assert_raise(EOFError) do
+      assert_local_raise EOFError do
         imap.logout
       end
     ensure
       imap.disconnect if imap
+    end
+  end
+
+  BrokenResponseReaderTestError = Class.new(StandardError)
+
+  test "exception from response reader" do
+    with_fake_server ignore_io_error: true, ignore_abrupt_eof: true do |server, imap|
+      handler = imap.add_response_handler do
+        imap.instance_exec do
+          def @reader.read_response_buffer
+            raise BrokenResponseReaderTestError, "testing"
+          end
+        end
+        imap.remove_response_handler handler
+      end
+      server.unsolicited "OK [ALERT] trigger read_response_buffer switcheroo"
+      server.unsolicited "OK [ALERT] trigger reader error"
+      # NOTE: closing the socket happens in the receiver thread, creating a race
+      # condition if a client thread issues a command right *here*.
+      #
+      # If a command is called here, it may run before or after the response
+      # reader error closes the connection.  If it runs before, then
+      # `get_tagged_response` should return the BrokenResponseReaderTestError
+      # exception.  If it runs after, we'll see the "stream closed" IOError.
+      #
+      # The distinction between these errors is not considered important enough
+      # to justify delaying for the "correct" error or complex tests to capture
+      # each possible case.
+      #
+      # By waiting for the receiver thread to close, this test ensures a stable
+      # result: the socket will be closed and `@exception` will be assigned...
+      # But, since `send_command` doesn't currently check this before attempting
+      # to send, it simply raises the "stream closed" IOError.
+      wait_for_receiver_thread_terminating(imap)
+
+      assert imap.disconnected?
+      assert_stream_closed_error do
+        imap.noop
+      end
+      assert imap.disconnected?
+    end
+  end
+
+  test "exception from response parser" do
+    with_fake_server ignore_io_error: true, ignore_abrupt_eof: true do |server, imap|
+      server.on "NOOP" do |resp|
+        resp.puts "#{resp.tag} NOPE [SERVERBUG] this ain't right!"
+      end
+      assert_reraised(Net::IMAP::InvalidResponseError, /bad.*NOPE/, imap:) do
+        imap.noop
+      end
+      assert imap.disconnected?
+    end
+    with_fake_server ignore_abrupt_eof: true do |server, imap|
+      server.on "FETCH" do |resp|
+        resp.untagged '1 FETCH (BODY[] ")'
+        resp.done_ok
+      end
+      assert_reraised(Net::IMAP::ResponseParseError, imap:) do
+        imap.fetch 1, "FAST"
+      end
+      assert imap.disconnected?
     end
   end
 
@@ -420,7 +484,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
-      assert_raise(Net::IMAP::Error) do
+      assert_local_raise(Net::IMAP::Error) do
         imap.idle_done
       end
     ensure
@@ -501,7 +565,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
     begin
       imap = Net::IMAP.new(server_addr, :port => port)
-      assert_raise(Net::IMAP::ByeResponseError) do
+      assert_local_raise(Net::IMAP::ByeResponseError) do
         imap.login("user", "password")
       end
     end
@@ -533,7 +597,7 @@ class IMAPTest < Net::IMAP::TestCase
       end
       imap.logout
     ensure
-      assert_raise(RuntimeError) do
+      assert_local_raise(RuntimeError) do
         imap.disconnect
       end
     end
@@ -578,7 +642,7 @@ class IMAPTest < Net::IMAP::TestCase
             c.signal
           end
         end
-        assert_raise(EOFError) do
+        assert_local_raise(EOFError) do
           imap.idle do |res|
             m.synchronize do
               in_idle = true
@@ -654,7 +718,7 @@ class IMAPTest < Net::IMAP::TestCase
         server.close
       end
     end
-    assert_raise(Net::IMAP::Error) do
+    assert_local_raise(Net::IMAP::Error) do
       #Net::IMAP.new(server_addr, :port => port)
       if true
           net_imap.new(server_addr, :port => port)
@@ -873,7 +937,7 @@ class IMAPTest < Net::IMAP::TestCase
 
       # limited automatic non-synchronizing literals
       imap.config.max_non_synchronizing_literal = 5
-      assert_raise(Net::IMAP::NoResponseError) do
+      assert_local_raise(Net::IMAP::NoResponseError) do
         send_args.call [
           Net::IMAP::Literal["\rhi\r"],
           Net::IMAP::Literal["\x01" * 10],
@@ -1026,6 +1090,7 @@ class IMAPTest < Net::IMAP::TestCase
             sock.close
           end
         rescue Errno::EPIPE, Errno::ECONNRESET, Errno::ECONNABORTED
+        rescue OpenSSL::SSL::SSLError
         end
       end
       sleep 0.1 until started

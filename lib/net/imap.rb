@@ -3212,7 +3212,7 @@ module Net
           @idle_done_cond.wait(timeout)
           @idle_done_cond = nil
           if @receiver_thread_terminating
-            raise @exception || Net::IMAP::Error.new("connection closed")
+            reraise @exception || Net::IMAP::Error.new("connection closed")
           end
         ensure
           remove_response_handler(response_handler)
@@ -3587,34 +3587,6 @@ module Net
       state_logout!
     end
 
-    def get_tagged_response(tag, cmd, timeout = nil)
-      if timeout
-        deadline = Time.now + timeout
-      end
-      until @tagged_responses.key?(tag)
-        raise @exception if @exception
-        if timeout
-          timeout = deadline - Time.now
-          if timeout <= 0
-            return nil
-          end
-        end
-        @tagged_response_arrival.wait(timeout)
-      end
-      resp = @tagged_responses.delete(tag)
-      case resp.name
-      when /\A(?:OK)\z/ni
-        return resp
-      when /\A(?:NO)\z/ni
-        raise NoResponseError, resp
-      when /\A(?:BAD)\z/ni
-        raise BadResponseError, resp
-      else
-        disconnect
-        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
-      end
-    end
-
     def get_response
       buff = @reader.read_response_buffer
       return nil if buff.length == 0
@@ -3690,6 +3662,66 @@ module Net
     def finish_sending_command(command)
       if (response = @tagged_responses[command.tag])&.name&.casecmp?("OK")
         raise InvalidTaggedResponseError.new(:incomplete, command:, response:)
+      end
+    end
+
+    def get_tagged_response(tag, cmd, timeout = nil)
+      if timeout
+        deadline = Time.now + timeout
+      end
+      until @tagged_responses.key?(tag)
+        reraise @exception
+        if timeout
+          timeout = deadline - Time.now
+          if timeout <= 0
+            return nil
+          end
+        end
+        @tagged_response_arrival.wait(timeout)
+      end
+      resp = @tagged_responses.delete(tag)
+      case resp.name
+      when /\A(?:OK)\z/ni
+        return resp
+      when /\A(?:NO)\z/ni
+        raise NoResponseError, resp
+      when /\A(?:BAD)\z/ni
+        raise BadResponseError, resp
+      else
+        disconnect
+        raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
+      end
+    end
+
+    # Raises a copy of +exception+ with an updated +backtrace+ and +cause+, or
+    # returns +nil+ when +exception+ is falsey.
+    #
+    # +backtrace+ is set to reflect the current caller.
+    #
+    # +cause+ is set to the original exception, _if_ the original has its own
+    # backtrace or cause.  Otherwise, the original was never raised and the
+    # default cause is used.
+    #
+    # This is meant for exceptions that may have been created by another thread.
+    # Raising them directly gives a misleading backtrace, making it hard to
+    # discover where the errors originate.  Although it is sometimes more
+    # appropriate to raise a wrapping exception, that changes the API and forces
+    # updates to users' `rescue` pattern matching.
+    def reraise(exception)
+      return unless exception
+      copy = exception.dup
+      # NOTE: set_backtrace(caller_locations) doesn't work for CRuby <= 3.3.
+      #   and set_backtrace(nil) doesn't work for TruffleRuby 34.0.0:
+      #   https://github.com/truffleruby/truffleruby/issues/4296
+      if RUBY_ENGINE == "truffleruby"
+        copy.set_backtrace caller_locations
+      else
+        copy.set_backtrace nil
+      end
+      if exception.cause || exception.backtrace
+        raise copy, cause: exception
+      else
+        raise copy
       end
     end
 
