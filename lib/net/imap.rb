@@ -3516,47 +3516,9 @@ module Net
 
     def receive_responses
       exception = nil
-      connection_closed = false
-      until connection_closed
+      loop do
         resp = get_response or raise EOFError, "end of file reached"
-        begin
-          synchronize do
-            case resp
-            when TaggedResponse
-              @tagged_responses[resp.tag] = resp
-              @tagged_response_arrival.broadcast
-              case resp.tag
-              when @logout_command_tag
-                state_logout!
-                return
-              when @continued_command_tag
-                @continuation_request_exception =
-                  RESPONSE_ERRORS[resp.name].new(resp)
-                @continuation_request_arrival.signal
-              end
-            when UntaggedResponse
-              record_untagged_response(resp)
-              if resp.name == "BYE" && @logout_command_tag.nil?
-                state_logout!
-                @sock.close
-                @exception = ByeResponseError.new(resp)
-                connection_closed = true
-              end
-            when ContinuationRequest
-              @continuation_request_arrival.signal
-            end
-            state_unselected! if resp in {data: {code: {name: "CLOSED"}}}
-            @response_handlers.each do |handler|
-              handler.call(resp)
-            end
-          rescue Exception => e
-            @exception = e
-            @tagged_response_arrival.broadcast
-            @continuation_request_arrival.broadcast
-          ensure
-            @exception = nil unless connection_closed
-          end
-        end
+        handle_response(resp) or return
       end
     rescue Exception => exception
       # NOTE: this rescue clause is only capturing the exception for the ensure
@@ -3593,6 +3555,47 @@ module Net
 
     #############################
     # built-in response handlers
+
+    def handle_response(resp)
+      connection_closed = false
+      synchronize do
+        case resp
+        when TaggedResponse
+          @tagged_responses[resp.tag] = resp
+          @tagged_response_arrival.broadcast
+          case resp.tag
+          when @logout_command_tag
+            state_logout!
+            return
+          when @continued_command_tag
+            @continuation_request_exception =
+              RESPONSE_ERRORS[resp.name].new(resp)
+            @continuation_request_arrival.signal
+          end
+        when UntaggedResponse
+          record_untagged_response(resp)
+          if resp.name == "BYE" && @logout_command_tag.nil?
+            state_logout!
+            @sock.close
+            @exception = ByeResponseError.new(resp)
+            connection_closed = true
+          end
+        when ContinuationRequest
+          @continuation_request_arrival.signal
+        end
+        state_unselected! if resp in {data: {code: {name: "CLOSED"}}}
+        @response_handlers.each do |handler|
+          handler.call(resp)
+        end
+      rescue Exception => e
+        @exception = e
+        @tagged_response_arrival.broadcast
+        @continuation_request_arrival.broadcast
+      ensure
+        @exception = nil unless connection_closed
+      end
+      !connection_closed
+    end
 
     # store name => [..., data]
     def record_untagged_response(resp)
