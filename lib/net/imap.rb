@@ -3518,18 +3518,12 @@ module Net
       connection_closed = false
       until connection_closed
         begin
-          resp = get_response
+          resp = get_response or raise EOFError, "end of file reached"
         rescue Exception => e
           synchronize do
             state_logout!
             @sock.close
             @exception = e
-          end
-          break
-        end
-        unless resp
-          synchronize do
-            @exception = EOFError.new("end of file reached")
           end
           break
         end
