@@ -3661,10 +3661,8 @@ module Net
     end
 
     def send_command(cmd, *args, &block)
+      args.each do validate_data _1 end
       synchronize do
-        args.each do |i|
-          validate_data(i)
-        end
         tag = generate_tag
         command = Command[tag:, name: cmd]
         put_string(tag + " " + cmd)
@@ -3681,10 +3679,10 @@ module Net
         ensure
           remove_response_handler(block) if block
         end
+      rescue InvalidResponseError
+        disconnect
+        raise
       end
-    rescue InvalidResponseError
-      disconnect
-      raise
     end
 
     # NOTE: This must be synchronized with sending the command's final CRLF and
