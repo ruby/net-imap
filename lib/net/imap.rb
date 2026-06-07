@@ -3517,16 +3517,7 @@ module Net
     def receive_responses
       connection_closed = false
       until connection_closed
-        begin
-          resp = get_response or raise EOFError, "end of file reached"
-        rescue Exception => e
-          synchronize do
-            state_logout!
-            @sock.close
-            @exception = e
-          end
-          break
-        end
+        resp = get_response or raise EOFError, "end of file reached"
         begin
           synchronize do
             case resp
@@ -3568,6 +3559,12 @@ module Net
       end
     ensure
       synchronize do
+        if $!
+          # Handling exceptions here, not in a rescue clause, so the lock isn't
+          # released and reacquired between rescue and ensure clauses.
+          @exception ||= $!
+          @sock.close
+        end
         state_logout!
         @receiver_thread_terminating = true
         @tagged_response_arrival.broadcast
