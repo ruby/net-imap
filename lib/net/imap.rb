@@ -3515,25 +3515,16 @@ module Net
     end
 
     def receive_responses
-      exception = nil
       loop do
         resp = get_response or raise EOFError, "end of file reached"
         handle_response(resp) or return
       end
-    rescue Exception => exception
-      # NOTE: this rescue clause is only capturing the exception for the ensure
-      # clause.  Using `$!` in the ensure clause seems to trigger a weird
-      # TruffleRuby bug: https://github.com/truffleruby/truffleruby/issues/4308
-      #
-      # We don't assign @exception directly here, because we want that to be
-      # atomically synchronized with all of the other changes in `ensure`.
-      raise
     ensure
       synchronize do
-        if exception
+        if $!
           # Handling exceptions here, not in a rescue clause, so the lock isn't
           # released and reacquired between rescue and ensure clauses.
-          @exception ||= exception
+          @exception ||= $!
           @sock.close
         end
         state_logout!
