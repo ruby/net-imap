@@ -3515,18 +3515,10 @@ module Net
     end
 
     def receive_responses
+      exception = nil
       connection_closed = false
       until connection_closed
-        begin
-          resp = get_response or raise EOFError, "end of file reached"
-        rescue Exception => e
-          synchronize do
-            state_logout!
-            @sock.close
-            @exception = e
-          end
-          break
-        end
+        resp = get_response or raise EOFError, "end of file reached"
         begin
           synchronize do
             case resp
@@ -3566,8 +3558,22 @@ module Net
           end
         end
       end
+    rescue Exception => exception
+      # NOTE: this rescue clause is only capturing the exception for the ensure
+      # clause.  Using `$!` in the ensure clause seems to trigger a weird
+      # TruffleRuby bug: https://github.com/truffleruby/truffleruby/issues/4308
+      #
+      # We don't assign @exception directly here, because we want that to be
+      # atomically synchronized with all of the other changes in `ensure`.
+      raise
     ensure
       synchronize do
+        if exception
+          # Handling exceptions here, not in a rescue clause, so the lock isn't
+          # released and reacquired between rescue and ensure clauses.
+          @exception ||= exception
+          @sock.close
+        end
         state_logout!
         @receiver_thread_terminating = true
         @tagged_response_arrival.broadcast
