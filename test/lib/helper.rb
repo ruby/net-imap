@@ -233,6 +233,9 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     refute_nil @rcvr_thread_trace, "receiver thread not running?"
     size = @rcvr_thread_trace.size
     assert_equal @rcvr_thread_trace, error.cause&.backtrace.last(size)
+  rescue Exception
+    puts error.full_message if error
+    raise
   end
 
   def pend_if(condition, *args, &block)

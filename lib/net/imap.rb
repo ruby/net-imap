@@ -3697,13 +3697,25 @@ module Net
     # updates to users' `rescue` pattern matching.
     def reraise(exception)
       return unless exception
-      copy = exception.dup
       # NOTE: set_backtrace(caller_locations) doesn't work for CRuby <= 3.3.
       #   and set_backtrace(nil) doesn't work for TruffleRuby 34.0.0:
       #   https://github.com/truffleruby/truffleruby/issues/4296
       if RUBY_ENGINE == "truffleruby"
-        copy.set_backtrace caller_locations
+        if exception.backtrace
+          puts
+          puts ?= * 60
+          puts exception.full_message
+          puts ?- * 60
+          copy = exception.dup
+          copy.set_backtrace caller_locations
+          puts exception.full_message
+          puts ?- * 60
+        else
+          copy = exception.dup
+          copy.set_backtrace caller_locations
+        end
       else
+        copy = exception.dup
         copy.set_backtrace nil
       end
       if exception.cause || exception.backtrace
