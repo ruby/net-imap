@@ -3515,27 +3515,10 @@ module Net
     end
 
     def receive_responses
+      exception = nil
       connection_closed = false
       until connection_closed
-        synchronize do
-          @exception = nil
-        end
-        begin
-          resp = get_response
-        rescue Exception => e
-          synchronize do
-            state_logout!
-            @sock.close
-            @exception = e
-          end
-          break
-        end
-        unless resp
-          synchronize do
-            @exception = EOFError.new("end of file reached")
-          end
-          break
-        end
+        resp = get_response or raise EOFError, "end of file reached"
         begin
           synchronize do
             case resp
@@ -3566,16 +3549,32 @@ module Net
             @response_handlers.each do |handler|
               handler.call(resp)
             end
-          end
-        rescue Exception => e
-          @exception = e
-          synchronize do
+          rescue Exception => e
+            @exception = e
             @tagged_response_arrival.broadcast
             @continuation_request_arrival.broadcast
+          ensure
+            @exception = nil unless connection_closed
           end
         end
       end
+    rescue Exception => exception
+      # NOTE: this rescue clause is only capturing the exception for the ensure
+      # clause.  Using `$!` in the ensure clause seems to trigger a weird
+      # TruffleRuby bug: https://github.com/truffleruby/truffleruby/issues/4308
+      #
+      # We don't assign @exception directly here, because we want that to be
+      # atomically synchronized with all of the other changes in `ensure`.
+      raise
+    ensure
       synchronize do
+        if exception
+          # Handling exceptions here, not in a rescue clause, so the lock isn't
+          # released and reacquired between rescue and ensure clauses.
+          @exception ||= exception
+          @sock.close
+        end
+        state_logout!
         @receiver_thread_terminating = true
         @tagged_response_arrival.broadcast
         @continuation_request_arrival.broadcast
@@ -3583,8 +3582,6 @@ module Net
           @idle_done_cond.signal
         end
       end
-    ensure
-      state_logout!
     end
 
     def get_response
