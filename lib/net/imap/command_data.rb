@@ -86,15 +86,23 @@ module Net
 
     # `non_sync` is an optional tri-state flag:
     # * `true`  -> Force non-synchronizing `LITERAL+`/`LITERAL-` behavior.
-    #   TODO: raise or warn when capabilities don't allow non_sync.
+    #   NOTE: raises DataFormatError when server doesn't support
+    #   non-synchronizing literal, or literal is too large for LITERAL-.
     # * `false` -> Force normal synchronizing literal behavior.
     # * `nil`   -> (default) Currently behaves like `false` (will be dynamic).
     #   TODO: Dynamic, based on capabilities and bytesize.
     def send_literal(str, tag = nil, binary: false, non_sync: nil)
+      bytesize = str.bytesize
       synchronize do
+        if non_sync && !non_sync_literal_allowed?(bytesize)
+          # TODO: check in Printer, so we don't need to close the connection.
+          @sock.close
+          raise DataFormatError, "Connection closed: " \
+            "Cannot send non-synchronizing literal without known server support"
+        end
         prefix = "~" if binary
         plus = "+" if non_sync
-        put_string("#{prefix}{#{str.bytesize}#{plus}}\r\n")
+        put_string("#{prefix}{#{bytesize}#{plus}}\r\n")
         if non_sync
           put_string(str)
           return
@@ -112,6 +120,15 @@ module Net
         end
       end
     end
+
+    def non_sync_literal_allowed?(bytesize)
+      return unless capabilities_cached?
+      return "+" if capable?("LITERAL+")
+      return "-" if capable_literal_minus? && bytesize <= 4096
+      false
+    end
+
+    def capable_literal_minus? = capable?("LITERAL-") || capable?("IMAP4rev2")
 
     # NOTE: +num+ should already be an Integer
     def send_number_data(num)
@@ -150,36 +167,38 @@ module Net
       end
     end
 
-    # Represents IMAP +text+ data, which may contain any 7-bit ASCII character,
-    # except for +NULL+, +CR+, or +LF+.  +text+ is extended to allow any
-    # multibyte +UTF-8+ character when either +UTF8=ACCEPT+ or +IMAP4rev2+ have
-    # been enabled, or when the server supports only +IMAP4rev2+ and not earlier
-    # IMAP revisions, or when the server advertises +UTF8=ONLY+.
+    # Represents IMAP +text+ or +quoted+ data, which share the same
+    # validations of decoded #data, and differ only in how they are formatted.
     #
-    # NOTE: The current implementation does not validate whether the connection
-    # currently supports UTF-8.  Future versions may change.
+    # +data+ may contain any 7-bit ASCII character except +NULL+, +CR+, or +LF+.
+    # Any multibyte +UTF-8+ character is also allowed when the connection
+    # supports UTF8: either +UTF8=ACCEPT+ or +IMAP4rev2+ have been enabled, or
+    # the server supports only +IMAP4rev2+ and not earlier IMAP revisions, or
+    # the server advertises +UTF8=ONLY+.
+    #
+    # NOTE: This does not verify whether the connection supports UTF-8, but that
+    # may change in future versions.
     #
     # The string's bytes must be valid ASCII or valid UTF-8.  The string's
     # reported encoding is ignored, but the string is _not_ transcoded.
-    class RawText < CommandData # :nodoc:
+    class ValidNonLiteralData < CommandData
       def initialize(data:)
         data = String(data.to_str)
-        data = if data.encoding in Encoding::ASCII | Encoding::UTF_8
-          -data
-        elsif data.ascii_only?
-          -(data.dup.force_encoding("ASCII"))
-        else
-          -(data.dup.force_encoding("UTF-8"))
+        unless data.encoding in Encoding::ASCII | Encoding::UTF_8
+          data = data.dup.force_encoding(data.ascii_only? ? "ASCII" : "UTF-8")
         end
+        data = -data
         super
         validate
       end
 
       def validate
-        if data.include?("\0")
-          raise DataFormatError, "NULL byte must be binary literal encoded"
+        if !(data.encoding in Encoding::ASCII | Encoding::UTF_8)
+          raise DataFormatError, "must use ASCII or UTF-8 encoding"
         elsif !data.valid_encoding?
           raise DataFormatError, "invalid UTF-8 must be literal encoded"
+        elsif data.include?("\0")
+          raise DataFormatError, "NULL byte must be binary literal encoded"
         elsif /[\r\n]/.match?(data)
           raise DataFormatError, "CR and LF bytes must be literal encoded"
         end
@@ -187,7 +206,17 @@ module Net
 
       def ascii_only? = data.ascii_only?
 
-      def send_data(imap, tag) = imap.__send__(:put_string, data)
+      def send_data(imap, tag = nil) = imap.__send__(:put_string, formatted)
+    end
+
+    # Represents IMAP +text+ data, which covers everything in the IMAP grammar,
+    # except for +literal+, +literal8+, and the concluding +CRLF+.
+    #
+    # NOTE: The current implementation does not verify that the connection
+    # supports UTF-8.  Future versions may validate this.
+    class RawText < ValidNonLiteralData # :nodoc:
+      # raw: no formatting necessary
+      alias formatted data
     end
 
     class RawData < CommandData # :nodoc:
@@ -206,7 +235,7 @@ module Net
 
       def validate
         return unless data.last in RawText(data: text)
-        if text.rindex(/~?\{[1-9]\d*\+?\}\z/n)
+        if text.rindex(/\{\d+\+?\}\z/n)
           raise DataFormatError, "RawData cannot end with literal continuation"
         end
       end
@@ -266,10 +295,13 @@ module Net
       end
     end
 
-    class QuotedString < CommandData # :nodoc:
-      def send_data(imap, tag)
-        imap.__send__(:send_quoted_string, data)
-      end
+    # Represents a IMAP +quoted+ string, which can encode any valid ASCII or
+    # UTF-8 string, unless it contains any +CR+, +LF+, or +NULL+ bytes.
+    #
+    # NOTE: The current implementation does not verify that the connection
+    # supports UTF-8.  Future versions may validate this.
+    class QuotedString < ValidNonLiteralData # :nodoc:
+      def formatted = %("#{data.gsub(/["\\]/, "\\\\\\&")}")
     end
 
     class Literal < Data.define(:data, :non_sync) # :nodoc:

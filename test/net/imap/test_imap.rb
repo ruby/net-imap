@@ -801,7 +801,7 @@ class IMAPTest < Net::IMAP::TestCase
   end
 
   test("send literal args") do
-    with_fake_server do |server, imap|
+    with_fake_server(with_extensions: %w[LITERAL-]) do |server, imap|
       server.on "TEST", &:done_ok
       send_args = ->(*args) do
         imap.__send__(:send_command, "TEST", *args)
@@ -847,6 +847,56 @@ class IMAPTest < Net::IMAP::TestCase
                    "literal8+" " ~{8+}\r\n\0\0\0\0\0\0\0\0 " \
                    "done".b,
                    server.commands.pop.args)
+    end
+  end
+
+  test("send non-synchronizing literals with LITERAL+") do
+    with_fake_server(
+      with_extensions: %w[LITERAL+], greeting_capabilities: true,
+    ) do |server, imap|
+      def imap.send_test_args(*args) = send_command("TEST", *args)
+      server.on "TEST", &:done_ok
+
+      # imap.config.max_non_synchronizing_literal = 5_000
+      # NOTE: support for automatic non-synchronizing literals added in v0.6
+      large = "\xff".b * 5_000
+      imap.send_test_args Net::IMAP::Literal[large, nil]
+      assert_equal("{5000}\r\n#{large}".b, server.commands.pop.args)
+
+      large = "\xff".b * 10_000
+      imap.send_test_args Net::IMAP::Literal[large, nil]
+      assert_equal("{10000}\r\n#{large}".b, server.commands.pop.args)
+
+      imap.send_test_args Net::IMAP::Literal[large, true]
+      assert_equal("{10000+}\r\n#{large}".b, server.commands.pop.args)
+    end
+  end
+
+  test("send non-synchronizing literal that's too large for LITERAL-") do
+    with_fake_server(
+      with_extensions: %w[LITERAL-], greeting_capabilities: true,
+      ignore_abrupt_eof: true, ignore_io_error: true
+    ) do |server, imap|
+      def imap.send_test_args(*args) = send_command("TEST", *args)
+      server.on "TEST", &:done_ok
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.send_test_args Net::IMAP::Literal["\xff".b * 5000, true]
+      end
+      assert imap.disconnected?
+    end
+  end
+
+  test("send non-synchronizing literal without known server support") do
+    with_fake_server(
+      with_extensions: %w[LITERAL+], greeting_capabilities: false,
+      ignore_abrupt_eof: true, ignore_io_error: true
+    ) do |server, imap|
+      def imap.send_test_args(*args) = send_command("TEST", *args)
+      server.on "TEST", &:done_ok
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.send_test_args Net::IMAP::Literal["\xff".b * 100, true]
+      end
+      assert imap.disconnected?
     end
   end
 
