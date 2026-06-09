@@ -45,6 +45,8 @@ class Net::IMAP::FakeServer
       mailboxes: {
         "INBOX" => { name: "INBOX" }.freeze,
       }.freeze,
+
+      ignore_abrupt_eof: false,
     }
 
     def initialize(with_extensions: [], without_extensions: [], **opts, &block)
@@ -68,6 +70,7 @@ class Net::IMAP::FakeServer
     alias greeting_bye?          greeting_bye
     alias greeting_capabilities? greeting_capabilities
     alias sasl_ir?               sasl_ir
+    alias ignore_abrupt_eof?     ignore_abrupt_eof
 
     def on(event, &handler)
       handler or raise ArgumentError

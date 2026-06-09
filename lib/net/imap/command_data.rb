@@ -17,14 +17,15 @@ module Net
       when nil
       when String
       when Integer
-        NumValidator.ensure_number(data)
+        # Covers modseq-valzer, which is the largest valid IMAP integer
+        if data.negative?
+          raise DataFormatError, "Integer argument must be unsigned: #{data}"
+        elsif 0xffff_ffff_ffff_ffff < data
+          raise DataFormatError, "Integer argument must fit in 64 bits: #{data}"
+        end
       when Array
-        if data[0] == 'CHANGEDSINCE'
-          NumValidator.ensure_mod_sequence_value(data[1])
-        else
-          data.each do |i|
-            validate_data(i)
-          end
+        data.each do |i|
+          validate_data(i)
         end
       when Time, Date, DateTime
       when Symbol
@@ -112,8 +113,9 @@ module Net
       end
     end
 
+    # NOTE: +num+ should already be an Integer
     def send_number_data(num)
-      put_string(num.to_s)
+      put_string(Integer(num).to_s)
     end
 
     def send_list_data(list, tag = nil)
@@ -190,7 +192,12 @@ module Net
 
     class RawData < CommandData # :nodoc:
       def initialize(data:)
-        data = split_parts(data)
+        case data
+        in String then data = self.class.split(data)
+        in Array  if   data.all? { _1 in RawText | Literal }
+        else
+          raise TypeError, "expected String or Array[#{RawText} | #{Literal}]"
+        end
         super
         validate
       end
@@ -204,9 +211,11 @@ module Net
         end
       end
 
-      private
-
-      def split_parts(data)
+      # Splits an input +string+ into an array of RawText and Literal/Literal8.
+      #
+      # NOTE: unlike RawData#validate, this does not prevent the final RawText
+      # from ending with a literal prefix.
+      def self.split(data)
         data = data.b # dups and ensures BINARY encoding
         parts = []
         while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n)
@@ -220,7 +229,7 @@ module Net
         parts
       end
 
-      def extract_literal(data, binary:, bytesize:, non_sync:)
+      def self.extract_literal(data, binary:, bytesize:, non_sync:)
         if data.bytesize < bytesize
           raise DataFormatError, "Too few bytes in string for literal, " \
             "expected: %s, remaining: %s" % [bytesize, data.bytesize]
@@ -228,6 +237,7 @@ module Net
         literal = data.byteslice(0, bytesize)
         (binary ? Literal8 : Literal).new(data: literal, non_sync:)
       end
+      private_class_method :extract_literal
     end
 
     class Atom < CommandData # :nodoc:

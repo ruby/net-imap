@@ -627,19 +627,23 @@ class IMAPTest < Net::IMAP::TestCase
         sock.print("RUBY0001 OK TEST completed\r\n")
         sock.gets # Integer: 2**32 - 1
         sock.print("RUBY0002 OK TEST completed\r\n")
-        sock.gets # MessageSet: 1
+        sock.gets # Integer: 2**32
         sock.print("RUBY0003 OK TEST completed\r\n")
-        sock.gets # MessageSet: 2**32 - 1
+        sock.gets # Integer: 2**64 - 1
         sock.print("RUBY0004 OK TEST completed\r\n")
-        sock.gets # SequenceSet: -1 => "*"
+        sock.gets # MessageSet: 1
         sock.print("RUBY0005 OK TEST completed\r\n")
-        sock.gets # SequenceSet: 1
+        sock.gets # MessageSet: 2**32 - 1
         sock.print("RUBY0006 OK TEST completed\r\n")
-        sock.gets # SequenceSet: 2**32 - 1
+        sock.gets # SequenceSet: -1 => "*"
         sock.print("RUBY0007 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 1
+        sock.print("RUBY0008 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 2**32 - 1
+        sock.print("RUBY0009 OK TEST completed\r\n")
         sock.gets # LOGOUT
         sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0008 OK LOGOUT completed\r\n")
+        sock.print("RUBY0010 OK LOGOUT completed\r\n")
       ensure
         sock.close
         server.close
@@ -653,8 +657,10 @@ class IMAPTest < Net::IMAP::TestCase
       end
       imap.__send__(:send_command, "TEST", 0)
       imap.__send__(:send_command, "TEST", 2**32 - 1)
+      imap.__send__(:send_command, "TEST", 2**32)
+      imap.__send__(:send_command, "TEST", 2**64 - 1)
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", 2**32)
+        imap.__send__(:send_command, "TEST", 2**64)
       end
       # MessageSet numbers may be non-zero uint32
       stderr = EnvUtil.verbose_warning do
