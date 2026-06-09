@@ -491,6 +491,13 @@ class CommandDataTest < Net::IMAP::TestCase
       assert_raise(DataFormatError) do RawData.new(data: "~literal+ ~{123+}") end
       raw = RawData.new(data: " {123} ")
       assert_equal [RawText[" {123} "]], raw.data
+
+      assert_raise(DataFormatError) do RawData.new(data: "literal {0}") end
+      assert_raise(DataFormatError) do RawData.new(data: "literal+ {0+}") end
+      assert_raise(DataFormatError) do RawData.new(data: "~literal ~{0}") end
+      assert_raise(DataFormatError) do RawData.new(data: "~literal+ ~{0+}") end
+      raw = RawData.new(data: " {0} ")
+      assert_equal [RawText[" {0} "]], raw.data
     end
 
     data(
