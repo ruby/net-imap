@@ -813,7 +813,7 @@ module Net
   # * {IMAP URLAUTH Authorization Mechanism Registry}[https://www.iana.org/assignments/urlauth-authorization-mechanism-registry/urlauth-authorization-mechanism-registry.xhtml]
   #
   class IMAP < Protocol
-    VERSION = "0.6.4"
+    VERSION = "0.6.4.1"
 
     # Aliases for supported capabilities, to be used with the #enable command.
     ENABLE_ALIASES = {
@@ -3155,10 +3155,11 @@ module Net
       capabilities = capabilities
         .flatten
         .map {|e| ENABLE_ALIASES[e] || e }
+        .flat_map { _1.is_a?(String) && !_1.empty? ? _1.split(/ /, -1) : [_1] }
         .uniq
-        .join(' ')
+        .map { Atom[_1] }
       synchronize do
-        send_command("ENABLE #{capabilities}")
+        send_command("ENABLE", *capabilities)
         result = clear_responses("ENABLED").last || []
         @utf8_strings ||= result.include? "UTF8=ACCEPT"
         @utf8_strings ||= result.include? "IMAP4REV2"
