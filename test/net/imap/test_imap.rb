@@ -827,7 +827,7 @@ class IMAPTest < Test::Unit::TestCase
   test("send non-synchronizing literal that's too large for LITERAL-") do
     with_fake_server(
       with_extensions: %w[LITERAL-], greeting_capabilities: true,
-      ignore_abrupt_eof: true
+      ignore_abrupt_eof: true, ignore_io_error: true
     ) do |server, imap|
       def imap.send_test_args(*args) = send_command("TEST", *args)
       server.on "TEST", &:done_ok
@@ -841,7 +841,7 @@ class IMAPTest < Test::Unit::TestCase
   test("send non-synchronizing literal without known server support") do
     with_fake_server(
       with_extensions: %w[LITERAL+], greeting_capabilities: false,
-      ignore_abrupt_eof: true
+      ignore_abrupt_eof: true, ignore_io_error: true
     ) do |server, imap|
       def imap.send_test_args(*args) = send_command("TEST", *args)
       server.on "TEST", &:done_ok
