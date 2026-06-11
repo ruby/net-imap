@@ -210,13 +210,16 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
-  # Similar to STARTTLS stripping test, but checks other commands too
+  # Similar to STARTTLS stripping test, but checks other commands and statuses
   data(
-    "IDLE"   => ->imap do imap.idle(1) do end end,
-    "NOOP"   => ->imap do imap.noop end,
-    "SELECT" => ->imap do imap.select("inbox") end,
+    "OK for IDLE"    => ["OK",  ->imap do imap.idle(1) do end end],
+    "OK for NOOP"    => ["OK",  ->imap do imap.noop end],
+    "NO for IDLE"    => ["NO",  ->imap do imap.idle(1) do end end],
+    "NO for EXAMINE" => ["NO",  ->imap do imap.examine("inbox") end],
+    "BAD for IDLE"   => ["BAD", ->imap do imap.idle(1) do end end],
+    "BAD for SELECT" => ["BAD", ->imap do imap.select("inbox") end],
   )
-  test "premature tagged OK response" do |cmd|
+  test "premature tagged response" do |(status, cmd)|
     timeout = 5
     timeout *= EnvUtil.timeout_scale || 1 if defined?(EnvUtil.timeout_scale)
     Timeout.timeout(timeout) do
@@ -230,9 +233,9 @@ class IMAPTest < Net::IMAP::TestCase
         begin
           sock.print("* OK test server\r\n")
           assert_equal :send_malicious_responses, client_to_server.pop
-          sock.print("RUBY0001 OK invalid\r\n")
-          sock.print("RUBY0002 OK false\r\n")
-          sock.print("RUBY0003 OK tricky\r\n")
+          sock.print("RUBY0001 #{status} invalid\r\n")
+          sock.print("RUBY0002 #{status} false\r\n")
+          sock.print("RUBY0003 #{status} tricky\r\n")
           server_to_client << :sent_malicious_responses
           sock.gets
         ensure
@@ -250,7 +253,9 @@ class IMAPTest < Net::IMAP::TestCase
         assert_equal :sent_malicious_responses, server_to_client.pop
         assert_equal [1, 2, 3], 3.times.map { rcvr_to_client.pop }
         # should respond this way for _any_ command
-        assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
+        assert_local_raise(
+          Net::IMAP::InvalidTaggedResponseError, / unstarted .*tag=RUBY0001/
+        ) do
           cmd.(imap)
         end
         assert imap.disconnected?
