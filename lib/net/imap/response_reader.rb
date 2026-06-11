@@ -31,7 +31,6 @@ module Net
 
       def bytes_read;       buff.bytesize                         end
       def empty?;           buff.empty?                           end
-      def done?;            line_done? && !get_literal_size       end
       def done?;            line_done? && !literal_size           end
       def line_done?;       buff.end_with?(CRLF)                  end
 
