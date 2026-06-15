@@ -806,7 +806,7 @@ class IMAPTest < Test::Unit::TestCase
     with_fake_server(
       with_extensions: %w[LITERAL+], greeting_capabilities: true,
     ) do |server, imap|
-      def imap.send_test_args(*args) = send_command("TEST", *args)
+      def imap.send_test_args(*args) send_command("TEST", *args) end
       server.on "TEST", &:done_ok
 
       # imap.config.max_non_synchronizing_literal = 5_000
@@ -829,7 +829,7 @@ class IMAPTest < Test::Unit::TestCase
       with_extensions: %w[LITERAL-], greeting_capabilities: true,
       ignore_abrupt_eof: true, ignore_io_error: true
     ) do |server, imap|
-      def imap.send_test_args(*args) = send_command("TEST", *args)
+      def imap.send_test_args(*args) send_command("TEST", *args) end
       server.on "TEST", &:done_ok
       assert_raise(Net::IMAP::DataFormatError) do
         imap.send_test_args Net::IMAP::Literal["\xff".b * 5000, true]
@@ -843,7 +843,7 @@ class IMAPTest < Test::Unit::TestCase
       with_extensions: %w[LITERAL+], greeting_capabilities: false,
       ignore_abrupt_eof: true, ignore_io_error: true
     ) do |server, imap|
-      def imap.send_test_args(*args) = send_command("TEST", *args)
+      def imap.send_test_args(*args) send_command("TEST", *args) end
       server.on "TEST", &:done_ok
       assert_raise(Net::IMAP::DataFormatError) do
         imap.send_test_args Net::IMAP::Literal["\xff".b * 100, true]
