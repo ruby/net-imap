@@ -1111,7 +1111,7 @@ module Net
 
       # Basic Client State
       @utf8_strings = false
-      @debug_output_bol = true
+      @debug_output_line = nil
       @exception = nil
       @greeting = nil
       @capabilities = nil
@@ -3550,7 +3550,7 @@ module Net
     def get_response
       buff = @reader.read_response_buffer
       return nil if buff.length == 0
-      $stderr.print(buff.gsub(/^/n, "S: ")) if config.debug?
+      synchronize do print_debug_trace("S: ", buff) end if config.debug?
       @parser.parse(buff)
     end
 
@@ -3733,15 +3733,20 @@ module Net
 
     def put_string(str)
       @sock.print(str)
-      if config.debug?
-        if @debug_output_bol
-          $stderr.print("C: ")
+      print_debug_trace("C: ", str) if config.debug?
+    end
+
+    def print_debug_trace(prefix, str)
+      str.each_line do |line|
+        if    @debug_output_line.nil?      then $stderr.print prefix
+        elsif @debug_output_line != prefix then $stderr.print "\n", prefix
         end
-        $stderr.print(str.gsub(/\n/n) { $'.empty? ? $& : "\nC: " })
-        if /\n\z/n.match(str)
-          @debug_output_bol = true
+        if /\n\z/n.match?(line)
+          $stderr.puts line.dump.delete_prefix('"').delete_suffix('"')
+          @debug_output_line = nil
         else
-          @debug_output_bol = false
+          $stderr.print line.dump.delete_prefix('"').delete_suffix('"')
+          @debug_output_line = prefix
         end
       end
     end
