@@ -174,6 +174,7 @@ class IMAPTest < Net::IMAP::TestCase
     def test_starttls_stripping_ok_sent_before_response
       # to coordinate between threads (better than sleep)
       server_to_client, client_to_server = Queue.new, Queue.new
+      rcvr_to_client = Queue.new
       imap = nil
       server = create_tcp_server
       port = server.addr[1]
@@ -190,15 +191,23 @@ class IMAPTest < Net::IMAP::TestCase
           server.close
         end
       end
+      timeout = 5
+      timeout *= EnvUtil.timeout_scale || 1 if defined?(EnvUtil.timeout_scale)
       begin
-        imap = Net::IMAP.new("localhost", :port => port)
-        client_to_server << :send_malicious_response
-        assert_equal :malicious_response_sent, server_to_client.pop
-        sleep 0.010 # to be sure the network buffers have flushed, etc
-        assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
-          imap.starttls(:ca_file => CA_FILE)
+        Timeout.timeout(timeout) do
+          imap = Net::IMAP.new("localhost", :port => port)
+          imap.add_response_handler do |resp| rcvr_to_client << resp end
+          client_to_server << :send_malicious_response
+          assert_equal :malicious_response_sent, server_to_client.pop
+          # Wait until the receive thread has parsed the injected response and
+          # stored it in @tagged_responses, so finish_sending_command can see it.
+          # (handle_response stores the tagged response before calling handlers.)
+          rcvr_to_client.pop
+          assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
+            imap.starttls(:ca_file => CA_FILE)
+          end
+          assert imap.disconnected?
         end
-        assert imap.disconnected?
       ensure
         imap.disconnect if imap && !imap.disconnected?
       end

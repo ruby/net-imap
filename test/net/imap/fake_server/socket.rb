@@ -51,7 +51,7 @@ class Net::IMAP::FakeServer
     def ignore_closed?(fallback)
       yield
     rescue IOError => err
-      close if !closed? && (@tcp_socket.closed? || @tls_socket.closed?)
+      close if !closed? && (@tcp_socket.closed? || @tls_socket&.closed?)
       return fallback if err.message.match?(/stream closed|closed stream/i)
       raise
     end
