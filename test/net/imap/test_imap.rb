@@ -632,19 +632,23 @@ class IMAPTest < Test::Unit::TestCase
         sock.print("RUBY0001 OK TEST completed\r\n")
         sock.gets # Integer: 2**32 - 1
         sock.print("RUBY0002 OK TEST completed\r\n")
-        sock.gets # MessageSet: 1
+        sock.gets # Integer: 2**32
         sock.print("RUBY0003 OK TEST completed\r\n")
-        sock.gets # MessageSet: 2**32 - 1
+        sock.gets # Integer: 2**64 - 1
         sock.print("RUBY0004 OK TEST completed\r\n")
-        sock.gets # SequenceSet: -1 => "*"
+        sock.gets # MessageSet: 1
         sock.print("RUBY0005 OK TEST completed\r\n")
-        sock.gets # SequenceSet: 1
+        sock.gets # MessageSet: 2**32 - 1
         sock.print("RUBY0006 OK TEST completed\r\n")
-        sock.gets # SequenceSet: 2**32 - 1
+        sock.gets # SequenceSet: -1 => "*"
         sock.print("RUBY0007 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 1
+        sock.print("RUBY0008 OK TEST completed\r\n")
+        sock.gets # SequenceSet: 2**32 - 1
+        sock.print("RUBY0009 OK TEST completed\r\n")
         sock.gets # LOGOUT
         sock.print("* BYE terminating connection\r\n")
-        sock.print("RUBY0008 OK LOGOUT completed\r\n")
+        sock.print("RUBY0010 OK LOGOUT completed\r\n")
       ensure
         sock.close
         server.close
@@ -658,8 +662,10 @@ class IMAPTest < Test::Unit::TestCase
       end
       imap.__send__(:send_command, "TEST", 0)
       imap.__send__(:send_command, "TEST", 2**32 - 1)
+      imap.__send__(:send_command, "TEST", 2**32)
+      imap.__send__(:send_command, "TEST", 2**64 - 1)
       assert_raise(Net::IMAP::DataFormatError) do
-        imap.__send__(:send_command, "TEST", 2**32)
+        imap.__send__(:send_command, "TEST", 2**64)
       end
       # MessageSet numbers may be non-zero uint32
       assert_raise(Net::IMAP::DataFormatError) do
@@ -747,7 +753,7 @@ class IMAPTest < Test::Unit::TestCase
   end
 
   test("send literal args") do
-    with_fake_server do |server, imap|
+    with_fake_server(with_extensions: %w[LITERAL-]) do |server, imap|
       server.on "TEST", &:done_ok
       send_args = ->(*args) do
         imap.__send__(:send_command, "TEST", *args)
@@ -793,6 +799,56 @@ class IMAPTest < Test::Unit::TestCase
                    "literal8+" " ~{8+}\r\n\0\0\0\0\0\0\0\0 " \
                    "done".b,
                    server.commands.pop.args)
+    end
+  end
+
+  test("send non-synchronizing literals with LITERAL+") do
+    with_fake_server(
+      with_extensions: %w[LITERAL+], greeting_capabilities: true,
+    ) do |server, imap|
+      def imap.send_test_args(*args) send_command("TEST", *args) end
+      server.on "TEST", &:done_ok
+
+      # imap.config.max_non_synchronizing_literal = 5_000
+      # NOTE: support for automatic non-synchronizing literals added in v0.6
+      large = "\xff".b * 5_000
+      imap.send_test_args Net::IMAP::Literal[large, nil]
+      assert_equal("{5000}\r\n#{large}".b, server.commands.pop.args)
+
+      large = "\xff".b * 10_000
+      imap.send_test_args Net::IMAP::Literal[large, nil]
+      assert_equal("{10000}\r\n#{large}".b, server.commands.pop.args)
+
+      imap.send_test_args Net::IMAP::Literal[large, true]
+      assert_equal("{10000+}\r\n#{large}".b, server.commands.pop.args)
+    end
+  end
+
+  test("send non-synchronizing literal that's too large for LITERAL-") do
+    with_fake_server(
+      with_extensions: %w[LITERAL-], greeting_capabilities: true,
+      ignore_abrupt_eof: true, ignore_io_error: true
+    ) do |server, imap|
+      def imap.send_test_args(*args) send_command("TEST", *args) end
+      server.on "TEST", &:done_ok
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.send_test_args Net::IMAP::Literal["\xff".b * 5000, true]
+      end
+      assert imap.disconnected?
+    end
+  end
+
+  test("send non-synchronizing literal without known server support") do
+    with_fake_server(
+      with_extensions: %w[LITERAL+], greeting_capabilities: false,
+      ignore_abrupt_eof: true, ignore_io_error: true
+    ) do |server, imap|
+      def imap.send_test_args(*args) send_command("TEST", *args) end
+      server.on "TEST", &:done_ok
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.send_test_args Net::IMAP::Literal["\xff".b * 100, true]
+      end
+      assert imap.disconnected?
     end
   end
 
@@ -1210,6 +1266,14 @@ EOF
       assert_equal %w[CONDSTORE],   result1
       assert_equal %w[UTF8=ACCEPT], result2
       assert_equal [],              result3
+
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.enable "injection\r\ninjected logout"
+      end
+      assert_empty cmdq
+      assert_raise(Net::IMAP::DataFormatError) do
+        imap.enable "foo", "", "bar"
+      end
     end
   end
 

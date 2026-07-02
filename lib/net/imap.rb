@@ -779,7 +779,7 @@ module Net
   # * {IMAP URLAUTH Authorization Mechanism Registry}[https://www.iana.org/assignments/urlauth-authorization-mechanism-registry/urlauth-authorization-mechanism-registry.xhtml]
   #
   class IMAP < Protocol
-    VERSION = "0.4.24"
+    VERSION = "0.4.25"
 
     # Aliases for supported capabilities, to be used with the #enable command.
     ENABLE_ALIASES = {
@@ -1049,26 +1049,22 @@ module Net
 
     # Disconnects from the server.
     #
+    # Waits for receiver thread to close before returning.  Slow or stuck
+    # response handlers can cause #disconnect to hang until they complete.
+    #
     # Related: #logout, #logout!
     def disconnect
       return if disconnected?
+      in_receiver_thread = Thread.current == @receiver_thread
       begin
-        begin
-          # try to call SSL::SSLSocket#io.
-          @sock.io.shutdown
-        rescue NoMethodError
-          # @sock is not an SSL::SSLSocket.
-          @sock.shutdown
-        end
+        @sock.to_io.shutdown
       rescue Errno::ENOTCONN
         # ignore `Errno::ENOTCONN: Socket is not connected' on some platforms.
       rescue Exception => e
-        @receiver_thread.raise(e)
+        @receiver_thread.raise(e) unless in_receiver_thread
       end
-      @receiver_thread.join
-      synchronize do
-        @sock.close
-      end
+      @sock.close
+      @receiver_thread.join unless mon_owned? || in_receiver_thread
       raise e if e
     end
 
@@ -2095,6 +2091,8 @@ module Net
     # string holding the entire search string, or a single-dimension array of
     # search keywords and arguments.
     #
+    # <em>Please note</em> the warning (below) when +keys+ is a String.
+    #
     # Returns a SearchResult object.  SearchResult inherits from Array (for
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
@@ -2104,8 +2102,8 @@ module Net
     # ===== Search criteria
     #
     # >>>
-    #   When +criteria+ is an Array, elements in the array will be validated and
-    #   formatted.  When +criteria+ is a String, it will be sent <em>with
+    #   When +keys+ is an Array, elements in the array will be validated and
+    #   formatted.  When +keys+ is a String, it will be sent <em>with
     #   minimal validation and no encoding or formatting</em>.
     #
     #   <em>*WARNING:* Although CRLF is prohibited, this is vulnerable to other
@@ -2176,7 +2174,8 @@ module Net
     # backward compatibility) but adds SearchResult#modseq when the +CONDSTORE+
     # capability has been enabled.
     #
-    # See #search for documentation of search criteria.
+    # See #search for documentation of parameters.  <em>Please note</em> the
+    # warning for when +keys+ is a String.
     def uid_search(keys, charset = nil)
       return search_internal("UID SEARCH", keys, charset)
     end
@@ -2253,6 +2252,8 @@ module Net
     # Similar to #fetch, but the +set+ parameter contains unique identifiers
     # instead of message sequence numbers.
     #
+    # +attr+ behaves the same as with #fetch.  <em>Please note</em> the #fetch
+    # warning on the +attr+ argument.
     # >>>
     #   *Note:* Servers _MUST_ implicitly include the +UID+ message data item as
     #   part of any +FETCH+ response caused by a +UID+ command, regardless of
@@ -2405,8 +2406,10 @@ module Net
 
     # Sends a {SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox for messages that match +search_keys+ and return an
-    # array of message sequence numbers, sorted by +sort_keys+.  +search_keys+
-    # are interpreted the same as for #search.
+    # array of message sequence numbers, sorted by +sort_keys+.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     #--
     # TODO: describe +sort_keys+
@@ -2431,8 +2434,10 @@ module Net
 
     # Sends a {UID SORT command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox for messages that match +search_keys+ and return an
-    # array of unique identifiers, sorted by +sort_keys+.  +search_keys+ are
-    # interpreted the same as for #search.
+    # array of unique identifiers, sorted by +sort_keys+.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # Related: #sort, #search, #uid_search, #thread, #uid_thread
     #
@@ -2446,8 +2451,10 @@ module Net
 
     # Sends a {THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # to search a mailbox and return message sequence numbers in threaded
-    # format, as a ThreadMember tree.  +search_keys+ are interpreted the same as
-    # for #search.
+    # format, as a ThreadMember tree.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # The supported algorithms are:
     #
@@ -2472,6 +2479,9 @@ module Net
     # Sends a {UID THREAD command [RFC5256 §3]}[https://www.rfc-editor.org/rfc/rfc5256#section-3]
     # Similar to #thread, but returns unique identifiers instead of
     # message sequence numbers.
+    #
+    # +search_keys+ are interpreted the same as the +criteria+ argument for
+    # #search.  <em>Please note</em> the #search warning for String +criteria+.
     #
     # Related: #thread, #search, #uid_search, #sort, #uid_sort
     #
@@ -2560,10 +2570,11 @@ module Net
       capabilities = capabilities
         .flatten
         .map {|e| ENABLE_ALIASES[e] || e }
+        .flat_map { _1.is_a?(String) && !_1.empty? ? _1.split(/ /, -1) : [_1] }
         .uniq
-        .join(' ')
+        .map { Atom[_1] }
       synchronize do
-        send_command("ENABLE #{capabilities}")
+        send_command("ENABLE", *capabilities)
         result = clear_responses("ENABLED").last || []
         @utf8_strings ||= result.include? "UTF8=ACCEPT"
         @utf8_strings ||= result.include? "IMAP4REV2"

@@ -18,10 +18,10 @@ class Net::IMAP::FakeServer
     def tls?; !!@tls_socket end
     def closed?; @closed end
 
-    def eof?;      socket.eof?       end
-    def gets(...)  socket.gets(...)  end
-    def read(...)  socket.read(...)  end
-    def print(...) socket.print(...) end
+    def eof?;      ignore_closed?(true) { socket.eof?       } end
+    def gets(...)  ignore_closed?(nil)  { socket.gets(...)  } end
+    def read(...)  ignore_closed?(nil)  { socket.read(...)  } end
+    def print(...) ignore_closed?(nil)  { socket.print(...) } end
 
     def use_tls
       @tls_socket ||= OpenSSL::SSL::SSLSocket.new(tcp_socket, ssl_ctx).tap do |s|
@@ -46,6 +46,14 @@ class Net::IMAP::FakeServer
         ctx.key  = OpenSSL::PKey::RSA.new         File.read config.tls.fetch :key
         ctx.cert = OpenSSL::X509::Certificate.new File.read config.tls.fetch :cert
       end
+    end
+
+    def ignore_closed?(fallback)
+      yield
+    rescue IOError => err
+      close if !closed? && (@tcp_socket.closed? || @tls_socket.closed?)
+      return fallback if err.message.match?(/stream closed|closed stream/i)
+      raise
     end
 
   end

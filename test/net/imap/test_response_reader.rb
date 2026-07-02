@@ -28,6 +28,8 @@ class ResponseReaderTest < Test::Unit::TestCase
     zero_literal = "tag ok #{literal ""} #{literal ""}\r\n"
     illegal_crs  = "tag ok #{many_crs} #{many_crs}\r\n"
     illegal_lfs  = "tag ok #{literal "\r"}\n#{literal "\r"}\n\r\n"
+    zero_padded  = "+ {010}\r\n1234567890\r\n" # NOTE: it's decimal, not octal!
+    goofy_zero   = "+ {000}\r\n\r\n"
     io = StringIO.new([
       simple,
       long_line,
@@ -36,6 +38,8 @@ class ResponseReaderTest < Test::Unit::TestCase
       zero_literal,
       illegal_crs,
       illegal_lfs,
+      zero_padded,
+      goofy_zero,
       simple,
     ].join)
     rcvr = Net::IMAP::ResponseReader.new(client, io)
@@ -46,6 +50,8 @@ class ResponseReaderTest < Test::Unit::TestCase
     assert_equal zero_literal, rcvr.read_response_buffer.to_str
     assert_equal illegal_crs,  rcvr.read_response_buffer.to_str
     assert_equal illegal_lfs,  rcvr.read_response_buffer.to_str
+    assert_equal zero_padded,  rcvr.read_response_buffer.to_str
+    assert_equal goofy_zero,   rcvr.read_response_buffer.to_str
     assert_equal simple,       rcvr.read_response_buffer.to_str
     assert_equal "",           rcvr.read_response_buffer.to_str
   end
@@ -83,6 +89,21 @@ class ResponseReaderTest < Test::Unit::TestCase
       result = rcvr.read_response_buffer
       flunk "Got result: %p" % [result]
     end
+  end
+
+  data(
+    bad_int64: "+ {99999999999999999999}\r\ndon't even try to read this...",
+  )
+  test "#read_response_buffer with invalid literal size" do |invalid|
+    client  = FakeClient.new
+    client.config.max_response_size = nil # any size is allowed!
+    io = StringIO.new(invalid, "rb")
+    rcvr = Net::IMAP::ResponseReader.new(client, io)
+    assert_raise Net::IMAP::DataFormatError do
+      result = rcvr.read_response_buffer
+      flunk "Got result: %p" % [result]
+    end
+    # assert io.closed?
   end
 
 end

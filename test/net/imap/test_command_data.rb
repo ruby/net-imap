@@ -8,6 +8,7 @@ class CommandDataTest < Test::Unit::TestCase
 
   Atom = Net::IMAP::Atom
   Flag = Net::IMAP::Flag
+  QuotedString = Net::IMAP::QuotedString
   Literal = Net::IMAP::Literal
   Literal8 = Net::IMAP::Literal8
   RawText = Net::IMAP::RawText
@@ -109,6 +110,7 @@ class CommandDataTest < Test::Unit::TestCase
       "with_quoted_specials\\",
       "with\rCR",
       "with\nLF",
+      "", # empty
     ].each do |symbol|
       assert_raise_with_message(Net::IMAP::DataFormatError, /\batom\b/i) do
         imap.send_data Atom[symbol]
@@ -140,6 +142,7 @@ class CommandDataTest < Test::Unit::TestCase
       :"with_quoted_specials\\",
       :"with\rCR",
       :"with\nLF",
+      :"", # empty
     ].each do |symbol|
       assert_raise_with_message(Net::IMAP::DataFormatError, /\bflag\b/i) do
         imap.send_data Flag[symbol]
@@ -177,20 +180,131 @@ class CommandDataTest < Test::Unit::TestCase
     ], imap.output
   end
 
-  class RawTextTest < CommandDataTest
-    test "basic ASCII string" do
-      imap.send_data RawText.new('foo "bar" (baz)')
-      assert_equal [Output.put_string('foo "bar" (baz)')], imap.output
+  class QuotedStringTest < CommandDataTest
+    test "quotes ASCII strings (no specials)" do
+      assert_equal '"INBOX"', QuotedString["INBOX"].formatted
+      imap.send_data(
+        QuotedString["INBOX"],
+        QuotedString["etc"]
+      )
+      assert_equal [
+        Output.put_string('"INBOX"'),
+        Output.put_string('"etc"'),
+      ], imap.output
+      imap.clear
     end
 
-    test "allows IMAP atom-special symbols" do
-      imap.send_data RawText.new('foo "bar" (baz)')
-      imap.send_data RawText.new("(){}[]%*\"\\")
-      imap.send_data RawText.new("(((((((((((((((( unbalanced ]]]]]]]]]]]]]")
+    test "quotes ASCII strings (atom specials)" do
+      [
+        "  with  spaces  in  string  ",
+        "with_parens()",
+        "with_list_wildcards*",
+        "with_list_wildcards%",
+        "with_resp_special]",
+        "with\x7fcontrol_char",
+        %{(){}[]%*'},
+      ].each do |string|
+        imap.send_data QuotedString[string]
+      end
       assert_equal [
-        Output.put_string('foo "bar" (baz)'),
-        Output.put_string("(){}[]%*\"\\"),
-        Output.put_string("(((((((((((((((( unbalanced ]]]]]]]]]]]]]"),
+        Output.put_string('"  with  spaces  in  string  "'),
+        Output.put_string('"with_parens()"'),
+        Output.put_string('"with_list_wildcards*"'),
+        Output.put_string('"with_list_wildcards%"'),
+        Output.put_string('"with_resp_special]"'),
+        Output.put_string(%{"with\x7fcontrol_char"}),
+        Output.put_string(%Q{"(){}[]%*'"}),
+      ], imap.output
+    end
+
+    test "escapes quoted specials" do
+      [
+        '"with" "quoted" "specials"',
+        "\\with\\quoted\\specials\\",
+        %{(){}[]%*"'\\},
+      ].each do |string|
+        imap.send_data QuotedString[string]
+      end
+      assert_equal [
+        Output.put_string('"\"with\" \"quoted\" \"specials\""'),
+        Output.put_string('"\\\\with\\\\quoted\\\\specials\\\\"'),
+        Output.put_string(%q{"(){}[]%*\"'\\\\"}),
+      ], imap.output
+    end
+
+    test "ASCII compatible string with another encodings" do
+      imap.send_data QuotedString.new("foo bar".encode("cp1252"))
+      assert_equal [
+        Output.put_string('"foo bar"'),
+      ], imap.output
+    end
+
+    test "allows ASCII control chars" do
+      text = QuotedString.new("beep\b beep\b escape!\e delete this:\x1f")
+      imap.send_data text
+      assert_equal [
+        Output.put_string(%{"beep\b beep\b escape!\e delete this:\x1f"}),
+      ], imap.output
+    end
+
+    test "quotes valid UTF-8 multibyte chars" do
+      imap.send_data QuotedString.new("föó bär")
+      imap.send_data QuotedString.new("ほげ ふが ぴよ")
+      assert_equal [
+        Output.put_string('"föó bär"'),
+        Output.put_string('"ほげ ふが ぴよ"'),
+      ], imap.output
+    end
+  end
+
+  class RawTextTest < CommandDataTest
+    test "allows ASCII strings with no specials" do
+      imap.send_data(
+        RawText["INBOX"],
+        RawText["etc"]
+      )
+      assert_equal [
+        Output.put_string("INBOX"),
+        Output.put_string("etc"),
+      ], imap.output
+      imap.clear
+    end
+
+    test "allows atom specials" do
+      [
+        "  with  spaces  in  string  ",
+        "with_parens()",
+        "with_list_wildcards*",
+        "with_list_wildcards%",
+        "with_resp_special]",
+        "with\x7fcontrol_char",
+        %{(){}[]%*'},
+      ].each do |string|
+        imap.send_data RawText[string]
+      end
+      assert_equal [
+        Output.put_string("  with  spaces  in  string  "),
+        Output.put_string("with_parens()"),
+        Output.put_string("with_list_wildcards*"),
+        Output.put_string("with_list_wildcards%"),
+        Output.put_string("with_resp_special]"),
+        Output.put_string("with\x7fcontrol_char"),
+        Output.put_string(%{(){}[]%*'}),
+      ], imap.output
+    end
+
+    test "allows quoted specials" do
+      [
+        '"with" "quoted" "specials"',
+        '\\with\\quoted\\specials\\',
+        %{(){}[]%*"'\\},
+      ].each do |string|
+        imap.send_data RawText[string]
+      end
+      assert_equal [
+        Output.put_string('"with" "quoted" "specials"'),
+        Output.put_string('\\with\\quoted\\specials\\'),
+        Output.put_string(%{(){}[]%*"'\\}),
       ], imap.output
     end
 
@@ -209,13 +323,28 @@ class CommandDataTest < Test::Unit::TestCase
       ], imap.output
     end
 
+    test "allows valid UTF-8 multibyte chars" do
+      imap.send_data RawText.new("föó bär")
+      imap.send_data RawText.new("ほげ ふが ぴよ")
+      assert_equal [
+        Output.put_string("föó bär"),
+        Output.put_string("ほげ ふが ぴよ"),
+      ], imap.output
+    end
+  end
+
+  SharedValidNonLiteralDataTests = ->(data_type) do
     data(
       "NULL" => ["with \0 NULL", /NULL\b.+\bbyte/i],
       "CR"   => ["with \r CR",   /CR\b.+\bbyte/i],
       "LF"   => ["with \n LF",   /LF\b.+\bbyte/i],
     )
     test "invalid ASCII byte" do |(text, error_message)|
-      try_multiple_encodings(error_message, text)
+      with_multiple_encodings(text) do |encoded|
+        assert_raise_with_message(DataFormatError, error_message) do
+          data_type[encoded]
+        end
+      end
     end
 
     # See Table 3-7, Well-Formed UTF-8 Byte Sequences, in The Unicode Standard:
@@ -232,7 +361,11 @@ class CommandDataTest < Test::Unit::TestCase
       "windows-1252"               => "åêïõü".encode("windows-1252"),
     )
     test "invalid UTF-8" do |text|
-      try_multiple_encodings(/invalid UTF-8/i, text)
+      with_multiple_encodings(text) do |encoded|
+        assert_raise_with_message(DataFormatError, /invalid UTF-8/i) do
+          data_type[encoded]
+        end
+      end
     end
 
     def with_multiple_encodings(data)
@@ -241,15 +374,9 @@ class CommandDataTest < Test::Unit::TestCase
       yield data.dup.force_encoding("UTF-8")
       yield data.dup.force_encoding("cp1252")
     end
-
-    def try_multiple_encodings(error_message, data)
-      with_multiple_encodings(data) do |encoded|
-        assert_raise_with_message(DataFormatError, error_message) do
-          RawText[encoded]
-        end
-      end
-    end
   end
+  QuotedStringTest.class_exec QuotedString, &SharedValidNonLiteralDataTests
+  RawTextTest     .class_exec RawText,      &SharedValidNonLiteralDataTests
 
   class RawDataTest < CommandDataTest
     test "simple raw text" do
@@ -377,6 +504,30 @@ class CommandDataTest < Test::Unit::TestCase
       assert_raise(DataFormatError) do RawData.new(data: "~literal+ ~{123+}") end
       raw = RawData.new(data: " {123} ")
       assert_equal [RawText[" {123} "]], raw.data
+
+      assert_raise(DataFormatError) do RawData.new(data: "literal {0}") end
+      assert_raise(DataFormatError) do RawData.new(data: "literal+ {0+}") end
+      assert_raise(DataFormatError) do RawData.new(data: "~literal ~{0}") end
+      assert_raise(DataFormatError) do RawData.new(data: "~literal+ ~{0+}") end
+      raw = RawData.new(data: " {0} ")
+      assert_equal [RawText[" {0} "]], raw.data
+    end
+
+    data(
+      "simple raw text"     => 'hello "world"',
+      "text, literal, text" => "OK {5}\r\nhello {5}\r\nworld",
+      "empty literals"      => "{0}\r\n{0+}\r\n~{0}\r\n~{0+}\r\n",
+      "binary and regular"  => "foo ~{7}\r\n\0bar\r\nbaz {4}\r\nquux",
+    )
+    test ".split" do |string|
+      assert_equal(RawData[string].data, RawData.split(string))
+    end
+
+    test ".split allows final literal prefix" do
+      assert_equal [RawText["text {123}"]],     RawData.split("text {123}")
+      assert_equal [RawText["text+ {123+}"]],   RawData.split("text+ {123+}")
+      assert_equal [RawText["~text ~{123}"]],   RawData.split("~text ~{123}")
+      assert_equal [RawText["~text+ ~{123+}"]], RawData.split("~text+ ~{123+}")
     end
   end
 
