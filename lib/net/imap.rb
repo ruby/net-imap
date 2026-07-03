@@ -1470,7 +1470,7 @@ module Net
       end
       if error
         disconnect
-        raise error
+        reraise error
       end
       unless handled
         disconnect
