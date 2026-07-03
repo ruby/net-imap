@@ -1482,8 +1482,7 @@ module Net
       if error
         disconnect
         reraise error
-      end
-      unless handled
+      elsif !handled
         disconnect
         raise InvalidResponseError,
               "STARTTLS handler was bypassed, although server responded %p" % [
