@@ -3738,7 +3738,6 @@ module Net
       when /\A(?:BAD)\z/ni
         raise BadResponseError, resp
       else
-        disconnect
         raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
       end
     end
