@@ -1479,15 +1479,18 @@ module Net
       rescue Exception => error
         raise # note that the error backtrace is in the receiver_thread
       end
-      if error
+      begin
+        if error
+          reraise error
+        elsif !handled
+          raise InvalidResponseError,
+                "STARTTLS handler was bypassed, although server responded %p" % [
+                  ok.raw_data.chomp
+                ]
+        end
+      rescue Exception => error
         disconnect
-        reraise error
-      elsif !handled
-        disconnect
-        raise InvalidResponseError,
-              "STARTTLS handler was bypassed, although server responded %p" % [
-                ok.raw_data.chomp
-              ]
+        raise
       end
       ok
     end
