@@ -1479,7 +1479,7 @@ module Net
       rescue Exception => error
         raise # note that the error backtrace is in the receiver_thread
       end
-      begin
+      synchronize do
         if error
           reraise error
         elsif !handled
@@ -1489,6 +1489,7 @@ module Net
                 ]
         end
       rescue Exception => error
+        @client_disconnect_error ||= error
         disconnect
         raise
       end
@@ -3271,7 +3272,8 @@ module Net
             response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
         end
-      rescue InvalidResponseError
+      rescue InvalidResponseError => error
+        @client_disconnect_error ||= error
         disconnect
         raise
       end
@@ -3701,7 +3703,8 @@ module Net
         ensure
           remove_response_handler(block) if block
         end
-      rescue InvalidResponseError
+      rescue InvalidResponseError => error
+        @client_disconnect_error ||= error
         disconnect
         raise
       end
