@@ -1018,6 +1018,7 @@ class IMAPTest < Net::IMAP::TestCase
 
       # After enabling UTF-8 strings
       imap.enable(:utf8)
+      assert imap.utf8_enabled?
       server.commands.pop.args => ["UTF8=ACCEPT"]
 
       imap.test_args "quoted-utf8", "αβγδε"
