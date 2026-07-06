@@ -278,7 +278,7 @@ class IMAPTest < Net::IMAP::TestCase
       yield
     end
     @threads << th
-    sleep 0.1 until th.stop?
+    sleep 0.001 until th.stop?
   end
 
   def test_unexpected_eof
@@ -632,7 +632,7 @@ class IMAPTest < Net::IMAP::TestCase
         server.close
       end
     end
-    sleep 0.1 until started
+    sleep 0.001 until started
     threads << Thread.start do
       imap = Net::IMAP.new(server_addr, :port => port)
       begin
@@ -1264,7 +1264,7 @@ class IMAPTest < Net::IMAP::TestCase
         rescue OpenSSL::SSL::SSLError
         end
       end
-      sleep 0.1 until started
+      sleep 0.001 until started
       begin
         begin
           imap = yield(port)
