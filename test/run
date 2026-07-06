@@ -1,0 +1,11 @@
+#!/usr/bin/env ruby
+
+require "bundler/setup"
+
+base_dir = File.expand_path("..", __dir__)
+$LOAD_PATH.unshift File.expand_path("test/lib", base_dir)
+$LOAD_PATH.unshift File.expand_path("lib",      base_dir)
+
+require_relative "lib/helper"
+
+exit Test::Unit::AutoRunner.run(true)
