@@ -55,6 +55,10 @@ module Net
       end
     end
 
+    UNQUOTABLE_CHARS = /\r\n/n
+    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/n
+    private_constant :UNQUOTABLE_CHARS, :ASTRING_SPECIALS
+
     # Sends generic strings formatted as +astring+:
     # * as an atom (note: this is based on +ASTRING-CHAR+, not +ATOM-CHAR+)
     # * as a quoted string
@@ -65,7 +69,7 @@ module Net
       if str.empty?
         # same as send_quoted_string(str), but incompatible encoding is allowed
         put_string('""')
-      elsif str.match?(/[\r\n]/n)
+      elsif str.match?(UNQUOTABLE_CHARS)
         send_literal(str, tag)
       elsif !str.ascii_only?
         if @utf8_strings
@@ -73,7 +77,7 @@ module Net
         else
           send_literal(str, tag)
         end
-      elsif str.match?(/[(){ \x00-\x1f\x7f%*"\\]/n)
+      elsif str.match?(ASTRING_SPECIALS)
         send_quoted_string(str)
       else
         # valid +astring+ atom: non-empty, ASCII only, no ASTRING_SPECIALS
