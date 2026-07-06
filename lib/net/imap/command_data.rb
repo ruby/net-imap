@@ -84,9 +84,11 @@ module Net
 
     # Encodable as +text+ (which is a superset of +quoted+):
     # * ASCII only (for any ASCII compatible encoding)
-    # * or UTF-8 has been enabled (TODO: validate UTF-8 strings)
+    # * or valid UTF-8 (when the connection supports it)
     def text_encodable?(str)
-      str.ascii_only? || @utf8_strings
+      str.ascii_only? || (@utf8_strings &&
+                          str.encoding == Encoding::UTF_8 &&
+                          str.valid_encoding?)
     end
 
     def send_quoted_string(str) = QuotedString.new(data: str).send_data(self)
