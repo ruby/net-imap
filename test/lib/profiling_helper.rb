@@ -7,6 +7,7 @@ module ProfilingHelper
     require "vernier"
     ENV["NET_IMAP_PROFILE"] in /\A(1|t|true|on|yes)\z/i
   rescue LoadError
+    undef profile?
     def profile? = false
     false
   end
