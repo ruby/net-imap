@@ -38,10 +38,21 @@ Test::Unit::TestCase.include Test::Unit::CoreAssertions
 
 require "net/imap"
 class Net::IMAP::TestCase < Test::Unit::TestCase
+  SOCKET_SUPPORT_HAPPY_EYEBALLS = begin
+    Socket.tcp_fast_fallback
+    true
+  rescue NoMethodError
+    false
+  end
+
   def setup
     Net::IMAP.config.reset
     @do_not_reverse_lookup = Socket.do_not_reverse_lookup
     Socket.do_not_reverse_lookup = true
+    if SOCKET_SUPPORT_HAPPY_EYEBALLS
+      @tcp_fast_fallback = Socket.tcp_fast_fallback
+      Socket.tcp_fast_fallback = false
+    end
     @threads = []
   end
 
@@ -49,6 +60,9 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     assert_join_threads(@threads) unless @threads.empty?
   ensure
     Socket.do_not_reverse_lookup = @do_not_reverse_lookup
+    if SOCKET_SUPPORT_HAPPY_EYEBALLS
+      Socket.tcp_fast_fallback = @tcp_fast_fallback
+    end
   end
 
   def wait_for_response_count(imap, type:, count:,

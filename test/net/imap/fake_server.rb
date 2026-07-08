@@ -74,6 +74,7 @@ class Net::IMAP::FakeServer
     Timeout.timeout(config.timeout) do
       tcp_socket = tcp_server.accept
       tcp_socket.timeout = config.read_timeout if tcp_socket.respond_to? :timeout
+      tcp_socket.setsockopt(::Socket::IPPROTO_TCP, ::Socket::TCP_NODELAY, 1)
       @connection = Connection.new(self, tcp_socket: tcp_socket)
       @connection.run
     ensure
