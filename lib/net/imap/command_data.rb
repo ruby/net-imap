@@ -86,7 +86,7 @@ module Net
     # * ASCII only (for any ASCII compatible encoding)
     # * or valid UTF-8 (when the connection supports it)
     def text_encodable?(str)
-      str.ascii_only? || (@utf8_strings &&
+      str.ascii_only? || (utf8_enabled? &&
                           str.encoding == Encoding::UTF_8 &&
                           str.valid_encoding?)
     end

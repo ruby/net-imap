@@ -326,6 +326,9 @@ module Net
   #
   #   <em>In general, #capable? should be used rather than explicitly sending a
   #   +CAPABILITY+ command to the server.</em>
+  # - #enable: Enables backwards incompatible server extensions.
+  #   <em>Requires the +ENABLE+ or +IMAP4rev2+ capability.</em>
+  # - #utf8_enabled?: Returns whether UTF-8 string encoding has been enabled.
   #
   # === Handling server responses
   #
@@ -552,6 +555,7 @@ module Net
   # ==== RFC6855: <tt>UTF8=ACCEPT</tt>, <tt>UTF8=ONLY</tt>
   #
   # - See #enable for information about support for UTF-8 string encoding.
+  # - #utf8_enabled?: Returns whether UTF-8 string encoding has been enabled.
   #
   # ==== RFC7162: +CONDSTORE+
   #
@@ -3166,6 +3170,11 @@ module Net
         result
       end
     end
+
+    # Returns whether UTF-8 string encoding has been enabled for the connection.
+    #
+    # See #enable.
+    def utf8_enabled?; @utf8_strings end
 
     # Sends an {IDLE command [RFC2177 §3]}[https://www.rfc-editor.org/rfc/rfc6851#section-3]
     # {[IMAP4rev2 §6.3.13]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.3.13]
