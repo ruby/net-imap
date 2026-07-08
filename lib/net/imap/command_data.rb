@@ -58,8 +58,8 @@ module Net
       end
     end
 
-    UNQUOTABLE_CHARS = /\0\r\n/n
-    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/n
+    UNQUOTABLE_CHARS = /\0\r\n/
+    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/
     private_constant :UNQUOTABLE_CHARS, :ASTRING_SPECIALS
 
     # Sends generic strings formatted as +astring+:
