@@ -944,6 +944,21 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  test "string args don't allow NULL bytes" do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      assert_raise_with_message(Net::IMAP::DataFormatError, /NULL byte/) do
+        imap.test_args "NULL=\0"
+      end
+
+      assert_raise_with_message(Net::IMAP::DataFormatError, /NULL byte/) do
+        imap.test_args ["ok", "also ok", "not ok: \0"]
+      end
+    end
+  end
+
   test "sending quoted string args" do
     with_fake_server do |server, imap|
       server.on "TEST", &:done_ok

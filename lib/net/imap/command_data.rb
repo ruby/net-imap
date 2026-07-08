@@ -15,6 +15,9 @@ module Net
       case data
       when nil
       when String
+        if data.include?("\0")
+          raise DataFormatError, "String argument contains NULL byte"
+        end
       when Integer
         # Covers modseq-valzer, which is the largest valid IMAP integer
         if data.negative?
@@ -55,7 +58,7 @@ module Net
       end
     end
 
-    UNQUOTABLE_CHARS = /\r\n/n
+    UNQUOTABLE_CHARS = /\0\r\n/n
     ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/n
     private_constant :UNQUOTABLE_CHARS, :ASTRING_SPECIALS
 
