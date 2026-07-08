@@ -328,6 +328,8 @@ module Net
   #   +CAPABILITY+ command to the server.</em>
   # - #enable: Enables backwards incompatible server extensions.
   #   <em>Requires the +ENABLE+ or +IMAP4rev2+ capability.</em>
+  # - #enabled: Returns a set of enabled server extensions.
+  # - #enabled?: Returns whether a server extension has been enabled.
   # - #utf8_enabled?: Returns whether UTF-8 string encoding has been enabled.
   #
   # === Handling server responses
@@ -825,6 +827,11 @@ module Net
       "UTF8=ONLY" => "UTF8=ACCEPT",
     }.freeze
 
+    # Aliases for supported capabilities, to be used with #enabled?.
+    ENABLED_ALIASES = {
+      utf8: Set.new(%w[UTF8=ACCEPT IMAP4REV2]).freeze,
+    }.freeze
+
     dir = File.expand_path("imap", __dir__)
     autoload :ConnectionState,        "#{dir}/connection_state"
     autoload :ResponseReader,         "#{dir}/response_reader"
@@ -1114,11 +1121,11 @@ module Net
       @ssl_ctx_params, @ssl_ctx = build_ssl_ctx(ssl)
 
       # Basic Client State
-      @utf8_strings = false
       @debug_output_bol = true
       @exception = nil
       @greeting = nil
       @capabilities = nil
+      @enabled = Set.new
       @tls_verified = false
       @connection_state = ConnectionState::NotAuthenticated.new
 
@@ -3165,16 +3172,47 @@ module Net
       synchronize do
         send_command("ENABLE", *capabilities)
         result = clear_responses("ENABLED").last || []
-        @utf8_strings ||= result.include? "UTF8=ACCEPT"
-        @utf8_strings ||= result.include? "IMAP4REV2"
+        @enabled.merge(result.map(&:upcase))
         result
       end
     end
 
     # Returns whether UTF-8 string encoding has been enabled for the connection.
     #
-    # See #enable.
-    def utf8_enabled?; @utf8_strings end
+    # This is currently identical to calling #enabled? with +:utf8+.
+    #
+    # See #enable and #enabled?.
+    def utf8_enabled?; enabled?(:utf8) end
+
+    # Returns whether +capability+ is in the set of #enabled capabilities,
+    # matched case-insensitively.
+    #
+    # When +capability+ is +:utf8+, it matches if _either_
+    # <tt>"UTF8=ACCEPT"</tt> or <tt>"IMAP4REV2"</tt> is enabled.
+    #
+    # See #enable and #utf8_enabled?.
+    def enabled?(capability)
+      case capability
+      in String
+        capability = capability.upcase
+        synchronize { @enabled.include?(capability) }
+      in Symbol
+        capabilities = ENABLED_ALIASES[capability] or
+          raise ArgumentError, "unknown capability alias: #{capability}"
+        synchronize { @enabled.intersect?(capabilities) }
+      else
+        raise TypeError, "expected capability to be String or Symbol, " \
+                         "got %s" % [capability.class]
+      end
+    end
+
+    # Returns a set of enabled capabilities for the connection, as upper-cased
+    # strings.
+    #
+    # See #enable and #enabled?.
+    def enabled
+      synchronize { @enabled.dup }
+    end
 
     # Sends an {IDLE command [RFC2177 §3]}[https://www.rfc-editor.org/rfc/rfc6851#section-3]
     # {[IMAP4rev2 §6.3.13]}[https://www.rfc-editor.org/rfc/rfc9051#section-6.3.13]
