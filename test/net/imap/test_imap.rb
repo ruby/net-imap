@@ -921,6 +921,94 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  test "sending nil args" do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      imap.test_args nil, [nil]
+      assert_equal "NIL (NIL)", server.commands.pop.args
+    end
+  end
+
+  test "sending atom string args (astring-chars)" do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      imap.test_args "valid-atoms", %w[foo=bar $baz]
+      assert_equal "valid-atoms (foo=bar $baz)", server.commands.pop.args
+
+      imap.test_args "unquoted-astring", "[resp-specials]"
+      assert_equal "unquoted-astring [resp-specials]", server.commands.pop.args
+    end
+  end
+
+  test "string args don't allow NULL bytes" do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      assert_raise_with_message(Net::IMAP::DataFormatError, /NULL byte/) do
+        imap.test_args "NULL=\0"
+      end
+
+      assert_raise_with_message(Net::IMAP::DataFormatError, /NULL byte/) do
+        imap.test_args ["ok", "also ok", "not ok: \0"]
+      end
+    end
+  end
+
+  test "sending quoted string args" do
+    with_fake_server do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      imap.test_args "empty", "", [""]
+      assert_equal   'empty "" ("")', server.commands.pop.args
+
+      imap.test_args "simple-quotable-specials", "() {} %*"
+      assert_equal('simple-quotable-specials "() {} %*"'.b,
+                   server.commands.pop.args)
+
+      imap.test_args "ascii-ctrl-chars", "\b\x7f"
+      assert_equal("ascii-ctrl-chars \"\b\x7f\"".b, server.commands.pop.args)
+
+      imap.test_args "quoted-specials", ["backslash=\\", 'dquotes=""']
+      assert_equal('quoted-specials ("backslash=\\\\" "dquotes=\\"\\"")'.b,
+                   server.commands.pop.args)
+    end
+  end
+
+  test "sending UTF-8 string args" do
+    with_fake_server(
+      with_extensions: %w[UTF8=ACCEPT LITERAL-],
+      greeting_capabilities: true,
+      capabilities_enablable: %w[UTF8=ACCEPT],
+    ) do |server, imap|
+      server.on "TEST", &:done_ok
+      def imap.test_args(*args) = send_command("TEST", *args)
+
+      # Before enabling UTF-8 strings, with non-synchronizing literals
+      imap.test_args "sync-literal-utf8", ["αβγδε"]
+      assert_equal("sync-literal-utf8 ({10+}\r\nαβγδε)".b,
+                   server.commands.pop.args)
+
+      # Before enabling UTF-8 strings, without non-synchronizing literals
+      imap.config.max_non_synchronizing_literal = -1
+      imap.test_args "sync-literal-utf8", ["αβγδε"]
+      assert_equal("sync-literal-utf8 ({10}\r\nαβγδε)".b,
+                   server.commands.pop.args)
+
+      # After enabling UTF-8 strings
+      imap.enable(:utf8)
+      server.commands.pop.args => ["UTF8=ACCEPT"]
+
+      imap.test_args "quoted-utf8", "αβγδε"
+      assert_equal 'quoted-utf8 "αβγδε"'.b, server.commands.pop.args
+    end
+  end
+
   test("send literal args") do
     with_fake_server(with_extensions: %w[LITERAL-]) do |server, imap|
       # disable automatic non-synchronizing literals

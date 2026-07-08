@@ -15,6 +15,9 @@ module Net
       case data
       when nil
       when String
+        if data.include?("\0")
+          raise DataFormatError, "String argument contains NULL byte"
+        end
       when Integer
         # Covers modseq-valzer, which is the largest valid IMAP integer
         if data.negative?
@@ -55,24 +58,32 @@ module Net
       end
     end
 
+    UNQUOTABLE_CHARS = /\0\r\n/n
+    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/n
+    private_constant :UNQUOTABLE_CHARS, :ASTRING_SPECIALS
+
+    # Sends generic strings formatted as +astring+:
+    # * as an atom (note: this is based on +ASTRING-CHAR+, not +ATOM-CHAR+)
+    # * as a quoted string
+    # * as a literal (may send non-synchronizing)
+    #
+    # NOTE: This does not validate that +str+ contains no +NULL+ bytes.
     def send_string_data(str, tag = nil)
       if str.empty?
+        # same as send_quoted_string(str), but incompatible encoding is allowed
         put_string('""')
-      elsif str.match?(/[\r\n]/n)
-        # literal, because multiline
+      elsif str.match?(UNQUOTABLE_CHARS)
         send_literal(str, tag)
       elsif !str.ascii_only?
         if @utf8_strings
-          # quoted string
           send_quoted_string(str)
         else
-          # literal, because of non-ASCII bytes
           send_literal(str, tag)
         end
-      elsif str.match?(/[(){ \x00-\x1f\x7f%*"\\]/n)
-        # quoted string
+      elsif str.match?(ASTRING_SPECIALS)
         send_quoted_string(str)
       else
+        # valid +astring+ atom: non-empty, ASCII only, no ASTRING_SPECIALS
         put_string(str)
       end
     end
@@ -273,6 +284,17 @@ module Net
       private_class_method :extract_literal
     end
 
+    # Please note that +ATOM-CHAR+ and +atom+ are not the same as +ASTRING-char+
+    # and the atom form of +astring+.  +astring+ allows <tt>]</tt>, but +atom+
+    # does not.
+    #
+    # Generic string arguments in Net::IMAP use +astring+, so they will send as
+    # atoms even if they contain <tt>]</tt>.
+    #
+    # This class is used by:
+    # * to validate generic symbol arguments, as the superclass of Flag
+    # * to validate #enable +capabilities+
+    # * to validate #store (and #uid_store) +attr+
     class Atom < CommandData # :nodoc:
       def initialize(**)
         super
