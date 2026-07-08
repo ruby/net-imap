@@ -994,10 +994,26 @@ class IMAPTest < Net::IMAP::TestCase
       assert_equal("sync-literal-utf8 ({10+}\r\nαβγδε)".b,
                    server.commands.pop.args)
 
+      imap.test_args "utf8-with-wrong-encoding", "αβγδε".b
+      assert_equal("utf8-with-wrong-encoding {10+}\r\nαβγδε".b,
+                   server.commands.pop.args)
+
+      imap.test_args "invalid-utf8", "\x80".b.force_encoding("UTF-8")
+      assert_equal("invalid-utf8 {1+}\r\n\x80".b,
+                   server.commands.pop.args)
+
       # Before enabling UTF-8 strings, without non-synchronizing literals
       imap.config.max_non_synchronizing_literal = -1
       imap.test_args "sync-literal-utf8", ["αβγδε"]
       assert_equal("sync-literal-utf8 ({10}\r\nαβγδε)".b,
+                   server.commands.pop.args)
+
+      imap.test_args "utf8-with-wrong-encoding", "αβγδε".b
+      assert_equal("utf8-with-wrong-encoding {10}\r\nαβγδε".b,
+                   server.commands.pop.args)
+
+      imap.test_args "invalid-utf8", "\x80".b.force_encoding("UTF-8")
+      assert_equal("invalid-utf8 {1}\r\n\x80".b,
                    server.commands.pop.args)
 
       # After enabling UTF-8 strings
@@ -1006,6 +1022,14 @@ class IMAPTest < Net::IMAP::TestCase
 
       imap.test_args "quoted-utf8", "αβγδε"
       assert_equal 'quoted-utf8 "αβγδε"'.b, server.commands.pop.args
+
+      imap.test_args "utf8-with-wrong-encoding", "αβγδε".b
+      assert_equal("utf8-with-wrong-encoding {10}\r\nαβγδε".b,
+                   server.commands.pop.args)
+
+      imap.test_args "invalid-utf8", "\x80".b.force_encoding("UTF-8")
+      assert_equal("invalid-utf8 {1}\r\n\x80".b,
+                   server.commands.pop.args)
     end
   end
 

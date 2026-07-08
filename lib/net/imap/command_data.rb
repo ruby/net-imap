@@ -58,8 +58,8 @@ module Net
       end
     end
 
-    UNQUOTABLE_CHARS = /\0\r\n/n
-    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/n
+    UNQUOTABLE_CHARS = /\0\r\n/
+    ASTRING_SPECIALS = /[(){ \x00-\x1f\x7f%*"\\]/
     private_constant :UNQUOTABLE_CHARS, :ASTRING_SPECIALS
 
     # Sends generic strings formatted as +astring+:
@@ -72,20 +72,23 @@ module Net
       if str.empty?
         # same as send_quoted_string(str), but incompatible encoding is allowed
         put_string('""')
-      elsif str.match?(UNQUOTABLE_CHARS)
-        send_literal(str, tag)
-      elsif !str.ascii_only?
-        if @utf8_strings
-          send_quoted_string(str)
-        else
-          send_literal(str, tag)
-        end
-      elsif str.match?(ASTRING_SPECIALS)
-        send_quoted_string(str)
-      else
+      elsif str.ascii_only? && !str.match?(ASTRING_SPECIALS)
         # valid +astring+ atom: non-empty, ASCII only, no ASTRING_SPECIALS
         put_string(str)
+      elsif text_encodable?(str) && !str.match?(UNQUOTABLE_CHARS)
+        send_quoted_string(str)
+      else
+        send_literal(str, tag)
       end
+    end
+
+    # Encodable as +text+ (which is a superset of +quoted+):
+    # * ASCII only (for any ASCII compatible encoding)
+    # * or valid UTF-8 (when the connection supports it)
+    def text_encodable?(str)
+      str.ascii_only? || (@utf8_strings &&
+                          str.encoding == Encoding::UTF_8 &&
+                          str.valid_encoding?)
     end
 
     def send_quoted_string(str) = QuotedString.new(data: str).send_data(self)
