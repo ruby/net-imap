@@ -3,12 +3,10 @@ if !(ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i) &&
 
   require "simplecov"
 
-  # Cannot use ".simplecov" file: simplecov-json triggers a circular require.
-  require "simplecov-json"
-  SimpleCov.formatters = SimpleCov::Formatter::MultiFormatter.new([
+  SimpleCov.formatters = [
     SimpleCov::Formatter::HTMLFormatter,
     SimpleCov::Formatter::JSONFormatter,
-  ])
+  ]
 
   SimpleCov.start do
     command_name "Net::IMAP tests"
