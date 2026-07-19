@@ -107,6 +107,7 @@ class IMAPErrorsTest < Net::IMAP::TestCase
 
     ENV["TERM"], ENV["NO_COLOR"], ENV["FORCE_COLOR"] = nil, nil, "0"
     assert_equal(expected_no_hl,    err.detailed_message)
+    omit_if_jruby "JRuby doesn't support fully format string hash lookup"
     assert_equal(expected_color_hl, err.detailed_message(highlight: true))
     assert_equal(expected_no_color, err.detailed_message(highlight: true,
                                                          highlight_no_color: true))
