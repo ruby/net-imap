@@ -210,7 +210,9 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
       assert_raise(expected, &block)
     end
     stack = caller
-    assert_equal stack, error.backtrace&.last(stack.size)
+    pend_if_jruby("JRuby bug: jruby/jruby#9528, fixed by: jruby/jruby#9548") do
+      assert_equal stack, error.backtrace&.last(stack.size)
+    end
     error
   end
 
@@ -221,6 +223,7 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
   # it can capture the top of the stacktrace.  After that, it'll continue to use
   # the same stacktrace.
   def assert_reraised(*args, imap: nil, &block)
+    return assert_local_raise(*args, &block) if RUBY_ENGINE == "jruby"
     @rcvr_thread_trace ||= imap.instance_variable_get(:@receiver_thread)
       &.backtrace&.last(2)
     error = assert_local_raise(*args, &block)
