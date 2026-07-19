@@ -224,9 +224,22 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     else
       assert_raise(expected, &block)
     end
-    stack = caller
-    assert_equal stack, error.backtrace&.last(stack.size)
+    assert_local_backtrace error
     error
+  end
+
+  # Asserts that +error+ was raised in the same thread as +caller+ _and_ was
+  # called from the same level as +caller+.  The caller's own frame is ignored,
+  # as are all extra frames in +error+, but the remaining frames much match.
+  #
+  # NOTE: `stack = caller(2)` is different from `$!.backtrace[2..]` in JRuby.
+  # Rather than use `caller`, this raises a local exception to use its backtrace
+  # for the comparison.
+  def assert_local_backtrace(error)
+    local_stack = raise "generating local backtrace" rescue $!.backtrace[2..]
+    error_stack = error.backtrace&.last(local_stack.size)
+    assert_equal local_stack, error_stack
+    error_stack
   end
 
   # Combines +assert_local_raise+ with an assertion that the exception's cause
