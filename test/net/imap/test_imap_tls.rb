@@ -110,7 +110,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
         imap
       end
       assert_kind_of(OpenSSL::SSL::SSLError, ex)
-      assert_equal (stack = caller), ex.backtrace&.last(stack.size)
+      assert_local_backtrace ex
       assert_equal false, imap.tls_verified?
       assert_equal({}, imap.ssl_ctx_params)
       assert_equal(nil, imap.ssl_ctx.ca_file)
