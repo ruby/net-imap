@@ -12,6 +12,16 @@ module NetIMAPTestHelpers
     def load_fixture_data(*test_fixture_path)
       dir = self::TEST_FIXTURE_PATH
       YAML.unsafe_load_file File.join(dir, *test_fixture_path)
+    rescue TypeError => err
+      case err.message
+      in /bind argument must be an instance of Data/
+        raise unless defined?(Net::IMAP::DataPolyfill)
+        file = test_fixture_path.last
+        warn "⚠️ Can't load test fixture #{file}: #{err.detailed_message}"
+        {tests: []}
+      else
+        raise
+      end
     end
 
     def generate_tests_from(fixture_data: nil, fixture_file: nil)
