@@ -99,8 +99,9 @@ class Net::IMAP::FakeServer
         response_b64 = resp.request_continuation("") || ""
         state.commands << {continuation: response_b64}
       end
-      response = Base64.decode64(response_b64)
-      response.empty?                   and return resp.fail_bad "canceled"
+      response_b64.strip == ?*          and return resp.fail_bad "canceled"
+      response = Base64.decode64(response_b64) rescue :decode64_failed
+      response == :decode64_failed      and return resp.fail_bad "invalid b64"
       # TODO: support mechanisms other than PLAIN.
       parts = response.split("\0")
       parts.length == 3                  or return resp.fail_bad "invalid"
