@@ -1479,16 +1479,19 @@ module Net
       rescue Exception => error
         raise # note that the error backtrace is in the receiver_thread
       end
-      if error
+      synchronize do
+        if error
+          reraise error
+        elsif !handled
+          raise InvalidResponseError,
+                "STARTTLS handler was bypassed, although server responded %p" % [
+                  ok.raw_data.chomp
+                ]
+        end
+      rescue Exception => error
+        @client_disconnect_error ||= error
         disconnect
-        reraise error
-      end
-      unless handled
-        disconnect
-        raise InvalidResponseError,
-              "STARTTLS handler was bypassed, although server responded %p" % [
-                ok.raw_data.chomp
-              ]
+        raise
       end
       ok
     end
@@ -3249,8 +3252,8 @@ module Net
       response = nil
 
       synchronize do
-        tag = Thread.current[:net_imap_tag] = generate_tag
-        command = Command[tag:, name: "IDLE"]
+        command = start_command(name: "IDLE")
+        tag = Thread.current[:net_imap_tag] = command.tag # TODO: remove this
         put_string("#{tag} IDLE#{CRLF}")
         finish_sending_command(command)
 
@@ -3269,7 +3272,8 @@ module Net
             response = get_tagged_response(tag, "IDLE", idle_response_timeout)
           end
         end
-      rescue InvalidResponseError
+      rescue InvalidResponseError => error
+        @client_disconnect_error ||= error
         disconnect
         raise
       end
@@ -3683,8 +3687,8 @@ module Net
     def send_command(cmd, *args, &block)
       args.each do validate_data _1 end
       synchronize do
-        tag = generate_tag
-        command = Command[tag:, name: cmd]
+        command = start_command(name: cmd)
+        tag = command.tag
         put_string(tag + " " + cmd)
         args.each do |i|
           put_string(" ")
@@ -3699,10 +3703,20 @@ module Net
         ensure
           remove_response_handler(block) if block
         end
-      rescue InvalidResponseError
+      rescue InvalidResponseError => error
+        @client_disconnect_error ||= error
         disconnect
         raise
       end
+    end
+
+    def start_command(**)
+      raise IOError, "closed stream" if disconnected?
+      command = Command.new(**, tag: generate_tag)
+      if (response = @tagged_responses[command.tag])
+        raise InvalidTaggedResponseError.new(:unstarted, command:, response:)
+      end
+      command
     end
 
     # NOTE: This must be synchronized with sending the command's final CRLF and
@@ -3736,7 +3750,6 @@ module Net
       when /\A(?:BAD)\z/ni
         raise BadResponseError, resp
       else
-        disconnect
         raise InvalidResponseError, "invalid tagged resp: %p" % [resp.raw_data.chomp]
       end
     end
