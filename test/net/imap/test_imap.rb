@@ -1045,6 +1045,10 @@ class IMAPTest < Net::IMAP::TestCase
       send_args.call ["\xDE\xAD\xBE\xEF".b]
       assert_equal "({4}\r\n\xDE\xAD\xBE\xEF)".b, server.commands.pop.args
 
+      send_args.call ["hi\rthere\n", "huh?\r\nfake out"]
+      assert_equal "({9}\r\nhi\rthere\n {14}\r\nhuh?\r\nfake out)".b,
+                   server.commands.pop.args
+
       # enable automatic non-synchronizing literals
       imap.config.max_non_synchronizing_literal = 1024
       buff = bytes = nil
