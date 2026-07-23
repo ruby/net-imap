@@ -211,6 +211,94 @@ class AuthenticatorsTest < Net::IMAP::TestCase
       "v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4="
     )
     assert authenticator.done?
+    # check cache values
+    assert_kind_of Net::IMAP::SASL::ScramCache, authenticator.cache
+    assert_equal "xKSVEDI6tPlSysH6mUQZOeeOp01r6B3fcJbodRPcYV0=".unpack1("m"),
+                 authenticator.cache.salted_password
+    assert_equal "pg/JI9Z+hkSpLRa5btpe9GVrDHJcSEN0viVTVXaZbos=".unpack1("m"),
+                 authenticator.cache.client_key
+    assert_equal "wfPLwcE6nTWhTAmQ7tl2KeoiWGPlZqQxSrmfPwDl2dU=".unpack1("m"),
+                 authenticator.cache.server_key
+  end
+
+  def test_scram_sha256_with_cached_salted_password
+    cache = Net::IMAP::SASL::ScramCache[
+      salt:       "W22ZaJ0SNY7soEsUEjb6gQ==".unpack1("m"),
+      iterations: 4096,
+      salted_password: "xKSVEDI6tPlSysH6mUQZOeeOp01r6B3fcJbodRPcYV0=".unpack1("m")
+    ]
+    authenticator = scram_sha256("user", cache:, cnonce: "rOprNGfwEbeRWgbNEkqO")
+    # n = no channel binding
+    # a = authzid
+    # n = authcid
+    # r = random nonce (client)
+    assert_equal("n,,n=user,r=rOprNGfwEbeRWgbNEkqO",
+                 authenticator.process(nil))
+    refute authenticator.done?
+    assert_equal(
+      # c = b64 of gs2 header and channel binding data
+      # r = random nonce (client + server)
+      # p = b64 client proof
+      # s = salt
+      # i = iteration count
+      "c=biws," \
+      "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+      "p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=",
+      authenticator.process(
+        "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+        "s=W22ZaJ0SNY7soEsUEjb6gQ==," \
+        "i=4096")
+    )
+    refute authenticator.done?
+    assert_empty authenticator.process(
+      "v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4="
+    )
+    assert authenticator.done?
+    # check cache values
+    assert_same cache, authenticator.cache
+    assert_equal "pg/JI9Z+hkSpLRa5btpe9GVrDHJcSEN0viVTVXaZbos=".unpack1("m"),
+                 authenticator.cache.client_key
+    assert_equal "wfPLwcE6nTWhTAmQ7tl2KeoiWGPlZqQxSrmfPwDl2dU=".unpack1("m"),
+                 authenticator.cache.server_key
+  end
+
+  def test_scram_sha256_with_cached_client_and_server_keys
+    cache = Net::IMAP::SASL::ScramCache[
+      salt:       "W22ZaJ0SNY7soEsUEjb6gQ==".unpack1("m"),
+      iterations: 4096,
+      client_key: "pg/JI9Z+hkSpLRa5btpe9GVrDHJcSEN0viVTVXaZbos=".unpack1("m"),
+      server_key: "wfPLwcE6nTWhTAmQ7tl2KeoiWGPlZqQxSrmfPwDl2dU=".unpack1("m"),
+    ]
+    authenticator = scram_sha256("user", cache:, cnonce: "rOprNGfwEbeRWgbNEkqO")
+    # n = no channel binding
+    # a = authzid
+    # n = authcid
+    # r = random nonce (client)
+    assert_equal("n,,n=user,r=rOprNGfwEbeRWgbNEkqO",
+                 authenticator.process(nil))
+    refute authenticator.done?
+    assert_equal(
+      # c = b64 of gs2 header and channel binding data
+      # r = random nonce (client + server)
+      # p = b64 client proof
+      # s = salt
+      # i = iteration count
+      "c=biws," \
+      "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+      "p=dHzbZapWIk4jUhN+Ute9ytag9zjfMHgsqmmiz7AndVQ=",
+      authenticator.process(
+        "r=rOprNGfwEbeRWgbNEkqO%hvYDpWUa2RaTCAfuxFIlj)hNlF$k0," \
+        "s=W22ZaJ0SNY7soEsUEjb6gQ==," \
+        "i=4096")
+    )
+    refute authenticator.done?
+    assert_empty authenticator.process(
+      "v=6rriTRBi23WpRR/wtup+mMhUZUn/dB5nLTJRsjl95G4="
+    )
+    assert authenticator.done?
+    # check cache values
+    assert_same cache, authenticator.cache
+    assert_nil authenticator.cache.salted_password
   end
 
   def test_scram_min_iterations
