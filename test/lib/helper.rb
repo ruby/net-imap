@@ -2,6 +2,7 @@ if !(ENV["SIMPLECOV_DISABLE"] in /\A(1|y(es)?|t(rue)?)\z/i) &&
     RUBY_ENGINE == "ruby" # C Ruby only
 
   require "simplecov"
+
   SimpleCov.start do
     command_name "Net::IMAP tests"
   end
