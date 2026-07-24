@@ -124,6 +124,7 @@ class IMAPCapabilitiesTest < Net::IMAP::TestCase
 
   if defined?(OpenSSL::SSL::SSLError)
     test "#capabilities caches greeting capabilities (implicit TLS)" do
+      omit_if_jruby
       with_fake_server(preauth: false, implicit_tls: true) do |server, imap|
         assert imap.capabilities_cached?
         assert_equal %w[IMAP4REV1 AUTH=PLAIN], imap.capabilities
@@ -136,6 +137,7 @@ class IMAPCapabilitiesTest < Net::IMAP::TestCase
 
     test "#capabilities cache is cleared after #starttls" do
       with_fake_server(preauth: false, cleartext_auth: false) do |server, imap|
+        omit_if_jruby
         assert imap.capabilities_cached?
         assert imap.capable? :IMAP4rev1
         refute imap.auth_capable? "plain"
@@ -189,6 +191,7 @@ class IMAPCapabilitiesTest < Net::IMAP::TestCase
 
   # TODO: should we warn about this?
   test "#capabilities cache IGNORES tagged OK response to STARTTLS" do
+    omit_if_jruby
     with_fake_server(preauth: false) do |server, imap|
       server.on "STARTTLS" do |cmd|
         cmd.done_ok code: "[CAPABILITY IMAP4rev1 AUTH=PLAIN fnord]"

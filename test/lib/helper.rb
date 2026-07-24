@@ -207,7 +207,9 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
       assert_raise(expected, &block)
     end
     stack = caller
-    assert_equal stack, error.backtrace&.last(stack.size)
+    pend_if_jruby("stack traces don't match in JRuby 10.0.1.0") do
+      assert_equal stack, error.backtrace&.last(stack.size)
+    end
     error
   end
 

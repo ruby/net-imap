@@ -13,6 +13,7 @@ class IMAPTest < Net::IMAP::TestCase
 
   if defined?(OpenSSL::SSL::SSLError)
     def test_imaps_unknown_ca
+      omit_if_jruby "SSL tests don't work yet"
       assert_local_raise(OpenSSL::SSL::SSLError) do
         imaps_test do |port|
           begin
@@ -27,6 +28,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_imaps_with_ca_file
+      omit_if_jruby "SSL tests don't work yet"
       # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
@@ -54,6 +56,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_imaps_verify_none
+      omit_if_jruby "SSL tests don't work yet"
       # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
@@ -81,6 +84,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_imaps_post_connection_check
+      omit_if_jruby "SSL tests don't work yet"
       assert_local_raise(OpenSSL::SSL::SSLError) do
         imaps_test do |port|
           # server_addr is different from the hostname in the certificate,
@@ -95,6 +99,7 @@ class IMAPTest < Net::IMAP::TestCase
 
   if defined?(OpenSSL::SSL)
     def test_starttls_unknown_ca
+      omit_if_jruby "SSL tests don't work yet"
       omit "This test is not working with Windows" if RUBY_PLATFORM =~ /mswin|mingw/
 
       imap = nil
@@ -116,6 +121,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_starttls
+      omit_if_jruby "SSL tests don't work yet"
       initial_verified, initial_ctx, initial_params = :unknown, :unknown, :unknown
       imap = nil
       starttls_test do |port|
@@ -141,6 +147,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_starttls_stripping_not_ok
+      omit_if_jruby "SSL tests don't work yet"
       imap = nil
       server = create_tcp_server
       port = server.addr[1]
@@ -173,6 +180,7 @@ class IMAPTest < Net::IMAP::TestCase
     end
 
     def test_starttls_stripping_ok_sent_before_response
+      omit_if_jruby "SSL tests don't work yet"
       # to coordinate between threads (better than sleep)
       server_to_client, client_to_server = Queue.new, Queue.new
       rcvr_to_client = Queue.new
@@ -677,6 +685,7 @@ class IMAPTest < Net::IMAP::TestCase
   end
 
   def test_connection_closed_without_greeting
+    omit_if_jruby "???"
     server = create_tcp_server
     port = server.addr[1]
     h = {

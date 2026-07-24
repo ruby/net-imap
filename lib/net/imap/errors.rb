@@ -340,7 +340,7 @@ module Net
         @state, @command, @response = state, command, response
         cmd_desc = name ? "#{state} #{name}" : state
         super "Received tagged #{status} to #{cmd_desc} command (tag=#{tag})"
-      rescue NoMatchingPatternError => err
+      rescue NoMatchingPatternError, NoMatchingPatternKeyError => err
         raise ArgumentError, err.message
       end
 
