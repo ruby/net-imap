@@ -40,5 +40,6 @@ jobs:
     - name: Report coverage
       if: ${{ matrix.os == 'ubuntu-latest' && github.event_name != 'pull_request' &&
         !startsWith(matrix.ruby, 'truffleruby') && !startsWith(matrix.ruby, 'jruby') }}
-      run: bundle exec rake coverage:report
+      run: bundle exec rake test:coverage:report
       timeout-minutes: 1 # _should_ finish in under a second
+      continue-on-error: ${{ matrix.os != 'ubuntu-latest' || matrix.ruby != '4.0' }}

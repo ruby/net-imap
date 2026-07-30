@@ -1,11 +1,12 @@
 # frozen_string_literal: true
 
 SimpleCov.configure do
-  formatter SimpleCov::Formatter::HTMLFormatter
-
   enable_coverage  :branch
   enable_coverage  :method
   enable_coverage  :eval
+
+  # eval branch coverage varies too much between runtime environments
+  ignore_branches :eval_generated
 
   skip "/test/"
   skip "/rakelib/"
