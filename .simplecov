@@ -7,6 +7,9 @@ SimpleCov.configure do
   enable_coverage  :method
   enable_coverage  :eval
 
+  # eval branch coverage varies too much between runtime environments
+  ignore_branches :eval_generated
+
   skip "/test/"
   skip "/rakelib/"
   cover "lib/**/*.rb"
