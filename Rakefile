@@ -13,7 +13,7 @@ end
 task :default => :test
 
 desc "Output coverage data report, and error when threshholds aren't met"
-task "coverage:report" do
+task "test:coverage:report" do
   require "simplecov"
   SimpleCov.collate "coverage/.resultset.json" do
     coverage(:line) do
