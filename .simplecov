@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 SimpleCov.configure do
-  formatter SimpleCov::Formatter::HTMLFormatter
-
   enable_coverage  :branch
   enable_coverage  :method
   enable_coverage  :eval

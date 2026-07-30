@@ -12,10 +12,13 @@ end
 
 task :default => :test
 
-desc "Output coverage data report, and error when threshholds aren't met"
+desc "Output HTML coverage data report, and error when threshholds aren't met"
 task "test:coverage:report" do
   require "simplecov"
+
   SimpleCov.collate "coverage/.resultset.json" do
+    formatter SimpleCov::Formatter::HTMLFormatter
+
     coverage(:line) do
       minimum           95
 
