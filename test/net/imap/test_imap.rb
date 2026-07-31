@@ -9,6 +9,8 @@ class IMAPTest < Net::IMAP::TestCase
   SERVER_KEY = File.expand_path("../fixtures/server.key", __dir__)
   SERVER_CERT = File.expand_path("../fixtures/server.crt", __dir__)
 
+  # TODO: convert to use Net::IMAP::FakeServer::TestHelper
+  include Net::IMAP::TestCase::SimpleTCPServerHelper
   include Net::IMAP::FakeServer::TestHelper
 
   if defined?(OpenSSL::SSL::SSLError)
@@ -271,14 +273,6 @@ class IMAPTest < Net::IMAP::TestCase
         imap.disconnect if imap
       end
     end
-  end
-
-  def start_server
-    th = Thread.new do
-      yield
-    end
-    @threads << th
-    sleep 0.001 until th.stop?
   end
 
   def test_unexpected_eof
@@ -1320,14 +1314,6 @@ class IMAPTest < Net::IMAP::TestCase
     ensure
       imap.disconnect if imap && !imap.disconnected?
     end
-  end
-
-  def create_tcp_server
-    return TCPServer.new(server_addr, 0)
-  end
-
-  def server_addr
-    Addrinfo.tcp("localhost", 0).ip_address
   end
 
 end

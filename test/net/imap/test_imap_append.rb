@@ -7,6 +7,8 @@ require_relative "fake_server"
 class IMAPAppendTest < Net::IMAP::TestCase
   TEST_FIXTURE_PATH = File.join(__dir__, "fixtures/response_parser")
 
+  # TODO: convert all tests to use Net::IMAP::FakeServer::TestHelper
+  include Net::IMAP::TestCase::SimpleTCPServerHelper
   include Net::IMAP::FakeServer::TestHelper
 
   test "#append" do
@@ -118,24 +120,6 @@ class IMAPAppendTest < Net::IMAP::TestCase
                    "~{#{mail.bytesize}}\r\n#{mail}",
                    server.commands.pop.args
     end
-  end
-
-  private
-
-  def start_server
-    th = Thread.new do
-      yield
-    end
-    @threads << th
-    sleep 0.1 until th.stop?
-  end
-
-  def create_tcp_server
-    return TCPServer.new(server_addr, 0)
-  end
-
-  def server_addr
-    Addrinfo.tcp("localhost", 0).ip_address
   end
 
 end
