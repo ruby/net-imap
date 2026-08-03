@@ -45,6 +45,21 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     end
   end
 
+  module SimpleTCPServerHelper
+    private
+
+    def start_server
+      th = Thread.new do
+        yield
+      end
+      @threads << th
+      sleep 0.001 until th.stop?
+    end
+
+    def create_tcp_server = TCPServer.new(server_addr, 0)
+    def server_addr       = Addrinfo.tcp("localhost", 0).ip_address
+  end
+
   def wait_for_response_count(imap, type:, count:,
                               timeout: 0.5, interval: 0.001)
     deadline = Time.now + timeout
