@@ -3,6 +3,8 @@
 require "net/imap"
 require "test/unit"
 
+# For integration testing of sending of command arguments (over a real socket),
+# see test_imap_sending_command_data.rb.
 class CommandDataTest < Net::IMAP::TestCase
   DataFormatError = Net::IMAP::DataFormatError
 
