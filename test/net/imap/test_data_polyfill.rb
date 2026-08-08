@@ -36,6 +36,25 @@ module Net
         test "CRuby uses core ::Data" do
           assert_same(::Data, ::Net::IMAP::Data)
         end
+
+        # These tests are not allow to break CI for ruby-head.
+        # Any StandardError will be converted to pending.
+        if RUBY_VERSION >= "4.1.0"
+          # test-unit doesn't have an "around callback" like rspec.
+          private def run_test
+            super
+          rescue Test::Unit::AssertionFailedError => error
+            raise Test::Unit::PendedError,
+              "Did this change for ruby 4.1?\n#{error.message}",
+              error.backtrace_locations || error.backtrace,
+              cause: error
+          rescue => error
+            raise Test::Unit::PendedError,
+              "Did this change for ruby 4.1? #{error.detailed_message}",
+              error.backtrace_locations || error.backtrace,
+              cause: error
+          end
+        end
       end
 
       def test_define
