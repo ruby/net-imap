@@ -1215,10 +1215,20 @@ module Net
         @sock.to_io.shutdown
       rescue Errno::ENOTCONN
         # ignore `Errno::ENOTCONN: Socket is not connected' on some platforms.
+      rescue IOError => e
+        # IO#close should be safe against being closed by another thread, but
+        # JRuby raises this error sometimes.
+        raise unless e.message == "closed stream"
       rescue Exception => e
         @receiver_thread.raise(e) unless in_receiver_thread
       end
-      @sock.close
+      begin
+        @sock.close
+      rescue IOError => e
+        # IO#close should be safe against being closed by another thread, but
+        # JRuby raises this error sometimes.
+        raise unless e.message == "closed stream"
+      end
       @receiver_thread.join(timeout) unless mon_owned? || in_receiver_thread
       raise e if e
     ensure
