@@ -159,7 +159,6 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       end
       begin
         imap = Net::IMAP.new("localhost", :port => port)
-        omit_if_jruby "JRuby sometimes raises IOError instead"
         assert_reraised(Net::IMAP::InvalidResponseError, imap:) do
           imap.starttls(:ca_file => CA_FILE)
         end
@@ -207,7 +206,6 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
           # stored it in @tagged_responses, so finish_sending_command can see it.
           # (handle_response stores the tagged response before calling handlers.)
           rcvr_to_client.pop
-          omit_if_jruby "JRuby sometimes raises IOError instead"
           assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
             imap.starttls(:ca_file => CA_FILE)
           end
