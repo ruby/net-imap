@@ -196,7 +196,7 @@ module Net
       # #load_defaults will not override #debug.
       attr_accessor :debug, type: :boolean, default: false
 
-      # method: debug?
+      # :method: debug?
       # :call-seq: debug? -> boolean
       #
       # Alias for #debug

@@ -104,7 +104,7 @@ module Net
     #
     class FetchStruct < Struct
       ##
-      # method: attr
+      # :method: attr
       # :call-seq: attr -> hash
       #
       # Each key specifies a message attribute, and the value is the
@@ -518,7 +518,7 @@ module Net
     # See FetchStruct documentation for a list of standard message attributes.
     class FetchData < FetchStruct.new(:seqno, :attr)
       ##
-      # method: seqno
+      # :method: seqno
       # :call-seq: seqno -> Integer
       #
       # The message sequence number.
@@ -532,7 +532,7 @@ module Net
       #   UIDFetchData will raise a NoMethodError.
 
       ##
-      # method: attr
+      # :method: attr
       # :call-seq: attr -> hash
       #
       # Each key specifies a message attribute, and the value is the
@@ -558,7 +558,7 @@ module Net
     # See FetchStruct documentation for a list of standard message attributes.
     class UIDFetchData < FetchStruct.new(:uid, :attr)
       ##
-      # method: uid
+      # :method: uid
       # call-seq: uid -> Integer
       #
       # A number expressing the unique identifier of the message.
@@ -568,7 +568,7 @@ module Net
       #   returns the uniqueid at the beginning of the +UIDFETCH+ response.
 
       ##
-      # method: attr
+      # :method: attr
       # call-seq: attr -> hash
       #
       # Each key specifies a message attribute, and the value is the

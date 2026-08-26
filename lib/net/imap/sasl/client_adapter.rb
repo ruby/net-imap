@@ -64,12 +64,12 @@ module Net
         def authenticate(...) AuthenticationExchange.authenticate(self, ...) end
 
         ##
-        # method: sasl_ir_capable?
+        # :method: sasl_ir_capable?
         # Do the protocol, server, and client all support an initial response?
         def_delegator :client, :sasl_ir_capable?
 
         ##
-        # method: auth_capable?
+        # :method: auth_capable?
         # call-seq: auth_capable?(mechanism)
         #
         # Does the server advertise support for the +mechanism+?
@@ -94,12 +94,12 @@ module Net
         end
 
         ##
-        # method: host
+        # :method: host
         # The hostname to which the client connected.
         def_delegator :client, :host
 
         ##
-        # method: port
+        # :method: port
         # The destination port to which the client connected.
         def_delegator :client, :port
 
@@ -108,12 +108,12 @@ module Net
         def response_errors; [] end
 
         ##
-        # method: drop_connection
+        # :method: drop_connection
         # Drop the connection gracefully, sending a "LOGOUT" command as needed.
         def_delegator :client, :drop_connection
 
         ##
-        # method: drop_connection!
+        # :method: drop_connection!
         # Drop the connection abruptly, closing the socket without logging out.
         def_delegator :client, :drop_connection!
 

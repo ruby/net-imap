@@ -19,13 +19,13 @@ module Net
     #
     class ContinuationRequest < Struct.new(:data, :raw_data)
       ##
-      # method: data
+      # :method: data
       # :call-seq: data -> ResponseText
       #
       # Returns a ResponseText object
 
       ##
-      # method: raw_data
+      # :method: raw_data
       # :call-seq: raw_data -> string
       #
       # the raw response data
@@ -39,13 +39,13 @@ module Net
     #
     class UntaggedResponse < Struct.new(:name, :data, :raw_data)
       ##
-      # method: name
+      # :method: name
       # :call-seq: name -> string
       #
       # The uppercase response name, e.g. "FLAGS", "LIST", "FETCH", etc.
 
       ##
-      # method: data
+      # :method: data
       # :call-seq: data -> object or nil
       #
       # The parsed response data, e.g: an array of flag symbols, an array of
@@ -54,7 +54,7 @@ module Net
       # determines what form the data can take.
 
       ##
-      # method: raw_data
+      # :method: raw_data
       # :call-seq: raw_data -> string
       #
       # The raw response data.
@@ -89,7 +89,7 @@ module Net
     # InvalidParseData.
     class UnparsedData < Struct.new(:unparsed_data)
       ##
-      # method: unparsed_data
+      # :method: unparsed_data
       # :call-seq: unparsed_data -> string
       #
       # The unparsed data
@@ -132,19 +132,19 @@ module Net
     # See also: UnparsedData, ExtensionData
     class InvalidParseData < Data.define(:parse_error, :unparsed_data, :parsed_data)
       ##
-      # method: parse_error
+      # :method: parse_error
       # :call-seq: parse_error -> ResponseParseError
       #
       # Returns the rescued ResponseParseError.
 
       ##
-      # method: unparsed_data
+      # :method: unparsed_data
       # :call-seq: unparsed_data -> string
       #
       # Returns the raw string which was skipped over by the parser.
 
       ##
-      # method: parsed_data
+      # :method: parsed_data
       #
       # May return a partial parse result for unparsed_data, which had already
       # been parsed before the parse_error.
@@ -170,7 +170,7 @@ module Net
     # See also: UnparsedData, ExtensionData, IgnoredResponse, InvalidParseData
     class UnparsedNumericResponseData < Struct.new(:number, :unparsed_data)
       ##
-      # method: number
+      # :method: number
       # :call-seq: number -> integer
       #
       # Returns a numeric response data prefix, when available.
@@ -180,7 +180,7 @@ module Net
       # mailbox data, #number may represent a message count.
 
       ##
-      # method: unparsed_data
+      # :method: unparsed_data
       # :call-seq: unparsed_data -> string
       #
       # The unparsed data, not including #number or UntaggedResponse#name.
@@ -197,7 +197,7 @@ module Net
     # See also: UnparsedData, UnparsedNumericResponseData, IgnoredResponse
     class ExtensionData < Struct.new(:data)
       ##
-      # method: data
+      # :method: data
       # :call-seq: data -> string
       #
       # The parsed extension data.
@@ -211,25 +211,25 @@ module Net
     #
     class TaggedResponse < Struct.new(:tag, :name, :data, :raw_data)
       ##
-      # method: tag
+      # :method: tag
       # :call-seq: tag -> string
       #
       # Returns the command tag
 
       ##
-      # method: name
+      # :method: name
       # :call-seq: name -> string
       #
       # Returns the name, one of "OK", "NO", or "BAD".
 
       ##
-      # method: data
+      # :method: data
       # :call-seq: data -> ResponseText
       #
       # Returns a ResponseText object
 
       ##
-      # method: raw_data
+      # :method: raw_data
       # :call-seq: raw_data -> string
       #
       # The raw response data.
@@ -254,13 +254,13 @@ module Net
       EMPTY = new(nil, "").freeze
 
       ##
-      # method: code
+      # :method: code
       # :call-seq: code -> ResponseCode or nil
       #
       # Returns a ResponseCode, if the response contains one
 
       ##
-      # method: text
+      # :method: text
       # :call-seq: text -> string
       #
       # Returns the response text, not including any response code
@@ -412,14 +412,14 @@ module Net
     # response code data, #data returns InvalidParseData.
     class ResponseCode < Struct.new(:name, :data)
       ##
-      # method: name
+      # :method: name
       # :call-seq: name -> string
       #
       # Returns the response code name, such as "ALERT", "PERMANENTFLAGS", or
       # "UIDVALIDITY".
 
       ##
-      # method: data
+      # :method: data
       # :call-seq: data -> object or nil
       #
       # Returns the parsed response code data, e.g: an array of capabilities
@@ -438,7 +438,7 @@ module Net
     #
     class MailboxList < Struct.new(:attr, :delim, :name)
       ##
-      # method: attr
+      # :method: attr
       # :call-seq: attr -> array of Symbols
       #
       # Returns the name attributes. Each name attribute is a symbol capitalized
@@ -451,13 +451,13 @@ module Net
       #   has links to specifications for all standard mailbox attributes.
 
       ##
-      # method: delim
+      # :method: delim
       # :call-seq: delim -> single character string
       #
       # Returns the hierarchy delimiter for the mailbox path.
 
       ##
-      # method: name
+      # :method: name
       # :call-seq: name -> string
       #
       # Returns the mailbox name.
@@ -477,7 +477,7 @@ module Net
     # [RFC9208[https://www.rfc-editor.org/rfc/rfc9208]] capability.
     class MailboxQuota < Struct.new(:mailbox, :usage, :quota)
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: mailbox -> string
       #
       # The quota root with the associated quota.
@@ -490,13 +490,13 @@ module Net
       alias quota_root mailbox
 
       ##
-      # method: usage
+      # :method: usage
       # :call-seq: usage -> Integer
       #
       # Current storage usage of the mailbox.
 
       ##
-      # method: quota
+      # :method: quota
       # :call-seq: quota -> Integer
       #
       # Storage limit imposed on the mailbox.
@@ -513,13 +513,13 @@ module Net
     # capability.
     class MailboxQuotaRoot < Struct.new(:mailbox, :quotaroots)
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: mailbox -> string
       #
       # The mailbox with the associated quota.
 
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: quotaroots -> array of strings
       #
       # Zero or more quotaroots that affect the quota on the specified mailbox.
@@ -534,20 +534,20 @@ module Net
     # capability.
     class MailboxACLItem < Struct.new(:user, :rights, :mailbox)
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: mailbox -> string
       #
       # The mailbox to which the indicated #user has the specified #rights.
 
       ##
-      # method: user
+      # :method: user
       # :call-seq: user -> string
       #
       # Login name that has certain #rights to the #mailbox that was specified
       # with the getacl command.
 
       ##
-      # method: rights
+      # :method: rights
       # :call-seq: rights -> string
       #
       # The access rights the indicated #user has to the #mailbox.
@@ -561,19 +561,19 @@ module Net
     # or +IMAP4rev2+ capability.
     class Namespace < Struct.new(:prefix, :delim, :extensions)
       ##
-      # method: prefix
+      # :method: prefix
       # :call-seq: prefix -> string
       #
       # Returns the namespace prefix string.
 
       ##
-      # method: delim
+      # :method: delim
       # :call-seq: delim -> single character string or nil
       #
       # Returns a hierarchy delimiter character, if it exists.
 
       ##
-      # method: extensions
+      # :method: extensions
       # :call-seq: extensions -> Hash[String, Array[String]]
       #
       # A hash of parameters mapped to arrays of strings, for extensibility.
@@ -590,19 +590,19 @@ module Net
     # or +IMAP4rev2+ capability.
     class Namespaces < Struct.new(:personal, :other, :shared)
       ##
-      # method: personal
+      # :method: personal
       # :call-seq: personal -> array of Namespace
       #
       # Returns an array of Personal Namespace objects.
 
       ##
-      # method: other
+      # :method: other
       # :call-seq: other -> array of Namespace
       #
       # Returns an array of Other Users' Namespace objects.
 
       ##
-      # method: shared
+      # :method: shared
       # :call-seq: shared -> array of Namespace
       #
       # Returns an array of Shared Namespace objects.
@@ -613,13 +613,13 @@ module Net
     # IMAP#status returns the contents of #attr.
     class StatusData < Struct.new(:mailbox, :attr)
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: mailbox -> string
       #
       # The mailbox name.
 
       ##
-      # method: attr
+      # :method: attr
       # :call-seq: attr -> Hash[String, Integer]
       #
       # A hash.  Each key is one of "MESSAGES", "RECENT", "UIDNEXT",
@@ -643,7 +643,7 @@ module Net
     class Envelope < Struct.new(:date, :subject, :from, :sender, :reply_to,
                                 :to, :cc, :bcc, :in_reply_to, :message_id)
       ##
-      # method: date
+      # :method: date
       # call-seq: date -> string
       #
       # Returns a string that represents the +Date+ header.
@@ -654,7 +654,7 @@ module Net
       #   for a malformed or draft message.
 
       ##
-      # method: subject
+      # :method: subject
       # call-seq: subject -> string or nil
       #
       # Returns a string that represents the +Subject+ header, if it is present.
@@ -666,7 +666,7 @@ module Net
       #   +nil+ and empty string as identical.
 
       ##
-      # method: from
+      # :method: from
       # call-seq: from -> array of Net::IMAP::Address or nil
       #
       # Returns an array of Address that represents the +From+ header.
@@ -680,7 +680,7 @@ module Net
       #   for a malformed or draft message.
 
       ##
-      # method: sender
+      # :method: sender
       # call-seq: sender -> array of Net::IMAP::Address or nil
       #
       # Returns an array of Address that represents the +Sender+ header.
@@ -693,7 +693,7 @@ module Net
       #   +nil+ for a malformed or draft message.
 
       ##
-      # method: reply_to
+      # :method: reply_to
       # call-seq: reply_to -> array of Net::IMAP::Address or nil
       #
       # Returns an array of Address that represents the <tt>Reply-To</tt>
@@ -707,25 +707,25 @@ module Net
       #   can be +nil+ for a malformed or draft message.
 
       ##
-      # method: to
+      # :method: to
       # call-seq: to -> array of Net::IMAP::Address
       #
       # Returns an array of Address that represents the +To+ header.
 
       ##
-      # method: cc
+      # :method: cc
       # call-seq: cc -> array of Net::IMAP::Address
       #
       # Returns an array of Address that represents the +Cc+ header.
 
       ##
-      # method: bcc
+      # :method: bcc
       # call-seq: bcc -> array of Net::IMAP::Address
       #
       # Returns an array of Address that represents the +Bcc+ header.
 
       ##
-      # method: in_reply_to
+      # :method: in_reply_to
       # call-seq: in_reply_to -> string
       #
       # Returns a string that represents the <tt>In-Reply-To</tt> header.
@@ -741,7 +741,7 @@ module Net
       #   +nil+ and empty string as identical.
 
       ##
-      # method: message_id
+      # :method: message_id
       # call-seq: message_id -> string
       #
       # Returns a string that represents the <tt>Message-ID</tt>.
@@ -771,14 +771,14 @@ module Net
     # field holds the group name phrase.
     class Address < Struct.new(:name, :route, :mailbox, :host)
       ##
-      # method: name
+      # :method: name
       # :call-seq: name -> string or nil
       #
       # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] address
       # +display-name+ (or the mailbox +phrase+ in the RFC-822 grammar).
 
       ##
-      # method: route
+      # :method: route
       # :call-seq: route -> string or nil
       #
       # Returns the route from RFC-822 route-addr.
@@ -788,7 +788,7 @@ module Net
       #        addresses with this syntax must still be accepted and parsed.
 
       ##
-      # method: mailbox
+      # :method: mailbox
       # :call-seq: mailbox -> string or nil
       #
       # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] address
@@ -799,7 +799,7 @@ module Net
       # mailbox indicates the end of a group.
 
       ##
-      # method: host
+      # :method: host
       # :call-seq: host -> string or nil
       #
       # Returns the [RFC5322[https://www.rfc-editor.org/rfc/rfc5322]] addr-spec
@@ -813,14 +813,14 @@ module Net
     #
     class ContentDisposition < Struct.new(:dsp_type, :param)
       ##
-      # method: dsp_type
+      # :method: dsp_type
       # :call-seq: dsp_type -> string
       #
       # Returns the content disposition type, as defined by
       # [DISPOSITION[https://www.rfc-editor.org/rfc/rfc2183]].
 
       ##
-      # method: param
+      # :method: param
       # :call-seq: param -> hash
       #
       # Returns a hash representing parameters of the Content-Disposition
@@ -832,13 +832,13 @@ module Net
     #
     class ThreadMember < Struct.new(:seqno, :children)
       ##
-      # method: seqno
+      # :method: seqno
       # :call-seq: seqno -> Integer
       #
       # The message sequence number.
 
       ##
-      # method: children
+      # :method: children
       # :call-seq: children -> array of ThreadMember
       #
       # An array of Net::IMAP::ThreadMember objects for mail items that are
@@ -900,28 +900,28 @@ module Net
       include BodyStructure
 
       ##
-      # method: media_type
+      # :method: media_type
       # :call-seq: media_type -> string
       #
       # The top-level media type as defined in
       # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
-      # method: subtype
+      # :method: subtype
       # :call-seq: subtype -> string
       #
       # The media subtype name as defined in
       # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
-      # method: param
+      # :method: param
       # :call-seq: param -> string
       #
       # Returns a hash that represents parameters as defined in
       # [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
-      # method: content_id
+      # :method: content_id
       # :call-seq: content_id -> string
       #
       # Returns a string giving the content id as defined
@@ -929,7 +929,7 @@ module Net
       # {§7}[https://www.rfc-editor.org/rfc/rfc2045#section-7].
 
       ##
-      # method: description
+      # :method: description
       # :call-seq: description -> string
       #
       # Returns a string giving the content description as defined
@@ -937,7 +937,7 @@ module Net
       # {§8}[https://www.rfc-editor.org/rfc/rfc2045#section-8].
 
       ##
-      # method: encoding
+      # :method: encoding
       # :call-seq: encoding -> string
       #
       # Returns a string giving the content transfer encoding as defined
@@ -945,20 +945,20 @@ module Net
       # {§6}[https://www.rfc-editor.org/rfc/rfc2045#section-6].
 
       ##
-      # method: size
+      # :method: size
       # :call-seq: size -> integer
       #
       # Returns a number giving the size of the body in octets.
 
       ##
-      # method: md5
+      # :method: md5
       # :call-seq: md5 -> string
       #
       # Returns a string giving the body MD5 value as defined in
       # [MD5[https://www.rfc-editor.org/rfc/rfc1864]].
 
       ##
-      # method: disposition
+      # :method: disposition
       # :call-seq: disposition -> ContentDisposition
       #
       # Returns a ContentDisposition object giving the content
@@ -966,7 +966,7 @@ module Net
       # [DISPOSITION[https://www.rfc-editor.org/rfc/rfc2183]].
 
       ##
-      # method: language
+      # :method: language
       # :call-seq: language -> string
       #
       # Returns a string or an array of strings giving the body
@@ -975,7 +975,7 @@ module Net
 
       #--
       ##
-      # method: location
+      # :method: location
       # :call-seq: location -> string
       #
       # A string list giving the body content URI as defined in
@@ -983,7 +983,7 @@ module Net
       #++
 
       ##
-      # method: extension
+      # :method: extension
       # :call-seq: extension -> string
       #
       # Returns extension data.  The +BODYSTRUCTURE+ fetch attribute
@@ -1037,7 +1037,7 @@ module Net
       include BodyStructure
 
       ##
-      # method: lines
+      # :method: lines
       # :call-seq: lines -> Integer
       #
       # Returns the size of the body in text lines.
@@ -1083,13 +1083,13 @@ module Net
       include BodyStructure
 
       ##
-      # method: envelope
+      # :method: envelope
       # :call-seq: envelope -> Envelope
       #
       # Returns a Net::IMAP::Envelope giving the envelope structure.
 
       ##
-      # method: body
+      # :method: body
       # :call-seq: body -> BodyStructure
       #
       # Returns a Net::IMAP::BodyStructure for the message's body structure.
@@ -1121,41 +1121,41 @@ module Net
       include BodyStructure
 
       ##
-      # method: media_type
+      # :method: media_type
       # call-seq: media_type -> "multipart"
       #
       # BodyTypeMultipart is only used with <tt>multipart/*</tt> media types.
 
       ##
-      # method: subtype
+      # :method: subtype
       # call-seq: subtype -> string
       #
       # Returns the content subtype name
       # as defined in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
-      # method: parts
+      # :method: parts
       # call-seq: parts -> array of BodyStructure objects
       #
       # Returns an array with a BodyStructure object for each part contained in
       # this part.
 
       ##
-      # method: param
+      # :method: param
       # call-seq: param -> hash
       #
       # Returns a hash that represents parameters
       # as defined in [MIME-IMB[https://www.rfc-editor.org/rfc/rfc2045]].
 
       ##
-      # method: disposition
+      # :method: disposition
       # call-seq: disposition -> ContentDisposition
       #
       # Returns a Net::IMAP::ContentDisposition object giving the content
       # disposition.
 
       ##
-      # method: language
+      # :method: language
       # :call-seq: language -> string
       #
       # Returns a string or an array of strings giving the body
@@ -1163,7 +1163,7 @@ module Net
       # [LANGUAGE-TAGS[https://www.rfc-editor.org/info/rfc3282]].
 
       ##
-      # method: extension
+      # :method: extension
       # call-seq: extension -> array
       #
       # Returns extension data as an array of numbers strings, and nested
