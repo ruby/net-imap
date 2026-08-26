@@ -193,11 +193,11 @@ module Net
         end
 
         ##
-        # method: range
+        # :method: range
         # :call-seq: range -> range
 
         ##
-        # method: results
+        # :method: results
         # :call-seq: results -> sequence set or nil
 
         # Converts #results to an array of integers.
