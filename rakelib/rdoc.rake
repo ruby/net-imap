@@ -6,6 +6,27 @@ require 'rdoc/rdoc' unless defined?(RDoc::Markup::ToHtml)
 module RDoc::Generator
   module NetIMAP
 
+    module FixPrismParserAttrVisitor
+
+      # Replaces the version in rdoc 8.0 with rdoc 7.2 behavior
+      def _visit_call_attr_reader_writer_accessor(call_node, rw)
+        return if @scanner.in_proc_block
+        names = initial_symbol_arguments(call_node) or return
+        @scanner.add_attributes(names.map(&:to_s), rw, call_node.location.start_line)
+      end
+
+      # Unlike #symbol_arguments, which is strict about _all_ arguments being
+      # symbol literals, this returns initial symbol args and ignores the rest.
+      def initial_symbol_arguments(call_node)
+        arguments_node = call_node.arguments or return
+        symbol_args = arguments_node.arguments
+          .slice_before {|arg| !arg.is_a?(Prism::SymbolNode) }
+          .first
+        symbol_args.map {|arg| arg.value.to_sym } if symbol_args.any?
+      end
+
+    end
+
     module RemoveRedundantParens
       def param_seq
         super.sub(/^\(\)\s*/, "")
@@ -44,6 +65,9 @@ class RDoc::Markup::ToHtml
   LIST_TYPE_TO_HTML[:NOTE] = ['<table class="rdoc-list note-list"><tbody>', '</tbody></table>']
   prepend RDoc::Generator::NetIMAP::LabelListTable
 end
+
+(RDoc::Parser::Ruby::RDocVisitor rescue nil)
+  &.prepend RDoc::Generator::NetIMAP::FixPrismParserAttrVisitor
 
 RDoc::Task.new do |doc|
   doc.title      = "net-imap #{Net::IMAP::VERSION}"
