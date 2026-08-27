@@ -788,6 +788,9 @@ module Net
       # Related: #min, #minmax, #slice
       def max(count = nil, star: :*)
         if count
+          count = Integer(count.to_int)
+          raise ArgumentError, 'negative count' if count < 0
+          return remain_frozen_empty if count == 0
           if cardinality <= count
             frozen? ? self : dup
           else
@@ -812,6 +815,8 @@ module Net
       # Related: #max, #minmax, #slice
       def min(count = nil, star: :*)
         if count
+          count = Integer(count.to_int)
+          raise ArgumentError, 'negative count' if count < 0
           slice(0...count) || remain_frozen_empty
         elsif (val = min_num)
           val != STAR_INT ? val : star
