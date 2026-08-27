@@ -3432,7 +3432,7 @@ module Net
     def clear_responses(type = nil)
       synchronize {
         if type
-          @responses.delete(type) || []
+          @responses.delete(type.to_s.upcase) || []
         else
           @responses.dup.transform_values(&:freeze)
             .tap { _1.default = [].freeze }
