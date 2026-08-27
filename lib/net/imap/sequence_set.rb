@@ -1869,8 +1869,9 @@ module Net
       def remain_frozen_empty; frozen? ? SequenceSet.empty : SequenceSet.new end
 
       # frozen clones are shallow copied
-      def initialize_clone(other)
-        @set_data = other.dup_set_data unless other.frozen?
+      def initialize_clone(other, freeze: nil)
+        @set_data = other.dup_set_data unless other.frozen? && freeze != false
+        freeze_set_data if freeze
         super
       end
 
