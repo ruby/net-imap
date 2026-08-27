@@ -80,8 +80,12 @@ module Net
 
       # Hash equality.  Unlike #==, order will be taken into account.
       def eql?(other)
-        return super if modseq.nil?
-        self.class == other.class && hash == other.hash
+        return false unless super
+        if modseq.nil?
+          !other.respond_to?(:modseq) || other.modseq.nil?
+        else
+          self.class == other.class && modseq == other.modseq
+        end
       end
 
       # Returns a string that represents the SearchResult.
