@@ -1743,6 +1743,7 @@ module Net
           when "SIZE"          then number64            # RFC8483, RFC9051
           when "HIGHESTMODSEQ" then mod_sequence_valzer # RFC7162
           when "MAILBOXID"     then parens__objectid    # RFC8474
+          when "APPENDLIMIT"   then NIL? ? nil : number  # RFC7889
           else
             number? || ExtensionData.new(tagged_ext_val)
           end
