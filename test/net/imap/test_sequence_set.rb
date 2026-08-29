@@ -558,6 +558,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal 3, set.find_ordered_index(5)
     assert_equal 4, set.find_ordered_index(6)
     assert_nil   set.find_ordered_index(4)
+    set = SequenceSet["1:4294967294,1:4294967294,*"]
+    assert_equal 8_589_934_588, set.find_ordered_index(:*)
     set = SequenceSet["1000:1111,1:100"]
     assert_equal   0, set.find_ordered_index(1000)
     assert_equal 100, set.find_ordered_index(1100)

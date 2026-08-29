@@ -1691,7 +1691,7 @@ module Net
         number = import_num number
         each_minmax_with_index(minmaxes) do |min, max, idx_min|
           number <  min and return nil
-          number <= max and return export_num(idx_min + (number - min))
+          number <= max and return idx_min + (number - min)
         end
         nil
       end
@@ -1704,7 +1704,7 @@ module Net
         number = import_num number
         each_minmax_with_index(each_entry_minmax) do |min, max, idx_min|
           if min <= number && number <= max
-            return export_num(idx_min + (number - min))
+            return idx_min + (number - min)
           end
         end
         nil
