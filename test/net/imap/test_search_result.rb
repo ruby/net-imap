@@ -93,6 +93,22 @@ class SearchDataTests < Net::IMAP::TestCase
     refute_operator result.hash, :eql?, array.hash
   end
 
+  # NOTE: this subclass is NOT overriding #==, #hash, or #eql?
+  Subclass = Class.new(SearchResult)
+
+  test "SearchResult[...] == / eql? Subclass[...]" do
+    array    = [1, 5, 20, 3, 98]
+    result   = SearchResult[*array]
+    subclass = Subclass[*array]
+    assert_operator result, :eql?, subclass
+    assert_equal result.hash, subclass.hash
+    modseq   = 12345
+    result   = SearchResult[*array, modseq:]
+    subclass = Subclass[*array, modseq:]
+    assert_operator result, :eql?, subclass
+    assert_equal result.hash, subclass.hash
+  end
+
   test "SearchResult[*nz_numbers, modseq: nz_number] != / not eql? Array[*nz_numbers]" do
     array  = [1, 5, 20, 3, 98]
     result = SearchResult[*array, modseq: 123456]

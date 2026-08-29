@@ -73,11 +73,11 @@ module Net
       end
 
       # Hash equality.  Unlike #==, order will be taken into account.
-      def hash = [super, self.class, modseq].hash
+      def hash = [SearchResult, modseq, super].hash
 
       # Hash equality.  Unlike #==, order will be taken into account.
       def eql?(other)
-        self.class == other.class &&
+        SearchResult === other &&
           modseq == other.modseq &&
           super
       end
