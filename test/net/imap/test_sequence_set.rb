@@ -252,6 +252,21 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     end
   end
 
+  test "#clone(freeze:)" do
+    original = SequenceSet["2:4,7:11,99,999"]
+    copy = original.clone(freeze: false)
+    refute copy.frozen?
+    copy << 123
+    assert copy.include?(123)
+    assert !original.include?(123)
+
+    copy = SequenceSet.new("2:4,7:11,99,999").clone(freeze: true)
+    assert copy.frozen?
+    assert_raise FrozenError do
+      copy << 123
+    end
+  end
+
   if defined?(Ractor)
     test "#freeze makes ractor sharable (deeply frozen)" do
       assert Ractor.shareable? SequenceSet.new("1:9,99,999").freeze
