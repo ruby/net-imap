@@ -2165,7 +2165,7 @@ module Net
       def number_input?(input)
         case input
         when *STARS, Integer then true
-        when String          then !input.include?(/[:,]/)
+        when String          then !input.match?(/[:,]/)
         end
       end
 
