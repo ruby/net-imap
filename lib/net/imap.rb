@@ -3901,7 +3901,9 @@ module Net
         raise ArgumentError, "partial can only be used with uid_fetch"
       end
       set = SequenceSet[set]
-      mod = mod.dup if mod && (partial || changedsince)
+      mod in nil | Array or
+        raise TypeError, "expected nil or array, got #{mod.class}"
+      mod &&= mod.dup
       if partial
         mod ||= []
         mod << "PARTIAL" << PartialRange[partial]
