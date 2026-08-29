@@ -173,7 +173,7 @@ class IMAPResponsesTest < Net::IMAP::TestCase
       assert_equal([Net::IMAP::TaggedResponse, "RUBY0001", "OK"],
                    [resp.class, resp.tag, resp.name])
       # called with "type", clears and returns only that type
-      assert_equal([172],        imap.clear_responses("EXISTS"))
+      assert_equal([172],        imap.clear_responses("exists"))
       assert_equal([],           imap.clear_responses("EXISTS"))
       assert_equal([1],          imap.clear_responses("RECENT"))
       assert_equal([3857529045], imap.clear_responses("UIDVALIDITY"))
