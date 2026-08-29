@@ -858,6 +858,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     set = SequenceSet.new [5..11, 20, 30..40]
     # deleting a single-member range
     assert_equal SequenceSet[9], set.delete?(9..9)
+    assert_equal 6, SequenceSet.new(5..10).delete?("6")
   end
 
   test "#slice!" do
