@@ -186,7 +186,7 @@ module Net
         end
 
         def peek_re?(re)
-          assert_no_lookahead if Net::IMAP.debug
+          assert_no_lookahead if config.debug?
           re.match?(@str, @pos)
         end
 
