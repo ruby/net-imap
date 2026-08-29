@@ -73,15 +73,13 @@ module Net
       end
 
       # Hash equality.  Unlike #==, order will be taken into account.
-      def hash
-        return super if modseq.nil?
-        [super, self.class, modseq].hash
-      end
+      def hash = [super, self.class, modseq].hash
 
       # Hash equality.  Unlike #==, order will be taken into account.
       def eql?(other)
-        return super if modseq.nil?
-        self.class == other.class && hash == other.hash
+        self.class == other.class &&
+          modseq == other.modseq &&
+          super
       end
 
       # Returns a string that represents the SearchResult.

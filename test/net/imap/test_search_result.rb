@@ -30,6 +30,17 @@ class SearchDataTests < Net::IMAP::TestCase
     refute_equal nomodseq, sorted
   end
 
+  test "#eql? and #hash include the result type and modseq" do
+    result = SearchResult[1, 2, modseq: 3]
+    same = SearchResult[1, 2, modseq: 3]
+
+    assert_operator result, :eql?, same
+    assert_equal result.hash, same.hash
+    refute_operator result, :eql?, SearchResult[2, 1, modseq: 3]
+    refute_operator result, :eql?, SearchResult[1, 2, modseq: 4]
+    refute_operator SearchResult[1, 2], :eql?, [1, 2]
+  end
+
   test "SearchResult[*nz_numbers] == Array[*nz_numbers]" do
     array  = [1, 5, 20, 3, 98]
     result = SearchResult[*array]
