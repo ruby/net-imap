@@ -985,6 +985,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet["345"],     SequenceSet["345,678"].min(1)
     assert_equal SequenceSet["345,678"], SequenceSet["345,678"].min(222)
     assert_equal SequenceSet.empty,      SequenceSet.new.min(5)
+    assert_equal SequenceSet.empty,      SequenceSet["3:6"].min(0)
+    assert_raise(ArgumentError) { SequenceSet["3:6"].min(-1) }
   end
 
   test "#max" do
@@ -1009,6 +1011,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     set = SequenceSet[1..]
     assert_equal SequenceSet["2:*"], set.max(2**32 - 1)
     assert_equal SequenceSet["1:*"], set.max(2**32)
+    assert_equal SequenceSet.empty, set.max(0)
+    assert_raise(ArgumentError) { set.max(-1) }
   end
 
   test "#minmax" do
