@@ -1676,7 +1676,7 @@ module Net
       def mailbox_data__status
         resp_name  = label("STATUS"); SP!
         mbox_name  = mailbox;         SP!
-        lpar; attr = status_att_list; rpar
+        lpar; attr = peek_rpar? ? {} : status_att_list; rpar
         UntaggedResponse.new(resp_name, StatusData.new(mbox_name, attr), @str)
       end
 

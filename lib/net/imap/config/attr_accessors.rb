@@ -58,9 +58,9 @@ module Net
 
         private
 
-        def initialize_clone(other)
+        def initialize_clone(other, **kwargs)
           super
-          @data = other.data.clone
+          @data = other.data.clone(**kwargs)
         end
 
         def initialize_dup(other)

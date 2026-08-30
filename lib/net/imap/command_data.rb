@@ -459,7 +459,7 @@ module Net
       # coerces using +to_s+
       def string(str)
         str = str.to_s
-        if str =~ LITERAL_REGEX
+        if str.b.match?(LITERAL_REGEX)
           Literal.new(str)
         else
           QuotedString.new(str)

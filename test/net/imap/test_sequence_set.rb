@@ -142,6 +142,25 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     end
   end
 
+  test "fuzz test: above/below predicates" do
+    10.times do
+      max = 100
+      size = max / 3
+      set = SequenceSet[Array.new(size) { rand(1..max) }]
+
+      1.upto(max + 2).each.each_cons(3) do |number, next_number|
+        all_above = set.all_above?(number)
+
+        assert_equal all_above, set.none_below?(next_number)
+        assert_equal all_above, !set.any_below?(next_number)
+
+        none_above = set.none_above?(number)
+        assert_equal none_above, !set.any_above?(number)
+        assert_equal none_above, set.all_below?(next_number)
+      end
+    end
+  end
+
   test "#== equality by value (not by identity or representation)" do
     assert_equal SequenceSet.new, SequenceSet.new
     assert_equal SequenceSet.new("1"), SequenceSet[1]
@@ -230,6 +249,21 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
       assert  copy.include?(456)
       assert !copy.include?(123)
       assert !orig.include?(456)
+    end
+  end
+
+  test "#clone(freeze:)" do
+    original = SequenceSet["2:4,7:11,99,999"]
+    copy = original.clone(freeze: false)
+    refute copy.frozen?
+    copy << 123
+    assert copy.include?(123)
+    assert !original.include?(123)
+
+    copy = SequenceSet.new("2:4,7:11,99,999").clone(freeze: true)
+    assert copy.frozen?
+    assert_raise FrozenError do
+      copy << 123
     end
   end
 
@@ -524,6 +558,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal 3, set.find_ordered_index(5)
     assert_equal 4, set.find_ordered_index(6)
     assert_nil   set.find_ordered_index(4)
+    set = SequenceSet["1:4294967294,1:4294967294,*"]
+    assert_equal 8_589_934_588, set.find_ordered_index(:*)
     set = SequenceSet["1000:1111,1:100"]
     assert_equal   0, set.find_ordered_index(1000)
     assert_equal 100, set.find_ordered_index(1100)
@@ -746,6 +782,164 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     refute set.disjoint? set
   end
 
+  test "#all_above?" do
+    set = SequenceSet.empty
+    assert_equal true,  set.all_above?(1)
+    assert_equal true,  set.all_above?("1")
+    assert_equal true,  set.all_above?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal false, set.all_above?(1)
+    assert_equal false, set.all_above?("1")
+    assert_equal false, set.all_above?(2**32 - 2)
+    assert_equal false, set.all_above?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal true,  set.all_above?(2**32 - 2)
+    assert_equal false, set.all_above?(2**32 - 1)
+    set = SequenceSet["4:5"]
+    assert_equal true,  set.all_above?(1)
+    assert_equal true,  set.all_above?(3)
+    assert_equal false, set.all_above?(4)
+    assert_equal false, set.all_above?(6)
+    assert_equal false, set.all_above?(2**32 - 1)
+    assert_raise(DataFormatError) do set.all_above?(0)     end
+    assert_raise(DataFormatError) do set.all_above?(-1)    end
+    assert_raise(DataFormatError) do set.all_above?(2**32) end
+    assert_raise(DataFormatError) do set.all_above?("*")   end
+    assert_raise(DataFormatError) do set.all_above?(:*)    end
+  end
+
+  test "#all_below?" do
+    set = SequenceSet.empty
+    assert_equal true,  set.all_below?(1)
+    assert_equal true,  set.all_below?("1")
+    assert_equal true,  set.all_below?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal false, set.all_below?(1)
+    assert_equal false, set.all_below?("1")
+    assert_equal false, set.all_below?(2**32 - 2)
+    assert_equal false, set.all_below?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal false, set.all_below?(2**32 - 2)
+    assert_equal false, set.all_below?(2**32 - 1)
+    set = SequenceSet["4:5"]
+    assert_equal true,  set.all_below?(2**32 - 1)
+    assert_equal true,  set.all_below?(6)
+    assert_equal false, set.all_below?(5)
+    assert_equal false, set.all_below?(1)
+    assert_raise(DataFormatError) do set.all_below?(0)     end
+    assert_raise(DataFormatError) do set.all_below?(-1)    end
+    assert_raise(DataFormatError) do set.all_below?(2**32) end
+    assert_raise(DataFormatError) do set.all_below?("*")   end
+    assert_raise(DataFormatError) do set.all_below?(:*)    end
+  end
+
+  test "#any_above?" do
+    set = SequenceSet.empty
+    assert_equal false, set.any_above?(1)
+    assert_equal false, set.any_above?("1")
+    assert_equal false, set.any_above?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal true,  set.any_above?(1)
+    assert_equal true,  set.any_above?("1")
+    assert_equal true,  set.any_above?(2**32 - 2)
+    assert_equal false, set.any_above?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal true,  set.any_above?(2**32 - 2)
+    assert_equal false, set.any_above?(2**32 - 1)
+    set = SequenceSet["4:5,*"]
+    assert_equal true,  set.any_above?(3)
+    assert_equal true,  set.any_above?(4)
+    assert_equal true,  set.any_above?(5)
+    assert_equal true,  set.any_above?(6)
+    assert_equal false, set.any_above?(2**32 - 1)
+    set = SequenceSet["4:5"]
+    assert_equal true,  set.any_above?(3)
+    assert_equal true,  set.any_above?(4)
+    assert_equal false, set.any_above?(5)
+    assert_equal false, set.any_above?(6)
+    assert_equal false, set.any_above?(2**32 - 1)
+    assert_raise(DataFormatError) do set.any_above?(0)     end
+    assert_raise(DataFormatError) do set.any_above?(-1)    end
+    assert_raise(DataFormatError) do set.any_above?(2**32) end
+    assert_raise(DataFormatError) do set.any_above?("*")   end
+    assert_raise(DataFormatError) do set.any_above?(:*)    end
+  end
+
+  test "#any_below?" do
+    set = SequenceSet.empty
+    assert_equal false, set.any_below?(1)
+    assert_equal false, set.any_below?("1")
+    assert_equal false, set.any_below?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal false, set.any_below?(1)
+    assert_equal true,  set.any_below?(2)
+    assert_equal true,  set.any_below?("2")
+    assert_equal true,  set.any_below?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal false, set.any_below?(2**32 - 1)
+    set = SequenceSet["3:5"]
+    assert_equal false, set.any_below?(3)
+    assert_equal true,  set.any_below?(4)
+    assert_equal true,  set.any_below?(5)
+    assert_equal true,  set.any_below?(6)
+    assert_raise(DataFormatError) do set.any_below?(0)     end
+    assert_raise(DataFormatError) do set.any_below?(-1)    end
+    assert_raise(DataFormatError) do set.any_below?(2**32) end
+    assert_raise(DataFormatError) do set.any_below?("*")   end
+    assert_raise(DataFormatError) do set.any_below?(:*)    end
+  end
+
+  test "#none_above?" do
+    set = SequenceSet.empty
+    assert_equal true, set.none_above?(1)
+    assert_equal true, set.none_above?("1")
+    assert_equal true, set.none_above?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal false, set.none_above?(1)
+    assert_equal false, set.none_above?("1")
+    assert_equal false, set.none_above?(2**32 - 2)
+    assert_equal true,  set.none_above?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal false, set.none_above?(2**32 - 2)
+    assert_equal true,  set.none_above?(2**32 - 1)
+    set = SequenceSet["4:5"]
+    assert_equal false, set.none_above?(1)
+    assert_equal false, set.none_above?(3)
+    assert_equal true,  set.none_above?(5)
+    assert_equal true,  set.none_above?(6)
+    assert_equal true,  set.none_above?(2**32 - 1)
+    assert_raise(DataFormatError) do set.none_above?(0)     end
+    assert_raise(DataFormatError) do set.none_above?(-1)    end
+    assert_raise(DataFormatError) do set.none_above?(2**32) end
+    assert_raise(DataFormatError) do set.none_above?("*")   end
+    assert_raise(DataFormatError) do set.none_above?(:*)    end
+  end
+
+  test "#none_below?" do
+    set = SequenceSet.empty
+    assert_equal true,  set.none_below?(1)
+    assert_equal true,  set.none_below?("1")
+    assert_equal true,  set.none_below?(2**32 - 1)
+    set = SequenceSet.full
+    assert_equal true,  set.none_below?(1)
+    assert_equal true,  set.none_below?("1")
+    assert_equal false, set.none_below?(2**32 - 2)
+    assert_equal false, set.none_below?(2**32 - 1)
+    set = SequenceSet["*"]
+    assert_equal true,  set.none_below?(2**32 - 2)
+    assert_equal true,  set.none_below?(2**32 - 1)
+    set = SequenceSet["4:5"]
+    assert_equal false, set.none_below?(2**32 - 1)
+    assert_equal false, set.none_below?(5)
+    assert_equal true,  set.none_below?(4)
+    assert_equal true,  set.none_below?(3)
+    assert_raise(DataFormatError) do set.none_below?(0)     end
+    assert_raise(DataFormatError) do set.none_below?(-1)    end
+    assert_raise(DataFormatError) do set.none_below?(2**32) end
+    assert_raise(DataFormatError) do set.none_below?("*")   end
+    assert_raise(DataFormatError) do set.none_below?(:*)    end
+  end
+
   test "#delete" do
     seqset = -> { SequenceSet.new _1 }
     assert_equal seqset["1,5"],       seqset["1,5"].delete("9")
@@ -793,6 +987,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet["345"],     SequenceSet["345,678"].min(1)
     assert_equal SequenceSet["345,678"], SequenceSet["345,678"].min(222)
     assert_equal SequenceSet.empty,      SequenceSet.new.min(5)
+    assert_equal SequenceSet.empty,      SequenceSet["3:6"].min(0)
+    assert_raise(ArgumentError) { SequenceSet["3:6"].min(-1) }
   end
 
   test "#max" do
@@ -817,6 +1013,8 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     set = SequenceSet[1..]
     assert_equal SequenceSet["2:*"], set.max(2**32 - 1)
     assert_equal SequenceSet["1:*"], set.max(2**32)
+    assert_equal SequenceSet.empty, set.max(0)
+    assert_raise(ArgumentError) { set.max(-1) }
   end
 
   test "#minmax" do
@@ -858,6 +1056,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     set = SequenceSet.new [5..11, 20, 30..40]
     # deleting a single-member range
     assert_equal SequenceSet[9], set.delete?(9..9)
+    assert_equal 6, SequenceSet.new(5..10).delete?("6")
   end
 
   test "#slice!" do

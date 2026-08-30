@@ -35,6 +35,15 @@
           APPENDLIMIT:
       raw_data: "* STATUS INBOX (APPENDLIMIT NIL)\r\n"
 
+  test_status_response_empty_attribute_list:
+    :response: "* STATUS INBOX ()\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: INBOX
+        attr: {}
+      raw_data: "* STATUS INBOX ()\r\n"
+
   test_invalid_status_response_trailing_space:
     :comments: |
       [Bug #13649]
