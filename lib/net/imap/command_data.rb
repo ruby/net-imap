@@ -265,21 +265,20 @@ module Net
       def self.split(data)
         data = data.b # dups and ensures BINARY encoding
         parts = []
-        offset = 0
-        while (match = /(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n.match(data, offset))
-          text = data.byteslice(offset...match.begin(0))
-          binary, bytesize, non_sync = !!match[1], match[2], !!match[3]
+        text_start = 0
+        while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n, text_start)
+          text, binary, bytesize, non_sync, literal_start =
+            data.byteslice(text_start...$~.begin(0)), !!$1, $2, !!$3, $~.end(0)
           bytesize = NumValidator.coerce_number64 bytesize
+          text_start = literal_start + bytesize
           parts << RawText[text] unless text.empty?
-          offset = match.end(0)
-          parts << extract_literal(data, offset:, binary:, bytesize:, non_sync:)
-          offset += bytesize
+          parts << extract_literal(data, literal_start, bytesize, binary:, non_sync:)
         end
-        parts << RawText[data.byteslice(offset..)] if offset < data.bytesize
+        parts << RawText[data.byteslice(text_start..)] if text_start < data.bytesize
         parts
       end
 
-      def self.extract_literal(data, offset:, binary:, bytesize:, non_sync:)
+      def self.extract_literal(data, offset, bytesize, binary:, non_sync:)
         remaining = data.bytesize - offset
         if remaining < bytesize
           raise DataFormatError, "Too few bytes in string for literal, " \
