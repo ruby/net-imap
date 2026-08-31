@@ -25,6 +25,16 @@
           UIDVALIDITY: 1234
       raw_data: "* STATUS INBOX (UIDNEXT 1 UIDVALIDITY 1234)\r\n"
 
+  test_status_response_appendlimit_nil:
+    :response: "* STATUS INBOX (APPENDLIMIT NIL)\r\n"
+    :expected: !ruby/struct:Net::IMAP::UntaggedResponse
+      name: STATUS
+      data: !ruby/struct:Net::IMAP::StatusData
+        mailbox: INBOX
+        attr:
+          APPENDLIMIT:
+      raw_data: "* STATUS INBOX (APPENDLIMIT NIL)\r\n"
+
   test_status_response_empty_attribute_list:
     :response: "* STATUS INBOX ()\r\n"
     :expected: !ruby/struct:Net::IMAP::UntaggedResponse
