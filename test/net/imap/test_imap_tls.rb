@@ -58,12 +58,13 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
+      ssl_ctx_params = { ca_file: CA_FILE }
       assert_nothing_raised do
         begin
           imaps_test do |port|
             imap = Net::IMAP.new("localhost",
                                 port: port,
-                                ssl: { :ca_file => CA_FILE })
+                                ssl: ssl_ctx_params)
             verified = imap.tls_verified?
             imap
           rescue SystemCallError
@@ -75,7 +76,9 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       end
       assert_equal true, verified
       assert_tls_verified imap
-      assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
+      assert_equal ssl_ctx_params, imap.ssl_ctx_params
+      refute_same  ssl_ctx_params, imap.ssl_ctx_params
+      refute ssl_ctx_params.frozen?
       assert_equal(CA_FILE, imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
       assert imap.ssl_ctx.verify_hostname

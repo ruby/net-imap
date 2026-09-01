@@ -4110,7 +4110,7 @@ module Net
 
     def build_ssl_ctx(ssl)
       if ssl
-        params = (Hash.try_convert(ssl) || {}).freeze
+        params = (Hash.try_convert(ssl) || {}).clone(freeze: true)
         context = OpenSSL::SSL::SSLContext.new
         context.set_params(params)
         context.setup
