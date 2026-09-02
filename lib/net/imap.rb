@@ -311,6 +311,8 @@ module Net
   #   - #max_response_size: Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
   # - #ssl_ctx_params: Returns the params that were sent to {`ssl_ctx.set_params`}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
   #
+  #   <em>*NOTE:* Presence does _NOT_ indicate a secure TLS connection.</em>
+  #
   # === Connection control
   #
   # - Net::IMAP.new: Creates a new \IMAP client which connects immediately and
@@ -333,6 +335,8 @@ module Net
   # - #tls_verified?: Returns whether TLS is used and #host has been verified.
   # - #ssl_ctx: Returns the {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
   #   after attempting to start TLS.
+  #
+  #   <em>*NOTE:* Presence does _NOT_ indicate a secure TLS connection.</em>
   #
   # === Server capabilities
   #
@@ -964,6 +968,9 @@ module Net
     # is unsuccessful.  The context object will be frozen.
     #
     # Returns +nil+ for a plaintext connection.
+    #
+    # *NOTE:* The presence of this attribute does _NOT_ indicate that the
+    # connection is using TLS.
     attr_reader :ssl_ctx
 
     # Returns the parameters that were sent to #ssl_ctx
@@ -971,6 +978,9 @@ module Net
     # when the connection tries to use TLS (even when unsuccessful).
     #
     # Returns +false+ for a plaintext connection.
+    #
+    # *NOTE:* The presence of this attribute does _NOT_ indicate that the
+    # connection is using TLS.
     attr_reader :ssl_ctx_params
 
     # Returns the current connection state.
