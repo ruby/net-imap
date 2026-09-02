@@ -365,7 +365,7 @@ module Net
       #   Prints a warning and returns the mutable responses hash.
       #   <em>This is not thread-safe.</em>
       #
-      # [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
+      # [+:frozen_dup+ <em>(default since +v0.6+)</em>]
       #   Returns a frozen copy of the unhandled responses hash, with frozen
       #   array values.
       #
