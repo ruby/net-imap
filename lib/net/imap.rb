@@ -85,29 +85,100 @@ module Net
   #
   # === Examples of Usage
   #
-  # ==== List sender and subject of all recent messages in the default mailbox
+  # ==== Connect with TLS to port 993
   #
-  #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
+  # Use Net::IMAP.new to open a new connection, with <tt>ssl: true</tt> for TLS.
+  # <br>
+  # Use #authenticate to log in.
+  #
+  #   hostname = "mail.example.com"
+  #   username = "user@example.com"
+  #   password = "correct-horse-battery-staple"
+  #
+  #   imap = Net::IMAP.new(hostname, ssl: true)
+  #   imap.authenticate(:plain, username, password)
+  #
+  # To authenticate with an OAuth2 access token:
+  #   if imap.auth_capable?(:OAUTHBEARER)
+  #     imap.authenticate(:OAUTHBEARER, oauth2_token:)
+  #   elsif imap.auth_capable?(:XOAUTH2)
+  #     imap.authenticate(:XOAUTH2, oauth2_token:)
+  #   else
+  #     raise "OAuth2 not supported?"
+  #   end
+  #
+  # See #authenticate for other supported authentication mechanisms.
+  #
+  # ==== List sender and subject of recent messages
+  #
+  # Use #examine to open a mailbox with read-only access.<br>
+  # Use #uid_search for a list of UIDs (or #search for sequence numbers).<br>
+  # Use #uid_fetch (or #fetch) to read message attributes, such as "envelope".
+  #
+  # Search returns a SearchResult or ESearchResult, which is coercible to
+  # SequenceSet so it can be used directly as a message set argument for other
+  # commands.  The first #uid_fetch argument is the set of message UIDs
+  # (sequence numbers for #fetch).  Fetch returns an array of FetchData (or
+  # UIDFetchData when +UIDONLY+ is enabled).
+  #
   #   imap.examine('INBOX')
-  #   imap.search(["RECENT"]).each do |message_id|
-  #     envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
-  #     puts "#{envelope.from[0].name}: \t#{envelope.subject}"
+  #   search_result = imap.uid_search(["SINCE", Date.today - 7])
+  #   imap.uid_fetch(search_result, "ENVELOPE").each do |fetch_data|
+  #     envelope = fetch_data.envelope
+  #     puts "#{envelope.from.first.name}: \t#{envelope.subject}"
   #   end
   #
-  # ==== Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
+  # ==== Move messages between two dates to another mailbox
   #
-  #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
-  #   imap.select('Mail/sent-mail')
-  #   if not imap.list('Mail/', 'sent-apr03')
-  #     imap.create('Mail/sent-apr03')
+  # Use #list to check if the destination mailbox exists.<br>
+  # Use #create to create a missing destination mailbox.<br>
+  # Use #select to open the source mailbox with read-write access.<br>
+  # Use #uid_search (or #search) to search for messages within a date range.<br>
+  # Use #uid_move (or #move) to atomically move messages to another mailbox.
+  #
+  # *NOTE:* Most servers support atomic +MOVE+, but not all do.
+  #   source      = "Mail/sent-mail"
+  #   destination = "Mail/sent-apr03"
+  #
+  #   # The "BEFORE" and "AFTER" search criteria are not inclusive.
+  #   since  = Date.parse("2003-04-01").prev_day
+  #   before = Date.parse("2003-05-01")
+  #
+  #   if imap.list("", destination).empty?
+  #     imap.create(destination)
   #   end
-  #   imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
-  #     imap.copy(message_id, "Mail/sent-apr03")
-  #     imap.store(message_id, "+FLAGS", [:Deleted])
+  #   imap.select(source)
+  #   search_result = imap.uid_search(["SINCE", since, "BEFORE", before])
+  #   imap.uid_move(search_result, destination)
+  #
+  # When atomic +MOVE+ is not supported, the messages can be copied and deleted.
+  # \IMAP message deletion requires two steps: set <tt>\Deleted</tt> flag to
+  # mark a message for deletion, then expunge the <tt>\Deleted</tt> messages.
+  #
+  # Use #uid_copy (or #copy) to copy messages to another mailbox.<br>
+  # Use #uid_store (or #store) to mark messages for deletion.<br>
+  # Use #uid_expunge (or #expunge) to remove deleted messages.
+  #
+  # *NOTE:* #uid_expunge is not supported by every server, and #expunge removes
+  # _all_ <tt>\Deleted</tt> messages in the mailbox, even if the
+  # <tt>\Deleted</tt> flag was added by another session.
+  #
+  #   if imap.capable?(:MOVE) || imap.capable?(:IMAP4rev2)
+  #     imap.uid_move(search_result, destination)
+  #   else
+  #     # Atomic MOVE is not supported.  Copy, delete, and expunge.
+  #     imap.uid_copy(search_result, destination)
+  #     imap.uid_store(search_result, "+FLAGS", [:Deleted])
+  #     if imap.capable?(:UIDPLUS) || imap.capable?(:IMAP4rev2)
+  #       imap.uid_expunge(search_result)
+  #     else
+  #       # NOTE: This may expunge _other_ deleted messages, too.
+  #       imap.expunge
+  #     end
   #   end
-  #   imap.expunge
+  #
+  # Additional error handling may be required for non-atomic moves.  Smaller
+  # batch sizes are recommended.
   #
   # == Capabilities
   #

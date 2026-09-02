@@ -26,41 +26,61 @@ Or install it yourself as:
 ### Connect with TLS to port 993
 
 ```ruby
-imap = Net::IMAP.new('mail.example.com', ssl: true)
-imap.port          => 993
-imap.tls_verified? => true
-case imap.greeting.name
-in /OK/i
-  # The client is connected in the "Not Authenticated" state.
-  imap.authenticate("PLAIN", "joe_user", "joes_password")
-in /PREAUTH/i
-  # The client is connected in the "Authenticated" state.
+hostname = "mail.example.com"
+username = "user@example.com"
+password = "correct-horse-battery-staple"
+
+imap = Net::IMAP.new(hostname, ssl: true)
+imap.authenticate(:plain, username, password)
+```
+
+To authenticate with an OAuth2 access token:
+```ruby
+if imap.auth_capable?(:OAUTHBEARER)
+  imap.authenticate(:OAUTHBEARER, username, oauth2_token)
+elsif imap.auth_capable?(:XOAUTH2)
+  imap.authenticate(:XOAUTH2, username, oauth2_token)
+else
+  raise "OAuth2 not supported?"
 end
 ```
 
-### List sender and subject of all recent messages in the default mailbox
+### List sender and subject of recent messages
 
 ```ruby
 imap.examine('INBOX')
-imap.search(["RECENT"]).each do |message_id|
-  envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
-  puts "#{envelope.from[0].name}: \t#{envelope.subject}"
+search_result = imap.uid_search(["SINCE", Date.today - 7])
+imap.uid_fetch(search_result, "ENVELOPE").each do |fetch_data|
+  envelope = fetch_data.envelope
+  puts "#{envelope.from.first.name}: \t#{envelope.subject}"
 end
 ```
 
-### Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
+### Move messages between two dates to another mailbox
 
 ```ruby
-imap.select('Mail/sent-mail')
-if imap.list('Mail/', 'sent-apr03').empty?
-  imap.create('Mail/sent-apr03')
+source      = "Mail/sent-mail"
+destination = "Mail/sent-apr03"
+
+# The "BEFORE" and "AFTER" search criteria are not inclusive.
+since  = Date.parse("2003-04-01").prev_day
+before = Date.parse("2003-05-01")
+
+if imap.list("", destination).empty?
+  imap.create(destination)
 end
-imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
-  if imap.capable?(:move) || imap.capable?(:IMAP4rev2)
-    imap.move(message_id, "Mail/sent-apr03")
+imap.select(source)
+search_result = imap.uid_search(["SINCE", since, "BEFORE", before])
+if imap.capable?(:MOVE) || imap.capable?(:IMAP4rev2)
+  imap.uid_move(search_result, destination)
+else
+  # Atomic MOVE is not supported.  Copy, delete, and expunge.
+  imap.uid_copy(search_result, destination)
+  imap.uid_store(search_result, "+FLAGS", [:Deleted])
+  if imap.capable?(:UIDPLUS) || imap.capable?(:IMAP4rev2)
+    imap.uid_expunge(search_result)
   else
-    imap.copy(message_id, "Mail/sent-apr03")
-    imap.store(message_id, "+FLAGS", [:Deleted])
+    # NOTE: This may expunge _other_ deleted messages, too.
     imap.expunge
   end
 end
