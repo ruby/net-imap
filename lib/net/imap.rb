@@ -289,7 +289,9 @@ module Net
   #
   # == What's here?
   #
-  # * {Connection control}[rdoc-ref:Net::IMAP@Connection+control+methods]
+  # * {Client configuration}[rdoc-ref:Net::IMAP@Client+configuration]
+  # * {Connection control}[rdoc-ref:Net::IMAP@Connection+control]
+  # * {Connection attributes}[rdoc-ref:Net::IMAP@Connection+attributes]
   # * {Server capabilities}[rdoc-ref:Net::IMAP@Server+capabilities]
   # * {Handling server responses}[rdoc-ref:Net::IMAP@Handling+server+responses]
   # * {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands]
@@ -300,40 +302,66 @@ module Net
   #   * {for the "logout" state}[rdoc-ref:Net::IMAP@Logout+state]
   # * {IMAP extension support}[rdoc-ref:Net::IMAP@IMAP+extension+support]
   #
-  # === Connection control methods
+  # === Client configuration
+  # - #host: The hostname this client connected to.
+  # - #port: The port this client connected to.
+  # - #config: The client configuration.  See Net::IMAP::Config.
+  #   - #open_timeout: Delegates to {config.open_timeout}[rdoc-ref:Config#open_timeout].
+  #   - #idle_response_timeout: Delegates to {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout].
+  #   - #max_response_size: Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
+  # - #ssl_ctx_params: Returns the params that were sent to {`ssl_ctx.set_params`}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
+  #
+  # === Connection control
   #
   # - Net::IMAP.new: Creates a new \IMAP client which connects immediately and
   #   waits for a successful server greeting before the method returns.
-  # - #connection_state: Returns the connection state.
   # - #starttls: Asks the server to upgrade a clear-text connection to use TLS.
+  #
+  #   <em>Requires the +STARTTLS+ capability.</em>
+  #
+  #   <em>*NOTE:* Connecting to the implicit TLS port should be preferred.</em>
   # - #logout: Tells the server to end the session.  Enters the +logout+ state.
+  # - #logout!: Calls #logout then #disconnect, converting most errors into
+  #   warnings.
   # - #disconnect: Disconnects the connection (without sending #logout first).
+  #
+  # === Connection attributes
+  #
+  # - #greeting: The server's initial untagged response.
+  # - #connection_state: Returns the connection state.
   # - #disconnected?: True if the connection has been closed.
+  # - #tls_verified?: Returns whether TLS is used and #host has been verified.
+  # - #ssl_ctx: Returns the {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
+  #   after attempting to start TLS.
   #
   # === Server capabilities
   #
+  # ==== Cached capabilities
   # - #capable?: Returns whether the server supports a given capability.
   # - #capabilities: Returns the server's capabilities as an array of strings.
+  # - #capabilities_cached?: Returns whether capabilities are cached.
+  # - #clear_cached_capabilities: Clears cached capabilities.
+  #
+  #   *NOTE:* The cache is automatically cleared when capabilities can change.
+  #
+  # ==== \SASL Auth mechanisms
+  #
   # - #auth_capable?: Returns whether the server advertises support for a given
   #   SASL mechanism, for use with #authenticate.
   # - #auth_mechanisms: Returns the #authenticate SASL mechanisms which
   #   the server claims to support as an array of strings.
-  # - #clear_cached_capabilities: Clears cached capabilities.
   #
-  #   <em>The capabilities cache is automatically cleared after completing
-  #   #starttls, #login, or #authenticate.</em>
-  # - #capability: Sends the +CAPABILITY+ command and returns the #capabilities.
+  # ==== Enabled capabilities
   #
-  #   <em>In general, #capable? should be used rather than explicitly sending a
-  #   +CAPABILITY+ command to the server.</em>
+  # *NOTE:* The following require the +ENABLE+ or +IMAP4rev2+ server capability.
   # - #enable: Enables backwards incompatible server extensions.
-  #   <em>Requires the +ENABLE+ or +IMAP4rev2+ capability.</em>
   # - #enabled: Returns a set of enabled server extensions.
   # - #enabled?: Returns whether a server extension has been enabled.
   # - #utf8_enabled?: Returns whether UTF-8 string encoding has been enabled.
   #
   # === Handling server responses
   #
+  # ==== Stored responses methods
   # - #greeting: The server's initial untagged response, which can indicate a
   #   pre-authenticated connection.
   # - #responses: Yields unhandled UntaggedResponse#data and <em>non-+nil+</em>
@@ -341,6 +369,8 @@ module Net
   # - #extract_responses: Removes and returns the responses for which the block
   #   returns a true value.
   # - #clear_responses: Deletes unhandled data from #responses and returns it.
+  #
+  # ==== Response handler methods
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
   # - #response_handlers: Returns the list of response handlers.
@@ -364,8 +394,9 @@ module Net
   #
   # - #capability: Returns the server's capabilities as an array of strings.
   #
-  #   <em>In general,</em> #capable? <em>should be used rather than explicitly
-  #   sending a +CAPABILITY+ command to the server.</em>
+  #   <em>*NOTE:* Use {cached capabilities
+  #   methods}[rdoc-ref:Net::IMAP@Server+Capabilities] instead, to avoid sending
+  #   unnecessary commands to the server.</em>
   # - #noop: Allows the server to send unsolicited untagged #responses.
   # - #logout: Tells the server to end the session. Enters the +logout+ state.
   #
@@ -377,6 +408,8 @@ module Net
   # - #starttls: Upgrades a clear-text connection to use TLS.
   #
   #   <em>Requires the +STARTTLS+ capability.</em>
+  #
+  #   <em>*NOTE:* Connecting to the implicit TLS port should be preferred.</em>
   # - #authenticate: Identifies the client to the server using the given
   #   {SASL mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
   #   and credentials.  Enters the +authenticated+ state.
@@ -453,10 +486,10 @@ module Net
   #
   # ==== RFC9051: +IMAP4rev2+
   #
-  # Although IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051] is not supported
-  # yet, Net::IMAP supports several extensions that have been folded into it:
-  # +ENABLE+, +IDLE+, +LITERAL-+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+,
-  # +UNSELECT+, <tt>STATUS=SIZE</tt>, and the fetch side of +BINARY+.
+  # Although IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051] is not fully
+  # supported yet, Net::IMAP supports several extensions that have been folded
+  # into it: +ENABLE+, +IDLE+, +LITERAL-+, +MOVE+, +NAMESPACE+, +SASL-IR+,
+  # +UIDPLUS+, +UNSELECT+, <tt>STATUS=SIZE</tt>, and the fetch side of +BINARY+.
   # Commands for these extensions are listed with the {Core IMAP
   # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
   #
