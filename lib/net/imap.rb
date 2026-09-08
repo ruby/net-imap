@@ -85,29 +85,100 @@ module Net
   #
   # === Examples of Usage
   #
-  # ==== List sender and subject of all recent messages in the default mailbox
+  # ==== Connect with TLS to port 993
   #
-  #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
+  # Use Net::IMAP.new to open a new connection, with <tt>ssl: true</tt> for TLS.
+  # <br>
+  # Use #authenticate to log in.
+  #
+  #   hostname = "mail.example.com"
+  #   username = "user@example.com"
+  #   password = "correct-horse-battery-staple"
+  #
+  #   imap = Net::IMAP.new(hostname, ssl: true)
+  #   imap.authenticate(:plain, username, password)
+  #
+  # To authenticate with an OAuth2 access token:
+  #   if imap.auth_capable?(:OAUTHBEARER)
+  #     imap.authenticate(:OAUTHBEARER, oauth2_token:)
+  #   elsif imap.auth_capable?(:XOAUTH2)
+  #     imap.authenticate(:XOAUTH2, oauth2_token:)
+  #   else
+  #     raise "OAuth2 not supported?"
+  #   end
+  #
+  # See #authenticate for other supported authentication mechanisms.
+  #
+  # ==== List sender and subject of recent messages
+  #
+  # Use #examine to open a mailbox with read-only access.<br>
+  # Use #uid_search for a list of UIDs (or #search for sequence numbers).<br>
+  # Use #uid_fetch (or #fetch) to read message attributes, such as "envelope".
+  #
+  # Search returns a SearchResult or ESearchResult, which is coercible to
+  # SequenceSet so it can be used directly as a message set argument for other
+  # commands.  The first #uid_fetch argument is the set of message UIDs
+  # (sequence numbers for #fetch).  Fetch returns an array of FetchData (or
+  # UIDFetchData when +UIDONLY+ is enabled).
+  #
   #   imap.examine('INBOX')
-  #   imap.search(["RECENT"]).each do |message_id|
-  #     envelope = imap.fetch(message_id, "ENVELOPE")[0].attr["ENVELOPE"]
-  #     puts "#{envelope.from[0].name}: \t#{envelope.subject}"
+  #   search_result = imap.uid_search(["SINCE", Date.today - 7])
+  #   imap.uid_fetch(search_result, "ENVELOPE").each do |fetch_data|
+  #     envelope = fetch_data.envelope
+  #     puts "#{envelope.from.first.name}: \t#{envelope.subject}"
   #   end
   #
-  # ==== Move all messages from April 2003 from "Mail/sent-mail" to "Mail/sent-apr03"
+  # ==== Move messages between two dates to another mailbox
   #
-  #   imap = Net::IMAP.new('mail.example.com')
-  #   imap.authenticate('PLAIN', 'joe_user', 'joes_password')
-  #   imap.select('Mail/sent-mail')
-  #   if not imap.list('Mail/', 'sent-apr03')
-  #     imap.create('Mail/sent-apr03')
+  # Use #list to check if the destination mailbox exists.<br>
+  # Use #create to create a missing destination mailbox.<br>
+  # Use #select to open the source mailbox with read-write access.<br>
+  # Use #uid_search (or #search) to search for messages within a date range.<br>
+  # Use #uid_move (or #move) to atomically move messages to another mailbox.
+  #
+  # *NOTE:* Most servers support atomic +MOVE+, but not all do.
+  #   source      = "Mail/sent-mail"
+  #   destination = "Mail/sent-apr03"
+  #
+  #   # The "BEFORE" and "AFTER" search criteria are not inclusive.
+  #   since  = Date.parse("2003-04-01").prev_day
+  #   before = Date.parse("2003-05-01")
+  #
+  #   if imap.list("", destination).empty?
+  #     imap.create(destination)
   #   end
-  #   imap.search(["BEFORE", "30-Apr-2003", "SINCE", "1-Apr-2003"]).each do |message_id|
-  #     imap.copy(message_id, "Mail/sent-apr03")
-  #     imap.store(message_id, "+FLAGS", [:Deleted])
+  #   imap.select(source)
+  #   search_result = imap.uid_search(["SINCE", since, "BEFORE", before])
+  #   imap.uid_move(search_result, destination)
+  #
+  # When atomic +MOVE+ is not supported, the messages can be copied and deleted.
+  # \IMAP message deletion requires two steps: set <tt>\Deleted</tt> flag to
+  # mark a message for deletion, then expunge the <tt>\Deleted</tt> messages.
+  #
+  # Use #uid_copy (or #copy) to copy messages to another mailbox.<br>
+  # Use #uid_store (or #store) to mark messages for deletion.<br>
+  # Use #uid_expunge (or #expunge) to remove deleted messages.
+  #
+  # *NOTE:* #uid_expunge is not supported by every server, and #expunge removes
+  # _all_ <tt>\Deleted</tt> messages in the mailbox, even if the
+  # <tt>\Deleted</tt> flag was added by another session.
+  #
+  #   if imap.capable?(:MOVE) || imap.capable?(:IMAP4rev2)
+  #     imap.uid_move(search_result, destination)
+  #   else
+  #     # Atomic MOVE is not supported.  Copy, delete, and expunge.
+  #     imap.uid_copy(search_result, destination)
+  #     imap.uid_store(search_result, "+FLAGS", [:Deleted])
+  #     if imap.capable?(:UIDPLUS) || imap.capable?(:IMAP4rev2)
+  #       imap.uid_expunge(search_result)
+  #     else
+  #       # NOTE: This may expunge _other_ deleted messages, too.
+  #       imap.expunge
+  #     end
   #   end
-  #   imap.expunge
+  #
+  # Additional error handling may be required for non-atomic moves.  Smaller
+  # batch sizes are recommended.
   #
   # == Capabilities
   #
@@ -289,7 +360,9 @@ module Net
   #
   # == What's here?
   #
-  # * {Connection control}[rdoc-ref:Net::IMAP@Connection+control+methods]
+  # * {Client configuration}[rdoc-ref:Net::IMAP@Client+configuration]
+  # * {Connection control}[rdoc-ref:Net::IMAP@Connection+control]
+  # * {Connection attributes}[rdoc-ref:Net::IMAP@Connection+attributes]
   # * {Server capabilities}[rdoc-ref:Net::IMAP@Server+capabilities]
   # * {Handling server responses}[rdoc-ref:Net::IMAP@Handling+server+responses]
   # * {Core IMAP commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands]
@@ -300,40 +373,70 @@ module Net
   #   * {for the "logout" state}[rdoc-ref:Net::IMAP@Logout+state]
   # * {IMAP extension support}[rdoc-ref:Net::IMAP@IMAP+extension+support]
   #
-  # === Connection control methods
+  # === Client configuration
+  # - #host: The hostname this client connected to.
+  # - #port: The port this client connected to.
+  # - #config: The client configuration.  See Net::IMAP::Config.
+  #   - #open_timeout: Delegates to {config.open_timeout}[rdoc-ref:Config#open_timeout].
+  #   - #idle_response_timeout: Delegates to {config.idle_response_timeout}[rdoc-ref:Config#idle_response_timeout].
+  #   - #max_response_size: Delegates to {config.max_response_size}[rdoc-ref:Config#max_response_size].
+  # - #ssl_ctx_params: Returns the params that were sent to {`ssl_ctx.set_params`}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html#method-i-set_params].
+  #
+  #   <em>*NOTE:* Presence does _NOT_ indicate a secure TLS connection.</em>
+  #
+  # === Connection control
   #
   # - Net::IMAP.new: Creates a new \IMAP client which connects immediately and
   #   waits for a successful server greeting before the method returns.
-  # - #connection_state: Returns the connection state.
   # - #starttls: Asks the server to upgrade a clear-text connection to use TLS.
+  #
+  #   <em>Requires the +STARTTLS+ capability.</em>
+  #
+  #   <em>*NOTE:* Connecting to the implicit TLS port should be preferred.</em>
   # - #logout: Tells the server to end the session.  Enters the +logout+ state.
+  # - #logout!: Calls #logout then #disconnect, converting most errors into
+  #   warnings.
   # - #disconnect: Disconnects the connection (without sending #logout first).
+  #
+  # === Connection attributes
+  #
+  # - #greeting: The server's initial untagged response.
+  # - #connection_state: Returns the connection state.
   # - #disconnected?: True if the connection has been closed.
+  # - #tls_verified?: Returns whether TLS is used and #host has been verified.
+  # - #ssl_ctx: Returns the {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
+  #   after attempting to start TLS.
+  #
+  #   <em>*NOTE:* Presence does _NOT_ indicate a secure TLS connection.</em>
   #
   # === Server capabilities
   #
+  # ==== Cached capabilities
   # - #capable?: Returns whether the server supports a given capability.
   # - #capabilities: Returns the server's capabilities as an array of strings.
+  # - #capabilities_cached?: Returns whether capabilities are cached.
+  # - #clear_cached_capabilities: Clears cached capabilities.
+  #
+  #   *NOTE:* The cache is automatically cleared when capabilities can change.
+  #
+  # ==== \SASL Auth mechanisms
+  #
   # - #auth_capable?: Returns whether the server advertises support for a given
   #   SASL mechanism, for use with #authenticate.
   # - #auth_mechanisms: Returns the #authenticate SASL mechanisms which
   #   the server claims to support as an array of strings.
-  # - #clear_cached_capabilities: Clears cached capabilities.
   #
-  #   <em>The capabilities cache is automatically cleared after completing
-  #   #starttls, #login, or #authenticate.</em>
-  # - #capability: Sends the +CAPABILITY+ command and returns the #capabilities.
+  # ==== Enabled capabilities
   #
-  #   <em>In general, #capable? should be used rather than explicitly sending a
-  #   +CAPABILITY+ command to the server.</em>
+  # *NOTE:* The following require the +ENABLE+ or +IMAP4rev2+ server capability.
   # - #enable: Enables backwards incompatible server extensions.
-  #   <em>Requires the +ENABLE+ or +IMAP4rev2+ capability.</em>
   # - #enabled: Returns a set of enabled server extensions.
   # - #enabled?: Returns whether a server extension has been enabled.
   # - #utf8_enabled?: Returns whether UTF-8 string encoding has been enabled.
   #
   # === Handling server responses
   #
+  # ==== Stored responses methods
   # - #greeting: The server's initial untagged response, which can indicate a
   #   pre-authenticated connection.
   # - #responses: Yields unhandled UntaggedResponse#data and <em>non-+nil+</em>
@@ -341,6 +444,8 @@ module Net
   # - #extract_responses: Removes and returns the responses for which the block
   #   returns a true value.
   # - #clear_responses: Deletes unhandled data from #responses and returns it.
+  #
+  # ==== Response handler methods
   # - #add_response_handler: Add a block to be called inside the receiver thread
   #   with every server response.
   # - #response_handlers: Returns the list of response handlers.
@@ -364,8 +469,9 @@ module Net
   #
   # - #capability: Returns the server's capabilities as an array of strings.
   #
-  #   <em>In general,</em> #capable? <em>should be used rather than explicitly
-  #   sending a +CAPABILITY+ command to the server.</em>
+  #   <em>*NOTE:* Use {cached capabilities
+  #   methods}[rdoc-ref:Net::IMAP@Server+Capabilities] instead, to avoid sending
+  #   unnecessary commands to the server.</em>
   # - #noop: Allows the server to send unsolicited untagged #responses.
   # - #logout: Tells the server to end the session. Enters the +logout+ state.
   #
@@ -377,6 +483,8 @@ module Net
   # - #starttls: Upgrades a clear-text connection to use TLS.
   #
   #   <em>Requires the +STARTTLS+ capability.</em>
+  #
+  #   <em>*NOTE:* Connecting to the implicit TLS port should be preferred.</em>
   # - #authenticate: Identifies the client to the server using the given
   #   {SASL mechanism}[https://www.iana.org/assignments/sasl-mechanisms/sasl-mechanisms.xhtml]
   #   and credentials.  Enters the +authenticated+ state.
@@ -453,10 +561,10 @@ module Net
   #
   # ==== RFC9051: +IMAP4rev2+
   #
-  # Although IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051] is not supported
-  # yet, Net::IMAP supports several extensions that have been folded into it:
-  # +ENABLE+, +IDLE+, +LITERAL-+, +MOVE+, +NAMESPACE+, +SASL-IR+, +UIDPLUS+,
-  # +UNSELECT+, <tt>STATUS=SIZE</tt>, and the fetch side of +BINARY+.
+  # Although IMAP4rev2[https://www.rfc-editor.org/rfc/rfc9051] is not fully
+  # supported yet, Net::IMAP supports several extensions that have been folded
+  # into it: +ENABLE+, +IDLE+, +LITERAL-+, +MOVE+, +NAMESPACE+, +SASL-IR+,
+  # +UIDPLUS+, +UNSELECT+, <tt>STATUS=SIZE</tt>, and the fetch side of +BINARY+.
   # Commands for these extensions are listed with the {Core IMAP
   # commands}[rdoc-ref:Net::IMAP@Core+IMAP+commands], above.
   #
@@ -931,6 +1039,9 @@ module Net
     # is unsuccessful.  The context object will be frozen.
     #
     # Returns +nil+ for a plaintext connection.
+    #
+    # *NOTE:* The presence of this attribute does _NOT_ indicate that the
+    # connection is using TLS.
     attr_reader :ssl_ctx
 
     # Returns the parameters that were sent to #ssl_ctx
@@ -938,6 +1049,9 @@ module Net
     # when the connection tries to use TLS (even when unsuccessful).
     #
     # Returns +false+ for a plaintext connection.
+    #
+    # *NOTE:* The presence of this attribute does _NOT_ indicate that the
+    # connection is using TLS.
     attr_reader :ssl_ctx_params
 
     # Returns the current connection state.
@@ -3331,7 +3445,7 @@ module Net
     #       Prints a warning and returns the mutable responses hash.
     #       <em>This is not thread-safe.</em>
     #
-    #     [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
+    #     [+:frozen_dup+ <em>(default since +v0.6+)</em>]
     #       Returns a frozen copy of the unhandled responses hash, with frozen
     #       array values.
     #

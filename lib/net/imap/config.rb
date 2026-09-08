@@ -120,6 +120,66 @@ module Net
     #
     # *NOTE:* Updates to config objects are not synchronized for thread-safety.
     #
+    # == What's here?
+    #
+    # === \Config attributes
+    #
+    # ==== Timeouts and other limits
+    #
+    # * #open_timeout: seconds to wait for connection to open or start TLS
+    # * #idle_response_timeout: seconds to wait for +IDLE+ command to complete
+    # * max_response_size: Maximum allowed server response size.
+    #
+    # ==== Server capabilities
+    #
+    # * #sasl_ir: Controls +SASL-IR+ behavior for Net::IMAP#authenticate.
+    # * #enforce_logindisabled: Controls +LOGINDISABLED+ behavior in
+    #   Net::IMAP#login.
+    # * max_non_synchronizing_literal: maximum bytesize for <tt>LITERAL+</tt> /
+    #   <tt>LITERAL-</tt> non-synchronizing literals.
+    #
+    # ==== Inherited defaults
+    # {Versioned defaults}[rdoc-ref:Net::IMAP@Versioned+defaults] inherit these
+    # from ::global and #load_defaults doesn't update them.
+    #
+    # * #debug (aliased as #debug?): whether debug mode is enabled
+    #
+    # ==== Backward compatibility
+    # These attributes will be removed by some future release.
+    #
+    # * #responses_without_block: Controls the behavior of Net::IMAP#responses
+    #   when called without any arguments (+type+ or +block+).
+    # * #parser_use_deprecated_uidplus_data: <em>Ignored since +v0.6.0+.</em>
+    # * #parser_max_deprecated_uidplus_data_size: <em>Ignored since +v0.6.0+.</em>
+    #
+    # === Getting a new or existing config
+    # * ::global:  The global config, used as the default #parent.
+    # * ::default: The hardcoded frozen default config, and parent of ::global.
+    # * ::version_defaults: Hard-coded frozen default configurations, indexed
+    #   by version.
+    # * ::[]: Returns a config from ::version_defaults or created by ::new.
+    # * ::new: Return a new Config which inherits from a given +parent+.
+    # * #new: Return a new Config which inherits from +self+.
+    #
+    # === Updating multiple attributes
+    # * #load_defaults: Sets attributes to a given +version+'s default values.
+    # * #update: Assigns multiple attribute values to +self+.
+    # * #reset: Resets attributes to inherit from #parent.
+    #
+    # === Exporting multiple attributes
+    # * #to_h: Return a hash with all attributes.
+    # * #inspect (aliased as #to_s): Returns a string representation of
+    #   overriden config attributes and the config inheritance chain.
+    # * #pretty_print: Used by PP[https://docs.ruby-lang.org/en/master/PP.html]
+    #   to create a string representation of all config attributes and the
+    #   inheritance chain.
+    #
+    # === Inheritance inspection
+    # * #parent: Returns the parent config object.
+    # * #inherited?: Returns whether all attributes inherit from #parent.
+    # * #inherits_defaults?: Returns whether all attributes inherit from a default config.
+    # * #overrides?: Returns whether any attributes override the #parent value.
+    #
     class Config
       # Array of attribute names that are _not_ loaded by #load_defaults.
       DEFAULT_TO_INHERIT = %i[debug].freeze
@@ -365,7 +425,7 @@ module Net
       #   Prints a warning and returns the mutable responses hash.
       #   <em>This is not thread-safe.</em>
       #
-      # [+:frozen_dup+ <em>(planned default for +v0.6+)</em>]
+      # [+:frozen_dup+ <em>(default since +v0.6+)</em>]
       #   Returns a frozen copy of the unhandled responses hash, with frozen
       #   array values.
       #
