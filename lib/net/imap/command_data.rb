@@ -265,23 +265,26 @@ module Net
       def self.split(data)
         data = data.b # dups and ensures BINARY encoding
         parts = []
-        while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n)
-          text, binary, bytesize, non_sync, data = $`, !!$1, $2, !!$3, $'
+        text_start = 0
+        while data.match(/(~)?\{(0|[1-9]\d*)(\+)?\}\r\n/n, text_start)
+          text, binary, bytesize, non_sync, literal_start =
+            data.byteslice(text_start...$~.begin(0)), !!$1, $2, !!$3, $~.end(0)
           bytesize = NumValidator.coerce_number64 bytesize
+          text_start = literal_start + bytesize
           parts << RawText[text] unless text.empty?
-          parts << extract_literal(data, binary:, bytesize:, non_sync:)
-          data.bytesplice(0, bytesize, "")
+          parts << extract_literal(data, literal_start, bytesize, binary:, non_sync:)
         end
-        parts << RawText[data] unless data.empty?
+        parts << RawText[data.byteslice(text_start..)] if text_start < data.bytesize
         parts
       end
 
-      def self.extract_literal(data, binary:, bytesize:, non_sync:)
-        if data.bytesize < bytesize
+      def self.extract_literal(data, offset, bytesize, binary:, non_sync:)
+        remaining = data.bytesize - offset
+        if remaining < bytesize
           raise DataFormatError, "Too few bytes in string for literal, " \
-            "expected: %s, remaining: %s" % [bytesize, data.bytesize]
+            "expected: %s, remaining: %s" % [bytesize, remaining]
         end
-        literal = data.byteslice(0, bytesize)
+        literal = data.byteslice(offset, bytesize)
         (binary ? Literal8 : Literal).new(data: literal, non_sync:)
       end
       private_class_method :extract_literal
