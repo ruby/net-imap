@@ -1676,7 +1676,7 @@ module Net
       def mailbox_data__status
         resp_name  = label("STATUS"); SP!
         mbox_name  = mailbox;         SP!
-        lpar; attr = status_att_list; rpar
+        lpar; attr = peek_rpar? ? {} : status_att_list; rpar
         UntaggedResponse.new(resp_name, StatusData.new(mbox_name, attr), @str)
       end
 
@@ -1743,6 +1743,7 @@ module Net
           when "SIZE"          then number64            # RFC8483, RFC9051
           when "HIGHESTMODSEQ" then mod_sequence_valzer # RFC7162
           when "MAILBOXID"     then parens__objectid    # RFC8474
+          when "APPENDLIMIT"   then NIL? ? nil : number  # RFC7889
           else
             number? || ExtensionData.new(tagged_ext_val)
           end

@@ -3432,7 +3432,7 @@ module Net
     def clear_responses(type = nil)
       synchronize {
         if type
-          @responses.delete(type) || []
+          @responses.delete(type.to_s.upcase) || []
         else
           @responses.dup.transform_values(&:freeze)
             .tap { _1.default = [].freeze }
@@ -3901,6 +3901,9 @@ module Net
         raise ArgumentError, "partial can only be used with uid_fetch"
       end
       set = SequenceSet[set]
+      mod in nil | Array or
+        raise TypeError, "expected nil or array, got #{mod.class}"
+      mod &&= mod.dup
       if partial
         mod ||= []
         mod << "PARTIAL" << PartialRange[partial]

@@ -312,6 +312,21 @@ class ConfigTest < Net::IMAP::TestCase
     assert_equal 1, copy.open_timeout
   end
 
+  test "#clone(freeze:)" do
+    original = Config.new(open_timeout: 1).freeze
+    copy = original.clone(freeze: false)
+    refute copy.frozen?
+    copy.open_timeout = 2
+    assert_equal 1, original.open_timeout
+    assert_equal 2, copy.open_timeout
+
+    copy = Config.new(open_timeout: 1).clone(freeze: true)
+    assert copy.frozen?
+    assert_raise FrozenError do
+      copy.open_timeout = 2
+    end
+  end
+
   test "#inherited? and #reset" do
     base = Config.new debug: false, open_timeout: 99, idle_response_timeout: 15
     child = base.new debug: true, open_timeout: 15, idle_response_timeout: 10

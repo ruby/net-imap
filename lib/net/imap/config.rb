@@ -312,7 +312,7 @@ module Net
       # * +0.6+: 16 KiB
       attr_accessor :max_non_synchronizing_literal, type: Integer, defaults: {
         0.0r => -1,
-        0.6r => 16 << 16, # 16 KiB
+        0.6r => 16 << 10, # 16 KiB
       }
 
       # The maximum allowed server response size.  When +nil+, there is no limit

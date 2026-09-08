@@ -161,6 +161,14 @@ class CommandDataTest < Net::IMAP::TestCase
   class StringFormatterTest < Net::IMAP::TestCase
     include Net::IMAP::StringFormatter
 
+    test "string selects a literal for non-ASCII text" do
+      value = "日本語"
+      formatted = string(value)
+
+      assert_kind_of Literal, formatted
+      assert_equal value.b, formatted.data
+    end
+
     test "literal_or_literal8" do
       assert_kind_of Literal,  literal_or_literal8("simple\r\n")
       assert_kind_of Literal8, literal_or_literal8("has NULL \0")
