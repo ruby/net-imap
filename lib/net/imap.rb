@@ -1035,8 +1035,10 @@ module Net
 
     # Returns the
     # {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
-    # used by the SSLSocket when TLS is attempted, even when the TLS handshake
-    # is unsuccessful.  The context object will be frozen.
+    # used by the
+    # {OpenSSL::SSL::SSLSocket}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLSocket.html].
+    # when TLS is attempted, even when the TLS handshake is unsuccessful.  The
+    # context object will be frozen.
     #
     # Returns +nil+ for a plaintext connection.
     #
