@@ -30,16 +30,47 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       end
     end
 
+    def assert_tls_unstarted(imap)  = assert_tls_stage imap, :unstarted
+    def assert_tls_incomplete(imap) = assert_tls_stage imap, :incomplete
+    def assert_tls_unverified(imap) = assert_tls_stage imap, :unverified
+    def assert_tls_verified(imap)   = assert_tls_stage imap, :verified
+
+    STAGES = %i[unstarted incomplete unverified verified].freeze
+
+    INSPECT_INCLUDES = {
+      unstarted:  " PLAINTEXT (TLS NOT STARTED) disconnected",
+      incomplete: " TLS (NOT ESTABLISHED) disconnected",
+      unverified: " TLS (NOT VERIFIED) disconnected",
+      verified:   " TLS disconnected",
+    }
+
+    def assert_tls_stage(imap, stage)
+      socket, connected, verified = Array.new(3) { _1 < STAGES.index(stage) }
+      assert imap.ssl_ctx_params.frozen?, "#ssl_ctx_params should be frozen"
+      assert_kind_of Hash, imap.ssl_ctx_params,
+                     "#ssl_ctx_params should be a Hash"
+      assert_kind_of OpenSSL::SSL::SSLContext, imap.ssl_ctx,
+                     "#ssl_ctx should be an OpenSSL::SSL::SSLContext"
+      assert_equal socket, imap.tls_socket?,
+                   "#tls_socket? should be #{socket}"
+      assert_equal connected, imap.tls_connected?,
+                   "#tls_connected? should be #{connected}"
+      assert_equal verified, imap.tls_verified?,
+                   "#tls_verified? should be #{verified}"
+      assert_include imap.inspect, INSPECT_INCLUDES.fetch(stage)
+    end
+
     def test_imaps_with_ca_file
       # Assert verified *after* the imaps_test and assert_nothing_raised blocks.
       # Otherwise, failures can't logout and need to wait for the timeout.
       verified, imap = :unknown, nil
+      ssl_ctx_params = { ca_file: CA_FILE }
       assert_nothing_raised do
         begin
           imaps_test do |port|
             imap = Net::IMAP.new("localhost",
                                 port: port,
-                                ssl: { :ca_file => CA_FILE })
+                                ssl: ssl_ctx_params)
             verified = imap.tls_verified?
             imap
           rescue SystemCallError
@@ -50,8 +81,10 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
         end
       end
       assert_equal true, verified
-      assert_equal true, imap.tls_verified?
-      assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
+      assert_tls_verified imap
+      assert_equal ssl_ctx_params, imap.ssl_ctx_params
+      refute_same  ssl_ctx_params, imap.ssl_ctx_params
+      refute ssl_ctx_params.frozen?
       assert_equal(CA_FILE, imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
       assert imap.ssl_ctx.verify_hostname
@@ -77,7 +110,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
         end
       end
       assert_equal false, verified
-      assert_equal false, imap.tls_verified?
+      assert_tls_unverified imap
       assert_equal({verify_mode: OpenSSL::SSL::VERIFY_NONE},
                    imap.ssl_ctx_params)
       assert_equal(nil, imap.ssl_ctx.ca_file)
@@ -111,7 +144,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       end
       assert_kind_of(OpenSSL::SSL::SSLError, ex)
       assert_local_backtrace ex
-      assert_equal false, imap.tls_verified?
+      assert_tls_incomplete imap
       assert_equal({}, imap.ssl_ctx_params)
       assert_equal(nil, imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
@@ -131,8 +164,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       assert_equal false, initial_verified
       assert_equal false, initial_params
       assert_equal nil,   initial_ctx
-      assert_equal true,  imap.tls_verified?
-      assert_include imap.inspect, " TLS disconnected"
+      assert_tls_verified imap
       assert_equal({ca_file: CA_FILE}, imap.ssl_ctx_params)
     rescue SystemCallError
       skip $!
@@ -167,8 +199,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
         imap.disconnect if imap && !imap.disconnected?
       end
 
-      assert_equal false, imap.tls_verified?
-      assert_include imap.inspect, " PLAINTEXT (TLS NOT STARTED) "
+      assert_tls_unstarted imap
       assert_equal({ca_file: CA_FILE},        imap.ssl_ctx_params)
       assert_equal(CA_FILE,                   imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
@@ -214,8 +245,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       ensure
         imap.disconnect if imap && !imap.disconnected?
       end
-      assert_equal false, imap.tls_verified?
-      assert_include imap.inspect, " PLAINTEXT (TLS NOT STARTED) "
+      assert_tls_unstarted imap
       assert_equal({ca_file: CA_FILE},        imap.ssl_ctx_params)
       assert_equal(CA_FILE,                   imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)
