@@ -35,6 +35,8 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
     def assert_tls_unverified(imap) = assert_tls_stage imap, :unverified
     def assert_tls_verified(imap)   = assert_tls_stage imap, :verified
 
+    STAGES = %i[unstarted incomplete unverified verified].freeze
+
     INSPECT_INCLUDES = {
       unstarted:  " PLAINTEXT (TLS NOT STARTED) disconnected",
       incomplete: " TLS (NOT ESTABLISHED) disconnected",
@@ -43,12 +45,16 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
     }
 
     def assert_tls_stage(imap, stage)
-      verified = stage == :verified
+      socket, connected, verified = Array.new(3) { _1 < STAGES.index(stage) }
       assert imap.ssl_ctx_params.frozen?, "#ssl_ctx_params should be frozen"
       assert_kind_of Hash, imap.ssl_ctx_params,
                      "#ssl_ctx_params should be a Hash"
       assert_kind_of OpenSSL::SSL::SSLContext, imap.ssl_ctx,
                      "#ssl_ctx should be an OpenSSL::SSL::SSLContext"
+      assert_equal socket, imap.tls_socket?,
+                   "#tls_socket? should be #{socket}"
+      assert_equal connected, imap.tls_connected?,
+                   "#tls_connected? should be #{connected}"
       assert_equal verified, imap.tls_verified?,
                    "#tls_verified? should be #{verified}"
       assert_include imap.inspect, INSPECT_INCLUDES.fetch(stage)

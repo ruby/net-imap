@@ -404,6 +404,12 @@ module Net
   # - #connection_state: Returns the connection state.
   # - #disconnected?: True if the connection has been closed.
   # - #tls_verified?: Returns whether TLS is used and #host has been verified.
+  # - #tls_connected?: Returns +true+ after TLS negotiation has completed.
+  #
+  #   <em>*NOTE:* This does _NOT_ indicate a secure TLS connection.</em>
+  # - #tls_socket?: Returns +true+ after TLS negotiation has started.
+  #
+  #   <em>*NOTE:* This does _NOT_ indicate a secure TLS connection.</em>
   # - #ssl_ctx: Returns the {SSLContext}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLContext.html]
   #   after attempting to start TLS.
   #
@@ -1301,12 +1307,11 @@ module Net
     end
 
     private def inspect_tls_state
-      if tls_verified?
-        "TLS"
-      elsif ssl_ctx && @sock.kind_of?(OpenSSL::SSL::SSLSocket)
-        "TLS (#{@tls_connected ? "NOT VERIFIED" : "NOT ESTABLISHED"})"
-      else
-        "PLAINTEXT#{" (TLS NOT STARTED)" if ssl_ctx}"
+      if    tls_verified?  then "TLS"
+      elsif tls_connected? then "TLS (NOT VERIFIED)"
+      elsif tls_socket?    then "TLS (NOT ESTABLISHED)"
+      elsif ssl_ctx        then "PLAINTEXT (TLS NOT STARTED)"
+      else                      "PLAINTEXT"
       end
     end
 
@@ -1314,6 +1319,30 @@ module Net
     # hostname has been verified.  Returns false when TLS has been established
     # but peer verification was disabled.
     def tls_verified?; @tls_verified end
+
+    # Returns +true+ after
+    # {OpenSSL::SSL::SSLSocket#connect}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLSocket.html#method-i-connect]
+    # completes successfully.
+    #
+    # <em>*NOTE:* This does _NOT_ indicate that the remote hostname has been
+    # verified.</em>
+    #
+    # This does _not_ indicate current connection state.  It will continue to
+    # return +true+ even after a successful connection has disconnected.
+    #
+    # See #tls_verified?
+    def tls_connected?; @tls_connected end
+
+    # Returns +true+ when the connection is a
+    # {OpenSSL::SSL::SSLSocket}[https://docs.ruby-lang.org/en/master/OpenSSL/SSL/SSLSocket.html]
+    #
+    # <em>*NOTE:* This does _NOT_ indicate that a TLS session has been
+    # established or that remote hostname has been verified.</em>
+    #
+    # This only indicates that TLS negotiation has started.
+    #
+    # See #tls_verified?
+    def tls_socket?; @sock.kind_of?(OpenSSL::SSL::SSLSocket) end
 
     # Disconnects from the server.
     #
