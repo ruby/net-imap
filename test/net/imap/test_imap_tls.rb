@@ -135,8 +135,7 @@ class IMAP_TLS_Test < Net::IMAP::TestCase
       end
       assert_kind_of(OpenSSL::SSL::SSLError, ex)
       assert_local_backtrace ex
-      pend "Fix TLSSocket#connect detection" do assert_tls_incomplete imap end
-      assert_tls_unverified imap # TODO: should be incomplete
+      assert_tls_incomplete imap
       assert_equal({}, imap.ssl_ctx_params)
       assert_equal(nil, imap.ssl_ctx.ca_file)
       assert_equal(OpenSSL::SSL::VERIFY_PEER, imap.ssl_ctx.verify_mode)

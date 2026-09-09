@@ -1240,7 +1240,7 @@ module Net
       @greeting = nil
       @capabilities = nil
       @enabled = Set.new
-      @tls_verified = false
+      @tls_connected = @tls_verified = false
       @connection_state = ConnectionState::NotAuthenticated.new
 
       # Client Protocol Receiver
@@ -1302,7 +1302,7 @@ module Net
       if tls_verified?
         "TLS"
       elsif ssl_ctx && @sock.kind_of?(OpenSSL::SSL::SSLSocket)
-        "TLS (#{@sock.session ? "NOT VERIFIED" : "NOT ESTABLISHED"})"
+        "TLS (#{@tls_connected ? "NOT VERIFIED" : "NOT ESTABLISHED"})"
       else
         "PLAINTEXT#{" (TLS NOT STARTED)" if ssl_ctx}"
       end
@@ -4129,6 +4129,7 @@ module Net
       @sock.sync_close = true
       @sock.hostname = @host if @sock.respond_to? :hostname=
       ssl_socket_connect(@sock, open_timeout)
+      @tls_connected = true
       if ssl_ctx.verify_mode != OpenSSL::SSL::VERIFY_NONE
         @sock.post_connection_check(@host)
         @tls_verified = true
