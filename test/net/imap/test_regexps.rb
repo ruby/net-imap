@@ -38,7 +38,7 @@ class IMAPRegexpsTest < Net::IMAP::TestCase
     pend "Regexp.linear_time? not implemented by #{RUBY_ENGINE} #{RUBY_ENGINE_VERSION}"
   rescue Test::Unit::AssertionFailedError
     raise if RUBY_ENGINE == "ruby"
-    pend "%p might backtrack in %s %s" % [regexp, RUBY_ENGINE, RUBY_ENGINE_VERSION]
+    pend "might backtrack in %s %s" % [RUBY_ENGINE, RUBY_ENGINE_VERSION]
   end
 
 end

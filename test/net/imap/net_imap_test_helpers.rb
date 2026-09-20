@@ -9,9 +9,22 @@ module NetIMAPTestHelpers
 
     attr_reader :fixtures
 
+    # TODO: remove this once TruffleRuby and JRuby are compatible
+    if Net::IMAP::Data != ::Data
+      Dir["test/net/imap/fixtures/response_parser/*.yml"].lazy
+        .flat_map { File.readlines(_1) }
+        .filter_map { %r{!ruby/data:(Net::IMAP::(?:\w|:)+)}.match _1 and $1 }
+        .each do |name|
+          Psych.load_tags["!ruby/data:#{name}"] ||= name
+        end
+    end
+
     def load_fixture_data(*test_fixture_path)
       dir = self::TEST_FIXTURE_PATH
       YAML.unsafe_load_file File.join(dir, *test_fixture_path)
+    rescue
+      warn "⚠️ Couldn't load test fixture: #{test_fixture_path.last}"
+      raise
     end
 
     def generate_tests_from(fixture_data: nil, fixture_file: nil)

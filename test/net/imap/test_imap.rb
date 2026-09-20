@@ -49,6 +49,7 @@ class IMAPTest < Net::IMAP::TestCase
         assert_equal :sent_malicious_responses, server_to_client.pop
         assert_equal [1, 2, 3], 3.times.map { rcvr_to_client.pop }
         # should respond this way for _any_ command
+        omit_if_jruby "JRuby sometimes raises IOError instead"
         assert_local_raise(Net::IMAP::InvalidTaggedResponseError) do
           cmd.(imap)
         end
@@ -204,6 +205,10 @@ class IMAPTest < Net::IMAP::TestCase
   end
 
   def test_connection_closed_without_greeting
+    unless (ObjectSpace.each_object(Object) { break true } rescue false)
+      omit_if_jruby "JRuby must enable ObjectSpace.each_object for this test"
+    end
+
     server = create_tcp_server
     port = server.addr[1]
     h = {

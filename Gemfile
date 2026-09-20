@@ -19,6 +19,8 @@ gem "benchmark", require: false
 gem "benchmark_driver", require: false
 gem "vernier", require: false, platform: :mri
 
+gem "jruby-openssl", ">= 0.19.0", platform: :jruby # fixes some flaky tests
+
 group :test do
   gem "simplecov", ">= 1.0.0", require: false, platforms: %i[mri windows]
 end
