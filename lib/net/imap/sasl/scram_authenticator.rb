@@ -5,6 +5,7 @@ require "securerandom"
 
 require_relative "gs2_header"
 require_relative "scram_algorithm"
+require_relative "scram_cache"
 
 module Net
   class IMAP
@@ -50,9 +51,22 @@ module Net
       #
       # === Caching SCRAM secrets
       #
-      # <em>Caching of salted_password, client_key, stored_key, and server_key
-      # is not supported yet.</em>
+      # The values for salted_password, client_key, and server_key are stored in
+      # #cache, a SASL::ScramCache object.  This object can be saved and re-used
+      # across multiple authentication exchanges.  When the #salt and #iteration
+      # are unchanged, the stored keys will be reused.  When they change, the
+      # cache object is updated with the new values.
       #
+      # **NOTE:** <em>The cache object must be handled with the same level of
+      # caution as the password itself.</em>  For example, it should always
+      # be encrypted at rest.
+      #
+      # When +cache+ contains the client and server keys (or the salted
+      # password), +password+ is optional.  But authentication will fail if
+      # #salt or #iterations change and #password hasn't been provided.
+      #
+      # Note that SASL::ScramCache is <em>not thread-safe</em>.  Concurrent
+      # authentications should dup or clone the cache object.
       class ScramAuthenticator
         include GS2Header
         include ScramAlgorithm
@@ -73,6 +87,7 @@ module Net
         #
         #   #username - An alias for #authcid.
         # * #password ― Password or passphrase associated with this #username.
+        # * _optional_ #cache - A pre-existing SASL::ScramCache object.
         # * _optional_ #authzid ― Alternate identity to act as or on behalf of.
         # * _optional_ #min_iterations - Overrides the default value (4096).
         # * _optional_ #max_iterations - Overrides the default value (2³¹ - 1).
@@ -82,6 +97,13 @@ module Net
         # *NOTE:* <em>It is the user's responsibility</em> to enforce minimum
         # and maximum iteration counts that are appropriate for their security
         # context.
+        #
+        # === Caching salted credentials
+        #
+        # When +cache+ contains the client and server keys (or the salted
+        # password), +password+ is optional.
+        #
+        # See ScramAuthenticator@Caching+SCRAM+secrets and SASL::ScramCache.
         def initialize(username_arg = nil, password_arg = nil,
                        authcid: nil, username: nil,
                        authzid: nil,
@@ -89,10 +111,14 @@ module Net
                        min_iterations: 4096, # see both RFC5802 and RFC7677
                        max_iterations: 2**31 - 1,  # max int32
                        cnonce: nil, # must only be set in tests
+                       cache: ScramCache.new,
                        **options)
           @username = username || username_arg || authcid or
             raise ArgumentError, "missing username (authcid)"
-          @password = password || secret || password_arg or
+          cache => ScramCache
+          @cache = cache
+          @password = password || secret || password_arg
+          @password || @cache.sufficient? or
             raise ArgumentError, "missing password"
           @authzid = authzid
 
@@ -109,9 +135,6 @@ module Net
           # These attrs are set from the server challenges
           @server_first_message = @snonce = @salt = @iterations = nil
           @server_error = nil
-
-          # Memoized after @salt and @iterations have been sent.
-          @salted_password = @client_key = @server_key = nil
 
           # These values are created and cached in response to server challenges
           @client_first_message_bare = nil
@@ -197,20 +220,34 @@ module Net
         # The iteration count for the selected hash function and user
         attr_reader :iterations
 
+        # Caches salted_password, client_key, and server_key, based on a
+        # specific #salt and #iterations.
+        #
+        # See SASL::ScramCache and ScramAuthenticator@Caching+SCRAM+secrets.
+        attr_reader :cache
+
         # An error reported by the server during the \SASL exchange.
         #
         # Does not include errors reported by the protocol, e.g.
         # Net::IMAP::NoResponseError.
         attr_reader :server_error
 
-        # Memoized ScramAlgorithm#salted_password (needs #salt and #iterations)
-        def salted_password = @salted_password ||= compute_salted { super }
+        # Cached value for ScramAlgorithm#salted_password.
+        # Requires +salt+ and +iterations+, from the server.
+        def salted_password
+          salted_cache_read(:salted_password) {
+            password or raise Error, "invalid cache: salt or iteration changed"
+            super
+          }
+        end
 
-        # Memoized ScramAlgorithm#client_key (needs #salt and #iterations)
-        def client_key = @client_key ||= compute_salted { super }
+        # Cached value for ScramAlgorithm#client_key.
+        # Requires +salt+ and +iterations+, from the server.
+        def client_key = salted_cache_read(:client_key) { super }
 
-        # Memoized ScramAlgorithm#server_key (needs #salt and #iterations)
-        def server_key = @server_key ||= compute_salted { super }
+        # Cached value for ScramAlgorithm#server_key.
+        # Requires +salt+ and +iterations+, from the server.
+        def server_key = salted_cache_read(:server_key) { super }
 
         # Returns a new OpenSSL::Digest object, set to the appropriate hash
         # function for the chosen mechanism.
@@ -251,11 +288,8 @@ module Net
 
         private
 
-        # Checks for +salt+ and +iterations+ before yielding
-        def compute_salted
-          salt       in String  or raise Error, "unknown salt"
-          iterations in Integer or raise Error, "unknown iterations"
-          yield
+        def salted_cache_read(name)
+          cache.read(name, salt:, iterations:) { yield }
         end
 
         # Need to store this for auth_message

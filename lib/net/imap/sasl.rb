@@ -142,6 +142,7 @@ module Net
       autoload :Authenticators,           "#{sasl_dir}/authenticators"
       autoload :GS2Header,                "#{sasl_dir}/gs2_header"
       autoload :ScramAlgorithm,           "#{sasl_dir}/scram_algorithm"
+      autoload :ScramCache,               "#{sasl_dir}/scram_cache"
 
       autoload :AnonymousAuthenticator,   "#{sasl_dir}/anonymous_authenticator"
       autoload :ExternalAuthenticator,    "#{sasl_dir}/external_authenticator"
