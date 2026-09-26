@@ -62,6 +62,14 @@ class IMAPTest < Net::IMAP::TestCase
     end
   end
 
+  def test_open_timeout
+    host = ENV.fetch("TEST_OPEN_TIMEOUT_HOST", "10.255.255.1")
+    pend host if host.start_with? "skip"
+    assert_raise(Net::OpenTimeout) do
+      Net::IMAP.new(host, open_timeout: 0)
+    end
+  end
+
   def test_unexpected_eof
     server = create_tcp_server
     port = server.addr[1]
