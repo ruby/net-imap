@@ -487,20 +487,10 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
                  SequenceSet[1...200][100, 10000]
   end
 
-  def pend_slice_bug(what, &) = pend("#slice bug: #{what}", &)
-
-  def pend_slice_neg_len(&)
-    pend_slice_bug("allow negative length", &)
-    assert_raise_with_message(ArgumentError,
-                              "length must not be negative",
-                              &)
-  end
-
-
   test "#slice(start, length) -> nil, for negative length" do
     set = SequenceSet[1...200]
-    pend_slice_neg_len do assert_nil set[ 100, -1] end
-    pend_slice_neg_len do assert_nil set[-100, -1] end
+    assert_nil set[ 100, -1]
+    assert_nil set[-100, -1]
   end
 
   test "#slice(start, length) -> nil, for invalid start" do

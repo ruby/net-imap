@@ -2420,7 +2420,7 @@ module Net
       def slice_length(start, length)
         start  = Integer(start.to_int)
         length = Integer(length.to_int)
-        raise ArgumentError, "length must not be negative" if length.negative?
+        return nil if length.negative?
         stop   = start + length unless start.negative? && start.abs <= length
         slice_range(start...stop)
       end
