@@ -492,16 +492,10 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   def pend_slice_neg_len(&)
     pend_slice_bug("allow negative length", &)
     assert_raise_with_message(ArgumentError,
-                              "length must be positive",
+                              "length must not be negative",
                               &)
   end
 
-  def pend_slice_zero_len(&)
-    pend_slice_bug("allow zero length", &)
-    assert_raise_with_message(ArgumentError,
-                              "length must be positive",
-                              &)
-  end
 
   test "#slice(start, length) -> nil, for negative length" do
     set = SequenceSet[1...200]
@@ -511,22 +505,22 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   test "#slice(start, length) -> nil, for invalid start" do
     set = SequenceSet[1..100]
-    pend_slice_zero_len do assert_nil set[ 101, 0] end
+    assert_nil set[ 101, 0]
     assert_nil set[ 101, 1]
     assert_nil set[ 101, 9]
-    pend_slice_zero_len do assert_nil set[-101, 0] end
+    assert_nil set[-101, 0]
     assert_nil set[-101, 1]
     assert_nil set[-101, 9]
 
     set = SequenceSet[*((10..100) % 10)]
     assert_nil set[-11, 1]
-    pend_slice_zero_len do assert_nil set[-11, 0] end
+    assert_nil set[-11, 0]
   end
 
   test "#slice(start, length) -> empty, for valid start but zero length" do
     set = SequenceSet[1...200]
-    pend_slice_zero_len do assert_same SequenceSet.empty, set[ 100, 0] end
-    pend_slice_zero_len do assert_same SequenceSet.empty, set[-100, 0] end
+    assert_same SequenceSet.empty, set[ 100, 0]
+    assert_same SequenceSet.empty, set[-100, 0]
   end
 
   test "#[range] -> set, for valid range" do
@@ -613,7 +607,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet[    100], set[ 9, 4]
     assert_equal SequenceSet[    100], set[-1, 4]
     # when positive start == cardinality
-    pend_slice_zero_len do assert_equal SequenceSet.empty,    set[10, 0] end
+    assert_equal SequenceSet.empty,    set[10, 0]
     assert_equal SequenceSet.empty,    set[10, 4]
     assert_equal SequenceSet.empty,    set[10...10]
     assert_equal SequenceSet.empty,    set[10.. 10]
