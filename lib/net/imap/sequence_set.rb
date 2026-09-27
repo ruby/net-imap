@@ -1720,7 +1720,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def at(index)
-        seek_number_in_minmaxes(minmaxes, index)
+        export_num sorted_set_num_at Integer index.to_int
       end
 
       # :call-seq: ordered_at(index) -> integer or nil
@@ -1733,7 +1733,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def ordered_at(index)
-        seek_number_in_minmaxes(each_entry_minmax, index)
+        export_num ordered_list_num_at Integer index.to_int
       end
 
       # :call-seq:
@@ -2377,15 +2377,22 @@ module Net
       ######################################################################{{{2
       # Number indexing methods
 
+      def sorted_set_num_at(index)
+        seek_number_in_minmaxes(minmaxes, index)
+      end
+
+      def ordered_list_num_at(index)
+        seek_number_in_minmaxes(each_entry_minmax, index)
+      end
+
       def seek_number_in_minmaxes(minmaxes, index)
-        index = Integer(index.to_int)
         if index.negative?
           reverse_each_minmax_with_index(minmaxes) do |min, max, idx_min, idx_max|
-            idx_min <= index and return export_num(min + (index - idx_min))
+            idx_min <= index and return min + (index - idx_min)
           end
         else
           each_minmax_with_index(minmaxes) do |min, _, idx_min, idx_max|
-            index <= idx_max and return export_num(min + (index - idx_min))
+            index <= idx_max and return min + (index - idx_min)
           end
         end
         nil
