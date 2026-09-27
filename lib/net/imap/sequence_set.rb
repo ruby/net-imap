@@ -2421,8 +2421,8 @@ module Net
         start  = Integer(start.to_int)
         length = Integer(length.to_int)
         raise ArgumentError, "length must be positive" unless length.positive?
-        last = start + length - 1 unless start.negative? && start.abs <= length
-        slice_range(start..last)
+        stop   = start + length unless start.negative? && start.abs <= length
+        slice_range(start...stop)
       end
 
       def slice_range(range)
