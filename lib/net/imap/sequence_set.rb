@@ -2427,12 +2427,11 @@ module Net
 
       def slice_range(range)
         first = range.begin ||  0
-        last  = range.end   || -1
-        if range.exclude_end?
-          return remain_frozen_empty if last.zero?
-          last -= 1 if range.end
-        end
-        if (first * last).positive? && last < first
+        rend  = range.end
+        excl  = range.exclude_end?
+        last = !(excl && rend == 0) &&        # (i...0)
+          (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
+        if !last || (first * last).positive? && last < first
           remain_frozen_empty
         elsif (min = sorted_set_num_at(first))
           max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
