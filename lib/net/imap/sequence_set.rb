@@ -2431,8 +2431,8 @@ module Net
         excl  = range.exclude_end?
         last = !(excl && rend == 0) &&        # (i...0)
           (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
-        if !last || (first * last).positive? && last < first
-          remain_frozen_empty
+        if !last || first.negative? == last.negative? && last < first
+          remain_frozen_empty if first.abs <= cardinality
         elsif (min = sorted_set_num_at(first))
           max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
           if    min <= max then intersection export_minmax_entry [min, max]
