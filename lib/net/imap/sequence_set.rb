@@ -2432,13 +2432,25 @@ module Net
         last = !(excl && rend == 0) &&        # (i...0)
           (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
         if !last || first.negative? == last.negative? && last < first
-          remain_frozen_empty if first.abs <= cardinality
+          remain_frozen_empty if valid_slice_start?(first)
         elsif (min = sorted_set_num_at(first))
           max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
           if    min <= max then intersection export_minmax_entry [min, max]
           else                  remain_frozen_empty
           end
         end
+      end
+
+      # By short-circuiting, this is a small performance improvement over
+      # `offset.abs <= cardinality`.  But, slice_range should get a bigger
+      # performance boost by combining this scan with the start offset scan.
+      def valid_slice_start?(offset)
+        offset = offset.abs
+        minmaxes.each do |min, max|
+          offset -= (max - min).succ
+          return true if offset.negative?
+        end
+        !offset.positive?
       end
 
       ######################################################################{{{2
