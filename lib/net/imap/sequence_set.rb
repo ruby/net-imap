@@ -2438,6 +2438,8 @@ module Net
           if    min <= max then intersection export_minmax_entry [min, max]
           else                  remain_frozen_empty
           end
+        elsif first.positive?
+          remain_frozen_empty if valid_slice_start?(first)
         end
       end
 
