@@ -2430,7 +2430,7 @@ module Net
         last  = range.end   || -1
         if range.exclude_end?
           return remain_frozen_empty if last.zero?
-          last -= 1 if range.end && last != STAR_INT
+          last -= 1 if range.end
         end
         if (first * last).positive? && last < first
           remain_frozen_empty
