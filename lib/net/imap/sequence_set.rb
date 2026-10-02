@@ -1739,16 +1739,49 @@ module Net
       # :call-seq:
       #    seqset[index]         -> integer or :* or nil
       #    slice(index)          -> integer or :* or nil
-      #    seqset[start, length] -> sequence set or nil
-      #    slice(start, length)  -> sequence set or nil
+      #    seqset[index, length] -> sequence set or nil
+      #    slice(index, length)  -> sequence set or nil
       #    seqset[range]         -> sequence set or nil
       #    slice(range)          -> sequence set or nil
       #
       # Returns a number or a subset from the _sorted_ set, without modifying
       # the set.
       #
+      # With a single +index+ argument, returns an integer or +:*+ or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0]     #=> 10
+      #     set[-1]    #=> 26
+      #
+      # With +index+ and +length+ arguments, returns a new SequenceSet or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[1, 2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #     set[-2, 2] #=> Net::IMAP::SequenceSet["23,26"]
+      #
+      # With a single +range+ argument, returns a new SequenceSet or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0...2] #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[0..2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #     set[0..-2] #=> Net::IMAP::SequenceSet["10:15,20:23"]
+      #     set[-6..6] #=> Net::IMAP::SequenceSet["15,20"]
+      #
+      # Note that the result is based on the sorted and de-duplicated set, not
+      # on the ordered #entries in #string.
+      #
+      #     set = Net::IMAP::SequenceSet["12,20:23,11:16,21"]
+      #     set[0]   #=> 11
+      #     set[-1]  #=> 23
+      #
+      # This behaves like <tt>Array#slice</tt> on a virtual array of all of the
+      # monotonically sorted #numbers in +self+:
+      #     # WARNING: For illustration only.  Do NOT do this with large sets.
+      #     sliced_array = seqset.numbers[*args] and
+      #       sliced_set = Net::IMAP::SequenceSet(sliced_array)
+      #     set.slice(*args) == sliced_set  #=> true
+      #
+      # ==== Number lookup by index
+      #
       # When an Integer argument +index+ is given, the number at offset +index+
-      # in the sorted set is returned:
+      # in the sorted set is returned.
       #
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[0]   #=> 10
@@ -1759,22 +1792,84 @@ module Net
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[-1]  #=> 26
       #     set[-3]  #=> 22
-      #     set[-6]  #=> 15
+      #     set[-11] #=> 10
       #
-      # If +index+ is out of range, +nil+ is returned.
-      #
+      # The range for +index+ is <tt>-cardinality...cardinality</tt>.
+      # If +index+ is out of range, returns +nil+.
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[11]  #=> nil
       #     set[-12] #=> nil
       #
-      # The result is based on the sorted and de-duplicated set, not on the
-      # ordered #entries in #string.
+      # With a single Integer argument, this behaves identically to #at.
       #
-      #     set = Net::IMAP::SequenceSet["12,20:23,11:16,21"]
-      #     set[0]   #=> 11
-      #     set[-1]  #=> 23
+      # ==== Subset slice by index and length
       #
-      # Related: #at
+      # When two Integer arguments, +index+ and +length+ are given, returns a
+      # new SequenceSet containing the +length+ successive numbers beginning at
+      # offset +index+.:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0, 2]  #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[1, 2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #
+      # If <tt>index + length</tt> is greater than #cardinality, returns all
+      # elements from +index+ to the end:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0, 15] #=> Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[5, 10] #=> Net::IMAP::SequenceSet["15,20:23,26"]
+      #     set[10, 5] #=> Net::IMAP::SequenceSet["26"]
+      #
+      # If +index+ is equal to #cardinality, returns a new empty SequenceSet.
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[11, 5] #=> Net::IMAP::SequenceSet.empty
+      #
+      # If +length+ is negative, returns +nil+.
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set[5, -1] #=> nil
+      #
+      # If +index+ is out of range (absolute value greater than #cardinality),
+      # returns +nil+.
+      #
+      # If +index+ is in range and +length+ is zero, returns a new empty
+      # SequenceSet.
+      #
+      # ==== Subset slice by index range
+      #
+      # When a single Range argument +range+ is given, returns a new SequenceSet
+      # containing the successive numbers at the offsets indicated by +range+.
+      #
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0...2]   #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[2..4]    #=> Net::IMAP::SequenceSet["12:14"]
+      #
+      #     set[-2..-1]  #=> Net::IMAP::SequenceSet["23,26"]
+      #     set[-4...-2] #=> Net::IMAP::SequenceSet["21:22"]
+      #
+      #     set[4..-4]   #=> Net::IMAP::SequenceSet["14:15,20:21"]
+      #     set[-6...6]  #=> Net::IMAP::SequenceSet["15"]
+      #
+      # An end-less range slices until the last number, and a begin-less range
+      # slices from the first number.
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[..3]    #=> Net::IMAP::SequenceSet["10:13"]
+      #     set[..-3]   #=> Net::IMAP::SequenceSet["10:15,20:22"]
+      #     set[-2..]   #=> Net::IMAP::SequenceSet["23,26"]
+      #     set[2..]    #=> Net::IMAP::SequenceSet["12:15,20:23,26"]
+      #
+      # When +range.begin+ points to a smaller index than +range.end+, a new
+      # empty SequenceSet is returned.
+      #
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set[5.. 4]  #=> SequenceSet.empty
+      #     set[-4..-5] #=> SequenceSet.empty
+      #     set[5..-6]  #=> SequenceSet.empty
+      #
+      # If +range.begin+ is out of range (absolute value greater than
+      # #cardinality), returns +nil+.
+      #
+      # This behaves similarly to a slice with +range.begin+ as +index+ and
+      # +range.size+ as +length+, when that both sides of the range are either
+      # negative or non-negative.  Note that the minimum +range.size+ is zero,
+      # so this can't return +nil+ for a negative range length.
       def [](index, length = nil)
         if    length              then slice_length(index, length)
         elsif index.is_a?(Range)  then slice_range(index)
