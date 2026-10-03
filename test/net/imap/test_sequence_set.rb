@@ -440,6 +440,13 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_nil        SequenceSet["101:110,201:210,301:310"][-44]
   end
 
+  test "#at(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full[nil] end
+    assert_implicit_integer_type_error do SequenceSet.full["1"] end
+    assert_implicit_integer_type_error do SequenceSet.full.at(nil) end
+    assert_implicit_integer_type_error do SequenceSet.full.at("1") end
+  end
+
   test "#ordered_at(non-negative index)" do
     assert_nil        SequenceSet.empty.ordered_at(0)
     assert_equal   1, SequenceSet.full.ordered_at(0)
@@ -472,6 +479,11 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
   end
 
+  test "#ordered_at(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.ordered_at(nil) end
+    assert_implicit_integer_type_error do SequenceSet.full.ordered_at("1") end
+  end
+
   test "#[start, length]" do
     assert_equal SequenceSet[10..99], SequenceSet.full[9, 90]
     assert_equal 90, SequenceSet.full[9, 90].count
@@ -485,6 +497,16 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     # with length longer than the remaining members
     assert_equal SequenceSet[101...200],
                  SequenceSet[1...200][100, 10000]
+  end
+
+  test "#[], argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full[nil] end
+    assert_implicit_integer_type_error do SequenceSet.full["1"] end
+    assert_implicit_integer_type_error do SequenceSet.full[nil, 1] end
+    assert_implicit_integer_type_error do SequenceSet.full["1", 1] end
+    assert_implicit_integer_type_error do SequenceSet.full[1, nil] end
+    assert_implicit_integer_type_error do SequenceSet.full[1, "1"] end
+    assert_implicit_integer_type_error do SequenceSet.full["1".."2"] end
   end
 
   test "#slice(start, length) -> nil, for negative length" do
@@ -1155,6 +1177,16 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_raise(ArgumentError) { set.max(-1) }
   end
 
+  test "#min(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.min("1") end
+    assert_implicit_integer_type_error do SequenceSet.full.min(nil) end
+  end
+
+  test "#max(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.max("1") end
+    assert_implicit_integer_type_error do SequenceSet.full.max(nil) end
+  end
+
   test "#minmax" do
     assert_equal [  3,   3], SequenceSet["3"].minmax
     assert_equal [ :*,  :*], SequenceSet["*"].minmax
@@ -1217,6 +1249,17 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet.empty, set.slice!(3..)
   end
 
+  test "#slice!, argument type errors" do
+    set = SequenceSet.new 1..20
+    assert_implicit_integer_type_error do set.slice!(nil) end
+    assert_implicit_integer_type_error do set.slice!("1") end
+    assert_implicit_integer_type_error do set.slice!(nil, 1) end
+    assert_implicit_integer_type_error do set.slice!("1", 1) end
+    assert_implicit_integer_type_error do set.slice!(1, nil) end
+    assert_implicit_integer_type_error do set.slice!(1, "1") end
+    assert_implicit_integer_type_error do set.slice!("1".."2") end
+  end
+
   test "#delete_at" do
     set = SequenceSet.new [5..10, 20]
     assert_nil   set.delete_at(20)
@@ -1227,6 +1270,12 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal  20, set.delete_at(3)
     assert_equal nil, set.delete_at(3)
     assert_equal SequenceSet[5, 7..8], set
+  end
+
+  test "#delete_at, argument type errors" do
+    set = SequenceSet.new 1..20
+    assert_implicit_integer_type_error do set.delete_at(nil) end
+    assert_implicit_integer_type_error do set.delete_at("1") end
   end
 
   test "#include_star?" do

@@ -204,6 +204,11 @@ class Net::IMAP::TestCase < Test::Unit::TestCase
     end
   end
 
+  def assert_implicit_integer_type_error(&)
+    msg = /\Ano implicit conversion (from|of) \w+ (in)?to Integer\z/
+    assert_raise_with_message(TypeError, msg, &)
+  end
+
   def assert_stream_closed_error
     assert_local_raise(IOError, /\A(?:stream closed|closed stream)\z/) do
       yield
