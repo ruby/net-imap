@@ -489,13 +489,6 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   def pend_slice_bug(what, &) = pend("#slice bug: #{what}", &)
 
-  def pend_slice_nil(actual)
-    pend_slice_bug "return nil for invalid slice start index" do
-      assert_nil actual
-    end
-    assert_equal SequenceSet.empty, actual
-  end
-
   def pend_slice_from_cardinality(actual)
     pend_slice_bug "return empty for start == cardinality" do
       assert_same SequenceSet.equal, actual
@@ -637,10 +630,10 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   test "#[range] -> nil, for positive start > cardinality" do
     assert_nil SequenceSet.empty[2..4]
     assert_nil SequenceSet.empty[1..0]
-    pend_slice_nil SequenceSet.empty[1...0]
+    assert_nil SequenceSet.empty[1...0]
     assert_nil SequenceSet.empty[2..4]
     assert_nil SequenceSet.empty[1..0]
-    pend_slice_nil SequenceSet.empty[1...0]
+    assert_nil SequenceSet.empty[1...0]
     assert_nil SequenceSet.empty[1..-1]
     assert_nil SequenceSet.empty[1...-1]
     assert_nil SequenceSet.empty[2..-4]
@@ -648,13 +641,13 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_nil SequenceSet[101..200][1000..1060]
 
     set = SequenceSet[*((10..100) % 10)]
-    pend_slice_nil set[11...11]
+    assert_nil set[11...11]
     assert_nil set[11.. 11]
-    pend_slice_nil set[11...10]
-    pend_slice_nil set[11.. 10]
-    pend_slice_nil set[11... 9]
-    pend_slice_nil set[11..  9]
-    pend_slice_nil set[11... 0]
+    assert_nil set[11...10]
+    assert_nil set[11.. 10]
+    assert_nil set[11... 9]
+    assert_nil set[11..  9]
+    assert_nil set[11... 0]
     assert_nil set[11..  0]
     assert_nil set[11...-1]
     assert_nil set[11.. -1]
@@ -664,10 +657,10 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
   test "#[range] -> nil, for negative start before first number" do
     assert_nil SequenceSet.empty[-2..4]
     assert_nil SequenceSet.empty[-1..0]
-    pend_slice_nil SequenceSet.empty[-1...0]
+    assert_nil SequenceSet.empty[-1...0]
     assert_nil SequenceSet.empty[-1..-1]
-    pend_slice_nil SequenceSet.empty[-1...-1]
-    pend_slice_nil SequenceSet.empty[-2..-4]
+    assert_nil SequenceSet.empty[-1...-1]
+    assert_nil SequenceSet.empty[-2..-4]
 
     assert_nil SequenceSet[101..200][-1000..-60]
 
@@ -678,7 +671,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_nil set[-11.. 10]
     assert_nil set[-11... 9]
     assert_nil set[-11..  9]
-    pend_slice_nil set[-11... 0]
+    assert_nil set[-11... 0]
     assert_nil set[-11..  0]
     assert_nil set[-11...-1]
     assert_nil set[-11.. -1]
