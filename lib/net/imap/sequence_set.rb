@@ -2435,7 +2435,7 @@ module Net
         if (first * last).positive? && last < first
           remain_frozen_empty
         elsif (min = sorted_set_num_at(first))
-          max = sorted_set_num_at(last) || STAR_INT
+          max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
           if    min <= max then intersection export_minmax_entry [min, max]
           else                  remain_frozen_empty
           end

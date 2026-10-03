@@ -489,13 +489,6 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   def pend_slice_bug(what, &) = pend("#slice bug: #{what}", &)
 
-  def pend_slice_lomax(set, start, actual)
-    pend_slice_bug "return empty when max < -cardinality" do
-      assert_same empty, actual
-    end
-    assert_equal set[start..], actual
-  end
-
   def pend_slice_nil(actual)
     pend_slice_bug "return nil for invalid slice start index" do
       assert_nil actual
@@ -613,11 +606,11 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   test "#[range] -> empty, for empty positive..negative range with valid start" do
     set = SequenceSet[1..200]
-    pend_slice_lomax set, 0,            set[  0.. -201]  # i.e:   0.. before start
-    pend_slice_lomax set, 0,            set[  0...-200]  # i.e:   0...  0
+    assert_same SequenceSet.empty, set[  0.. -201]  # i.e:   0.. before start
+    assert_same SequenceSet.empty, set[  0...-200]  # i.e:   0...  0
     assert_same SequenceSet.empty, set[  1.. -200]  # i.e:   1..   0
-    pend_slice_lomax set, 100,          set[100.. -201]  # i.e: 100.. before first
-    pend_slice_lomax set, 100,          set[100...-200]  # i.e: 100...  0
+    assert_same SequenceSet.empty, set[100.. -201]  # i.e: 100.. before first
+    assert_same SequenceSet.empty, set[100...-200]  # i.e: 100...  0
     assert_same SequenceSet.empty, set[100...-100]  # i.e: 100...100
     assert_same SequenceSet.empty, set[100.. -101]  # i.e: 100..  99
     assert_same SequenceSet.empty, set[199...  -1]  # i.e: 199...199
