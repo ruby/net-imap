@@ -2434,11 +2434,9 @@ module Net
         end
         if (first * last).positive? && last < first
           remain_frozen_empty
-        elsif (min = at(first))
-          max = at(last)
-          max = :* if max.nil?
-          if    max == :*  then self & (min..)
-          elsif min <= max then self & (min..max)
+        elsif (min = sorted_set_num_at(first))
+          max = sorted_set_num_at(last) || STAR_INT
+          if    min <= max then intersection export_minmax_entry [min, max]
           else                  remain_frozen_empty
           end
         end

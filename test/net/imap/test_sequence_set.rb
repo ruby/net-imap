@@ -496,15 +496,6 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal set[start..], actual
   end
 
-  def pend_slice_star(expected, &)
-    pend_slice_bug "don't crash when min == :*" do
-      assert_same expected, yield
-    end
-    assert_raise_with_message(ArgumentError,
-                              /\Acomparison of Symbol with \d+ /,
-                              &)
-  end
-
   def pend_slice_nil(actual)
     pend_slice_bug "return nil for invalid slice start index" do
       assert_nil actual
@@ -616,7 +607,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_same SequenceSet.empty, set[-100..   99]  # i.e: 100..  99
     assert_same SequenceSet.empty, set[  -1... 199]  # i.e: 199...199
     assert_same SequenceSet.empty, set[  -1..  198]  # i.e: 199...198
-    pend_slice_star SequenceSet.empty do SequenceSet.full[-1..0] end
+    assert_same SequenceSet.empty, SequenceSet.full[-1..0]
     assert_same SequenceSet.empty, SequenceSet.full[-1...0]
   end
 
