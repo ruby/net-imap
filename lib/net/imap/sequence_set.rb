@@ -1019,9 +1019,9 @@ module Net
       # is empty.  (+star+ is ignored when +count+ is given.)
       #
       # Related: #min, #minmax, #slice
-      def max(count = nil, star: :*)
-        if count
-          count = Integer(count.to_int)
+      def max(count = (unset_count = true; nil), star: :*)
+        if !unset_count
+          count = implicit_int(count)
           raise ArgumentError, 'negative count' if count < 0
           return remain_frozen_empty if count == 0
           if cardinality <= count
@@ -1046,9 +1046,9 @@ module Net
       # is empty.  (+star+ is ignored when +count+ is given.)
       #
       # Related: #max, #minmax, #slice
-      def min(count = nil, star: :*)
-        if count
-          count = Integer(count.to_int)
+      def min(count = (unset_count = true; nil), star: :*)
+        if !unset_count
+          count = implicit_int(count)
           raise ArgumentError, 'negative count' if count < 0
           slice(0...count) || remain_frozen_empty
         elsif (val = min_num)
@@ -1360,7 +1360,7 @@ module Net
       #
       # Related: #delete, #delete?, #slice!, #subtract, #difference
       def delete_at(index)
-        slice! Integer(index.to_int)
+        slice! implicit_int index
       end
 
       # :call-seq:
@@ -1376,9 +1376,10 @@ module Net
       # #string will be regenerated after deletion.
       #
       # Related: #slice, #delete_at, #delete, #delete?, #subtract, #difference
-      def slice!(index, length = nil)
+      def slice!(index, length = (length_unset = true; nil))
         modifying! # short-circuit before slice
-        deleted = slice(index, length) and subtract deleted
+        deleted = length_unset ? slice(index) : slice(index, length)
+        subtract deleted if deleted
         deleted
       end
 
@@ -1720,7 +1721,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def at(index)
-        export_num sorted_set_num_at Integer index.to_int
+        export_num sorted_set_num_at implicit_int index
       end
 
       # :call-seq: ordered_at(index) -> integer or nil
@@ -1733,7 +1734,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def ordered_at(index)
-        export_num ordered_list_num_at Integer index.to_int
+        export_num ordered_list_num_at implicit_int index
       end
 
       # :call-seq:
@@ -1870,8 +1871,8 @@ module Net
       # +range.size+ as +length+, when that both sides of the range are either
       # negative or non-negative.  Note that the minimum +range.size+ is zero,
       # so this can't return +nil+ for a negative range length.
-      def [](index, length = nil)
-        if    length              then slice_length(index, length)
+      def [](index, length = (length_unset = true; nil))
+        if    !length_unset       then slice_length(index, length)
         elsif index.is_a?(Range)  then slice_range(index)
         else                           at(index)
         end
@@ -2418,16 +2419,16 @@ module Net
       end
 
       def slice_length(start, length)
-        start  = Integer(start.to_int)
-        length = Integer(length.to_int)
+        start  = implicit_int(start)
+        length = implicit_int(length)
         return nil if length.negative?
         stop   = start + length unless start.negative? && start.abs <= length
         slice_range(start...stop)
       end
 
       def slice_range(range)
-        first = range.begin ||  0
-        rend  = range.end
+        first = (implicit_int(range.begin) unless range.begin.nil?) || 0
+        rend  = (implicit_int(range.end)   unless range.end.nil?)
         excl  = range.exclude_end?
         last = !(excl && rend == 0) &&        # (i...0)
           (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
@@ -2453,6 +2454,19 @@ module Net
           return true if offset.negative?
         end
         !offset.positive?
+      end
+
+      # Something like this exists in ruby's C API.  Why not in ruby's ruby?
+      def implicit_int(input)
+        Integer.try_convert(input) or
+          raise TypeError, case input
+            when nil
+              "no implicit conversion from %p to Integer" % [input]
+            when true, false
+              "no implicit conversion of %p into Integer" % [input]
+            else
+              "no implicit conversion of %s into Integer" % [input.class.name]
+            end
       end
 
       ######################################################################{{{2
