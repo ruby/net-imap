@@ -489,13 +489,6 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
 
   def pend_slice_bug(what, &) = pend("#slice bug: #{what}", &)
 
-  def pend_slice_from_cardinality(actual)
-    pend_slice_bug "return empty for start == cardinality" do
-      assert_same SequenceSet.equal, actual
-    end
-    assert_nil actual
-  end
-
   def pend_slice_neg_len(&)
     pend_slice_bug("allow negative length", &)
     assert_raise_with_message(ArgumentError,
@@ -608,7 +601,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_same SequenceSet.empty, set[100.. -101]  # i.e: 100..  99
     assert_same SequenceSet.empty, set[199...  -1]  # i.e: 199...199
     assert_same SequenceSet.empty, set[199..   -2]  # i.e: 199...198
-    pend_slice_from_cardinality    set[200..   -1]  # i.e: 200.. 199
+    assert_same SequenceSet.empty, set[200..   -1]  # i.e: 200.. 199
   end
 
   test "#slice(range) -> empty, for start == cardinality" do
@@ -621,9 +614,9 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet[    100], set[-1, 4]
     # when positive start == cardinality
     pend_slice_zero_len do assert_equal SequenceSet.empty,    set[10, 0] end
-    pend_slice_from_cardinality        set[10, 4]
+    assert_equal SequenceSet.empty,    set[10, 4]
     assert_equal SequenceSet.empty,    set[10...10]
-    pend_slice_from_cardinality        set[10.. 10]
+    assert_equal SequenceSet.empty,    set[10.. 10]
     assert_equal SequenceSet.empty,    set[10.. 9]
   end
 
@@ -1237,7 +1230,7 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet[9..10, 20],    set.slice!(3..)
     assert_equal SequenceSet[5, 7..8],      set
     assert_nil   set.slice!(3)
-    pend_slice_from_cardinality set.slice!(3..)
+    assert_equal SequenceSet.empty, set.slice!(3..)
   end
 
   test "#delete_at" do
