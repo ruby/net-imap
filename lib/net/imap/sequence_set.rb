@@ -2383,7 +2383,7 @@ module Net
       # Number indexing methods
 
       def sorted_set_num_at(index)
-        seek_number_in_minmaxes(minmaxes, index)
+        scan_to_num_index(index) { num_at(_1, _2) }
       end
 
       def ordered_list_num_at(index)
@@ -2448,16 +2448,69 @@ module Net
         end
       end
 
-      # By short-circuiting, this is a small performance improvement over
-      # `offset.abs <= cardinality`.  But, slice_range should get a bigger
-      # performance boost by combining this scan with the start offset scan.
-      def valid_slice_start?(offset)
-        offset = offset.abs
-        minmaxes.each do |min, max|
-          offset -= (max - min).succ
-          return true if offset.negative?
+      # :call-seq:
+      #   scan_to_num_index(num_idx) {|run_idx, diff| result } -> result | nil
+      #
+      # Yields +run_idx+ and +diff+, which can be passed to #num_at.
+      # Yields +runs.size+ with no +diff+ when +num_idx+ equals #cardinality.
+      # Returns the block result.
+      #
+      # +run_idx+ will have the same sign as +num_index+.
+      # +diff+ currently counts up from the run's min, but this may change.
+      def scan_to_num_index(idx)
+        if idx.negative?
+          reverse_scan_run_indexes do |run_idx, min_idx, max_idx|
+            return yield run_idx, idx - min_idx if min_idx <= idx
+          end
+          nil
+        else
+          size = scan_run_indexes do |run_idx, min_idx, max_idx|
+            return yield run_idx, idx - min_idx if idx <= max_idx
+          end
+          yield runs.size if size == idx
         end
-        !offset.positive?
+      end
+
+      # By short-circuiting, this is a small performance improvement over
+      # `num_idx.abs <= cardinality`.  But, slice_range should get a bigger
+      # performance boost by combining this scan with the start num_idx scan.
+      def valid_slice_start?(num_idx)
+        scan_to_num_index(num_idx) do return true end
+        false
+      end
+
+      def each_run_diff(minmaxes = self.minmaxes)
+        minmaxes.each do |run_min, run_max|
+          yield run_max - run_min
+        end
+      end
+
+      def reverse_each_run_diff(minmaxes = self.minmaxes)
+        minmaxes.reverse_each do |run_min, run_max|
+          yield run_max - run_min
+        end
+      end
+
+      # Yields run_idx, num_idx_min, num_idx_max.  Returns cardinality.
+      def scan_run_indexes
+        run_idx = num_idx_min = 0
+        each_run_diff do |run_diff|
+          num_idx_max = num_idx_min + run_diff
+          yield run_idx, num_idx_min, num_idx_max
+          run_idx, num_idx_min = run_idx.succ, num_idx_max.succ
+        end
+        num_idx_min
+      end
+
+      # Yields -run_idx, -num_idx_min, -num_idx_max.  Returns cardinality.
+      def reverse_scan_run_indexes
+        run_idx = num_idx_max = -1
+        reverse_each_run_diff do |run_diff|
+          num_idx_min = num_idx_max - run_diff
+          yield run_idx, num_idx_min, num_idx_max
+          run_idx, num_idx_max = run_idx.pred, num_idx_min.pred
+        end
+        ~num_idx_max
       end
 
       ######################################################################{{{2
@@ -2474,8 +2527,9 @@ module Net
       def min_num                 = minmaxes.first&.first
       def max_num                 = minmaxes.last&.last
 
-      def min_at(idx)             = minmaxes[idx][0]
-      def max_at(idx)             = minmaxes[idx][1]
+      def min_at(idx)             = minmaxes[idx]&.[](0)
+      def max_at(idx)             = minmaxes[idx]&.[](1)
+      def num_at(idx, diff)       = min_at(idx) &.+ (diff || 0)
 
       def sum_runs_size(runs)     = runs.sum(runs.size) { _2 - _1 }
 
