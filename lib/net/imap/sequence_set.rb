@@ -2435,19 +2435,24 @@ module Net
       def slice_range(range)
         first = implicit_int(range.begin || 0)
         rend  = implicit_int(range.end) unless range.end.nil?
-        excl  = range.exclude_end?
-        last = !(excl && rend == 0) &&        # (i...0)
-          (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
-        if !last || first.negative? == last.negative? && last < first
-          remain_frozen_empty if valid_slice_start?(first)
-        elsif (min = sorted_set_num_at(first))
-          max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
-          if    min <= max then intersection export_minmax_entry [min, max]
-          else                  remain_frozen_empty
+        scan_to_num_index(first) {|first_run, first_diff|
+          return remain_frozen_empty unless first_diff # first == cardinality
+          excl = range.exclude_end?
+          last = !(excl && rend == 0) &&        # (i...0)
+            ((excl ? rend&.pred : rend) || -1)  # (i...j) vs (i..j) vs (i...)
+          diff = last - first if last && first.negative? == last.negative?
+          if !first_diff || !last || diff&.negative?
+            remain_frozen_empty
+          elsif (min = num_at(first_run, first_diff))
+            max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
+            if    min <= max then intersection export_minmax_entry [min, max]
+            else                  remain_frozen_empty
+            end
+          else
+            warn "Net::IMAP::SequenceSet BUG: missing min for slice"
+            remain_frozen_empty
           end
-        elsif first.positive?
-          remain_frozen_empty if valid_slice_start?(first)
-        end
+        }
       end
 
       # :call-seq:
