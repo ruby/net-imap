@@ -2383,6 +2383,8 @@ module Net
       # Number indexing methods
 
       def sorted_set_num_at(index)
+        return min_num if index.zero?
+        return max_num if index == -1
         scan_to_num_index(index) { num_at(_1, _2) }
       end
 
