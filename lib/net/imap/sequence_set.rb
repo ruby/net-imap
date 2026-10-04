@@ -2205,6 +2205,12 @@ module Net
       alias runs set_data
       alias minmaxes runs
 
+      # NOTE: +minmaxes+ array is NOT copied.
+      def initialize_with_set_data(set_data)
+        @set_data = set_data
+        @string = nil
+      end
+
       private
 
       def remain_frozen(set) frozen? ? set.freeze : set end
@@ -2385,7 +2391,7 @@ module Net
       def sorted_set_num_at(index)
         return min_num if index.zero?
         return max_num if index == -1
-        scan_to_num_index(index) { num_at(_1, _2) }
+        scan_to_num_index(index, false) { num_at(_1, _2) }
       end
 
       def ordered_list_num_at(index)
@@ -2428,29 +2434,31 @@ module Net
         start  = implicit_int(start)
         length = implicit_int(length)
         return nil if length.negative?
-        stop   = start + length unless start.negative? && start.abs <= length
-        slice_range(start...stop)
+        scan_to_num_index(start, true) {|first_run, first_diff|
+          if length.zero?
+            remain_frozen_empty
+          elsif start.negative? && -start <= length
+            slice_runs_to_end(first_run, first_diff)
+          else
+            slice_runs_length(first_run, first_diff, length)
+          end
+        }
       end
 
       def slice_range(range)
         first = implicit_int(range.begin || 0)
         rend  = implicit_int(range.end) unless range.end.nil?
-        scan_to_num_index(first) {|first_run, first_diff|
-          return remain_frozen_empty unless first_diff # first == cardinality
-          excl = range.exclude_end?
-          last = !(excl && rend == 0) &&        # (i...0)
-            ((excl ? rend&.pred : rend) || -1)  # (i...j) vs (i..j) vs (i...)
-          diff = last - first if last && first.negative? == last.negative?
-          if !first_diff || !last || diff&.negative?
-            remain_frozen_empty
-          elsif (min = num_at(first_run, first_diff))
-            max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
-            if    min <= max then intersection export_minmax_entry [min, max]
-            else                  remain_frozen_empty
-            end
+        scan_to_num_index(first, true) {|first_run, first_diff|
+          # short-circuit (valid...0)
+          return remain_frozen_empty if range.exclude_end? && rend == 0
+          # normalize (i...j) and (i...) to (i..j)
+          last = (range.exclude_end? ? rend&.pred : rend) || -1
+          if last == -1
+            slice_runs_to_end(first_run, first_diff)
+          elsif first.negative? == last.negative?
+            slice_runs_length(first_run, first_diff, (last - first).succ)
           else
-            warn "Net::IMAP::SequenceSet BUG: missing min for slice"
-            remain_frozen_empty
+            slice_runs_to_index(first_run, first_diff, last)
           end
         }
       end
@@ -2458,50 +2466,35 @@ module Net
       # :call-seq:
       #   scan_to_num_index(num_idx) {|run_idx, diff| result } -> result | nil
       #
-      # Yields +run_idx+ and +diff+, which can be passed to #num_at.
-      # Yields +runs.size+ with no +diff+ when +num_idx+ equals #cardinality.
-      # Returns the block result.
+      # Yields once if num_idx is in range.  Returns the block result.
       #
-      # +run_idx+ will have the same sign as +num_index+.
-      # +diff+ currently counts up from the run's min, but this may change.
-      def scan_to_num_index(idx)
-        if idx.negative?
+      # When +first+ is true and <tt>num_idx == cardinality</tt>, returns an
+      # empty set (without yielding).
+      #
+      # Otherwise, returns +nil+ without yielding.
+      #
+      # +num_idx+ and +diff+ are usable with #num_at:
+      #  * +run_idx+ will be zero or positive, regardless of +num_idx+ sign.
+      #  * +diff+ counts up from the indexed run min, but this may change.
+      def scan_to_num_index(num_idx, first)
+        if num_idx.negative?
           reverse_scan_run_indexes do |run_idx, min_idx, max_idx|
-            return yield run_idx, idx - min_idx if min_idx <= idx
+            return yield run_idx, num_idx - min_idx if min_idx <= num_idx
           end
           nil
         else
           size = scan_run_indexes do |run_idx, min_idx, max_idx|
-            return yield run_idx, idx - min_idx if idx <= max_idx
+            return yield run_idx, num_idx - min_idx if num_idx <= max_idx
           end
-          yield runs.size if size == idx
-        end
-      end
-
-      # By short-circuiting, this is a small performance improvement over
-      # `num_idx.abs <= cardinality`.  But, slice_range should get a bigger
-      # performance boost by combining this scan with the start num_idx scan.
-      def valid_slice_start?(num_idx)
-        scan_to_num_index(num_idx) do return true end
-        false
-      end
-
-      def each_run_diff(minmaxes = self.minmaxes)
-        minmaxes.each do |run_min, run_max|
-          yield run_max - run_min
-        end
-      end
-
-      def reverse_each_run_diff(minmaxes = self.minmaxes)
-        minmaxes.reverse_each do |run_min, run_max|
-          yield run_max - run_min
+          remain_frozen_empty if first && size == num_idx
         end
       end
 
       # Yields run_idx, num_idx_min, num_idx_max.  Returns cardinality.
-      def scan_run_indexes
-        run_idx = num_idx_min = 0
-        each_run_diff do |run_diff|
+      def scan_run_indexes(run_idx = 0)
+        num_idx_min = 0
+        while (min, max = minmaxes[run_idx])
+          run_diff = max - min
           num_idx_max = num_idx_min + run_diff
           yield run_idx, num_idx_min, num_idx_max
           run_idx, num_idx_min = run_idx.succ, num_idx_max.succ
@@ -2511,13 +2504,82 @@ module Net
 
       # Yields -run_idx, -num_idx_min, -num_idx_max.  Returns cardinality.
       def reverse_scan_run_indexes
-        run_idx = num_idx_max = -1
-        reverse_each_run_diff do |run_diff|
+        run_idx, num_idx_max = runs.count.pred, -1
+        until run_idx.negative?
+          min, max = minmaxes[run_idx]
+          run_diff = max - min
           num_idx_min = num_idx_max - run_diff
           yield run_idx, num_idx_min, num_idx_max
           run_idx, num_idx_max = run_idx.pred, num_idx_min.pred
         end
         ~num_idx_max
+      end
+
+      def slice_runs_length(first_run_idx, first_diff, length)
+        return remain_frozen_empty unless length.positive?
+        num_idx = first_diff + length.pred
+        scan_run_indexes(first_run_idx) do |last_run_idx, min_idx, max_idx|
+          if num_idx <= max_idx
+            last_diff = num_idx - min_idx
+            return slice_runs_between(first_run_idx, first_diff,
+                                      last_run_idx, last_diff)
+          end
+        end
+        slice_runs_to_end(first_run_idx, first_diff)
+      end
+
+      def slice_runs_to_index(first_run, first_diff, last)
+        if last == -1
+          slice_runs_to_end(first_run, first_diff)
+        else
+          # TODO: short-circuit scan to last, so it never goes below first
+          sliced = scan_to_num_index(last, false) {|last_run, last_diff|
+            slice_runs_between(first_run, first_diff, last_run, last_diff)
+          }
+          sliced ||
+            (remain_frozen_empty if last.negative?) ||
+            slice_runs_to_end(first_run, first_diff)
+        end
+      end
+
+      def slice_runs_to_end(first_idx, first_diff)
+        sliced = []
+        first_num = num_at(first_idx, first_diff) and
+          first_max = max_at(first_idx)           and
+          sliced << [first_num, first_max]        and
+          rest = minmaxes[first_idx.succ..]       and
+          sliced.concat(rest)
+        set = SequenceSet.new
+        set.initialize_with_set_data sliced
+        remain_frozen set
+      end
+
+      def slice_runs_between(first_run_idx, first_diff, last_run_idx, last_diff)
+        if last_diff.nil?
+          slice_runs_to_end(first_idx, first_diff)
+        elsif last_run_idx < first_run_idx
+          remain_frozen_empty
+        elsif first_run_idx == last_run_idx
+          if last_diff < first_diff
+            remain_frozen_empty
+          else
+            first_num = num_at first_run_idx, first_diff
+            last_num  = first_num + (last_diff - first_diff)
+            set = SequenceSet.new
+            set.initialize_with_set_data [[first_num, last_num]]
+            remain_frozen set
+          end
+        else
+          first_num = num_at first_run_idx, first_diff
+          last_num  = num_at last_run_idx,  last_diff
+          sliced = []
+          sliced << [first_num, max_at(first_run_idx)]
+          sliced.concat minmaxes[first_run_idx.succ...last_run_idx]
+          sliced << [min_at(last_run_idx), last_num]
+          set = SequenceSet.new
+          set.initialize_with_set_data sliced
+          remain_frozen set
+        end
       end
 
       ######################################################################{{{2
@@ -2568,6 +2630,13 @@ module Net
           result = super
           @cardinality = 0
           result
+        end
+
+        protected
+
+        def initialize_with_set_data(...)
+          super
+          @cardinality = sum_runs_size(runs)
         end
 
         private
