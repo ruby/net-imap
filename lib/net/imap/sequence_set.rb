@@ -2453,12 +2453,20 @@ module Net
           return remain_frozen_empty if range.exclude_end? && rend == 0
           # normalize (i...j) and (i...) to (i..j)
           last = (range.exclude_end? ? rend&.pred : rend) || -1
-          if last == -1
+          if last == -1 || cardinality&.pred <= last
             slice_runs_to_end(first_run, first_diff)
           elsif first.negative? == last.negative?
             slice_runs_length(first_run, first_diff, (last - first).succ)
           else
-            slice_runs_to_index(first_run, first_diff, last)
+            first += cardinality if first.negative?
+            last  += cardinality if last&.negative?
+            if last.nil?
+              remain_frozen_empty
+            elsif cardinality.pred <= last
+              slice_runs_to_end(first_run, first_diff)
+            else
+              slice_runs_length(first_run, first_diff, (last - first).succ)
+            end
           end
         }
       end
@@ -2526,20 +2534,6 @@ module Net
           end
         end
         slice_runs_to_end(first_run_idx, first_diff)
-      end
-
-      def slice_runs_to_index(first_run, first_diff, last)
-        if last == -1
-          slice_runs_to_end(first_run, first_diff)
-        else
-          # TODO: short-circuit scan to last, so it never goes below first
-          sliced = scan_to_num_index(last, false) {|last_run, last_diff|
-            slice_runs_between(first_run, first_diff, last_run, last_diff)
-          }
-          sliced ||
-            (remain_frozen_empty if last.negative?) ||
-            slice_runs_to_end(first_run, first_diff)
-        end
       end
 
       def slice_runs_to_end(first_idx, first_diff)
