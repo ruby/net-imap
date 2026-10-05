@@ -1581,7 +1581,7 @@ module Net
       #     set.cardinality  #=> 4294967296
       #
       # Related: #count, #count_with_duplicates
-      def cardinality = minmaxes.sum(runs.count) { _2 - _1 }
+      def cardinality = sum_runs_size(runs)
 
       # Returns the count of distinct #numbers in the set.
       #
@@ -2359,6 +2359,8 @@ module Net
       def min_at(idx)             = minmaxes[idx][0]
       def max_at(idx)             = minmaxes[idx][1]
 
+      def sum_runs_size(runs)     = runs.sum(runs.size) { _2 - _1 }
+
       ######################################################################{{{2
       # Core set data modification primitives
 
@@ -2370,6 +2372,38 @@ module Net
       def delete_run_at(idx)           = runs.delete_at(idx)
       def slice_runs!(...)             = runs.slice!(...)
       def truncate_runs!(idx)          = runs.slice!(idx..)
+
+      # Memoizes `SequenceSet#cardinality`.  Also memoizes when `#freeze` is
+      # called, a tradeoff which penalizes freezing and frozen set creation.
+      #
+      # TODO: maintain @cardinality when mutating @set_data
+      # TODO: store @set_data as some sort of order statistic tree
+      module CardinalityCache # :nodoc:
+        def initialize(...)
+          super
+          @cardinality = nil
+        end
+
+        def cardinality
+          return @cardinality if @cardinality
+          calculated = super
+          @cardinality = calculated unless frozen?
+          calculated
+        end
+
+        def freeze
+          cardinality unless frozen? || @cardinality
+          super
+        end
+
+        private
+
+        def modifying!
+          super
+          @cardinality = nil
+        end
+      end
+      prepend CardinalityCache
 
       ######################################################################{{{2
       # Update methods
