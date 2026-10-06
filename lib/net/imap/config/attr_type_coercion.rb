@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../utils"
+
 module Net
   class IMAP
     class Config
@@ -28,23 +30,9 @@ module Net
         end
         private_class_method :included
 
-        if defined?(Ractor.shareable_proc)
-          def self.safe(&b)
-            case obj = b.call
-            when Proc
-              Ractor.shareable_proc(&obj)
-            else
-              Ractor.make_shareable obj
-            end
-          end
-        elsif defined?(Ractor.make_shareable)
-          def self.safe(&b)
-            obj = nil.instance_eval(&b).freeze
-            Ractor.make_shareable obj
-          end
-        else
-          def self.safe(&b) nil.instance_eval(&b).freeze end
-        end
+        extend Utils
+
+        def self.safe(&) = shareable(&)
         private_class_method :safe
 
         Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
