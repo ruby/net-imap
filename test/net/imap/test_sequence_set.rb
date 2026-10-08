@@ -34,7 +34,9 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     set.merge nums
     seqset.merge nums
     assert_equal set, seqset.to_set
-    assert seqset.elements.size <= set.size
+    assert_equal set.size, seqset.size
+    assert_equal set.size, seqset.cardinality
+    assert_operator seqset.elements.size, :<=, set.size
     sorted = set.to_a.sort
     assert_equal sorted, seqset.numbers
     Array.new(50) { rand(sorted.count) }.each do |idx|

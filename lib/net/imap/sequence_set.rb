@@ -1586,7 +1586,7 @@ module Net
       #     set.cardinality  #=> 4294967296
       #
       # Related: #count, #count_with_duplicates
-      def cardinality = minmaxes.sum(runs.count) { _2 - _1 }
+      def cardinality = sum_runs_size(runs)
 
       # Returns the count of distinct #numbers in the set.
       #
@@ -2477,6 +2477,8 @@ module Net
       def min_at(idx)             = minmaxes[idx][0]
       def max_at(idx)             = minmaxes[idx][1]
 
+      def sum_runs_size(runs)     = runs.sum(runs.size) { _2 - _1 }
+
       ######################################################################{{{2
       # Core set data modification primitives
 
@@ -2488,6 +2490,84 @@ module Net
       def delete_run_at(idx)           = runs.delete_at(idx)
       def slice_runs!(...)             = runs.slice!(...)
       def truncate_runs!(idx)          = runs.slice!(idx..)
+
+      # NOTE: Use of *any* other Array mutator methods besides these <em>will
+      # break the cardinality cache</em>.
+      #
+      # TODO: store @set_data as some sort of order statistic tree
+      module CardinalityCache # :nodoc:
+        attr_reader :cardinality
+
+        def initialize(...)
+          @cardinality = 0
+          super
+        end
+
+        def clear
+          result = super
+          @cardinality = 0
+          result
+        end
+
+        private
+
+        def delete_run_at(idx)
+          result = super or return
+          @cardinality -= (result.last - result.first).succ
+          result
+        end
+
+        def insert_minmax(idx, min, max)
+          result = super
+          @cardinality += (max - min).succ
+          result
+        end
+
+        def append_minmax(min, max)
+          result = super
+          @cardinality += (max - min).succ
+          result
+        end
+
+        def replace_minmaxes(minmaxes)
+          result = super
+          @cardinality = sum_runs_size(runs)
+          result
+        end
+
+        def slice_runs!(...)
+          sliced = super or return
+          if runs.size <= sliced.size
+            @cardinality = sum_runs_size(runs)
+          else
+            @cardinality -= sum_runs_size(sliced)
+          end
+          sliced
+        end
+
+        def truncate_runs!(idx)
+          sliced = super or return
+          if runs.size <= sliced.size
+            @cardinality = sum_runs_size(runs)
+          else
+            @cardinality -= sum_runs_size(sliced)
+          end
+          sliced
+        end
+
+        def set_min_at(idx, min)
+          old_min = min_at(idx) or raise RangeError, "No run at index"
+          @cardinality -= min - old_min
+          super
+        end
+
+        def set_max_at(idx, max)
+          old_max = max_at(idx) or raise RangeError, "No run at index"
+          @cardinality += max - old_max
+          super
+        end
+      end
+      prepend CardinalityCache
 
       ######################################################################{{{2
       # Update methods
