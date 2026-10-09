@@ -2430,46 +2430,55 @@ module Net
         idx_max
       end
 
-      def slice_length(start, length)
-        start  = implicit_int(start)
+      # Implements #slice(index, length)
+      def slice_length(first, length)
+        first  = implicit_int(first)
         length = implicit_int(length)
-        return nil if length.negative?
-        scan_to_num_index(start, true) {|first_run, first_diff|
-          if length.zero?
-            remain_frozen_empty
-          elsif start.negative? && -start <= length
-            slice_runs_to_end(first_run, first_diff)
-          else
-            slice_runs_length(first_run, first_diff, length)
-          end
-        }
+        return nil                 if length.negative?
+        return nil                 if cardinality <  first.abs
+        return remain_frozen_empty if cardinality == first
+        return remain_frozen_empty if length.zero?
+        return slice_to_end(first) if first.negative? && -first <= length
+        return slice_to_end(first) if cardinality <= first + length
+        slice_num_index_to_length(first, length)
       end
 
+      # Implements #slice(range)
       def slice_range(range)
         first = implicit_int(range.begin || 0)
         rend  = implicit_int(range.end) unless range.end.nil?
+        excl  = range.exclude_end?
+        return nil                 if cardinality < first.abs  # (invalid..any)
+        return slice_to_end(first) if rend.nil?                # (first..)
+        return remain_frozen_empty if excl && rend.zero?       # (first...0)
+
+        last  = (excl ? rend.pred : rend)
+        return slice_to_end(first) if last == -1               # (first..-1)
+        return slice_to_end(first) if cardinality.pred <= last # (first..too_high)
+
+        if first.negative? == last.negative?
+          slice_num_index_to_length(first, (last - first).succ)
+        else
+          pfirst = first.negative? ? first + cardinality : first
+          plast  = last.negative?  ? last  + cardinality : last
+          length = (plast - pfirst).succ
+          # TODO: only scan by length when it's _much_ smaller than `last.abs`?
+          slice_num_index_to_length(first, length)
+        end
+      end
+
+      def slice_to_end(first)
         scan_to_num_index(first, true) {|first_run, first_diff|
-          # short-circuit (valid...0)
-          return remain_frozen_empty if range.exclude_end? && rend == 0
-          # normalize (i...j) and (i...) to (i..j)
-          last = (range.exclude_end? ? rend&.pred : rend) || -1
-          if last == -1 || cardinality&.pred <= last
-            slice_runs_to_end(first_run, first_diff)
-          elsif first.negative? == last.negative?
-            slice_runs_length(first_run, first_diff, (last - first).succ)
-          else
-            first += cardinality if first.negative?
-            last  += cardinality if last&.negative?
-            if last.nil?
-              remain_frozen_empty
-            elsif cardinality.pred <= last
-              slice_runs_to_end(first_run, first_diff)
-            else
-              slice_runs_length(first_run, first_diff, (last - first).succ)
-            end
-          end
+          slice_runs_to_end(first_run, first_diff)
         }
       end
+
+      ######################################################################{{{2
+      # Slicing runs by _internal_ number pointer: (run_idx, offset)
+      #
+      # NOTE: The internal number pointer tuple format may change to match the
+      # how runs are stored.  e.g: +offset+ _currently_ represents the offset
+      # from the run's min, but it could diff from max instead.
 
       # :call-seq:
       #   scan_to_num_index(num_idx) {|run_idx, diff| result } -> result | nil
@@ -2485,16 +2494,20 @@ module Net
       #  * +run_idx+ will be zero or positive, regardless of +num_idx+ sign.
       #  * +diff+ counts up from the indexed run min, but this may change.
       def scan_to_num_index(num_idx, first)
-        if num_idx.negative?
+        if cardinality < num_idx.abs
+          nil
+        elsif cardinality == num_idx
+          remain_frozen_empty if first
+        elsif num_idx.negative?
           reverse_scan_run_indexes do |run_idx, min_idx, max_idx|
             return yield run_idx, num_idx - min_idx if min_idx <= num_idx
           end
           nil
         else
-          size = scan_run_indexes do |run_idx, min_idx, max_idx|
+          scan_run_indexes do |run_idx, min_idx, max_idx|
             return yield run_idx, num_idx - min_idx if num_idx <= max_idx
           end
-          remain_frozen_empty if first && size == num_idx
+          nil
         end
       end
 
@@ -2523,6 +2536,19 @@ module Net
         ~num_idx_max
       end
 
+      # Same as #slice_length, except:
+      # * no argument coercion or validation
+      # * returns empty set when length is negative
+      # * no short-circuiting based on cardinality
+      #
+      # TODO: when first is negative, scan in reverse (end first)
+      def slice_num_index_to_length(first, length)
+        scan_to_num_index(first, true) {|first_run, first_diff|
+          slice_runs_length(first_run, first_diff, length)
+        }
+      end
+
+      # Has first pointer
       def slice_runs_length(first_run_idx, first_diff, length)
         return remain_frozen_empty unless length.positive?
         num_idx = first_diff + length.pred
@@ -2534,18 +2560,6 @@ module Net
           end
         end
         slice_runs_to_end(first_run_idx, first_diff)
-      end
-
-      def slice_runs_to_end(first_idx, first_diff)
-        sliced = []
-        first_num = num_at(first_idx, first_diff) and
-          first_max = max_at(first_idx)           and
-          sliced << [first_num, first_max]        and
-          rest = minmaxes[first_idx.succ..]       and
-          sliced.concat(rest)
-        set = SequenceSet.new
-        set.initialize_with_set_data sliced
-        remain_frozen set
       end
 
       def slice_runs_between(first_run_idx, first_diff, last_run_idx, last_diff)
@@ -2574,6 +2588,18 @@ module Net
           set.initialize_with_set_data sliced
           remain_frozen set
         end
+      end
+
+      def slice_runs_to_end(first_idx, first_diff)
+        sliced = []
+        first_num = num_at(first_idx, first_diff) and
+          first_max = max_at(first_idx)           and
+          sliced << [first_num, first_max]        and
+          rest = minmaxes[first_idx.succ..]       and
+          sliced.concat(rest)
+        set = SequenceSet.new
+        set.initialize_with_set_data sliced
+        remain_frozen set
       end
 
       ######################################################################{{{2
