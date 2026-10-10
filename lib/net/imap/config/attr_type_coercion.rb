@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "../utils"
+
 module Net
   class IMAP
     class Config
@@ -28,28 +30,14 @@ module Net
         end
         private_class_method :included
 
-        if defined?(Ractor.shareable_proc)
-          def self.safe(&b)
-            case obj = b.call
-            when Proc
-              Ractor.shareable_proc(&obj)
-            else
-              Ractor.make_shareable obj
-            end
-          end
-        elsif defined?(Ractor.make_shareable)
-          def self.safe(&b)
-            obj = nil.instance_eval(&b).freeze
-            Ractor.make_shareable obj
-          end
-        else
-          def self.safe(&b) nil.instance_eval(&b).freeze end
-        end
-        private_class_method :safe
+        extend Utils
 
-        Types = Hash.new do |h, type| type => Proc | nil; safe{type} end
-        Types[:boolean] = Boolean = safe{-> {!!_1}}
-        Types[Integer]  = safe{->{Integer(_1)}}
+        Types = Hash.new do |h, type|
+          type => Proc | nil
+          Utils.shareable{type}
+        end
+        Types[:boolean] = Boolean = shareable{-> {!!_1}}
+        Types[Integer]  = shareable{->{Integer(_1)}}
 
         def self.attr_accessor(attr, type: nil)
           type = Types[type] or return
@@ -57,16 +45,16 @@ module Net
           define_method :"#{attr}?" do send attr end if type == Boolean
         end
 
-        NilOrInteger = safe{->val { Integer val unless val.nil? }}
+        NilOrInteger = shareable{->val { Integer val unless val.nil? }}
 
-        Enum = ->(*enum) {
-          safe_enum = safe{enum}
+        Enum = shareable{->(*enum) {
+          safe_enum = Utils.shareable{enum}
           expected = -"one of #{safe_enum.map(&:inspect).join(", ")}"
-          safe{->val {
+          Utils.shareable{->val {
             return val if safe_enum.include?(val)
             raise ArgumentError, "expected %s, got %p" % [expected, val]
           }}
-        }
+        }}
 
       end
     end
