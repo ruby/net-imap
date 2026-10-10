@@ -20,5 +20,5 @@ gem "benchmark_driver", require: false
 gem "vernier", require: false, platform: :mri
 
 group :test do
-  gem "simplecov", ">= 1.0.0", require: false, platforms: %i[mri windows]
+  gem "simplecov", ">= 1.2.0", require: false, platforms: %i[mri windows]
 end
