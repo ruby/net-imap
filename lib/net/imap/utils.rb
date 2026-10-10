@@ -19,6 +19,8 @@ module Net
             Ractor.make_shareable obj
           end
         end
+
+      # simplecov:disable
       elsif defined?(Ractor.make_shareable)
         def shareable(&b)
           obj = nil.instance_eval(&b).freeze
@@ -27,6 +29,7 @@ module Net
       else
         def shareable(&b) nil.instance_eval(&b).freeze end
       end
+      # simplecov:enable
 
     end
   end
