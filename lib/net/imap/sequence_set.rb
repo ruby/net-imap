@@ -2,6 +2,8 @@
 
 require "set" unless defined?(::Set)
 
+require_relative "utils"
+
 module Net
   class IMAP
 
@@ -423,6 +425,8 @@ module Net
     #   representation and returns +self+.
     #
     class SequenceSet
+      include Utils # :nodoc:
+
       # The largest possible non-zero unsigned 32-bit integer
       UINT32_MAX = 2**32 - 1
 
@@ -1019,9 +1023,9 @@ module Net
       # is empty.  (+star+ is ignored when +count+ is given.)
       #
       # Related: #min, #minmax, #slice
-      def max(count = nil, star: :*)
-        if count
-          count = Integer(count.to_int)
+      def max(count = (unset_count = true; nil), star: :*)
+        if !unset_count
+          count = implicit_int(count)
           raise ArgumentError, 'negative count' if count < 0
           return remain_frozen_empty if count == 0
           if cardinality <= count
@@ -1046,9 +1050,9 @@ module Net
       # is empty.  (+star+ is ignored when +count+ is given.)
       #
       # Related: #max, #minmax, #slice
-      def min(count = nil, star: :*)
-        if count
-          count = Integer(count.to_int)
+      def min(count = (unset_count = true; nil), star: :*)
+        if !unset_count
+          count = implicit_int(count)
           raise ArgumentError, 'negative count' if count < 0
           slice(0...count) || remain_frozen_empty
         elsif (val = min_num)
@@ -1360,7 +1364,7 @@ module Net
       #
       # Related: #delete, #delete?, #slice!, #subtract, #difference
       def delete_at(index)
-        slice! Integer(index.to_int)
+        slice! implicit_int index
       end
 
       # :call-seq:
@@ -1376,9 +1380,10 @@ module Net
       # #string will be regenerated after deletion.
       #
       # Related: #slice, #delete_at, #delete, #delete?, #subtract, #difference
-      def slice!(index, length = nil)
+      def slice!(index, length = (length_unset = true; nil))
         modifying! # short-circuit before slice
-        deleted = slice(index, length) and subtract deleted
+        deleted = length_unset ? slice(index) : slice(index, length)
+        subtract deleted if deleted
         deleted
       end
 
@@ -1720,7 +1725,7 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def at(index)
-        seek_number_in_minmaxes(minmaxes, index)
+        export_num sorted_set_num_at implicit_int index
       end
 
       # :call-seq: ordered_at(index) -> integer or nil
@@ -1733,22 +1738,55 @@ module Net
       #
       # Related: #[], #slice, #ordered_at
       def ordered_at(index)
-        seek_number_in_minmaxes(each_entry_minmax, index)
+        export_num ordered_list_num_at implicit_int index
       end
 
       # :call-seq:
       #    seqset[index]         -> integer or :* or nil
       #    slice(index)          -> integer or :* or nil
-      #    seqset[start, length] -> sequence set or nil
-      #    slice(start, length)  -> sequence set or nil
+      #    seqset[index, length] -> sequence set or nil
+      #    slice(index, length)  -> sequence set or nil
       #    seqset[range]         -> sequence set or nil
       #    slice(range)          -> sequence set or nil
       #
       # Returns a number or a subset from the _sorted_ set, without modifying
       # the set.
       #
+      # With a single +index+ argument, returns an integer or +:*+ or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0]     #=> 10
+      #     set[-1]    #=> 26
+      #
+      # With +index+ and +length+ arguments, returns a new SequenceSet or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[1, 2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #     set[-2, 2] #=> Net::IMAP::SequenceSet["23,26"]
+      #
+      # With a single +range+ argument, returns a new SequenceSet or nil:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0...2] #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[0..2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #     set[0..-2] #=> Net::IMAP::SequenceSet["10:15,20:23"]
+      #     set[-6..6] #=> Net::IMAP::SequenceSet["15,20"]
+      #
+      # Note that the result is based on the sorted and de-duplicated set, not
+      # on the ordered #entries in #string.
+      #
+      #     set = Net::IMAP::SequenceSet["12,20:23,11:16,21"]
+      #     set[0]   #=> 11
+      #     set[-1]  #=> 23
+      #
+      # This behaves like <tt>Array#slice</tt> on a virtual array of all of the
+      # monotonically sorted #numbers in +self+:
+      #     # WARNING: For illustration only.  Do NOT do this with large sets.
+      #     sliced_array = seqset.numbers[*args] and
+      #       sliced_set = Net::IMAP::SequenceSet(sliced_array)
+      #     set.slice(*args) == sliced_set  #=> true
+      #
+      # ==== Number lookup by index
+      #
       # When an Integer argument +index+ is given, the number at offset +index+
-      # in the sorted set is returned:
+      # in the sorted set is returned.
       #
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[0]   #=> 10
@@ -1759,24 +1797,86 @@ module Net
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[-1]  #=> 26
       #     set[-3]  #=> 22
-      #     set[-6]  #=> 15
+      #     set[-11] #=> 10
       #
-      # If +index+ is out of range, +nil+ is returned.
-      #
+      # The range for +index+ is <tt>-cardinality...cardinality</tt>.
+      # If +index+ is out of range, returns +nil+.
       #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
       #     set[11]  #=> nil
       #     set[-12] #=> nil
       #
-      # The result is based on the sorted and de-duplicated set, not on the
-      # ordered #entries in #string.
+      # With a single Integer argument, this behaves identically to #at.
       #
-      #     set = Net::IMAP::SequenceSet["12,20:23,11:16,21"]
-      #     set[0]   #=> 11
-      #     set[-1]  #=> 23
+      # ==== Subset slice by index and length
       #
-      # Related: #at
-      def [](index, length = nil)
-        if    length              then slice_length(index, length)
+      # When two Integer arguments, +index+ and +length+ are given, returns a
+      # new SequenceSet containing the +length+ successive numbers beginning at
+      # offset +index+.:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0, 2]  #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[1, 2]  #=> Net::IMAP::SequenceSet["11:12"]
+      #
+      # If <tt>index + length</tt> is greater than #cardinality, returns all
+      # elements from +index+ to the end:
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0, 15] #=> Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[5, 10] #=> Net::IMAP::SequenceSet["15,20:23,26"]
+      #     set[10, 5] #=> Net::IMAP::SequenceSet["26"]
+      #
+      # If +index+ is equal to #cardinality, returns a new empty SequenceSet.
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[11, 5] #=> Net::IMAP::SequenceSet.empty
+      #
+      # If +length+ is negative, returns +nil+.
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set[5, -1] #=> nil
+      #
+      # If +index+ is out of range (absolute value greater than #cardinality),
+      # returns +nil+.
+      #
+      # If +index+ is in range and +length+ is zero, returns a new empty
+      # SequenceSet.
+      #
+      # ==== Subset slice by index range
+      #
+      # When a single Range argument +range+ is given, returns a new SequenceSet
+      # containing the successive numbers at the offsets indicated by +range+.
+      #
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[0...2]   #=> Net::IMAP::SequenceSet["10:11"]
+      #     set[2..4]    #=> Net::IMAP::SequenceSet["12:14"]
+      #
+      #     set[-2..-1]  #=> Net::IMAP::SequenceSet["23,26"]
+      #     set[-4...-2] #=> Net::IMAP::SequenceSet["21:22"]
+      #
+      #     set[4..-4]   #=> Net::IMAP::SequenceSet["14:15,20:21"]
+      #     set[-6...6]  #=> Net::IMAP::SequenceSet["15"]
+      #
+      # An end-less range slices until the last number, and a begin-less range
+      # slices from the first number.
+      #     set = Net::IMAP::SequenceSet["10:15,20:23,26"]
+      #     set[..3]    #=> Net::IMAP::SequenceSet["10:13"]
+      #     set[..-3]   #=> Net::IMAP::SequenceSet["10:15,20:22"]
+      #     set[-2..]   #=> Net::IMAP::SequenceSet["23,26"]
+      #     set[2..]    #=> Net::IMAP::SequenceSet["12:15,20:23,26"]
+      #
+      # When +range.begin+ points to a smaller index than +range.end+, a new
+      # empty SequenceSet is returned.
+      #
+      #     set = Net::IMAP::SequenceSet[1..10]
+      #     set[5.. 4]  #=> SequenceSet.empty
+      #     set[-4..-5] #=> SequenceSet.empty
+      #     set[5..-6]  #=> SequenceSet.empty
+      #
+      # If +range.begin+ is out of range (absolute value greater than
+      # #cardinality), returns +nil+.
+      #
+      # This behaves similarly to a slice with +range.begin+ as +index+ and
+      # +range.size+ as +length+, when that both sides of the range are either
+      # negative or non-negative.  Note that the minimum +range.size+ is zero,
+      # so this can't return +nil+ for a negative range length.
+      def [](index, length = (length_unset = true; nil))
+        if    !length_unset       then slice_length(index, length)
         elsif index.is_a?(Range)  then slice_range(index)
         else                           at(index)
         end
@@ -2282,15 +2382,22 @@ module Net
       ######################################################################{{{2
       # Number indexing methods
 
+      def sorted_set_num_at(index)
+        seek_number_in_minmaxes(minmaxes, index)
+      end
+
+      def ordered_list_num_at(index)
+        seek_number_in_minmaxes(each_entry_minmax, index)
+      end
+
       def seek_number_in_minmaxes(minmaxes, index)
-        index = Integer(index.to_int)
         if index.negative?
           reverse_each_minmax_with_index(minmaxes) do |min, max, idx_min, idx_max|
-            idx_min <= index and return export_num(min + (index - idx_min))
+            idx_min <= index and return min + (index - idx_min)
           end
         else
           each_minmax_with_index(minmaxes) do |min, _, idx_min, idx_max|
-            index <= idx_max and return export_num(min + (index - idx_min))
+            index <= idx_max and return min + (index - idx_min)
           end
         end
         nil
@@ -2316,30 +2423,41 @@ module Net
       end
 
       def slice_length(start, length)
-        start  = Integer(start.to_int)
-        length = Integer(length.to_int)
-        raise ArgumentError, "length must be positive" unless length.positive?
-        last = start + length - 1 unless start.negative? && start.abs <= length
-        slice_range(start..last)
+        start  = implicit_int(start)
+        length = implicit_int(length)
+        return nil if length.negative?
+        stop   = start + length unless start.negative? && start.abs <= length
+        slice_range(start...stop)
       end
 
       def slice_range(range)
-        first = range.begin ||  0
-        last  = range.end   || -1
-        if range.exclude_end?
-          return remain_frozen_empty if last.zero?
-          last -= 1 if range.end && last != STAR_INT
-        end
-        if (first * last).positive? && last < first
-          remain_frozen_empty
-        elsif (min = at(first))
-          max = at(last)
-          max = :* if max.nil?
-          if    max == :*  then self & (min..)
-          elsif min <= max then self & (min..max)
+        first = implicit_int(range.begin || 0)
+        rend  = implicit_int(range.end) unless range.end.nil?
+        excl  = range.exclude_end?
+        last = !(excl && rend == 0) &&        # (i...0)
+          (excl && rend&.pred || rend || -1)  # (i...j) vs (i..j) vs (i...)
+        if !last || first.negative? == last.negative? && last < first
+          remain_frozen_empty if valid_slice_start?(first)
+        elsif (min = sorted_set_num_at(first))
+          max = sorted_set_num_at(last) || (last.negative? ? 0 : STAR_INT)
+          if    min <= max then intersection export_minmax_entry [min, max]
           else                  remain_frozen_empty
           end
+        elsif first.positive?
+          remain_frozen_empty if valid_slice_start?(first)
         end
+      end
+
+      # By short-circuiting, this is a small performance improvement over
+      # `offset.abs <= cardinality`.  But, slice_range should get a bigger
+      # performance boost by combining this scan with the start offset scan.
+      def valid_slice_start?(offset)
+        offset = offset.abs
+        minmaxes.each do |min, max|
+          offset -= (max - min).succ
+          return true if offset.negative?
+        end
+        !offset.positive?
       end
 
       ######################################################################{{{2

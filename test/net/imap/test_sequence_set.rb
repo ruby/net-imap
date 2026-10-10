@@ -440,6 +440,13 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_nil        SequenceSet["101:110,201:210,301:310"][-44]
   end
 
+  test "#at(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full[nil] end
+    assert_implicit_integer_type_error do SequenceSet.full["1"] end
+    assert_implicit_integer_type_error do SequenceSet.full.at(nil) end
+    assert_implicit_integer_type_error do SequenceSet.full.at("1") end
+  end
+
   test "#ordered_at(non-negative index)" do
     assert_nil        SequenceSet.empty.ordered_at(0)
     assert_equal   1, SequenceSet.full.ordered_at(0)
@@ -472,6 +479,11 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal  :*, SequenceSet["1:10,*"].ordered_at(10)
   end
 
+  test "#ordered_at(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.ordered_at(nil) end
+    assert_implicit_integer_type_error do SequenceSet.full.ordered_at("1") end
+  end
+
   test "#[start, length]" do
     assert_equal SequenceSet[10..99], SequenceSet.full[9, 90]
     assert_equal 90, SequenceSet.full[9, 90].count
@@ -482,14 +494,48 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
                  SequenceSet[((1..10_000) % 10).to_a][1, 4]
     assert_equal SequenceSet[9981, 9971, 9961, 9951],
                  SequenceSet[((1..10_000) % 10).to_a][-5, 4]
-    assert_nil SequenceSet[111..222, 888..999][2000, 4]
-    assert_nil SequenceSet[111..222, 888..999][-2000, 4]
     # with length longer than the remaining members
     assert_equal SequenceSet[101...200],
                  SequenceSet[1...200][100, 10000]
   end
 
-  test "#[range]" do
+  test "#[], argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full[nil] end
+    assert_implicit_integer_type_error do SequenceSet.full["1"] end
+    assert_implicit_integer_type_error do SequenceSet.full[nil, 1] end
+    assert_implicit_integer_type_error do SequenceSet.full["1", 1] end
+    assert_implicit_integer_type_error do SequenceSet.full[1, nil] end
+    assert_implicit_integer_type_error do SequenceSet.full[1, "1"] end
+    assert_implicit_integer_type_error do SequenceSet.full["1".."2"] end
+  end
+
+  test "#slice(start, length) -> nil, for negative length" do
+    set = SequenceSet[1...200]
+    assert_nil set[ 100, -1]
+    assert_nil set[-100, -1]
+  end
+
+  test "#slice(start, length) -> nil, for invalid start" do
+    set = SequenceSet[1..100]
+    assert_nil set[ 101, 0]
+    assert_nil set[ 101, 1]
+    assert_nil set[ 101, 9]
+    assert_nil set[-101, 0]
+    assert_nil set[-101, 1]
+    assert_nil set[-101, 9]
+
+    set = SequenceSet[*((10..100) % 10)]
+    assert_nil set[-11, 1]
+    assert_nil set[-11, 0]
+  end
+
+  test "#slice(start, length) -> empty, for valid start but zero length" do
+    set = SequenceSet[1...200]
+    assert_same SequenceSet.empty, set[ 100, 0]
+    assert_same SequenceSet.empty, set[-100, 0]
+  end
+
+  test "#[range] -> set, for valid range" do
     assert_equal SequenceSet[10..100], SequenceSet.full[9..99]
     assert_equal SequenceSet[1000..1100],
                  SequenceSet[1..100, 1000..1111][100..200]
@@ -502,19 +548,133 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet[((51..9951) % 10).to_a],
                  SequenceSet[((1..10_000) % 10).to_a][5..-5]
     assert_equal SequenceSet.full, SequenceSet.full[0..]
+    assert_equal SequenceSet.full, SequenceSet.full[0...]
+    assert_equal SequenceSet.full, SequenceSet.full[0...2**32]
     assert_equal SequenceSet[2..], SequenceSet.full[1..]
     assert_equal SequenceSet[:*], SequenceSet.full[-1..]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][60..50]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][-50..-60]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][-10..10]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][60..-60]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][10...0]
-    assert_equal SequenceSet.empty, SequenceSet[1..100][0...0]
-    assert_nil SequenceSet.empty[2..4]
-    assert_nil SequenceSet[101..200][1000..1060]
-    assert_nil SequenceSet[101..200][-1000..-60]
     # with length longer than the remaining members
     assert_equal SequenceSet[101..1111], SequenceSet[1..1111][100..999_999]
+  end
+
+  test "#[range] -> empty, for empty positive range with valid start" do
+    set = SequenceSet[1..200]
+    assert_same SequenceSet.empty, set[  0...  0]  # beginning (exclusive)
+    assert_same SequenceSet.empty, set[  1..   0]  # beginning (inclusive)
+    assert_same SequenceSet.empty, set[100...  0]  # middle (exclusive)
+    assert_same SequenceSet.empty, set[100...100]  # middle (exclusive)
+    assert_same SequenceSet.empty, set[100..  99]  # middle (inclusive)
+    assert_same SequenceSet.empty, set[199...199]  # end (exclusive)
+    assert_same SequenceSet.empty, set[199.. 198]  # end (inclusive)
+    assert_same SequenceSet.empty, set[200...200]  # just after end (exclusive)
+    assert_same SequenceSet.empty, set[200.. 199]  # just after end (inclusive)
+    assert_same SequenceSet.empty, SequenceSet.empty[0...0]
+  end
+
+  test "#[range] -> empty, for empty negative range with valid start" do
+    set = SequenceSet[1..200]
+    assert_same SequenceSet.empty, set[-200.. -201]  # i.e:   0.. before start
+    assert_same SequenceSet.empty, set[-200...-200]  # i.e:   0...  0
+    assert_same SequenceSet.empty, set[-199.. -200]  # i.e:   1..   0
+    assert_same SequenceSet.empty, set[-100.. -201]  # i.e: 100.. before first
+    assert_same SequenceSet.empty, set[-100...-200]  # i.e: 100...  0
+    assert_same SequenceSet.empty, set[-100...-100]  # i.e: 100...100
+    assert_same SequenceSet.empty, set[-100.. -101]  # i.e: 100..  99
+    assert_same SequenceSet.empty, set[  -1...  -1]  # i.e: 199...199
+    assert_same SequenceSet.empty, set[  -1..   -2]  # i.e: 199...198
+  end
+
+  test "#[range] -> empty, for empty negative..positive range with valid start" do
+    set = SequenceSet[1..200]
+    assert_same SequenceSet.empty, set[-200...   0]  # i.e:   0...  0
+    assert_same SequenceSet.empty, set[-199..    0]  # i.e:   1..   0
+    assert_same SequenceSet.empty, set[-100...   0]  # i.e: 100...  0
+    assert_same SequenceSet.empty, set[-100... 100]  # i.e: 100...100
+    assert_same SequenceSet.empty, set[-100..   99]  # i.e: 100..  99
+    assert_same SequenceSet.empty, set[  -1... 199]  # i.e: 199...199
+    assert_same SequenceSet.empty, set[  -1..  198]  # i.e: 199...198
+    assert_same SequenceSet.empty, SequenceSet.full[-1..0]
+    assert_same SequenceSet.empty, SequenceSet.full[-1...0]
+  end
+
+  test "#[range] -> empty, for empty positive..negative range with valid start" do
+    set = SequenceSet[1..200]
+    assert_same SequenceSet.empty, set[  0.. -201]  # i.e:   0.. before start
+    assert_same SequenceSet.empty, set[  0...-200]  # i.e:   0...  0
+    assert_same SequenceSet.empty, set[  1.. -200]  # i.e:   1..   0
+    assert_same SequenceSet.empty, set[100.. -201]  # i.e: 100.. before first
+    assert_same SequenceSet.empty, set[100...-200]  # i.e: 100...  0
+    assert_same SequenceSet.empty, set[100...-100]  # i.e: 100...100
+    assert_same SequenceSet.empty, set[100.. -101]  # i.e: 100..  99
+    assert_same SequenceSet.empty, set[199...  -1]  # i.e: 199...199
+    assert_same SequenceSet.empty, set[199..   -2]  # i.e: 199...198
+    assert_same SequenceSet.empty, set[200..   -1]  # i.e: 200.. 199
+  end
+
+  test "#slice(range) -> empty, for start == cardinality" do
+    set = SequenceSet[*((10..100) % 10)]
+    assert_equal 10, set.cardinality
+    # when starting just before last numger
+    assert_equal SequenceSet[90, 100], set[ 8, 4]
+    assert_equal SequenceSet[90, 100], set[-2, 4]
+    assert_equal SequenceSet[    100], set[ 9, 4]
+    assert_equal SequenceSet[    100], set[-1, 4]
+    # when positive start == cardinality
+    assert_equal SequenceSet.empty,    set[10, 0]
+    assert_equal SequenceSet.empty,    set[10, 4]
+    assert_equal SequenceSet.empty,    set[10...10]
+    assert_equal SequenceSet.empty,    set[10.. 10]
+    assert_equal SequenceSet.empty,    set[10.. 9]
+  end
+
+  test "#[range] -> nil, for positive start > cardinality" do
+    assert_nil SequenceSet.empty[2..4]
+    assert_nil SequenceSet.empty[1..0]
+    assert_nil SequenceSet.empty[1...0]
+    assert_nil SequenceSet.empty[2..4]
+    assert_nil SequenceSet.empty[1..0]
+    assert_nil SequenceSet.empty[1...0]
+    assert_nil SequenceSet.empty[1..-1]
+    assert_nil SequenceSet.empty[1...-1]
+    assert_nil SequenceSet.empty[2..-4]
+
+    assert_nil SequenceSet[101..200][1000..1060]
+
+    set = SequenceSet[*((10..100) % 10)]
+    assert_nil set[11...11]
+    assert_nil set[11.. 11]
+    assert_nil set[11...10]
+    assert_nil set[11.. 10]
+    assert_nil set[11... 9]
+    assert_nil set[11..  9]
+    assert_nil set[11... 0]
+    assert_nil set[11..  0]
+    assert_nil set[11...-1]
+    assert_nil set[11.. -1]
+    assert_nil set[11..-11]
+  end
+
+  test "#[range] -> nil, for negative start before first number" do
+    assert_nil SequenceSet.empty[-2..4]
+    assert_nil SequenceSet.empty[-1..0]
+    assert_nil SequenceSet.empty[-1...0]
+    assert_nil SequenceSet.empty[-1..-1]
+    assert_nil SequenceSet.empty[-1...-1]
+    assert_nil SequenceSet.empty[-2..-4]
+
+    assert_nil SequenceSet[101..200][-1000..-60]
+
+    set = SequenceSet[*((10..100) % 10)]
+    assert_nil set[-11...11]
+    assert_nil set[-11.. 11]
+    assert_nil set[-11...10]
+    assert_nil set[-11.. 10]
+    assert_nil set[-11... 9]
+    assert_nil set[-11..  9]
+    assert_nil set[-11... 0]
+    assert_nil set[-11..  0]
+    assert_nil set[-11...-1]
+    assert_nil set[-11.. -1]
+    assert_nil set[-11..-11]
   end
 
   test "#find_index" do
@@ -1017,6 +1177,16 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_raise(ArgumentError) { set.max(-1) }
   end
 
+  test "#min(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.min("1") end
+    assert_implicit_integer_type_error do SequenceSet.full.min(nil) end
+  end
+
+  test "#max(invalid), argument type errors" do
+    assert_implicit_integer_type_error do SequenceSet.full.max("1") end
+    assert_implicit_integer_type_error do SequenceSet.full.max(nil) end
+  end
+
   test "#minmax" do
     assert_equal [  3,   3], SequenceSet["3"].minmax
     assert_equal [ :*,  :*], SequenceSet["*"].minmax
@@ -1076,7 +1246,18 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal SequenceSet[9..10, 20],    set.slice!(3..)
     assert_equal SequenceSet[5, 7..8],      set
     assert_nil   set.slice!(3)
-    assert_nil   set.slice!(3..)
+    assert_equal SequenceSet.empty, set.slice!(3..)
+  end
+
+  test "#slice!, argument type errors" do
+    set = SequenceSet.new 1..20
+    assert_implicit_integer_type_error do set.slice!(nil) end
+    assert_implicit_integer_type_error do set.slice!("1") end
+    assert_implicit_integer_type_error do set.slice!(nil, 1) end
+    assert_implicit_integer_type_error do set.slice!("1", 1) end
+    assert_implicit_integer_type_error do set.slice!(1, nil) end
+    assert_implicit_integer_type_error do set.slice!(1, "1") end
+    assert_implicit_integer_type_error do set.slice!("1".."2") end
   end
 
   test "#delete_at" do
@@ -1089,6 +1270,12 @@ class IMAPSequenceSetTest < Net::IMAP::TestCase
     assert_equal  20, set.delete_at(3)
     assert_equal nil, set.delete_at(3)
     assert_equal SequenceSet[5, 7..8], set
+  end
+
+  test "#delete_at, argument type errors" do
+    set = SequenceSet.new 1..20
+    assert_implicit_integer_type_error do set.delete_at(nil) end
+    assert_implicit_integer_type_error do set.delete_at("1") end
   end
 
   test "#include_star?" do

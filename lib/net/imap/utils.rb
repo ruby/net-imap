@@ -10,6 +10,19 @@ module Net
     module Utils
       module_function
 
+      # Something like this exists in ruby's C API.  Why not in ruby's ruby?
+      def implicit_int(input)
+        Integer.try_convert(input) or
+          raise TypeError, case input
+            when nil
+              "no implicit conversion from %p to Integer" % [input]
+            when true, false
+              "no implicit conversion of %p into Integer" % [input]
+            else
+              "no implicit conversion of %s into Integer" % [input.class.name]
+            end
+      end
+
       if defined?(Ractor.shareable_proc)
         def shareable
           case obj = yield
