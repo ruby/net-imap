@@ -20,52 +20,55 @@ task "test:coverage:report" do
     formatter SimpleCov::Formatter::HTMLFormatter
 
     coverage(:line) do
-      minimum           95
+      minimum  95
 
-      minimum_per_group 98, only: "Config"
-      minimum_per_group 97, only: "StringPrep"
-      minimum_per_group 97, only: "SASL"
-      minimum_per_group 95, only: "Data Types"
-      minimum_per_group 94, only: "Parser"
-      minimum_per_group 92, only: "Client"
+      minimum  98, per: group("Config")
+      minimum  97, per: group("StringPrep")
+      minimum  97, per: group("SASL")
+      minimum  95, per: group("Data Types")
+      minimum  94, per: group("Parser")
+      minimum  92, per: group("Client")
 
-      minimum_per_file  80
-      minimum_per_file  55, only: "lib/net/imap/search_result.rb"
+      minimum  80, per: :file
+      minimum  55, per: "lib/net/imap/search_result.rb"
     end
 
     # NOTE: branch coverage varies more widely between ruby versions
     coverage(:branch) do
-      minimum           80
+      # eval branch coverage varies too much between runtime environments
+      ignore :eval_generated
 
-      minimum_per_group 90, only: "Data Types"
-      minimum_per_group 85, only: "Config"
-      minimum_per_group 80, only: "Client"
-      minimum_per_group 80, only: "Parser"
-      minimum_per_group 70, only: "SASL"
-      minimum_per_group 70, only: "StringPrep"
+      minimum  80
 
-      minimum_per_file  60
-      minimum_per_file  50, only: "lib/net/imap/sasl/authenticators.rb"
-      minimum_per_file  50, only: "lib/net/imap/config/attr_accessors.rb"
+      minimum  90, per: group("Data Types")
+      minimum  85, per: group("Config")
+      minimum  80, per: group("Client")
+      minimum  80, per: group("Parser")
+      minimum  70, per: group("SASL")
+      minimum  70, per: group("StringPrep")
+
+      minimum  60, per: :file
+      minimum  50, per: "lib/net/imap/sasl/authenticators.rb"
+      minimum  50, per: "lib/net/imap/config/attr_accessors.rb"
     end
 
     coverage(:method) do
-      minimum            88
+      minimum  88
 
-      minimum_per_group 100, only: "Config"
-      minimum_per_group  90, only: "Data Types"
-      minimum_per_group  90, only: "StringPrep"
-      minimum_per_group  85, only: "Client"
-      minimum_per_group  80, only: "Parser"
-      minimum_per_group  80, only: "SASL"
+      minimum 100, per: group("Config")
+      minimum  90, per: group("Data Types")
+      minimum  90, per: group("StringPrep")
+      minimum  85, per: group("Client")
+      minimum  80, per: group("Parser")
+      minimum  80, per: group("SASL")
 
-      minimum_per_file   65
-      minimum_per_file   60, only: "lib/net/imap/response_parser/parser_utils.rb"
-      minimum_per_file   55, only: "lib/net/imap/sasl/authenticators.rb"
-      minimum_per_file   50, only: "lib/net/imap/authenticators.rb"
-      minimum_per_file   50, only: "lib/net/imap/sasl/anonymous_authenticator.rb"
-      minimum_per_file   35, only: "lib/net/imap/sasl/protocol_adapters.rb"
-      minimum_per_file   20, only: "lib/net/imap/response_data.rb"
+      minimum  65, per: :file
+      minimum  60, per: "lib/net/imap/response_parser/parser_utils.rb"
+      minimum  55, per: "lib/net/imap/sasl/authenticators.rb"
+      minimum  50, per: "lib/net/imap/authenticators.rb"
+      minimum  50, per: "lib/net/imap/sasl/anonymous_authenticator.rb"
+      minimum  35, per: "lib/net/imap/sasl/protocol_adapters.rb"
+      minimum  20, per: "lib/net/imap/response_data.rb"
     end
   end
 end
