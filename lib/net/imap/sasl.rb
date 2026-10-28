@@ -103,7 +103,15 @@ module Net
 
       # Indicates an authentication exchange that will be or has been canceled
       # by the client, not due to any error or failure during processing.
-      AuthenticationCanceled = Class.new(Error)
+      class AuthenticationCanceled < Error
+        # The error response from the server
+        attr_reader :response
+
+        def initialize(message = "authentication canceled", response: nil)
+          super(message)
+          @response = response
+        end
+      end
 
       # Indicates an error when processing a server challenge, e.g: an invalid
       # or unparsable challenge.  An underlying exception may be available as
