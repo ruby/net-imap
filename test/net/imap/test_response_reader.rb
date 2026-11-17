@@ -76,6 +76,25 @@ class ResponseReaderTest < Net::IMAP::TestCase
     end
   end
 
+  test "#read_response_buffer sets ResponseTooLargeError#literal_size" do
+    client = FakeClient.new
+    client.config.max_response_size = 10
+
+    long_line = "+ 34567890\r\n"
+    error = assert_raise Net::IMAP::ResponseTooLargeError do
+      Net::IMAP::ResponseReader.new(client, StringIO.new(long_line, "rb"))
+                               .read_response_buffer
+    end
+    assert_nil error.literal_size
+
+    big_literal = "+ {200}\r\n"
+    error = assert_raise Net::IMAP::ResponseTooLargeError do
+      Net::IMAP::ResponseReader.new(client, StringIO.new(big_literal, "rb"))
+                               .read_response_buffer
+    end
+    assert_equal 200, error.literal_size
+  end
+
   test "#read_response_buffer max_response_size straddling CRLF" do
     barely_over = "+ 3456789\r\n"  # CRLF straddles the boundary
     client = FakeClient.new
