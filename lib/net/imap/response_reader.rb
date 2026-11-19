@@ -48,8 +48,9 @@ module Net
       def line_done?          = buff.end_with?(CRLF)
 
       def get_literal_size(buff)
-        buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n) &&
-          coerce_number64($1)
+        return unless buff.end_with?("}\r\n") && buff.rindex(/\{(\d+)\}\r\n\z/n)
+
+        coerce_number64($1)
       rescue DataFormatError
         raise DataFormatError, format("invalid response literal size (%s)", $1)
       end
